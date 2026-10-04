@@ -101,8 +101,16 @@ foreach ($target in $targets) {
     $output = Assert-ChildPath (Join-Path $desktopPublishRoot $target.Name) $desktopPublishRoot
     [IO.Directory]::CreateDirectory($desktopPublishRoot) | Out-Null
     if (Test-Path -LiteralPath $output) {
+        $outputPrefix = [IO.Path]::GetFullPath($output).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+        if (Get-Process | Where-Object { $_.Path -and $_.Path.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase) }) { throw "Close running applications in $output before replacing the test package; old package preserved." }
         # Preserve portable state; retain the complete previous package as a recoverable copy.
         $portableSource = if ($target.Name -eq "macos") { Join-Path $output "Nonet.app/Contents/MacOS" } else { $output }
+        if ($target.Name -eq 'macos' -and -not (Test-Path -LiteralPath $portableSource)) {
+            # 更名之前的应用包也需要参与数据保留，不能只识别新包名。
+            $oldBundles = @(Get-ChildItem -LiteralPath $output -Directory -Filter '*.app')
+            if ($oldBundles.Count -ne 1) { throw 'Cannot uniquely identify previous macOS bundle; old package preserved.' }
+            $portableSource = Join-Path $oldBundles[0].FullName 'Contents/MacOS'
+        }
         $portableDestination = if ($target.Name -eq "macos") { Join-Path $package "Nonet.app/Contents/MacOS" } else { $package }
         # 升级旧品牌便携版时也保留原引导配置，防止自定义数据目录失联。
         foreach ($dataName in @("Data", "Nonet.bootstrap.json", "LittleMusicPlayer.bootstrap.json")) {
@@ -120,7 +128,10 @@ foreach ($target in $targets) {
                     if (-not $configuredSource.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase) -or -not (Test-Path -LiteralPath $configuredSource)) { continue }
                     # The validated prefix allows a relative path on both Windows
                     # PowerShell 5.1 (.NET Framework) and PowerShell 7.
-                    $configuredDestination = Assert-ChildPath (Join-Path $package $configuredSource.Substring($outputPrefix.Length)) $package
+                    $portablePrefix = [IO.Path]::GetFullPath($portableSource).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+                    $configuredDestination = if ($configuredSource.StartsWith($portablePrefix, [StringComparison]::OrdinalIgnoreCase)) {
+                        Assert-ChildPath (Join-Path $portableDestination $configuredSource.Substring($portablePrefix.Length)) $package
+                    } else { Assert-ChildPath (Join-Path $package $configuredSource.Substring($outputPrefix.Length)) $package }
                     if (-not (Test-Path -LiteralPath $configuredDestination)) { [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($configuredDestination)) | Out-Null; Copy-Item -LiteralPath $configuredSource -Destination $configuredDestination -Recurse }
                 }
             } catch { throw "Portable data preservation failed; previous package is unchanged: $($_.Exception.Message)" }
