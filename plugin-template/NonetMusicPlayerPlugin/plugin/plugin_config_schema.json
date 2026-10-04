@@ -1,0 +1,10 @@
+{
+  "greeting": {
+    "type": "string",
+    "description": "Greeting / 问候语",
+    "hint": "This text is shown on the plugin page.",
+    "default": "Hello, NonetMusicPlayer!",
+    "required": true,
+    "max_length": 200
+  }
+}

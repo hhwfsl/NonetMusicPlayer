@@ -1,0 +1,409 @@
+<Application
+    x:Class="NonetMusicPlayer.Desktop.App"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:icons="using:NonetMusicPlayer.Desktop.Controls"
+    RequestedThemeVariant="Default">
+    <Application.Resources>
+        <FontFamily x:Key="AppFontFamily">avares://Avalonia.Fonts.Inter/Assets#Inter, Microsoft YaHei UI, PingFang SC, Noto Sans CJK SC</FontFamily>
+        <x:Double x:Key="AppFontSize">13</x:Double>
+        <SolidColorBrush x:Key="AppBackgroundBrush" Color="#101117" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#171920" />
+        <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#20232D" />
+        <SolidColorBrush x:Key="TooltipBackgroundBrush" Color="#20232D" />
+        <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#282C39" />
+        <SolidColorBrush x:Key="NavSelectedBrush" Color="#292437" />
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F2F3F7" />
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#959DAF" />
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#626B80" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#A895FF" />
+        <SolidColorBrush x:Key="AccentTextBrush" Color="#A895FF" />
+        <SolidColorBrush x:Key="AccentForegroundBrush" Color="#000000" />
+        <SolidColorBrush x:Key="AccentHoverBrush" Color="#BEAEFF" />
+        <SolidColorBrush x:Key="AccentPressedBrush" Color="#9381E6" />
+        <SolidColorBrush x:Key="ErrorBrush" Color="#F0526C" />
+        <SolidColorBrush x:Key="AccentSecondaryBrush" Color="#79CDBE" />
+        <SolidColorBrush x:Key="DividerBrush" Color="#2A2D38" />
+        <GridLength x:Key="SliderPreContentMargin">10</GridLength>
+        <GridLength x:Key="SliderPostContentMargin">10</GridLength>
+        <GridLength x:Key="ArtistColumnWidth">160</GridLength>
+        <GridLength x:Key="AlbumColumnWidth">180</GridLength>
+        <x:Double x:Key="SliderHorizontalHeight">32</x:Double>
+        <x:Double x:Key="SliderHorizontalThumbWidth">12</x:Double>
+        <x:Double x:Key="SliderHorizontalThumbHeight">12</x:Double>
+        <x:Double x:Key="TrackRowMinHeight">64</x:Double>
+        <x:Double x:Key="ButtonMinHeight">38</x:Double>
+        <x:Double x:Key="ButtonMinWidth">30</x:Double>
+        <x:Double x:Key="IconSize">20</x:Double>
+        <CornerRadius x:Key="ControlCornerRadius">9</CornerRadius>
+    </Application.Resources>
+    <Application.Styles>
+        <Style Selector=":is(Button), MenuItem, ComboBox, ComboBoxItem, ToggleSwitch, TextBlock, TextBox, NumericUpDown, Slider">
+            <Setter Property="icons:FullTextToolTips.Enabled" Value="True" />
+            <Setter Property="ToolTip.ShowOnDisabled" Value="True" />
+        </Style>
+        <Style Selector=":is(TextBlock)">
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <FluentTheme>
+            <FluentTheme.Palettes>
+                <ColorPaletteResources x:Key="Dark" Accent="#A895FF" />
+                <ColorPaletteResources x:Key="Light" Accent="#A895FF" />
+            </FluentTheme.Palettes>
+        </FluentTheme>
+        <Style Selector="ToolTip">
+            <Setter Property="MaxWidth" Value="520" />
+            <Setter Property="Background" Value="{DynamicResource TooltipBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
+            <Setter Property="FontSize" Value="{DynamicResource AppFontSize}" />
+            <Setter Property="icons:TooltipRendering.Enabled" Value="True" />
+        </Style>
+        <Style Selector="ToolTip /template/ Border">
+            <Setter Property="BoxShadow" Value="0 0 0 0 Transparent" />
+        </Style>
+        <Style Selector="ToolTip TextBlock">
+            <Setter Property="icons:FullTextToolTips.Enabled" Value="False" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="TextTrimming" Value="None" />
+            <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
+            <Setter Property="FontSize" Value="{DynamicResource AppFontSize}" />
+            <Setter Property="icons:TooltipRendering.Enabled" Value="True" />
+        </Style>
+        <Style Selector="Window">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+        <Style Selector="icons|VectorIcon">
+            <Setter Property="Width" Value="{DynamicResource IconSize}" />
+            <Setter Property="Height" Value="{DynamicResource IconSize}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Brush" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
+            <Setter Property="MinHeight" Value="{DynamicResource ButtonMinHeight}" />
+            <Setter Property="MinWidth" Value="{DynamicResource ButtonMinWidth}" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+        </Style>
+        <Style Selector="Button:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+        </Style>
+        <Style Selector="Button.nav">
+            <Setter Property="Height" Value="44" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="Padding" Value="14,0" />
+        </Style>
+        <Style Selector="Button.nav.selected">
+            <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+        <Style Selector="Button.nav:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+        </Style>
+        <Style Selector="Button.nav:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Opacity" Value="0.5" />
+        </Style>
+        <Style Selector="Button.section-heading">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
+        </Style>
+        <Style Selector="Button.primary:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
+        </Style>
+        <Style Selector="Button.transport">
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.transport.primary">
+            <Setter Property="Width" Value="42" />
+            <Setter Property="Height" Value="42" />
+            <Setter Property="CornerRadius" Value="21" />
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+        </Style>
+        <Style Selector="Button.search-icon">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="Transparent">
+                        <ContentPresenter
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Content="{TemplateBinding Content}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Button.search-icon:pointerover /template/ ContentPresenter, Button.search-icon:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="CheckBox.song-selector">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="Transparent">
+                        <Border
+                            Name="SelectionBox"
+                            Width="16"
+                            Height="16"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            BorderBrush="{DynamicResource TextMutedBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4">
+                            <Path
+                                Name="SelectionTick"
+                                Data="M 3,8 L 6,11 L 12,4"
+                                IsVisible="False"
+                                Stroke="{DynamicResource AccentForegroundBrush}"
+                                StrokeThickness="1.8" />
+                        </Border>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="CheckBox.song-selector:checked /template/ Border#SelectionBox">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+        <Style Selector="CheckBox.song-selector:checked /template/ Path#SelectionTick">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="CheckBox.song-selector:focus-visible /template/ Border#SelectionBox">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentTextBrush}" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+        <Style Selector="Button.window-control">
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="MinWidth" Value="22" />
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="Transparent">
+                        <Border
+                            Width="14"
+                            Height="14"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="7" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Button.player-control">
+            <Setter Property="Width" Value="50" />
+            <Setter Property="Height" Value="50" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="15" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.player-control icons|VectorIcon">
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Brush" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+        <Style Selector="Button.player-tool">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="15" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Grid.track-row.playing">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Border.track-row-surface.playing">
+            <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+        </Style>
+        <Style Selector="Grid.track-row.playing TextBlock.track-title">
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.window-control icons|VectorIcon">
+            <Setter Property="Width" Value="11" />
+            <Setter Property="Height" Value="11" />
+            <Setter Property="Brush" Value="#4A302B" />
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <Style Selector="Button.window-control:focus-visible">
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+        <Style Selector="Button.quiet">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="MinHeight" Value="30" />
+        </Style>
+        <Style Selector="Button.column">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+        </Style>
+        <Style Selector="TextBlock.eyebrow">
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBox.web-search">
+            <Setter Property="CornerRadius" Value="22" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="Button.cover">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="MinHeight" Value="{DynamicResource ButtonMinHeight}" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,2" />
+            <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+            <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
+        </Style>
+        <Style Selector="ListBoxItem /template/ ContentPresenter">
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+            <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="ToggleSwitch">
+            <Setter Property="MinHeight" Value="44" />
+            <Setter Property="OnContent" Value="" />
+            <Setter Property="OffContent" Value="" />
+        </Style>
+        <!--
+            The Fluent switch's inner grid is top-aligned even when the control
+            itself is centered. Center the actual track, not only its 44px target.
+        -->
+        <Style Selector="ToggleSwitch.plugin-enabled /template/ Grid">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="FlyoutPresenter.statistics-calendar">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="16" />
+        </Style>
+        <Style Selector="FlyoutPresenter.statistics-calendar /template/ Border#LayoutRoot">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="BoxShadow" Value="none" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="MinHeight" Value="{DynamicResource ButtonMinHeight}" />
+            <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+        </Style>
+        <Style Selector="MenuItem, CheckBox, ToggleSwitch, NumericUpDown, ComboBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+        <Style Selector="ToolTip, ContextMenu, ComboBoxItem">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+        <Style Selector="Expander">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+        </Style>
+        <Style Selector="Expander /template/ ToggleButton#ExpanderHeader">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+        </Style>
+        <Style Selector="Window.touch Button.nav, Window.touch Button.section-heading">
+            <Setter Property="MinHeight" Value="44" />
+            <Setter Property="Height" Value="44" />
+        </Style>
+        <Style Selector="Window.touch Button.transport, Window.touch Button.player-tool, Window.touch Button.window-control">
+            <Setter Property="MinHeight" Value="44" />
+            <Setter Property="MinWidth" Value="44" />
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
+        </Style>
+        <Style Selector="Window.touch Slider">
+            <Setter Property="MinHeight" Value="44" />
+        </Style>
+        <Style Selector="Window.touch ScrollBar:vertical">
+            <Setter Property="Width" Value="18" />
+            <Setter Property="MinWidth" Value="18" />
+        </Style>
+        <Style Selector="ScrollBar:vertical">
+            <Setter Property="Width" Value="12" />
+            <Setter Property="MinWidth" Value="12" />
+        </Style>
+        <Style Selector="Slider">
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+            <Setter Property="MinHeight" Value="32" />
+        </Style>
+    </Application.Styles>
+</Application>

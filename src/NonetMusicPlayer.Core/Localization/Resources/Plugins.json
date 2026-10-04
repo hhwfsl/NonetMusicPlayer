@@ -1,0 +1,272 @@
+{
+  "Plugins.InstallPlugin": {
+    "zh-CN": "安装插件",
+    "en-US": "Install Plugin",
+    "ja-JP": "プラグインをインストール"
+  },
+  "Plugins.InstallPluginImpp": {
+    "zh-CN": "安装插件（.impp）",
+    "en-US": "Install plugin (.impp)",
+    "ja-JP": "プラグインをインストール (.impp)"
+  },
+  "Plugins.EnterJSONAsDocumentedByThePluginSensitiveFields": {
+    "zh-CN": "按插件说明填写 JSON。token、password、secret 等敏感字段只在本次会话保留，重启后需重新输入。请勿在普通字段或 URL 中填写密钥。",
+    "en-US": "Enter JSON as documented by the plugin. Sensitive fields such as token, password and secret last only for this session and must be entered again after restart. Do not store keys in ordinary fields or URLs.",
+    "ja-JP": "プラグインの説明に従ってJSONを入力してください。token・password・secretなどの機密欄はセッションのみ保持し、再起動後に再入力が必要です。通常の欄やURLに鍵を保存しないでください。"
+  },
+  "Plugins.TheOperationFailedCheckPermissionsFilesOrConnectionsAnd": {
+    "zh-CN": "操作未成功，请检查权限、文件或连接后重试。",
+    "en-US": "The operation failed. Check permissions, files or connections and try again.",
+    "ja-JP": "操作に失敗しました。権限・ファイル・接続をご確認のうえ、再試行してください。"
+  },
+  "Plugins.Plugins": {
+    "zh-CN": "插件",
+    "en-US": "Plugins",
+    "ja-JP": "プラグイン"
+  },
+  "Plugins.PluginInstallationFailed": {
+    "zh-CN": "插件安装失败",
+    "en-US": "Plugin installation failed",
+    "ja-JP": "プラグインのインストールに失敗しました"
+  },
+  "Plugins.PluginPackagesMustUseTheImppExtension": {
+    "zh-CN": "插件包必须使用 .impp 格式。",
+    "en-US": "Plugin packages must use the .impp extension.",
+    "ja-JP": "プラグインパッケージは .impp 形式にしてください。"
+  },
+  "Plugins.ThePluginDoesNotHavePermissionForThisAction": {
+    "zh-CN": "插件没有此操作权限。",
+    "en-US": "The plugin does not have permission for this action.",
+    "ja-JP": "プラグインにこの操作の権限がありません。"
+  },
+  "Plugins.PluginConfiguration": {
+    "zh-CN": "插件配置",
+    "en-US": "Plugin configuration",
+    "ja-JP": "プラグイン設定"
+  },
+  "Plugins.PluginConfigurationNestingIsTooDeep": {
+    "zh-CN": "插件配置嵌套过深。",
+    "en-US": "Plugin configuration nesting is too deep.",
+    "ja-JP": "プラグイン設定の階層が深すぎます。"
+  },
+  "Plugins.PluginConfigurationFailed": {
+    "zh-CN": "插件配置失败",
+    "en-US": "Plugin configuration failed",
+    "ja-JP": "プラグインの設定に失敗しました"
+  },
+  "Plugins.PluginConfigurationSaved": {
+    "zh-CN": "插件配置已保存",
+    "en-US": "Plugin configuration saved",
+    "ja-JP": "プラグイン設定を保存しました"
+  },
+  "Plugins.ThePluginIndexIsDamagedPluginsWereNotStarted": {
+    "zh-CN": "插件索引损坏，插件未自动运行；请重新安装。",
+    "en-US": "The plugin index is damaged. Plugins were not started; reinstall them.",
+    "ja-JP": "プラグイン一覧が破損しています。自動実行せず、再インストールしてください。"
+  },
+  "Plugins.PluginIsDisabled": {
+    "zh-CN": "插件未启用",
+    "en-US": "Plugin is disabled",
+    "ja-JP": "プラグインは無効です"
+  },
+  "Plugins.ThePluginIsDisabledOrUninstalled": {
+    "zh-CN": "插件未启用或已经卸载。",
+    "en-US": "The plugin is disabled or uninstalled.",
+    "ja-JP": "プラグインが無効か削除されています。"
+  },
+  "Plugins.PluginDownloadFailed": {
+    "zh-CN": "插件下载失败",
+    "en-US": "Plugin download failed",
+    "ja-JP": "プラグインのダウンロードに失敗"
+  },
+  "Plugins.PluginDownloadComplete": {
+    "zh-CN": "插件下载完成",
+    "en-US": "Plugin download complete",
+    "ja-JP": "プラグインのダウンロード完了"
+  },
+  "Plugins.PluginDownloadCanceledOrTimedOut": {
+    "zh-CN": "插件下载已取消或超时。",
+    "en-US": "Plugin download canceled or timed out.",
+    "ja-JP": "ダウンロードがキャンセルされたかタイムアウトしました。"
+  },
+  "Plugins.UnableToOpenPluginPage": {
+    "zh-CN": "插件页面无法打开",
+    "en-US": "Unable to open plugin page",
+    "ja-JP": "プラグインのページを開けません"
+  },
+  "Plugins.PluginInstalled": {
+    "zh-CN": "插件已安装",
+    "en-US": "Plugin installed",
+    "ja-JP": "プラグインをインストールしました"
+  },
+  "Plugins.PluginDisabledAndItsProcessStopped": {
+    "zh-CN": "插件已禁用，进程已停止",
+    "en-US": "Plugin disabled and its process stopped",
+    "ja-JP": "プラグインを無効にし、プロセスを停止しました"
+  },
+  "Plugins.PluginEnabled": {
+    "zh-CN": "插件已启用",
+    "en-US": "Plugin enabled",
+    "ja-JP": "プラグインを有効にしました"
+  },
+  "Plugins.PluginUninstalled": {
+    "zh-CN": "插件已卸载",
+    "en-US": "Plugin uninstalled",
+    "ja-JP": "プラグインを削除しました"
+  },
+  "Plugins.PluginSource": {
+    "zh-CN": "插件音源 · {0}",
+    "en-US": "Plugin source · {0}",
+    "ja-JP": "プラグイン音源・{0}"
+  },
+  "Plugins.PluginManager": {
+    "zh-CN": "插件中心",
+    "en-US": "Plugin manager",
+    "ja-JP": "プラグイン管理"
+  },
+  "Plugins.ImportFromGitHubRelease": {
+    "zh-CN": "从 GitHub Release 导入",
+    "en-US": "Import from GitHub Release",
+    "ja-JP": "GitHub Releaseからインポート"
+  },
+  "Plugins.ThePluginProcessWillStopAndItsFilesAnd": {
+    "zh-CN": "将停止插件进程并移除插件文件与配置；音乐文件不受影响。对应音源歌曲将不再显示。",
+    "en-US": "The plugin process will stop and its files and configuration will be removed. Music files are unchanged. Its provider tracks will no longer appear.",
+    "ja-JP": "プラグインのプロセスを停止し、ファイルと設定を削除します。音楽ファイルは変更せず、この音源の曲は表示しなくなります。"
+  },
+  "Plugins.NoInstalledPlugins": {
+    "zh-CN": "没有已安装的插件",
+    "en-US": "No installed plugins",
+    "ja-JP": "インストール済みプラグインはありません"
+  },
+  "Plugins.DefaultLayoutRestoredMusicLikedSongsPlaylistsAndPlugin": {
+    "zh-CN": "默认布局已恢复 · 歌曲、收藏、歌单和插件配置均保留",
+    "en-US": "Default layout restored. Music, liked songs, playlists and plugin settings are unchanged.",
+    "ja-JP": "標準レイアウトに戻しました。曲、お気に入り、プレイリスト、プラグイン設定は変更しません。"
+  },
+  "Plugins.LayoutExportedWithoutMusicLibraryPlaybackSpeedPluginsOr": {
+    "zh-CN": "配置已导出，不包含曲库、倍速、插件或认证信息。",
+    "en-US": "Layout exported without music library, playback speed, plugins or credentials.",
+    "ja-JP": "音楽ライブラリ、再生速度、プラグイン、認証情報を含めずにレイアウトを書き出しました。"
+  },
+  "Plugins.ConfigurationExportedItExcludesTheLibraryPlaybackPositionPlugins": {
+    "zh-CN": "配置已导出，不包含曲库、播放进度、插件或认证信息。",
+    "en-US": "Configuration exported. It excludes the library, playback position, plugins and credentials.",
+    "ja-JP": "設定をエクスポートしました。ライブラリ・再生位置・プラグイン・認証情報は含まれません。"
+  },
+  "Plugins.EnablePlugin": {
+    "zh-CN": "启用插件",
+    "en-US": "Enable plugin",
+    "ja-JP": "プラグインを有効化"
+  },
+  "Plugins.EnableThisPagePluginFirst": {
+    "zh-CN": "请先启用这个页面插件。",
+    "en-US": "Enable this page plugin first.",
+    "ja-JP": "このページプラグインを先に有効にしてください。"
+  },
+  "Plugins.ChooseAnImppPackageForThisOperatingSystem": {
+    "zh-CN": "请选择适用于当前系统的 .impp 插件包。",
+    "en-US": "Choose an .impp package for this operating system.",
+    "ja-JP": "現在のOSに対応する.imppパッケージを選択してください。"
+  },
+  "Plugins.EnableThisPluginInThePluginManagerFirst": {
+    "zh-CN": "请在插件中心启用对应插件后再打开。",
+    "en-US": "Enable this plugin in the plugin manager first.",
+    "ja-JP": "プラグイン管理でこのプラグインを有効にしてください。"
+  },
+  "Plugins.Permissions": {
+    "zh-CN": "权限",
+    "en-US": "Permissions",
+    "ja-JP": "権限"
+  },
+  "Plugins.NoPluginsInstalled": {
+    "zh-CN": "尚未安装插件",
+    "en-US": "No plugins installed",
+    "ja-JP": "プラグインはインストールされていません"
+  },
+  "Plugins.EnterTheHTTPSURLOfAPublicReleaseLatest": {
+    "zh-CN": "输入公开 Release 版本页、latest 页或 .impp 附件的 HTTPS 链接。",
+    "en-US": "Enter the HTTPS URL of a public release, latest release or .impp asset.",
+    "ja-JP": "公開リリース、最新リリース、または.impp添付ファイルのHTTPS URLを入力してください。"
+  },
+  "Plugins.DisablePlugin": {
+    "zh-CN": "停用插件",
+    "en-US": "Disable plugin",
+    "ja-JP": "プラグインを無効化"
+  },
+  "Plugins.UnableToSaveSettingsCheckDataFolderPermissionsAnd": {
+    "zh-CN": "无法保存设置：请检查数据目录权限或磁盘空间",
+    "en-US": "Unable to save settings. Check data folder permissions and free disk space.",
+    "ja-JP": "設定を保存できません。データフォルダーの権限とディスクの空き容量をご確認ください。"
+  },
+  "Plugins.ChoosePluginPackage": {
+    "zh-CN": "选择插件包",
+    "en-US": "Choose Plugin Package",
+    "ja-JP": "プラグインパッケージを選択"
+  },
+  "Plugins.ChoosePluginAsset": {
+    "zh-CN": "选择插件附件",
+    "en-US": "Choose plugin asset",
+    "ja-JP": "プラグイン添付ファイルを選択"
+  },
+  "Plugins.LocalTracksExportedPluginTracksAreOmittedToKeep": {
+    "zh-CN": "已导出本地歌曲；插件音源不含服务器地址，未导出",
+    "en-US": "Local tracks exported. Plugin tracks are omitted to keep server addresses private.",
+    "ja-JP": "ローカルの曲を書き出しました。サーバーのアドレスを保護するためプラグインの曲は含めません。"
+  },
+  "Plugins.ImportedSongsFilesCouldNotBeReadCheckTheir": {
+    "zh-CN": "已导入 {0} 首歌曲，另有 {1} 项无法读取；请检查文件格式和访问权限。",
+    "en-US": "Imported {0} songs; {1} files could not be read. Check their formats and access permissions.",
+    "ja-JP": "{0} 曲をインポートしました。{1} 件を読み込めませんでした。形式とアクセス権限をご確認ください。"
+  },
+  "Plugins.DataIsUnchangedCheckThePluginSPageConfiguration": {
+    "zh-CN": "原数据未修改，请检查插件包中的页面配置。",
+    "en-US": "Data is unchanged. Check the plugin's page configuration.",
+    "ja-JP": "データは変更していません。プラグインのページ設定を確認してください。"
+  },
+  "Plugins.WaitForTheCurrentOperationBeforeInstallingAPlugin": {
+    "zh-CN": "正在处理其他操作，请等待完成后再安装插件。",
+    "en-US": "Wait for the current operation before installing a plugin.",
+    "ja-JP": "現在の操作が完了してからプラグインをインストールしてください。"
+  },
+  "Plugins.ReadingGitHubReleaseInformation": {
+    "zh-CN": "正在读取 GitHub Release 信息…",
+    "en-US": "Reading GitHub Release information…",
+    "ja-JP": "GitHub Release情報を読み込み中…"
+  },
+  "Plugins.DataMigrationIsInProgressChangePluginConfigurationAfter": {
+    "zh-CN": "正在复制数据目录，请稍后再修改插件配置。",
+    "en-US": "Data migration is in progress. Change plugin configuration after it finishes.",
+    "ja-JP": "データ移行中です。完了後にプラグイン設定を変更してください。"
+  },
+  "Plugins.FindingPluginAssets": {
+    "zh-CN": "正在获取插件附件",
+    "en-US": "Finding plugin assets",
+    "ja-JP": "プラグイン添付ファイルを取得中"
+  },
+  "Plugins.LoadingTheSourceLibraryThroughItsPlugin": {
+    "zh-CN": "正在通过插件读取音源曲库…",
+    "en-US": "Loading the source library through its plugin…",
+    "ja-JP": "プラグインから音源のライブラリを読み込み中…"
+  },
+  "Plugins.DownloadingPlugin": {
+    "zh-CN": "正在下载插件",
+    "en-US": "Downloading plugin",
+    "ja-JP": "プラグインをダウンロード中"
+  },
+  "Plugins.ResetLayoutPositionsAndDimensionsAndReplaceUnappliedEdits": {
+    "zh-CN": "只恢复界面位置和尺寸，未应用的编辑内容将替换。不影响歌曲、收藏、歌单或插件。",
+    "en-US": "Reset layout positions and dimensions and replace unapplied edits. Music, liked songs, playlists and plugins are unchanged.",
+    "ja-JP": "配置と寸法を初期化し、未適用の編集を置き換えます。曲、お気に入り、プレイリスト、プラグインは変更しません。"
+  },
+  "Plugins.ResetsOnlyInterfacePositionsSizesAndTheLayoutFile": {
+    "zh-CN": "只恢复界面位置和尺寸与配置文件。不影响歌曲、收藏、歌单或插件。",
+    "en-US": "Resets only interface positions, sizes and the layout file. Tracks, favorites, playlists and plugins are retained.",
+    "ja-JP": "画面の位置、サイズ、レイアウトファイルのみ初期化します。曲、お気に入り、プレイリスト、プラグインは保持されます。"
+  },
+  "Plugins.AuthorTypeVersionPermissionsInstalledPluginsAreDisabledBy": {
+    "zh-CN": "作者：{0}\n类型：{1} · 版本：{2}\n权限：{3}\n\n{4}\n\n安装后默认禁用。仅安装可信来源的插件。",
+    "en-US": "Author: {0}\nType: {1} · Version: {2}\nPermissions: {3}\n\n{4}\n\nInstalled plugins are disabled by default. Install only trusted plugins.",
+    "ja-JP": "作者：{0}\n種類：{1} · バージョン：{2}\n権限：{3}\n\n{4}\n\nインストール後は無効です。信頼できるプラグインのみインストールしてください。"
+  }
+}

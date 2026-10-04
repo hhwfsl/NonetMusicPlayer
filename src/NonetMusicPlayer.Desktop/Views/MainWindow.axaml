@@ -1,0 +1,1079 @@
+<Window
+    x:Class="NonetMusicPlayer.Desktop.Views.MainWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:NonetMusicPlayer.Desktop.Models"
+    xmlns:ui="using:NonetMusicPlayer.Desktop.Controls"
+    xmlns:vm="using:NonetMusicPlayer.Desktop.ViewModels"
+    Title="Nonet"
+    Width="1360"
+    Height="860"
+    MinWidth="640"
+    MinHeight="480"
+    x:DataType="vm:MainViewModel"
+    Background="Transparent"
+    Icon="/Assets/icon.ico"
+    TransparencyLevelHint="Transparent"
+    WindowDecorations="None"
+    WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Border
+            x:Name="WindowSurface"
+            Background="{DynamicResource AppBackgroundBrush}"
+            BorderBrush="{DynamicResource DividerBrush}"
+            BorderThickness="1"
+            ClipToBounds="True"
+            CornerRadius="12">
+            <Grid RowDefinitions="52,*">
+                <Image
+                    x:Name="AppBackgroundImage"
+                    Grid.RowSpan="2"
+                    IsHitTestVisible="False"
+                    Stretch="UniformToFill" />
+                <Border
+                    x:Name="TitleBarSurface"
+                    Grid.Row="0"
+                    Background="{DynamicResource TitleBarBackgroundBrush}"
+                    PointerPressed="TitleBar_PointerPressed"
+                    ZIndex="20">
+                    <Grid
+                        x:Name="TitleBarLayout"
+                        Margin="20,0,12,0"
+                        ColumnDefinitions="Auto,*,Auto">
+                        <StackPanel
+                            x:Name="TitleBrand"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="10">
+                            <Image
+                                Width="24"
+                                Height="24"
+                                Source="/Assets/icon.ico" />
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                FontWeight="SemiBold"
+                                Text="Nonet" />
+                            <TextBlock
+                                x:Name="ApplicationVersionLabel"
+                                Margin="4,0"
+                                VerticalAlignment="Center"
+                                FontSize="10"
+                                Foreground="{DynamicResource TextMutedBrush}"
+                                Text="{Binding VersionText}" />
+                        </StackPanel>
+                        <StackPanel
+                            x:Name="TitleButtons"
+                            Grid.Column="2"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="0">
+                            <Button
+                                x:Name="CloseWindowButton"
+                                AutomationProperties.Name="{ui:Loc Key='Common.Close'}"
+                                Background="#FF5F57"
+                                Classes="window-control"
+                                Click="CloseWindow_Click"
+                                ToolTip.Tip="{ui:Loc Key='Common.Close'}" />
+                            <Button
+                                x:Name="MinimizeWindowButton"
+                                AutomationProperties.Name="{ui:Loc Key='Common.Minimize'}"
+                                Background="#FEBC2E"
+                                Classes="window-control"
+                                Click="MinimizeWindow_Click"
+                                ToolTip.Tip="{ui:Loc Key='Common.Minimize'}" />
+                            <Button
+                                x:Name="MaximizeWindowButton"
+                                AutomationProperties.Name="{ui:Loc Key='Common.MaximizeOrRestore'}"
+                                Background="#28C840"
+                                Classes="window-control"
+                                Click="MaximizeWindow_Click"
+                                ToolTip.Tip="{ui:Loc Key='Common.MaximizeRestore'}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <ui:WorkspacePanel
+                    x:Name="Workspace"
+                    Grid.Row="1"
+                    ZIndex="20">
+                    <ui:LayoutWidget Key="Navigation" Label="导航">
+                        <ui:LayoutWidget.Child>
+                            <Border
+                                x:Name="SidebarPanel"
+                                Background="{DynamicResource NavigationBackgroundBrush}"
+                                BorderBrush="{DynamicResource DividerBrush}"
+                                BorderThickness="0,0,1,0">
+                                <Grid Margin="14,14,14,14" RowDefinitions="*,Auto">
+                                    <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Disabled">
+                                        <StackPanel Spacing="4">
+                                            <Button
+                                                x:Name="MyMusicHeading"
+                                                Classes="section-heading"
+                                                Click="ToggleMyMusic_Click">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <TextBlock Classes="eyebrow" Text="{ui:Loc Key='Library.MyMusic'}" />
+                                                    <TextBlock
+                                                        x:Name="MyMusicChevron"
+                                                        Grid.Column="1"
+                                                        Text="⌃" />
+                                                </Grid>
+                                            </Button>
+                                            <StackPanel x:Name="MyMusicNavigation" Spacing="4">
+                                                <Button
+                                                    Classes="nav"
+                                                    Click="Navigate_Click"
+                                                    Tag="library">
+                                                    <Grid ColumnDefinitions="32,*">
+                                                        <ui:VectorIcon HorizontalAlignment="Left" Kind="Home" />
+                                                        <TextBlock
+                                                            Grid.Column="1"
+                                                            VerticalAlignment="Center"
+                                                            Text="{ui:Loc Key='Home.Music'}" />
+                                                    </Grid>
+                                                </Button>
+                                                <Button
+                                                    Classes="nav"
+                                                    Click="Navigate_Click"
+                                                    Tag="history">
+                                                    <Grid ColumnDefinitions="32,*">
+                                                        <ui:VectorIcon HorizontalAlignment="Left" Kind="History" />
+                                                        <TextBlock
+                                                            Grid.Column="1"
+                                                            VerticalAlignment="Center"
+                                                            Text="{ui:Loc Key='Playback.RecentlyPlayed'}" />
+                                                    </Grid>
+                                                </Button>
+                                                <Button
+                                                    Classes="nav"
+                                                    Click="Navigate_Click"
+                                                    Tag="statistics">
+                                                    <Grid ColumnDefinitions="32,*">
+                                                        <ui:VectorIcon HorizontalAlignment="Left" Kind="Statistics" />
+                                                        <TextBlock
+                                                            Grid.Column="1"
+                                                            VerticalAlignment="Center"
+                                                            Text="{ui:Loc Key='Statistics.ListeningStatistics'}" />
+                                                    </Grid>
+                                                </Button>
+                                            </StackPanel>
+                                            <Border
+                                                Height="1"
+                                                Margin="10,14,10,4"
+                                                Background="{DynamicResource DividerBrush}" />
+                                            <Grid Margin="12,4,4,4" ColumnDefinitions="*,Auto,Auto">
+                                                <TextBlock
+                                                    VerticalAlignment="Center"
+                                                    Classes="eyebrow"
+                                                    Text="{ui:Loc Key='Playlists.Playlists'}" />
+                                                <Button
+                                                    Grid.Column="1"
+                                                    Classes="transport"
+                                                    Click="CreatePlaylist_Click"
+                                                    ToolTip.Tip="{ui:Loc Key='Playlists.NewPlaylist'}">
+                                                    <ui:VectorIcon Kind="Plus" />
+                                                </Button>
+                                                <Button x:Name="PlaylistsCollapseButton" Grid.Column="2"
+                                                        Classes="transport" Click="TogglePlaylists_Click"
+                                                        ToolTip.Tip="{ui:Loc Key='Common.Collapse'}">
+                                                    <ui:VectorIcon x:Name="PlaylistsChevron" Kind="ChevronUp" />
+                                                </Button>
+                                            </Grid>
+                                            <StackPanel x:Name="PlaylistNavigation" Spacing="3" />
+                                            <StackPanel
+                                                x:Name="PluginSection"
+                                                IsVisible="False"
+                                                Spacing="4">
+                                                <Border
+                                                    Height="1"
+                                                    Margin="10,14,10,4"
+                                                    Background="{DynamicResource DividerBrush}" />
+                                                <Button Classes="section-heading" Click="TogglePlugins_Click">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <TextBlock Classes="eyebrow" Text="{ui:Loc Key='Plugins.Plugins'}" />
+                                                        <TextBlock
+                                                            x:Name="PluginsChevron"
+                                                            Grid.Column="1"
+                                                            Text="⌃" />
+                                                    </Grid>
+                                                </Button>
+                                                <StackPanel x:Name="PluginNavigation" Spacing="3" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                    <StackPanel
+                                        Grid.Row="1"
+                                        Margin="0,12,0,0"
+                                        Spacing="4">
+                                        <Border
+                                            Height="1"
+                                            Margin="10,0,10,10"
+                                            Background="{DynamicResource DividerBrush}" />
+                                        <Button
+                                            Classes="nav"
+                                            Click="Navigate_Click"
+                                            Tag="plugins">
+                                            <Grid ColumnDefinitions="32,*">
+                                                <ui:VectorIcon HorizontalAlignment="Left" Kind="Plugins" />
+                                                <TextBlock
+                                                    Grid.Column="1"
+                                                    VerticalAlignment="Center"
+                                                    Text="{ui:Loc Key='Plugins.PluginManager'}" />
+                                            </Grid>
+                                        </Button>
+                                        <Button
+                                            Classes="nav"
+                                            Click="Navigate_Click"
+                                            Tag="terminal">
+                                            <Grid ColumnDefinitions="32,*">
+                                                <ui:VectorIcon HorizontalAlignment="Left" Kind="Terminal" />
+                                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{ui:Loc Key='Terminal.Title'}" />
+                                            </Grid>
+                                        </Button>
+                                        <Button
+                                            Classes="nav"
+                                            Click="Navigate_Click"
+                                            Tag="settings">
+                                            <Grid ColumnDefinitions="32,*">
+                                                <ui:VectorIcon HorizontalAlignment="Left" Kind="Settings" />
+                                                <TextBlock
+                                                    Grid.Column="1"
+                                                    VerticalAlignment="Center"
+                                                    Text="{ui:Loc Key='Common.Settings'}" />
+                                            </Grid>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </ui:LayoutWidget.Child>
+                    </ui:LayoutWidget>
+                    <ui:LayoutWidget Key="Content" Label="主内容">
+                        <ui:LayoutWidget.Child>
+                            <Border x:Name="ContentSurface" Background="{DynamicResource ContentBackgroundBrush}">
+                                <Grid
+                                    x:Name="PageContentGrid"
+                                    Margin="30,24,30,12"
+                                    RowDefinitions="Auto,*">
+                                    <Grid Margin="0,0,0,12" RowDefinitions="Auto,Auto,Auto">
+                                        <Grid
+                                            x:Name="PageHeading"
+                                            ColumnDefinitions="*,Auto"
+                                            RowDefinitions="Auto,Auto">
+                                            <StackPanel
+                                                x:Name="PageHeadingLabel"
+                                                Margin="0,0,18,0"
+                                                Spacing="6">
+                                                <TextBlock
+                                                    FontSize="26"
+                                                    FontWeight="SemiBold"
+                                                    Text="{Binding PageTitle}"
+                                                    TextTrimming="CharacterEllipsis" />
+                                                <TextBlock
+                                                    x:Name="TrackCountLabel"
+                                                    Foreground="{DynamicResource TextSecondaryBrush}"
+                                                    Text="{Binding TrackCountText}" />
+                                            </StackPanel>
+                                            <Button x:Name="PageBackToTop" Grid.Column="1" IsVisible="False"
+                                                    Width="44" Height="44" Classes="transport" Click="PageBackToTop_Click"
+                                                    AutomationProperties.Name="{ui:Loc Key='Common.BackToTop'}"
+                                                    ToolTip.Tip="{ui:Loc Key='Common.BackToTop'}">
+                                                <ui:VectorIcon Kind="BackToTop" />
+                                            </Button>
+                                            <Button
+                                                x:Name="UserManualButton"
+                                                Grid.Column="1"
+                                                Click="UserManual_Click"
+                                                IsVisible="False">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <ui:VectorIcon Kind="Help" />
+                                                    <TextBlock Text="{ui:Loc Key='Common.UserManual'}" />
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
+                                        <ContentControl
+                                            x:Name="PlaylistHeader"
+                                            Grid.Row="1"
+                                            Margin="0,18,0,0"
+                                            IsVisible="False" />
+                                        <Grid
+                                            x:Name="LibraryActions"
+                                            Grid.Row="2"
+                                            Margin="0,18,0,0"
+                                            ColumnDefinitions="Auto,*"
+                                            ColumnSpacing="12">
+                                            <Grid
+                                                x:Name="SelectionToolbar"
+                                                MinHeight="38"
+                                                VerticalAlignment="Center"
+                                                ColumnDefinitions="Auto,Auto,Auto"
+                                                IsVisible="False">
+                                                <CheckBox
+                                                    x:Name="SelectionToggle"
+                                                    VerticalAlignment="Center"
+                                                    Click="SelectionToggle_Click"
+                                                    Content="{ui:Loc Key='Playlists.SelectAll'}"
+                                                    IsThreeState="True"
+                                                    ToolTip.Tip="{ui:Loc Key='Common.ClickToSelectAllMixedStateMeansPartialSelection'}" />
+                                                <TextBlock
+                                                    x:Name="SelectionCountText"
+                                                    Grid.Column="1"
+                                                    Margin="10,0"
+                                                    VerticalAlignment="Center"
+                                                    FontSize="12"
+                                                    Foreground="{DynamicResource TextMutedBrush}"
+                                                    Text="{ui:Loc Key='Common.TracksSelected'}" />
+                                                <Button
+                                                    x:Name="BatchActionsButton"
+                                                    Grid.Column="2"
+                                                    Classes="quiet"
+                                                    Click="BatchActions_Click"
+                                                    IsEnabled="False">
+                                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                                        <ui:VectorIcon
+                                                            Width="16"
+                                                            Height="16"
+                                                            Kind="More" />
+                                                        <TextBlock FontSize="12" Text="{ui:Loc Key='Common.SelectedTrackActions'}" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </Grid>
+                                            <WrapPanel
+                                                x:Name="LibraryActionsFlow"
+                                                Grid.Column="1"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center">
+                                                <Grid
+                                                    x:Name="SearchContainer"
+                                                    Width="270"
+                                                    Height="44"
+                                                    VerticalAlignment="Center"
+                                                    ClipToBounds="True">
+                                                    <TextBox
+                                                        x:Name="LibrarySearch"
+                                                        Height="44"
+                                                        Padding="44,10,44,10"
+                                                        AutomationProperties.Name="{ui:Loc Key='Library.SearchMusic'}"
+                                                        Classes="web-search"
+                                                        PlaceholderText="{ui:Loc Key='Library.SearchTracksArtistsAlbums'}"
+                                                        Text="{Binding SearchText, Mode=OneWay}" />
+                                                    <Button
+                                                        x:Name="ExecuteSearchButton"
+                                                        Width="40"
+                                                        Height="40"
+                                                        HorizontalAlignment="Left"
+                                                        VerticalAlignment="Center"
+                                                        Classes="search-icon"
+                                                        Click="ExecuteSearch_Click"
+                                                        ToolTip.Tip="{ui:Loc Key='Common.Search'}">
+                                                        <ui:VectorIcon Kind="Search" />
+                                                    </Button>
+                                                    <Button
+                                                        x:Name="ClearSearchButton"
+                                                        Width="40"
+                                                        Height="40"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Center"
+                                                        Classes="search-icon"
+                                                        Click="ClearSearch_Click"
+                                                        ToolTip.Tip="{ui:Loc Key='Common.ClearSearch'}">
+                                                        <ui:VectorIcon
+                                                            Width="16"
+                                                            Height="16"
+                                                            Kind="Close" />
+                                                    </Button>
+                                                </Grid>
+                                                <Button
+                                                    x:Name="LibraryAddFiles"
+                                                    Width="44"
+                                                    Height="44"
+                                                    AutomationProperties.Name="{ui:Loc Key='Library.AddMusic'}"
+                                                    Classes="transport"
+                                                    Click="AddFiles_Click"
+                                                    ToolTip.Tip="{ui:Loc Key='Library.AddMusic'}">
+                                                    <ui:VectorIcon Kind="FileAdd" />
+                                                </Button>
+                                                <Button
+                                                    x:Name="LibraryAddFolder"
+                                                    Width="44"
+                                                    Height="44"
+                                                    AutomationProperties.Name="{ui:Loc Key='Common.AddFolder'}"
+                                                    Classes="transport"
+                                                    Click="AddFolder_Click"
+                                                    ToolTip.Tip="{ui:Loc Key='Common.AddFolder'}">
+                                                    <ui:VectorIcon Kind="Folder" />
+                                                </Button>
+                                                <Button
+                                                    Width="44"
+                                                    Height="44"
+                                                    AutomationProperties.Name="{ui:Loc Key='Common.More9F07D2'}"
+                                                    Classes="transport"
+                                                    Click="LibraryMore_Click"
+                                                    ToolTip.Tip="{ui:Loc Key='Common.More9F07D2'}">
+                                                    <ui:VectorIcon Kind="More" />
+                                                </Button>
+                                                <Button
+                                                    x:Name="BatchEntryButton"
+                                                    Width="44"
+                                                    Height="44"
+                                                    AutomationProperties.Name="{ui:Loc Key='Playlists.SelectTracks'}"
+                                                    Classes="transport"
+                                                    Click="BatchEntry_Click"
+                                                    ToolTip.Tip="{ui:Loc Key='Playlists.SelectTracks'}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                                        <ui:VectorIcon x:Name="BatchEntryIcon" Kind="SelectAll" />
+                                                        <TextBlock
+                                                            x:Name="BatchEntryLabel"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="12"
+                                                            IsVisible="False"
+                                                            Text="{ui:Loc Key='Playlists.DoneSelecting'}" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button
+                                                    x:Name="TracksBackToTop"
+                                                    Width="44" Height="44" Classes="transport"
+                                                    Click="BackToTop_Click"
+                                                    AutomationProperties.Name="{ui:Loc Key='Common.BackToTop'}"
+                                                    ToolTip.Tip="{ui:Loc Key='Common.BackToTop'}">
+                                                    <ui:VectorIcon Kind="BackToTop" />
+                                                </Button>
+                                                <Button
+                                                    Width="44"
+                                                    Height="44"
+                                                    Classes="transport"
+                                                    Click="CancelImport_Click"
+                                                    IsVisible="{Binding IsBusy}"
+                                                    ToolTip.Tip="{ui:Loc Key='Common.CancelImport'}">
+                                                    <ui:VectorIcon Kind="Close" />
+                                                </Button>
+                                            </WrapPanel>
+                                        </Grid>
+                                    </Grid>
+                                    <Grid
+                                        x:Name="LibraryPage"
+                                        Grid.Row="1"
+                                        RowDefinitions="Auto,36,*">
+                                        <Grid
+                                            x:Name="TrackHeader"
+                                            Grid.Row="1"
+                                            Margin="12,0,12,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="{DynamicResource TrackSelectionColumnWidth}" />
+                                                <ColumnDefinition Width="34" />
+                                                <ColumnDefinition Width="48" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="{DynamicResource ArtistColumnWidth}" />
+                                                <ColumnDefinition Width="{DynamicResource AlbumColumnWidth}" />
+                                                <ColumnDefinition Width="56" />
+                                                <ColumnDefinition Width="144" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock
+                                                Grid.Column="0"
+                                                Classes="eyebrow"
+                                                Text="{ui:Loc Key='Common.Select'}" />
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                Classes="eyebrow"
+                                                Text="#" />
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                Classes="eyebrow"
+                                                Text="{ui:Loc Key='Common.Artwork'}" />
+                                            <TextBlock
+                                                Grid.Column="3"
+                                                Classes="eyebrow"
+                                                Text="{ui:Loc Key='Common.Title'}" />
+                                            <TextBlock
+                                                Grid.Column="4"
+                                                Classes="eyebrow"
+                                                Text="{ui:Loc Key='Library.Artists'}" />
+                                            <TextBlock
+                                                Grid.Column="5"
+                                                Classes="eyebrow"
+                                                Text="{ui:Loc Key='Library.Albums'}" />
+                                            <TextBlock
+                                                Grid.Column="6"
+                                                Classes="eyebrow"
+                                                Text="{ui:Loc Key='Common.Duration'}" />
+                                            <TextBlock
+                                                Grid.Column="7"
+                                                Classes="eyebrow"
+                                                Text="{ui:Loc Key='Common.Actions'}" />
+                                        </Grid>
+                                        <ui:TrackListBox
+                                            x:Name="TracksList"
+                                            Grid.Row="2"
+                                            DoubleTapped="TracksList_DoubleTapped"
+                                            DragDrop.AllowDrop="True"
+                                            DragDrop.Drop="Library_Drop"
+                                            ItemsSource="{Binding VisibleTracks}"
+                                            ScrollViewer.BringIntoViewOnFocusChange="False"
+                                            SelectionMode="Multiple">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate x:DataType="models:TrackItem">
+                                                    <Border
+                                                        Classes="track-row-surface"
+                                                        Classes.playing="{Binding IsPlayingHere}"
+                                                        ClipToBounds="True"
+                                                        CornerRadius="{DynamicResource ControlCornerRadius}">
+                                                        <Grid
+                                                            MinHeight="{DynamicResource TrackRowMinHeight}"
+                                                            Margin="12,0"
+                                                            Classes="track-row"
+                                                            Classes.playing="{Binding IsPlayingHere}">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="{DynamicResource TrackSelectionColumnWidth}" />
+                                                                <ColumnDefinition Width="34" />
+                                                                <ColumnDefinition Width="{DynamicResource TrackArtworkColumnWidth}" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="{DynamicResource ArtistColumnWidth}" />
+                                                                <ColumnDefinition Width="{DynamicResource AlbumColumnWidth}" />
+                                                                <ColumnDefinition Width="{DynamicResource TrackDurationColumnWidth}" />
+                                                                <ColumnDefinition Width="{DynamicResource TrackActionsColumnWidth}" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <CheckBox
+                                                                VerticalAlignment="Center"
+                                                                AutomationProperties.Name="{ui:Loc Key='Common.SelectThisTrack'}"
+                                                                Classes="song-selector"
+                                                                IsChecked="{Binding $parent[ListBoxItem].IsSelected, Mode=TwoWay}"
+                                                                IsVisible="{Binding $parent[ui:TrackListBox].BatchMode}"
+                                                                ToolTip.Tip="{ui:Loc Key='Common.SelectThisTrack'}" />
+                                                            <TextBlock
+                                                                Grid.Column="1"
+                                                                VerticalAlignment="Center"
+                                                                FontSize="12"
+                                                                Foreground="{DynamicResource TextMutedBrush}"
+                                                                Text="{Binding DisplayIndex}" />
+                                                            <Border
+                                                                Grid.Column="2"
+                                                                Width="40"
+                                                                Height="40"
+                                                                HorizontalAlignment="Left"
+                                                                Background="{DynamicResource SurfaceRaisedBrush}"
+                                                                ClipToBounds="True"
+                                                                CornerRadius="7"
+                                                                IsVisible="{DynamicResource ShowTrackArtwork}">
+                                                                <Grid>
+                                                                    <ui:VectorIcon
+                                                                        Width="24"
+                                                                        Height="24"
+                                                                        Kind="Music" />
+                                                                    <Image Source="{Binding Artwork}" Stretch="UniformToFill" />
+                                                                </Grid>
+                                                            </Border>
+                                                            <TextBlock
+                                                                Grid.Column="3"
+                                                                Margin="0,0,12,0"
+                                                                VerticalAlignment="Center"
+                                                                Classes="track-title"
+                                                                FontWeight="Medium"
+                                                                Text="{Binding Title}"
+                                                                TextTrimming="CharacterEllipsis"
+                                                                ToolTip.Tip="{Binding Title}" />
+                                                            <TextBlock
+                                                                Grid.Column="4"
+                                                                Margin="0,0,12,0"
+                                                                VerticalAlignment="Center"
+                                                                Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                IsVisible="{DynamicResource ShowTrackMetadata}"
+                                                                Text="{Binding Artist}"
+                                                                TextTrimming="CharacterEllipsis"
+                                                                ToolTip.Tip="{Binding Artist}" />
+                                                            <TextBlock
+                                                                Grid.Column="5"
+                                                                Margin="0,0,12,0"
+                                                                VerticalAlignment="Center"
+                                                                Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                IsVisible="{DynamicResource ShowTrackMetadata}"
+                                                                Text="{Binding Album}"
+                                                                TextTrimming="CharacterEllipsis"
+                                                                ToolTip.Tip="{Binding Album}" />
+                                                            <TextBlock
+                                                                Grid.Column="6"
+                                                                VerticalAlignment="Center"
+                                                                FontSize="12"
+                                                                Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                IsVisible="{DynamicResource ShowTrackDuration}"
+                                                                Text="{Binding DurationText}" />
+                                                            <Grid Grid.Column="7" VerticalAlignment="Center">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="{DynamicResource TrackActionColumnWidth}" />
+                                                                    <ColumnDefinition Width="{DynamicResource TrackActionColumnWidth}" />
+                                                                    <ColumnDefinition Width="{DynamicResource TrackActionColumnWidth}" />
+                                                                    <ColumnDefinition Width="{DynamicResource TrackActionColumnWidth}" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <Button
+                                                                    AutomationProperties.Name="{ui:Loc Key='Playback.PlayThisTrack'}"
+                                                                    Classes="transport"
+                                                                    Click="TrackPlay_Click"
+                                                                    ToolTip.Tip="{ui:Loc Key='Playback.PlayThisTrack'}">
+                                                                    <ui:VectorIcon
+                                                                        Width="18"
+                                                                        Height="18"
+                                                                        Kind="Play" />
+                                                                </Button>
+                                                                <Button
+                                                                    Grid.Column="1"
+                                                                    AutomationProperties.Name="{ui:Loc Key='Playlists.LikeOrUnlike'}"
+                                                                    Classes="transport"
+                                                                    Click="TrackFavorite_Click"
+                                                                    ToolTip.Tip="{ui:Loc Key='Playlists.LikeUnlike'}">
+                                                                    <Grid>
+                                                                        <ui:VectorIcon IsVisible="{Binding !IsFavorite}" Kind="Heart" />
+                                                                        <ui:VectorIcon
+                                                                            Brush="#F0526C"
+                                                                            Filled="True"
+                                                                            IsVisible="{Binding IsFavorite}"
+                                                                            Kind="Heart" />
+                                                                    </Grid>
+                                                                </Button>
+                                                                <Button
+                                                                    Grid.Column="2"
+                                                                    AutomationProperties.Name="{ui:Loc Key='Common.TrackInformation'}"
+                                                                    Classes="transport"
+                                                                    Click="TrackInfo_Click"
+                                                                    ToolTip.Tip="{ui:Loc Key='Common.TrackInformation'}">
+                                                                    <ui:VectorIcon Kind="Info" />
+                                                                </Button>
+                                                                <Button
+                                                                    Grid.Column="3"
+                                                                    AutomationProperties.Name="{ui:Loc Key='Common.MoreTrackActions'}"
+                                                                    Classes="transport"
+                                                                    Click="TrackMore_Click"
+                                                                    ToolTip.Tip="{ui:Loc Key='Common.MoreTrackActions'}">
+                                                                    <ui:VectorIcon Kind="More" />
+                                                                </Button>
+                                                            </Grid>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ui:TrackListBox>
+                                        <StackPanel
+                                            Grid.Row="2"
+                                            MaxWidth="480"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            IsHitTestVisible="False"
+                                            IsVisible="{Binding IsEmptyStateVisible}"
+                                            Spacing="14">
+                                            <ui:VectorIcon
+                                                Width="60"
+                                                Height="60"
+                                                HorizontalAlignment="Center"
+                                                Brush="{DynamicResource AccentBrush}"
+                                                Kind="Music" />
+                                            <TextBlock
+                                                FontSize="23"
+                                                FontWeight="SemiBold"
+                                                Text="{Binding EmptyStateTitle}"
+                                                TextAlignment="Center" />
+                                            <TextBlock
+                                                Foreground="{DynamicResource TextSecondaryBrush}"
+                                                LineHeight="24"
+                                                Text="{Binding EmptyStateDescription}"
+                                                TextAlignment="Center"
+                                                TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <ContentControl
+                                        x:Name="AlternatePage"
+                                        Grid.Row="1"
+                                        IsVisible="False" />
+                                </Grid>
+                            </Border>
+                        </ui:LayoutWidget.Child>
+                    </ui:LayoutWidget>
+                    <ui:LayoutWidget
+                        Key="Player"
+                        ClipToBounds="False"
+                        Label="播放栏"
+                        ZIndex="30">
+                        <ui:LayoutWidget.Child>
+                            <Border
+                                x:Name="PlayerSurface"
+                                Background="{DynamicResource PlayerBackgroundBrush}"
+                                DragDrop.AllowDrop="True"
+                                DragDrop.Drop="Player_Drop">
+                                <Grid ColumnDefinitions="*" RowDefinitions="0,*">
+                                    <Grid
+                                        x:Name="PlayerColumns"
+                                        Grid.Row="1"
+                                        Margin="24,10,24,10"
+                                        ColumnDefinitions="*,210,*"
+                                        RowDefinitions="0,*">
+                                        <Grid
+                                            Grid.Row="1"
+                                            ColumnDefinitions="80,*"
+                                            RowDefinitions="*,*">
+                                            <Button
+                                                x:Name="PlayerArtwork"
+                                                Grid.RowSpan="2"
+                                                Width="60"
+                                                Height="60"
+                                                Padding="0"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Center"
+                                                AutomationProperties.Name="{ui:Loc Key='Lyrics.OpenLyrics'}"
+                                                Classes="cover"
+                                                Click="ShowLyrics_Click"
+                                                HorizontalContentAlignment="Stretch"
+                                                VerticalContentAlignment="Stretch"
+                                                ToolTip.Tip="{ui:Loc Key='Lyrics.OpenLyrics'}">
+                                                <Border
+                                                    Background="{DynamicResource SurfaceRaisedBrush}"
+                                                    ClipToBounds="True"
+                                                    CornerRadius="15">
+                                                    <Grid>
+                                                        <ui:VectorIcon
+                                                            Width="24"
+                                                            Height="24"
+                                                            Kind="Music" />
+                                                        <Image Source="{Binding CurrentArtwork}" Stretch="UniformToFill" />
+                                                    </Grid>
+                                                </Border>
+                                            </Button>
+                                            <TextBlock
+                                                x:Name="PlayerTitle"
+                                                Grid.Column="1"
+                                                Margin="0,0,12,3"
+                                                VerticalAlignment="Bottom"
+                                                FontSize="18"
+                                                FontWeight="Bold"
+                                                Text="{Binding CurrentTitle}"
+                                                TextTrimming="CharacterEllipsis"
+                                                ToolTip.Tip="{Binding CurrentTitle}" />
+                                            <TextBlock
+                                                x:Name="PlayerArtist"
+                                                Grid.Row="1"
+                                                Grid.Column="1"
+                                                Margin="0,3,12,0"
+                                                VerticalAlignment="Top"
+                                                FontSize="16"
+                                                FontWeight="SemiBold"
+                                                Foreground="{DynamicResource TextSecondaryBrush}"
+                                                Text="{Binding CurrentArtist}"
+                                                TextTrimming="CharacterEllipsis"
+                                                ToolTip.Tip="{Binding CurrentArtist}" />
+                                        </Grid>
+                                        <Grid
+                                            Grid.Row="1"
+                                            Grid.Column="1"
+                                            ColumnDefinitions="70,70,70">
+                                            <Button
+                                                x:Name="PlayerPrevious"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                AutomationProperties.Name="{ui:Loc Key='Common.Previous'}"
+                                                Classes="player-control"
+                                                Command="{Binding PlayPreviousCommand}"
+                                                ToolTip.Tip="{ui:Loc Key='Common.PreviousCtrl'}">
+                                                <ui:VectorIcon Kind="Previous" />
+                                            </Button>
+                                            <Button
+                                                x:Name="PlayerPlay"
+                                                Grid.Column="1"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                AutomationProperties.Name="{ui:Loc Key='Playback.PlayOrPause'}"
+                                                Classes="player-control"
+                                                Command="{Binding TogglePlayPauseCommand}"
+                                                ToolTip.Tip="{ui:Loc Key='Playback.PlayPauseSpace'}">
+                                                <Grid>
+                                                    <ui:VectorIcon IsVisible="{Binding !IsPlaying}" Kind="Play" />
+                                                    <ui:VectorIcon IsVisible="{Binding IsPlaying}" Kind="Pause" />
+                                                </Grid>
+                                            </Button>
+                                            <Button
+                                                x:Name="PlayerNext"
+                                                Grid.Column="2"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                AutomationProperties.Name="{ui:Loc Key='Common.Next'}"
+                                                Classes="player-control"
+                                                Command="{Binding PlayNextCommand}"
+                                                ToolTip.Tip="{ui:Loc Key='Common.NextCtrl'}">
+                                                <ui:VectorIcon Kind="Next" />
+                                            </Button>
+                                        </Grid>
+                                        <Grid
+                                            Grid.Row="1"
+                                            Grid.Column="2"
+                                            HorizontalAlignment="Right"
+                                            ColumnDefinitions="112,45,45,45,45,45">
+                                            <StackPanel
+                                                x:Name="PlayerTime"
+                                                MinWidth="80"
+                                                MinHeight="16"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Orientation="Horizontal"
+                                                Spacing="5">
+                                                <TextBlock
+                                                    FontSize="13"
+                                                    Foreground="{DynamicResource TextSecondaryBrush}"
+                                                    Text="{Binding PositionText}" />
+                                                <TextBlock
+                                                    FontSize="13"
+                                                    Foreground="{DynamicResource TextMutedBrush}"
+                                                    Text="/" />
+                                                <TextBlock
+                                                    FontSize="13"
+                                                    Foreground="{DynamicResource TextMutedBrush}"
+                                                    Text="{Binding DurationText}" />
+                                            </StackPanel>
+                                            <Button
+                                                x:Name="PlayerMode"
+                                                Grid.Column="1"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                AutomationProperties.Name="{ui:Loc Key='Playback.ChoosePlaybackMode'}"
+                                                Classes="player-tool"
+                                                Click="PlayMode_Click"
+                                                ToolTip.Tip="{Binding ModeDescription}">
+                                                <ui:VectorIcon Kind="{Binding ModeIcon}" />
+                                            </Button>
+                                            <Button
+                                                x:Name="PlayerFavorite"
+                                                Grid.Column="2"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                AutomationProperties.Name="{ui:Loc Key='Playlists.LikeOrUnlike'}"
+                                                Classes="player-tool"
+                                                Click="CurrentFavorite_Click"
+                                                IsEnabled="{Binding HasCurrentTrack}"
+                                                ToolTip.Tip="{ui:Loc Key='Playlists.AddToRemoveFromLikedSongsCtrlD'}">
+                                                <Grid>
+                                                    <ui:VectorIcon IsVisible="{Binding !CurrentIsFavorite}" Kind="Heart" />
+                                                    <ui:VectorIcon
+                                                        x:Name="FavoriteActiveIcon"
+                                                        Brush="#F0526C"
+                                                        Filled="True"
+                                                        IsVisible="{Binding CurrentIsFavorite}"
+                                                        Kind="Heart" />
+                                                </Grid>
+                                            </Button>
+                                            <Button
+                                                x:Name="PlayerMore"
+                                                Grid.Column="3"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                AutomationProperties.Name="{ui:Loc Key='Common.MoreActionsForTheCurrentSong'}"
+                                                Classes="player-tool"
+                                                Click="PlayerMore_Click"
+                                                ToolTip.Tip="{ui:Loc Key='Common.MoreActionsForTheCurrentSong'}">
+                                                <ui:VectorIcon Kind="More" />
+                                            </Button>
+                                            <Button
+                                                x:Name="PlayerVolume"
+                                                Grid.Column="4"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                AutomationProperties.Name="{ui:Loc Key='Playback.VolumeControl'}"
+                                                Classes="player-tool"
+                                                ToolTip.Tip="{ui:Loc Key='Playback.AdjustVolume'}">
+                                                <Grid>
+                                                    <ui:VectorIcon IsVisible="{Binding !IsMuted}" Kind="Volume" />
+                                                    <ui:VectorIcon IsVisible="{Binding IsMuted}" Kind="Mute" />
+                                                </Grid>
+                                                <Button.Flyout>
+                                                    <Flyout OverlayDismissEventPassThrough="True" Placement="Top">
+                                                        <StackPanel Width="64" Spacing="8">
+                                                            <Slider
+                                                                x:Name="VolumeSlider"
+                                                                Height="100"
+                                                                HorizontalAlignment="Center"
+                                                                AutomationProperties.Name="{ui:Loc Key='Playback.VolumePercentage'}"
+                                                                Maximum="100"
+                                                                Minimum="0"
+                                                                Orientation="Vertical"
+                                                                Value="{Binding Volume, Mode=TwoWay}" />
+                                                            <TextBlock
+                                                                HorizontalAlignment="Center"
+                                                                Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                Text="{Binding VolumeText}" />
+                                                        </StackPanel>
+                                                    </Flyout>
+                                                </Button.Flyout>
+                                            </Button>
+                                            <Button
+                                                x:Name="PlayerDesktopLyrics"
+                                                Grid.Column="5"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                AutomationProperties.Name="{ui:Loc Key='Lyrics.DesktopLyrics'}"
+                                                Classes="player-tool"
+                                                Click="DesktopLyrics_Click"
+                                                ToolTip.Tip="{ui:Loc Key='Lyrics.ShowHideDesktopLyrics'}">
+                                                <ui:VectorIcon Kind="Lyrics" />
+                                            </Button>
+                                        </Grid>
+                                    </Grid>
+                                    <ui:PlayerProgressSlider
+                                        x:Name="PlaybackSlider"
+                                        ui:FullTextToolTips.Enabled="False"
+                                        Height="24"
+                                        MinHeight="24"
+                                        Margin="0,-12,0,0"
+                                        VerticalAlignment="Top"
+                                        AutomationProperties.Name="{ui:Loc Key='Playback.PlaybackProgress'}"
+                                        IsEnabled="{Binding HasCurrentTrack}"
+                                        Maximum="{Binding PlaybackDuration}"
+                                        Minimum="0"
+                                        PointerReleased="PlaybackSlider_Released"
+                                        ZIndex="20"
+                                        Value="{Binding PlaybackPosition, Mode=OneWay}" />
+                                    <Border
+                                        x:Name="PlayerResizeGrip"
+                                        Grid.Row="1"
+                                        Width="88"
+                                        Height="12"
+                                        Margin="0,12,0,0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Top"
+                                        AutomationProperties.Name="{ui:Loc Key='Playback.ResizePlayerBar'}"
+                                        Background="Transparent"
+                                        Cursor="SizeNorthSouth"
+                                        PointerPressed="PlayerResizeGrip_PointerPressed"
+                                        ToolTip.Tip="{ui:Loc Key='Playback.DragToResizeThePlayerBar'}"
+                                        ZIndex="25">
+                                        <Border
+                                            Width="44"
+                                            Height="3"
+                                            Background="{DynamicResource TextMutedBrush}"
+                                            CornerRadius="2"
+                                            IsHitTestVisible="False"
+                                            Opacity="0.55" />
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </ui:LayoutWidget.Child>
+                    </ui:LayoutWidget>
+                </ui:WorkspacePanel>
+                <ContentControl
+                    x:Name="FullLyricsHost"
+                    Grid.RowSpan="2"
+                    Padding="24,56,24,12"
+                    Background="{DynamicResource ContentBackgroundBrush}"
+                    IsVisible="False"
+                    ZIndex="10" />
+            </Grid>
+        </Border>
+        <StackPanel
+            x:Name="NotificationHost"
+            MaxWidth="440"
+            Margin="24,68,24,0"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Spacing="10"
+            ZIndex="100">
+            <Border
+                x:Name="NotificationBar"
+                Padding="16"
+                Background="{DynamicResource SurfaceRaisedBrush}"
+                BorderBrush="{DynamicResource AccentBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                IsVisible="False">
+                <Grid ColumnDefinitions="24,*,28">
+                    <ui:VectorIcon
+                        x:Name="NotificationIcon"
+                        Margin="0,2,0,0"
+                        VerticalAlignment="Top"
+                        Brush="{DynamicResource AccentBrush}"
+                        Kind="Info" />
+                    <StackPanel
+                        Grid.Column="1"
+                        Margin="10,0"
+                        Spacing="6">
+                        <TextBlock x:Name="NotificationTitle" FontWeight="SemiBold" />
+                        <TextBlock
+                            x:Name="NotificationMessage"
+                            Foreground="{DynamicResource TextSecondaryBrush}"
+                            TextWrapping="Wrap" />
+                        <TextBlock
+                            x:Name="NotificationRemaining"
+                            FontSize="11"
+                            Foreground="{DynamicResource TextMutedBrush}"
+                            IsVisible="False" />
+                    </StackPanel>
+                    <Button
+                        Grid.Column="2"
+                        Width="28"
+                        Height="28"
+                        AutomationProperties.Name="{ui:Loc Key='Common.ExitApplication56F252'}"
+                        Classes="transport"
+                        Click="DismissNotification_Click"
+                        ToolTip.Tip="{ui:Loc Key='Common.ExitApplication56F252'}">
+                        <ui:VectorIcon
+                            Width="16"
+                            Height="16"
+                            Kind="Close" />
+                    </Button>
+                </Grid>
+            </Border>
+        </StackPanel>
+        <Border
+            Height="5"
+            VerticalAlignment="Top"
+            Background="Transparent"
+            Cursor="SizeNorthSouth"
+            PointerPressed="ResizeBorder_PointerPressed"
+            Tag="Top" />
+        <Border
+            Height="5"
+            VerticalAlignment="Bottom"
+            Background="Transparent"
+            Cursor="SizeNorthSouth"
+            PointerPressed="ResizeBorder_PointerPressed"
+            Tag="Bottom" />
+        <Border
+            Width="5"
+            HorizontalAlignment="Left"
+            Background="Transparent"
+            Cursor="SizeWestEast"
+            PointerPressed="ResizeBorder_PointerPressed"
+            Tag="Left" />
+        <Border
+            Width="5"
+            HorizontalAlignment="Right"
+            Background="Transparent"
+            Cursor="SizeWestEast"
+            PointerPressed="ResizeBorder_PointerPressed"
+            Tag="Right" />
+        <Border
+            Width="10"
+            Height="10"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Top"
+            Background="Transparent"
+            Cursor="TopLeftCorner"
+            PointerPressed="ResizeBorder_PointerPressed"
+            Tag="TopLeft" />
+        <Border
+            Width="10"
+            Height="10"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Background="Transparent"
+            Cursor="TopRightCorner"
+            PointerPressed="ResizeBorder_PointerPressed"
+            Tag="TopRight" />
+        <Border
+            Width="10"
+            Height="10"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Bottom"
+            Background="Transparent"
+            Cursor="BottomLeftCorner"
+            PointerPressed="ResizeBorder_PointerPressed"
+            Tag="BottomLeft" />
+        <Border
+            Width="10"
+            Height="10"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Background="Transparent"
+            Cursor="BottomRightCorner"
+            PointerPressed="ResizeBorder_PointerPressed"
+            Tag="BottomRight" />
+    </Grid>
+</Window>

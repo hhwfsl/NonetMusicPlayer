@@ -1,0 +1,5 @@
+{
+  "tickMilliseconds": { "description": "移动间隔（毫秒）", "type": "int", "default": 150, "min": 80, "max": 400 },
+  "wrapWalls": { "description": "穿越边界", "type": "bool", "default": false },
+  "snakeColor": { "description": "蛇身颜色", "type": "string", "default": "#A895FF", "hint": "填写 #RRGGBB 色值。" }
+}

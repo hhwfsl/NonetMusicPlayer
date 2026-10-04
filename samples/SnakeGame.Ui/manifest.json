@@ -1,0 +1,12 @@
+{
+  "id": "littlemusic.snake-test",
+  "name": "贪吃蛇小游戏测试插件",
+  "navigationLabel": "贪吃蛇小游戏测试插件",
+  "version": "1.0.0",
+  "contractVersion": 1,
+  "type": "ui",
+  "description": "贪吃蛇小游戏。方向键或 WASD 转向，空格暂停，R 重新开始。",
+  "author": "NonetMusicPlayer 示例",
+  "permissions": [],
+  "pageEntry": "page.json"
+}

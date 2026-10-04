@@ -1,0 +1,11 @@
+{
+  "id": "example.seaglass",
+  "name": "海玻璃主题",
+  "version": "1.0.0",
+  "contractVersion": 1,
+  "type": "theme",
+  "author": "NonetMusicPlayer",
+  "description": "原生深色海玻璃配色，不执行任何代码。",
+  "permissions": [],
+  "tokens": { "Accent": "#79CDBE", "Background": "#0D161B", "Surface": "#15242A", "Text": "#E7F3F2" }
+}

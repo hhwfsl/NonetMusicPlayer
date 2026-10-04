@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>nonet</AssemblyName>
+    <RootNamespace>NonetMusicPlayerCli</RootNamespace>
+    <Version>0.4.0-beta.1</Version>
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="NonetMusicPlayer.CoreChecks" />
+    <ProjectReference Include="../NonetMusicPlayer.Core/NonetMusicPlayer.Core.csproj" />
+    <TrimmerRootAssembly Include="TagLibSharp" />
+    <TrimmerRootAssembly Include="SoundFlow.Codecs.FFMpeg" />
+  </ItemGroup>
+  <Target Name="KeepMetadataLibraryReplaceable" BeforeTargets="_ComputeFilesToBundle">
+    <ItemGroup>
+      <ResolvedFileToPublish Update="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Filename)' == 'TagLibSharp'">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+</Project>

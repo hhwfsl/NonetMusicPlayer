@@ -1,0 +1,467 @@
+{
+  "Playback.Play": {
+    "zh-CN": "播放",
+    "en-US": "Play",
+    "ja-JP": "再生"
+  },
+  "Playback.PlayPause": {
+    "zh-CN": "播放 / 暂停",
+    "en-US": "Play / Pause",
+    "ja-JP": "再生・一時停止"
+  },
+  "Playback.PlayPauseSpace": {
+    "zh-CN": "播放 / 暂停（空格）",
+    "en-US": "Play / pause (Space)",
+    "ja-JP": "再生 / 一時停止（スペース）"
+  },
+  "Playback.Plays": {
+    "zh-CN": "播放次数",
+    "en-US": "Plays",
+    "ja-JP": "再生回数"
+  },
+  "Playback.MostPlayedSong": {
+    "zh-CN": "播放次数最多的歌曲",
+    "en-US": "Most played song",
+    "ja-JP": "最も多く再生した曲"
+  },
+  "Playback.MostPlayedArtist": {
+    "zh-CN": "播放次数最多的艺术家",
+    "en-US": "Most played artist",
+    "ja-JP": "最も多く再生したアーティスト"
+  },
+  "Playback.PlaybackMode": {
+    "zh-CN": "播放方式",
+    "en-US": "Playback mode",
+    "ja-JP": "再生モード"
+  },
+  "Playback.PlayOrPause": {
+    "zh-CN": "播放或暂停",
+    "en-US": "Play or pause",
+    "ja-JP": "再生または一時停止"
+  },
+  "Playback.UnableToAdvanceToTheNextSong": {
+    "zh-CN": "播放结束后切换歌曲失败",
+    "en-US": "Unable to advance to the next song",
+    "ja-JP": "次の曲へ移動できません"
+  },
+  "Playback.PlaybackProgress": {
+    "zh-CN": "播放进度",
+    "en-US": "Playback progress",
+    "ja-JP": "再生位置"
+  },
+  "Playback.PlaybackProgressBarHeightCannotExceedPixels": {
+    "zh-CN": "播放进度条高度不能超过 64 像素。",
+    "en-US": "Playback progress bar height cannot exceed 64 pixels.",
+    "ja-JP": "再生バーの高さは 64 ピクセル以下にしてください。"
+  },
+  "Playback.PlaybackControl": {
+    "zh-CN": "播放控制",
+    "en-US": "Playback control",
+    "ja-JP": "再生操作"
+  },
+  "Playback.Player": {
+    "zh-CN": "播放栏",
+    "en-US": "Player",
+    "ja-JP": "再生バー"
+  },
+  "Playback.PlaybackMode12A803": {
+    "zh-CN": "播放模式：{0}",
+    "en-US": "Playback mode: {0}",
+    "ja-JP": "再生モード：{0}"
+  },
+  "Playback.ThePlayerIsNotConnected": {
+    "zh-CN": "播放器尚未连接。",
+    "en-US": "The player is not connected.",
+    "ja-JP": "プレーヤーが接続されていません。"
+  },
+  "Playback.PlayAll": {
+    "zh-CN": "播放全部",
+    "en-US": "Play all",
+    "ja-JP": "すべて再生"
+  },
+  "Playback.PlaybackFailed": {
+    "zh-CN": "播放失败",
+    "en-US": "Playback failed",
+    "ja-JP": "再生に失敗しました"
+  },
+  "Playback.PlaybackSpeed": {
+    "zh-CN": "播放速度",
+    "en-US": "Playback speed",
+    "ja-JP": "再生速度"
+  },
+  "Playback.PlaybackSpeedEqualizerAndTrackActions": {
+    "zh-CN": "播放速度、均衡器与歌曲操作",
+    "en-US": "Playback speed, equalizer and track actions",
+    "ja-JP": "再生速度、イコライザー、曲の操作"
+  },
+  "Playback.PlaybackPositionMustBeAValidNumberOfSeconds": {
+    "zh-CN": "播放位置必须是有效秒数。",
+    "en-US": "Playback position must be a valid number of seconds.",
+    "ja-JP": "再生位置は有効な秒数で指定してください。"
+  },
+  "Playback.PlaySelectedTracks": {
+    "zh-CN": "播放选中的 {0} 首",
+    "en-US": "Play {0} selected tracks",
+    "ja-JP": "選択した {0} 曲を再生"
+  },
+  "Playback.PlaybackAndAudio": {
+    "zh-CN": "播放与声音",
+    "en-US": "Playback and audio",
+    "ja-JP": "再生と音声"
+  },
+  "Playback.PlayThisTrack": {
+    "zh-CN": "播放这首歌",
+    "en-US": "Play this track",
+    "ja-JP": "この曲を再生"
+  },
+  "Playback.UnableToReadPlaybackState": {
+    "zh-CN": "播放状态读取失败",
+    "en-US": "Unable to read playback state",
+    "ja-JP": "再生状態を取得できません"
+  },
+  "Playback.UnableToChangePlaybackState": {
+    "zh-CN": "播放状态切换失败",
+    "en-US": "Unable to change playback state",
+    "ja-JP": "再生状態を変更できません"
+  },
+  "Playback.PlayFromHere": {
+    "zh-CN": "从此处播放",
+    "en-US": "Play from here",
+    "ja-JP": "ここから再生"
+  },
+  "Playback.RepeatOne": {
+    "zh-CN": "单曲",
+    "en-US": "Repeat one",
+    "ja-JP": "1曲リピート"
+  },
+  "Playback.RepeatOne8CDE79": {
+    "zh-CN": "单曲循环",
+    "en-US": "Repeat one",
+    "ja-JP": "1 曲リピート"
+  },
+  "Playback.NoPlayableSongsRemainInThisListPlaybackStopped": {
+    "zh-CN": "当前播放列表中没有可播放的歌曲，已停止播放。",
+    "en-US": "No playable songs remain in this list. Playback stopped.",
+    "ja-JP": "再生可能な曲がないため、再生を停止しました。"
+  },
+  "Playback.StopPlaybackWithoutClosingTheAppTheTimerIs": {
+    "zh-CN": "到时停止播放，不关闭软件；重启后不保留计时。",
+    "en-US": "Stop playback without closing the app. The timer is not retained after restart.",
+    "ja-JP": "アプリを閉じずに再生を停止します。再起動後はタイマーを引き継ぎません。"
+  },
+  "Playback.AdjustVolume": {
+    "zh-CN": "调节音量",
+    "en-US": "Adjust volume",
+    "ja-JP": "音量を調整"
+  },
+  "Playback.ResizePlayerBar": {
+    "zh-CN": "调整播放栏高度",
+    "en-US": "Resize player bar",
+    "ja-JP": "再生バーの高さを変更"
+  },
+  "Playback.ClosePlayer": {
+    "zh-CN": "关闭播放器？",
+    "en-US": "Close player?",
+    "ja-JP": "プレーヤーを閉じますか？"
+  },
+  "Playback.AddThisAppToYourAudioFileHandlersAnd": {
+    "zh-CN": "将本软件添加到当前用户的音频打开方式列表，并打开系统默认应用设置。不会自动修改已有默认应用。",
+    "en-US": "Add this app to your audio file handlers and open system default-app settings. Existing defaults are not changed automatically.",
+    "ja-JP": "現在のユーザーの音声アプリ一覧に登録し、システムの既定アプリ設定を開きます。既存の既定アプリは自動で変更しません。"
+  },
+  "Playback.RepeatAll": {
+    "zh-CN": "列表循环",
+    "en-US": "Repeat all",
+    "ja-JP": "全曲リピート"
+  },
+  "Playback.ListSortedPlaybackFollowsTheFullListSearchingDoes": {
+    "zh-CN": "列表已排序；播放时使用该页面的完整顺序（搜索不截断队列）",
+    "en-US": "List sorted. Playback follows the full list; searching does not truncate it.",
+    "ja-JP": "リストを並べ替えました。検索結果にかかわらず、このページ全体の順序で再生します。"
+  },
+  "Playback.TemporaryPlayback": {
+    "zh-CN": "临时播放",
+    "en-US": "Temporary playback",
+    "ja-JP": "一時再生"
+  },
+  "Playback.CouldNotOpenTemporaryAudio": {
+    "zh-CN": "临时音频无法打开",
+    "en-US": "Could not open temporary audio",
+    "ja-JP": "一時音声を開けませんでした"
+  },
+  "Playback.NoAudioOutputIsAvailableYourPositionIsSaved": {
+    "zh-CN": "没有可用的音频输出设备，已保留播放位置；连接设备后点击继续。",
+    "en-US": "No audio output is available. Your position is saved; connect a device and press Play.",
+    "ja-JP": "利用できる音声出力がありません。位置を保持しました。機器を接続して再生を押してください。"
+  },
+  "Playback.PlayerHeight": {
+    "zh-CN": "默认播放栏高度",
+    "en-US": "Player height",
+    "ja-JP": "再生バーの高さ"
+  },
+  "Playback.PlayerAtTheTop": {
+    "zh-CN": "默认播放栏在顶部",
+    "en-US": "Player at the top",
+    "ja-JP": "再生バーを上部に表示"
+  },
+  "Playback.DefaultAudioPlayer": {
+    "zh-CN": "默认音频播放器",
+    "en-US": "Default audio player",
+    "ja-JP": "既定の音楽プレーヤー"
+  },
+  "Playback.ConfigurationLoadedIntoTheEditorApplyToActivateIt": {
+    "zh-CN": "配置已载入编辑器，点击应用后生效。",
+    "en-US": "Configuration loaded into the editor. Apply to activate it.",
+    "ja-JP": "設定をエディターに読み込みました。適用すると反映されます。"
+  },
+  "Playback.ChangingDevicesStopsPlaybackTheNewDeviceIsUsed": {
+    "zh-CN": "切换设备会停止当前播放，重新播放后生效。",
+    "en-US": "Changing devices stops playback. The new device is used on next playback.",
+    "ja-JP": "デバイス変更時は再生を停止し、次の再生から使用します。"
+  },
+  "Playback.SwitchingPausesPlaybackAndKeepsYourPositionPressPlay": {
+    "zh-CN": "切换时暂停并保留进度，点击继续从原位置播放。",
+    "en-US": "Switching pauses playback and keeps your position. Press Play to continue.",
+    "ja-JP": "切替時は位置を保持して一時停止します。再生を押すと続きから再生します。"
+  },
+  "Playback.ClearPlaybackHistory": {
+    "zh-CN": "清空播放记录？",
+    "en-US": "Clear playback history?",
+    "ja-JP": "再生履歴を消去しますか？"
+  },
+  "Playback.ClearHistory": {
+    "zh-CN": "清空最近播放",
+    "en-US": "Clear history",
+    "ja-JP": "再生履歴を消去"
+  },
+  "Playback.SelectOrPlayASongFirst": {
+    "zh-CN": "请先选择或播放一首歌。",
+    "en-US": "Select or play a song first.",
+    "ja-JP": "先に曲を選択または再生してください。"
+  },
+  "Playback.SetTheDefaultAudioPlayerFromAPublishedBuild": {
+    "zh-CN": "请在发布版中设置默认音频播放器。",
+    "en-US": "Set the default audio player from a published build.",
+    "ja-JP": "リリース版から既定のプレーヤーを設定してください。"
+  },
+  "Playback.CouldNotReadTheLastTemporaryAudioFile": {
+    "zh-CN": "上次临时播放的音频无法读取",
+    "en-US": "Could not read the last temporary audio file",
+    "ja-JP": "前回の一時音声ファイルを読み込めませんでした"
+  },
+  "Playback.SetDefaultPlayer": {
+    "zh-CN": "设置默认播放器",
+    "en-US": "Set default player",
+    "ja-JP": "既定のプレーヤーに設定"
+  },
+  "Playback.UnableToApplyAudioSettings": {
+    "zh-CN": "声音设置无法应用",
+    "en-US": "Unable to apply audio settings",
+    "ja-JP": "音声設定を適用できません"
+  },
+  "Playback.AudioAndPlayback": {
+    "zh-CN": "声音与播放",
+    "en-US": "Audio and playback",
+    "ja-JP": "音声と再生"
+  },
+  "Playback.OutputDevice": {
+    "zh-CN": "输出设备",
+    "en-US": "Output device",
+    "ja-JP": "出力デバイス"
+  },
+  "Playback.OutputDeviceChangedPlaybackPositionWasRetainedPressPlay": {
+    "zh-CN": "输出设备已切换，已保留播放位置；点击继续。",
+    "en-US": "Output device changed. Playback position was retained. Press Play to resume.",
+    "ja-JP": "出力機器を切り替えました。再生位置は保持されています。再生ボタンで再開できます。"
+  },
+  "Playback.Shuffle": {
+    "zh-CN": "随机",
+    "en-US": "Shuffle",
+    "ja-JP": "シャッフル"
+  },
+  "Playback.ShuffleF34B7C": {
+    "zh-CN": "随机播放",
+    "en-US": "Shuffle",
+    "ja-JP": "シャッフル"
+  },
+  "Playback.NoPlayableTracksPlaybackStopped": {
+    "zh-CN": "所有歌曲均无法播放，已停止。",
+    "en-US": "No playable tracks. Playback stopped.",
+    "ja-JP": "再生できる曲がないため停止しました。"
+  },
+  "Playback.UnableToSeek": {
+    "zh-CN": "跳转播放位置失败",
+    "en-US": "Unable to seek",
+    "ja-JP": "再生位置を変更できません"
+  },
+  "Playback.UnableToStopPlayback": {
+    "zh-CN": "停止播放失败",
+    "en-US": "Unable to stop playback",
+    "ja-JP": "再生を停止できません"
+  },
+  "Playback.DragToResizeThePlayerBar": {
+    "zh-CN": "拖动调整播放栏高度",
+    "en-US": "Drag to resize the player bar",
+    "ja-JP": "ドラッグして再生バーの高さを変更"
+  },
+  "Playback.PlayDroppedTracks": {
+    "zh-CN": "拖入歌曲后自动播放",
+    "en-US": "Play dropped tracks",
+    "ja-JP": "ドロップした曲を再生"
+  },
+  "Playback.PlayDroppedFiles": {
+    "zh-CN": "拖入文件后播放",
+    "en-US": "Play dropped files",
+    "ja-JP": "ドロップした曲を再生"
+  },
+  "Playback.NothingPlaying": {
+    "zh-CN": "未播放",
+    "en-US": "Nothing playing",
+    "ja-JP": "再生していません"
+  },
+  "Playback.NoAudioOutputDeviceFoundConnectOneAndTry": {
+    "zh-CN": "未找到可用的音频输出设备，请连接设备后重试。",
+    "en-US": "No audio output device found. Connect one and try again.",
+    "ja-JP": "音声出力機器がありません。接続して再試行してください。"
+  },
+  "Playback.UnableToPlaySkipped": {
+    "zh-CN": "无法播放《{0}》，已跳过",
+    "en-US": "Unable to play {0}; skipped.",
+    "ja-JP": "「{0}」を再生できないため、スキップしました。"
+  },
+  "Playback.UnableToListAudioDevices": {
+    "zh-CN": "无法枚举音频设备",
+    "en-US": "Unable to list audio devices",
+    "ja-JP": "音声デバイスを一覧表示できません"
+  },
+  "Playback.SystemDefault": {
+    "zh-CN": "系统默认",
+    "en-US": "System default",
+    "ja-JP": "システム標準"
+  },
+  "Playback.ChoosePlaybackMode": {
+    "zh-CN": "选择播放方式",
+    "en-US": "Choose playback mode",
+    "ja-JP": "再生モードを選択"
+  },
+  "Playback.ChooseATrackToPlay": {
+    "zh-CN": "选择一首歌曲开始播放",
+    "en-US": "Choose a track to play",
+    "ja-JP": "曲を選んで再生"
+  },
+  "Playback.RepeatAllAD3221": {
+    "zh-CN": "循环",
+    "en-US": "Repeat all",
+    "ja-JP": "全曲リピート"
+  },
+  "Playback.PlaybackStopped": {
+    "zh-CN": "已停止播放",
+    "en-US": "Playback stopped",
+    "ja-JP": "再生を停止しました"
+  },
+  "Playback.PausedPressPlayToResume": {
+    "zh-CN": "已暂停 · 点击播放继续",
+    "en-US": "Paused · Press Play to resume",
+    "ja-JP": "一時停止中 · 再生ボタンで再開"
+  },
+  "Playback.AudioSupportRegisteredChooseThisAppAsTheDefault": {
+    "zh-CN": "已注册音频打开方式，可在文件管理器中选择本软件为默认应用。",
+    "en-US": "Audio support registered. Choose this app as the default in your file manager.",
+    "ja-JP": "音声アプリを登録しました。ファイル管理で既定のアプリを選択してください。"
+  },
+  "Playback.Volume": {
+    "zh-CN": "音量",
+    "en-US": "Volume",
+    "ja-JP": "音量"
+  },
+  "Playback.VolumePercentage": {
+    "zh-CN": "音量百分比",
+    "en-US": "Volume percentage",
+    "ja-JP": "音量の割合"
+  },
+  "Playback.VolumeControl": {
+    "zh-CN": "音量调节",
+    "en-US": "Volume control",
+    "ja-JP": "音量調整"
+  },
+  "Playback.UnableToChangeVolume": {
+    "zh-CN": "音量设置失败",
+    "en-US": "Unable to change volume",
+    "ja-JP": "音量を変更できません"
+  },
+  "Playback.PlaybackFailed987DF3": {
+    "zh-CN": "音频播放失败",
+    "en-US": "Playback failed",
+    "ja-JP": "再生に失敗しました"
+  },
+  "Playback.AudioOutputIsUnavailablePlaybackPausedConnectADevice": {
+    "zh-CN": "音频输出不可用，已暂停；连接设备后点击继续。",
+    "en-US": "Audio output is unavailable. Playback paused. Connect a device and press Play to resume.",
+    "ja-JP": "音声出力が利用できないため、一時停止しました。機器を接続して再生ボタンを押してください。"
+  },
+  "Playback.AudioOutputCouldNotBeSwitchedYourPlaybackPosition": {
+    "zh-CN": "音频输出切换失败，已保留播放位置。",
+    "en-US": "Audio output could not be switched. Your playback position is kept.",
+    "ja-JP": "音声出力を切り替えられませんでした。再生位置は保持しています。"
+  },
+  "Playback.AudioOutputCouldNotBeOpenedTheTrackAnd": {
+    "zh-CN": "音频输出设备无法打开，已保留歌曲和播放位置。",
+    "en-US": "Audio output could not be opened. The track and position are retained.",
+    "ja-JP": "音声出力機器を開けませんでした。曲と再生位置は保持しています。"
+  },
+  "Playback.AudioOutputChangedPlaybackIsPausedAtTheCurrent": {
+    "zh-CN": "音频输出已切换，播放已暂停；点击继续可从原位置播放。",
+    "en-US": "Audio output changed. Playback is paused at the current position; press Play to continue.",
+    "ja-JP": "音声出力が切り替わり、現在の位置で一時停止しました。再生を押すと続きから再生します。"
+  },
+  "Playback.NowPlaying": {
+    "zh-CN": "正在播放",
+    "en-US": "Now playing",
+    "ja-JP": "再生中"
+  },
+  "Playback.Playing": {
+    "zh-CN": "正在播放 · {0}",
+    "en-US": "Playing · {0}",
+    "ja-JP": "再生中 · {0}"
+  },
+  "Playback.Playing0CA729": {
+    "zh-CN": "正在播放 · {0} · {1}",
+    "en-US": "Playing · {0} · {1}",
+    "ja-JP": "再生中 · {0} · {1}"
+  },
+  "Playback.Loading": {
+    "zh-CN": "正在载入《{0}》…",
+    "en-US": "Loading {0}…",
+    "ja-JP": "「{0}」を読み込み中…"
+  },
+  "Playback.AfterRegistrationChooseThisAppAsTheAudioDefault": {
+    "zh-CN": "注册后，在文件管理器中选择本软件为音频默认打开方式。",
+    "en-US": "After registration, choose this app as the audio default in your file manager.",
+    "ja-JP": "登録後、ファイル管理で既定の音声アプリを選びます。"
+  },
+  "Playback.RegisterAudioHandler": {
+    "zh-CN": "注册音频打开方式",
+    "en-US": "Register audio handler",
+    "ja-JP": "音声アプリを登録"
+  },
+  "Playback.RegisterAudioFileSupport": {
+    "zh-CN": "注册音频打开方式？",
+    "en-US": "Register audio file support?",
+    "ja-JP": "音声ファイルの関連付けを登録しますか？"
+  },
+  "Playback.RegisterAudioFormatsThenChooseTheDefaultAppIn": {
+    "zh-CN": "注册音频格式后，在系统设置中选择默认应用。移动软件目录后需重新注册。",
+    "en-US": "Register audio formats, then choose the default app in system settings. Register again after moving the app.",
+    "ja-JP": "音声形式を登録後、システム設定で既定のアプリを選びます。アプリの移動後は再登録してください。"
+  },
+  "Playback.RecentlyPlayed": {
+    "zh-CN": "最近播放",
+    "en-US": "Recently played",
+    "ja-JP": "最近再生した曲"
+  },
+  "Playback.RecentHistoryLimit": {
+    "zh-CN": "最近播放保留上限",
+    "en-US": "Recent history limit",
+    "ja-JP": "最近の再生履歴の上限"
+  }
+}

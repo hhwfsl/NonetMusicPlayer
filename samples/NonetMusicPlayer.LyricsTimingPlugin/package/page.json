@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "title": "精准歌词工具",
+  "description": "在播放器中为歌词标注时间。取消、离开页面或禁用插件会结束标注。",
+  "widgets": [{ "type": "lyrics-timing", "title": "逐行时间标注" }]
+}

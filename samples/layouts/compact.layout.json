@@ -1,0 +1,35 @@
+{
+  // 小封面、较紧凑的按钮，进度条移到播放栏底部。所有功能仍然保留。
+  "schemaVersion": 2,
+  "workspace": {},
+  "player": {
+    "rows": ["*", "20"],
+    "columns": ["*", "142", "*"],
+    "items": [
+      { "id": "progress", "row": 1, "column": 0, "columnSpan": 3, "verticalAlignment": "Stretch" },
+      { "row": 0, "column": 0, "grid": {
+        "rows": ["*", "*"], "columns": ["56", "*"], "items": [
+          { "id": "artwork", "row": 0, "column": 0, "rowSpan": 2, "width": 48, "height": 48, "horizontalAlignment": "Left" },
+          { "id": "title", "row": 0, "column": 1, "fontSize": 14, "verticalAlignment": "Bottom", "margin": [4, 0, 12, 2] },
+          { "id": "artist", "row": 1, "column": 1, "fontSize": 12, "verticalAlignment": "Top", "margin": [4, 2, 12, 0] }
+        ]
+      } },
+      { "row": 0, "column": 1, "grid": {
+        "rows": ["*"], "columns": ["44", "54", "44"], "items": [
+          { "id": "previous", "row": 0, "column": 0, "width": 32, "height": 32, "horizontalAlignment": "Center" },
+          { "id": "play", "row": 0, "column": 1, "width": 42, "height": 42, "horizontalAlignment": "Center" },
+          { "id": "next", "row": 0, "column": 2, "width": 32, "height": 32, "horizontalAlignment": "Center" }
+        ]
+      } },
+      { "row": 0, "column": 2, "horizontalAlignment": "Right", "grid": {
+        "rows": ["*"], "columns": ["110", "36", "36", "36", "36"], "items": [
+          { "id": "time", "row": 0, "column": 0, "horizontalAlignment": "Center", "fontSize": 11, "margin": [0, 0, 8, 0] },
+          { "id": "mode", "row": 0, "column": 1, "width": 32, "height": 32, "horizontalAlignment": "Center" },
+          { "id": "favorite", "row": 0, "column": 2, "width": 32, "height": 32, "horizontalAlignment": "Center" },
+          { "id": "more", "row": 0, "column": 3, "width": 32, "height": 32, "horizontalAlignment": "Center" },
+          { "id": "volume", "row": 0, "column": 4, "width": 32, "height": 32, "horizontalAlignment": "Center" }
+        ]
+      } }
+    ]
+  }
+}

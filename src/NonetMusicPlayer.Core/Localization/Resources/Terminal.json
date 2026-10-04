@@ -1,0 +1,18 @@
+{
+  "Terminal.Title": { "zh-CN": "终端", "en-US": "Terminal", "ja-JP": "ターミナル" },
+  "Terminal.Scrollback": { "zh-CN": "终端历史行数", "en-US": "Terminal scrollback lines", "ja-JP": "スクロールバック行数" },
+  "Terminal.ScrollbackHint": { "zh-CN": "默认保留 1000 行，最多 10000 行。", "en-US": "Keep 1,000 lines by default, up to 10,000.", "ja-JP": "既定は 1000 行、最大 10000 行です。" },
+  "Terminal.FontSize": { "zh-CN": "终端字体大小", "en-US": "Terminal font size", "ja-JP": "ターミナルの文字サイズ" },
+  "Terminal.FontSizeHint": { "zh-CN": "独立调整终端文字，范围为 10–32 px。", "en-US": "Set terminal text independently, from 10 to 32 px.", "ja-JP": "ターミナルの文字を 10–32 px で調整します。" },
+  "Terminal.MinimumLevel": { "zh-CN": "终端最低日志等级", "en-US": "Minimum terminal log level", "ja-JP": "ターミナルの最低ログレベル" },
+  "Terminal.MinimumLevelHint": { "zh-CN": "仅过滤终端显示；磁盘日志固定记录 INFO、WARN 和 ERROR。", "en-US": "Filter terminal display only. Disk logs always record INFO, WARN and ERROR.", "ja-JP": "表示のみを絞り込みます。ファイルには INFO、WARN、ERROR を常に記録します。" },
+  "Terminal.InvalidLevel": { "zh-CN": "日志等级只能是 INFO、WARN 或 ERROR。", "en-US": "Log level must be INFO, WARN or ERROR.", "ja-JP": "ログレベルは INFO、WARN、ERROR のいずれかです。" },
+  "Terminal.Opacity": { "zh-CN": "终端不透明度", "en-US": "Terminal opacity", "ja-JP": "ターミナルの不透明度" },
+  "Terminal.OpacityHint": { "zh-CN": "单独调整终端底色，不影响文字清晰度。", "en-US": "Adjust the terminal background independently without fading its text.", "ja-JP": "文字の鮮明さを保ったままターミナルの背景を調整します。" },
+  "Terminal.Completed": { "zh-CN": "{0}：已完成", "en-US": "{0}: completed", "ja-JP": "{0}：完了" },
+  "Terminal.Description": { "zh-CN": "输入 help 查看播放器命令。此终端不执行系统命令。", "en-US": "Enter help for player commands. System shell commands are not supported.", "ja-JP": "help でプレイヤーのコマンドを表示します。システムのコマンドは実行できません。" },
+  "Terminal.Input": { "zh-CN": "输入播放器命令…", "en-US": "Enter a player command…", "ja-JP": "プレイヤーのコマンドを入力…" },
+  "Terminal.Execute": { "zh-CN": "执行", "en-US": "Run", "ja-JP": "実行" },
+  "Terminal.Clear": { "zh-CN": "清空输出", "en-US": "Clear output", "ja-JP": "出力をクリア" },
+  "Terminal.Confirm": { "zh-CN": "确认执行 {0}？此操作会更改播放器数据，但不会删除原始音频。", "en-US": "Run {0}? This changes player data but does not delete original audio files.", "ja-JP": "{0} を実行しますか？プレイヤーのデータは変更されますが、元の音声ファイルは削除されません。" }
+}

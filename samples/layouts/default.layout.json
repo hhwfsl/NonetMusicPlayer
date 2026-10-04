@@ -1,0 +1,35 @@
+{
+  // 设置 → 布局配置：修改此示例后导入，校验并应用。点击封面打开歌词。
+  "schemaVersion": 2,
+  "workspace": {},
+  "player": {
+    "rows": ["24", "*"],
+    "columns": ["*", "210", "*"],
+    "items": [
+      { "id": "progress", "row": 0, "column": 0, "columnSpan": 3, "height": 32, "verticalAlignment": "Center" },
+      { "row": 1, "column": 0, "grid": {
+        "rows": ["*", "*"], "columns": ["80", "*"], "items": [
+          { "id": "artwork", "row": 0, "column": 0, "rowSpan": 2, "width": 60, "height": 60, "horizontalAlignment": "Left" },
+          { "id": "title", "row": 0, "column": 1, "fontSize": 18, "verticalAlignment": "Bottom", "margin": [0, 0, 12, 3] },
+          { "id": "artist", "row": 1, "column": 1, "fontSize": 16, "verticalAlignment": "Top", "margin": [0, 3, 12, 0] }
+        ]
+      } },
+      { "row": 1, "column": 1, "grid": {
+        "rows": ["*"], "columns": ["70", "70", "70"], "items": [
+          { "id": "previous", "row": 0, "column": 0, "width": 50, "height": 50, "horizontalAlignment": "Center" },
+          { "id": "play", "row": 0, "column": 1, "width": 50, "height": 50, "horizontalAlignment": "Center" },
+          { "id": "next", "row": 0, "column": 2, "width": 50, "height": 50, "horizontalAlignment": "Center" }
+        ]
+      } },
+      { "row": 1, "column": 2, "horizontalAlignment": "Right", "grid": {
+        "rows": ["*"], "columns": ["112", "45", "45", "45", "45"], "items": [
+          { "id": "time", "row": 0, "column": 0, "horizontalAlignment": "Center", "margin": [0, 0, 8, 0] },
+          { "id": "mode", "row": 0, "column": 1, "width": 40, "height": 40, "horizontalAlignment": "Center" },
+          { "id": "favorite", "row": 0, "column": 2, "width": 40, "height": 40, "horizontalAlignment": "Center" },
+          { "id": "more", "row": 0, "column": 3, "width": 40, "height": 40, "horizontalAlignment": "Center" },
+          { "id": "volume", "row": 0, "column": 4, "width": 40, "height": 40, "horizontalAlignment": "Center" }
+        ]
+      } }
+    ]
+  }
+}

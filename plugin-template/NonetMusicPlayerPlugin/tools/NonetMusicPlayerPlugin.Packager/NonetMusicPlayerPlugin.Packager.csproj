@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../sdk/NonetMusicPlayer.PluginSdk/NonetMusicPlayer.PluginSdk.csproj" /></ItemGroup>
+</Project>

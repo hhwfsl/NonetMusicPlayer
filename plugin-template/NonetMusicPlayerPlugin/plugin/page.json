@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "title": "Hello World",
+  "description": "My first NonetMusicPlayer plugin.",
+  "widgets": [
+    { "type": "text", "title": "Greeting", "text": "${config.greeting}" }
+  ]
+}

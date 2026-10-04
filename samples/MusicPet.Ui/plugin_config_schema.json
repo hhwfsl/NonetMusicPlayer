@@ -1,0 +1,5 @@
+{
+  "petName": { "description": "桌宠名字", "type": "string", "default": "音乐猫", "max_length": 60 },
+  "floating": { "description": "显示悬浮桌宠", "type": "bool", "default": true },
+  "bodyColor": { "description": "桌宠颜色", "type": "string", "default": "#B8DCF2" }
+}

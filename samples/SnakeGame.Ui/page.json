@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "title": "贪吃蛇",
+  "description": "音乐继续播放，游戏只在这个页面运行。离开页面、禁用或卸载插件会停止游戏计时器。",
+  "widgets": [
+    {
+      "type": "snake",
+      "title": "贪吃蛇",
+      "text": "点击“开始游戏”，再用方向键或 WASD 转向。",
+      "columns": 24,
+      "rows": 18,
+      "tickMilliseconds": "${config.tickMilliseconds}",
+      "wrapWalls": "${config.wrapWalls}",
+      "background": "#111827",
+      "snake": "${config.snakeColor}",
+      "food": "#F0526C"
+    }
+  ]
+}

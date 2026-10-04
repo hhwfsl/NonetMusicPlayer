@@ -1,0 +1,367 @@
+{
+  "Playlists.LikedSongsCannotBeRenamedOrDeletedItsDescription": {
+    "zh-CN": "“我喜欢”是固定歌单，不能改名或删除；仍可修改简介和封面。",
+    "en-US": "Liked songs cannot be renamed or deleted. Its description and cover can be changed.",
+    "ja-JP": "「お気に入り」の名前変更と削除はできません。説明とカバーは変更できます。"
+  },
+  "Playlists.LikedSongsIsABuiltInPlaylistAndCannot": {
+    "zh-CN": "“我喜欢”是固定歌单，不能删除。",
+    "en-US": "Liked songs is a built-in playlist and cannot be deleted.",
+    "ja-JP": "「お気に入り」は標準プレイリストのため削除できません。"
+  },
+  "Playlists.EditPlaylist": {
+    "zh-CN": "编辑歌单",
+    "en-US": "Edit playlist",
+    "ja-JP": "プレイリストを編集"
+  },
+  "Playlists.EditPlaylistDetails": {
+    "zh-CN": "编辑歌单信息",
+    "en-US": "Edit playlist details",
+    "ja-JP": "プレイリスト情報を編集"
+  },
+  "Playlists.PlayPlaylist": {
+    "zh-CN": "播放歌单",
+    "en-US": "Play playlist",
+    "ja-JP": "プレイリストを再生"
+  },
+  "Playlists.LikedSongsPlaylistsAndMusicFilesAreUnchanged": {
+    "zh-CN": "不影响收藏、歌单和音乐文件。",
+    "en-US": "Liked songs, playlists and music files are unchanged.",
+    "ja-JP": "お気に入り、プレイリスト、音楽ファイルは変更しません。"
+  },
+  "Playlists.PartiallySelectedSelectAll": {
+    "zh-CN": "部分已选 · 全选",
+    "en-US": "Partially selected · Select all",
+    "ja-JP": "一部選択済み・すべて選択"
+  },
+  "Playlists.CreateAPlaylistContainingTheSelectedTracks": {
+    "zh-CN": "创建歌单并加入选中的歌曲。",
+    "en-US": "Create a playlist containing the selected tracks.",
+    "ja-JP": "選択した曲でプレイリストを作成します。"
+  },
+  "Playlists.RemoveFromThisPlaylist": {
+    "zh-CN": "从此歌单移除",
+    "en-US": "Remove from this playlist",
+    "ja-JP": "このプレイリストから削除"
+  },
+  "Playlists.RemoveFromLikedSongs": {
+    "zh-CN": "从我喜欢中移除",
+    "en-US": "Remove from liked songs",
+    "ja-JP": "お気に入りから削除"
+  },
+  "Playlists.UnappliedLayoutEditsWillBeLostOnClosingCancel": {
+    "zh-CN": "存在未应用的布局草稿，关闭后会丢失。可取消关闭，回到设置应用或导出配置。音乐、收藏和歌单已保存。",
+    "en-US": "Unapplied layout edits will be lost on closing. Cancel to apply or export them in settings. Music, liked songs and playlists are saved.",
+    "ja-JP": "終了すると未適用のレイアウト編集が失われます。キャンセルして設定から適用・書き出しができます。曲、お気に入り、プレイリストは保存済みです。"
+  },
+  "Playlists.OpenPlaylist": {
+    "zh-CN": "打开歌单",
+    "en-US": "Open playlist",
+    "ja-JP": "プレイリストを開く"
+  },
+  "Playlists.TheCurrentSourceHasNoAvailableSongsSelectA": {
+    "zh-CN": "当前播放来源已没有可用歌曲；请在歌单中重新选择歌曲或启用对应音源。",
+    "en-US": "The current source has no available songs. Select a song in a playlist or enable its source.",
+    "ja-JP": "現在の音源に再生できる曲がありません。プレイリストで曲を選び直すか、該当する音源を有効にしてください。"
+  },
+  "Playlists.ImportM3UPlaylist": {
+    "zh-CN": "导入 M3U 歌单",
+    "en-US": "Import M3U playlist",
+    "ja-JP": "M3U プレイリストを取り込む"
+  },
+  "Playlists.ImportPlaylist": {
+    "zh-CN": "导入歌单",
+    "en-US": "Import playlist",
+    "ja-JP": "プレイリストを取り込む"
+  },
+  "Playlists.Playlists": {
+    "zh-CN": "歌单",
+    "en-US": "Playlists",
+    "ja-JP": "プレイリスト"
+  },
+  "Playlists.PlaylistsUseManualOrderingMoveSongsUpOrDown": {
+    "zh-CN": "歌单保持手动顺序；请使用上移、下移调整歌曲，不支持标题排序。",
+    "en-US": "Playlists use manual ordering. Move songs up or down instead of sorting by column.",
+    "ja-JP": "プレイリストの順序は手動で変更します。列での並べ替えではなく、上下移動をご利用ください。"
+  },
+  "Playlists.PlaylistImportFailed": {
+    "zh-CN": "歌单导入失败",
+    "en-US": "Playlist import failed",
+    "ja-JP": "プレイリストを取り込めませんでした"
+  },
+  "Playlists.PlaylistArtwork": {
+    "zh-CN": "歌单封面",
+    "en-US": "Playlist artwork",
+    "ja-JP": "プレイリストのカバー"
+  },
+  "Playlists.PlaylistDescriptionsCannotExceedCharacters": {
+    "zh-CN": "歌单简介最多 500 个字符。",
+    "en-US": "Playlist descriptions cannot exceed 500 characters.",
+    "ja-JP": "プレイリストの説明は500文字以内にしてください。"
+  },
+  "Playlists.Description": {
+    "zh-CN": "歌单描述",
+    "en-US": "Description",
+    "ja-JP": "説明"
+  },
+  "Playlists.PlaylistName": {
+    "zh-CN": "歌单名称",
+    "en-US": "Playlist name",
+    "ja-JP": "プレイリスト名"
+  },
+  "Playlists.PlaylistNamesMustContainCharacters": {
+    "zh-CN": "歌单名应为 1–80 个字符。",
+    "en-US": "Playlist names must contain 1–80 characters.",
+    "ja-JP": "プレイリスト名は 1〜80 文字です。"
+  },
+  "Playlists.ThePlaylistNoLongerExists": {
+    "zh-CN": "歌单已不存在。",
+    "en-US": "The playlist no longer exists.",
+    "ja-JP": "プレイリストは既に削除されています。"
+  },
+  "Playlists.PlaylistDeletedMusicFilesKeptCtrlZToUndo": {
+    "zh-CN": "歌单已移除，音乐文件保留 · Ctrl+Z 可撤销",
+    "en-US": "Playlist deleted; music files kept · Ctrl+Z to undo",
+    "ja-JP": "プレイリストを削除しました。音楽ファイルは保持されます · Ctrl+Z で元に戻せます"
+  },
+  "Playlists.PlaylistDetailsUpdated": {
+    "zh-CN": "歌单资料已更新",
+    "en-US": "Playlist details updated",
+    "ja-JP": "プレイリスト情報を更新しました"
+  },
+  "Playlists.APlaylistImportCannotExceedSongs": {
+    "zh-CN": "歌单最多导入 50000 首歌曲。",
+    "en-US": "A playlist import cannot exceed 50,000 songs.",
+    "ja-JP": "一度にインポートできるのは50,000曲までです。"
+  },
+  "Playlists.SystemPlaylist": {
+    "zh-CN": "固定歌单",
+    "en-US": "System playlist",
+    "ja-JP": "固定プレイリスト"
+  },
+  "Playlists.ExitingStopsPlaybackYourLibraryFavoritesAndSettingsHave": {
+    "zh-CN": "关闭后会停止播放。音乐库、收藏和设置已保存。",
+    "en-US": "Exiting stops playback. Your library, favorites and settings have been saved.",
+    "ja-JP": "終了すると再生が停止します。ライブラリ・お気に入り・設定は保存済みです。"
+  },
+  "Playlists.PlaybackWillStopLibraryLikedSongsAndSettingsAre": {
+    "zh-CN": "关闭后会停止播放。资料库、收藏和设置已保存。",
+    "en-US": "Playback will stop. Library, liked songs and settings are saved.",
+    "ja-JP": "再生を停止します。ライブラリ、お気に入り、設定は保存されています。"
+  },
+  "Playlists.RemoveOnlyFromThisPlaylistLibraryAndMusicFiles": {
+    "zh-CN": "仅从当前歌单移除，音乐库和音乐文件保留。可按 Ctrl+Z 撤销。",
+    "en-US": "Remove only from this playlist. Library and music files are kept. Ctrl+Z can undo.",
+    "ja-JP": "このプレイリストからのみ削除します。ライブラリと音楽ファイルは残ります。Ctrl+Z で元に戻せます。"
+  },
+  "Playlists.RemoveOnlyFromThisPlaylistLibraryAndMusicFiles5CD32B": {
+    "zh-CN": "仅从当前歌单移除，资料库和音乐文件保留。可按 Ctrl+Z 撤销。",
+    "en-US": "Remove only from this playlist. Library and music files are kept. Ctrl+Z can undo.",
+    "ja-JP": "このプレイリストからのみ削除します。ライブラリと音楽ファイルは残ります。Ctrl+Z で元に戻せます。"
+  },
+  "Playlists.RemoveLibraryAndPlaylistReferencesOnlyMusicFilesAre": {
+    "zh-CN": "仅移除音乐库及歌单中的引用，磁盘上的音乐文件不会删除。可按 Ctrl+Z 撤销。",
+    "en-US": "Remove library and playlist references only. Music files are kept. Ctrl+Z can undo.",
+    "ja-JP": "ライブラリとプレイリストの参照のみを削除します。音楽ファイルは残ります。Ctrl+Z で元に戻せます。"
+  },
+  "Playlists.RemoveLibraryAndPlaylistReferencesOnlyMusicFilesAreC84DB5": {
+    "zh-CN": "仅移除资料库及歌单中的引用，磁盘上的音乐文件不会删除。可按 Ctrl+Z 撤销。",
+    "en-US": "Remove library and playlist references only. Music files are kept. Ctrl+Z can undo.",
+    "ja-JP": "ライブラリとプレイリストの参照のみを削除します。音楽ファイルは残ります。Ctrl+Z で元に戻せます。"
+  },
+  "Playlists.EnterExitTrackSelection": {
+    "zh-CN": "进入 / 退出批量操作",
+    "en-US": "Enter / exit track selection",
+    "ja-JP": "複数選択を開始・終了"
+  },
+  "Playlists.NameFixedPlaylistCannotBeRenamedOrDeleted": {
+    "zh-CN": "名称（固定歌单不可重命名或删除）",
+    "en-US": "Name (fixed playlist cannot be renamed or deleted)",
+    "ja-JP": "名前 (固定プレイリストの名前変更・削除はできません)"
+  },
+  "Playlists.SelectTracks": {
+    "zh-CN": "批量操作",
+    "en-US": "Select tracks",
+    "ja-JP": "複数選択"
+  },
+  "Playlists.TrackSelectionClearSelection": {
+    "zh-CN": "批量模式：取消全选",
+    "en-US": "Track selection: clear selection",
+    "ja-JP": "複数選択：選択を解除"
+  },
+  "Playlists.TrackSelectionSelectAll": {
+    "zh-CN": "批量模式：全选",
+    "en-US": "Track selection: select all",
+    "ja-JP": "複数選択：すべて選択"
+  },
+  "Playlists.TrackSelectionMoveUp": {
+    "zh-CN": "批量模式：所选歌曲上移",
+    "en-US": "Track selection: move up",
+    "ja-JP": "複数選択：選択した曲を上へ移動"
+  },
+  "Playlists.TrackSelectionMoveDown": {
+    "zh-CN": "批量模式：所选歌曲下移",
+    "en-US": "Track selection: move down",
+    "ja-JP": "複数選択：選択した曲を下へ移動"
+  },
+  "Playlists.ClearSearchExitSelection": {
+    "zh-CN": "清空搜索 / 退出批量操作",
+    "en-US": "Clear search / exit selection",
+    "ja-JP": "検索をクリア・複数選択を終了"
+  },
+  "Playlists.EnterAPlaylistName": {
+    "zh-CN": "请填写歌单名称。",
+    "en-US": "Enter a playlist name.",
+    "ja-JP": "プレイリスト名を入力してください。"
+  },
+  "Playlists.SelectAPlaylistBeforeAddingMusic": {
+    "zh-CN": "请先选择一个歌单，再添加音乐。",
+    "en-US": "Select a playlist before adding music.",
+    "ja-JP": "音楽を追加する前にプレイリストを選んでください。"
+  },
+  "Playlists.ClearSelection": {
+    "zh-CN": "取消全选",
+    "en-US": "Clear selection",
+    "ja-JP": "選択を解除"
+  },
+  "Playlists.SelectAll": {
+    "zh-CN": "全选",
+    "en-US": "Select all",
+    "ja-JP": "すべて選択"
+  },
+  "Playlists.DeletePlaylist": {
+    "zh-CN": "删除歌单",
+    "en-US": "Delete playlist",
+    "ja-JP": "プレイリストを削除"
+  },
+  "Playlists.DeletePlaylist858586": {
+    "zh-CN": "删除歌单？",
+    "en-US": "Delete playlist?",
+    "ja-JP": "プレイリストを削除しますか？"
+  },
+  "Playlists.AddToPlaylist": {
+    "zh-CN": "添加到歌单",
+    "en-US": "Add to playlist",
+    "ja-JP": "プレイリストに追加"
+  },
+  "Playlists.AddToLikedSongs": {
+    "zh-CN": "添加到我喜欢",
+    "en-US": "Add to liked songs",
+    "ja-JP": "お気に入りに追加"
+  },
+  "Playlists.LikeUnlike": {
+    "zh-CN": "添加到我喜欢 / 取消喜欢",
+    "en-US": "Like / Unlike",
+    "ja-JP": "お気に入りに追加・解除"
+  },
+  "Playlists.AddToRemoveFromLikedSongsCtrlD": {
+    "zh-CN": "添加到我喜欢 / 取消喜欢（Ctrl+D）",
+    "en-US": "Add to / remove from Liked songs (Ctrl+D)",
+    "ja-JP": "お気に入りに追加 / 削除（Ctrl+D）"
+  },
+  "Playlists.LikeOrUnlike": {
+    "zh-CN": "添加到我喜欢或取消喜欢",
+    "en-US": "Like or unlike",
+    "ja-JP": "お気に入りに追加または解除"
+  },
+  "Playlists.AddPlaylistDescription": {
+    "zh-CN": "添加歌单简介",
+    "en-US": "Add playlist description",
+    "ja-JP": "プレイリストの説明を追加"
+  },
+  "Playlists.AddMusicFilesOrDragSongsIntoAPlaylist": {
+    "zh-CN": "添加音乐文件，或拖入歌曲。使用收藏按钮与歌曲操作菜单加入歌单。",
+    "en-US": "Add music files or drag songs into a playlist. Use the heart button or song menu to organize your music.",
+    "ja-JP": "音楽ファイルを追加するか、プレイリストに曲をドラッグしてください。ハートボタンや曲のメニューで整理できます。"
+  },
+  "Playlists.DoneSelecting": {
+    "zh-CN": "退出批量操作",
+    "en-US": "Done selecting",
+    "ja-JP": "選択を終了"
+  },
+  "Playlists.ChooseANameForTheNewPlaylist": {
+    "zh-CN": "为喜欢的音乐建立自己的歌单。",
+    "en-US": "Choose a name for the new playlist.",
+    "ja-JP": "新しいプレイリスト名を入力してください。"
+  },
+  "Playlists.LikedSongs": {
+    "zh-CN": "我喜欢",
+    "en-US": "Liked songs",
+    "ja-JP": "お気に入り"
+  },
+  "Playlists.DescribeThisPlaylistUpToCharacters": {
+    "zh-CN": "写下歌单的故事、心情或使用场景（最多 500 字）…",
+    "en-US": "Describe this playlist (up to 500 characters)…",
+    "ja-JP": "プレイリストの説明を入力 (最大 500 文字)…"
+  },
+  "Playlists.NewPlaylist": {
+    "zh-CN": "新建歌单",
+    "en-US": "New playlist",
+    "ja-JP": "新しいプレイリスト"
+  },
+  "Playlists.CreateAPlaylistContainingTheCurrentTrack": {
+    "zh-CN": "新建歌单，并加入当前歌曲。",
+    "en-US": "Create a playlist containing the current track.",
+    "ja-JP": "現在の曲でプレイリストを作成します。"
+  },
+  "Playlists.CreatePlaylistAndAdd": {
+    "zh-CN": "新建歌单并添加",
+    "en-US": "Create playlist and add",
+    "ja-JP": "新規プレイリストに追加"
+  },
+  "Playlists.SelectPlaylistCover": {
+    "zh-CN": "选择歌单封面",
+    "en-US": "Select playlist cover",
+    "ja-JP": "プレイリストのカバーを選択"
+  },
+  "Playlists.AddedToNewSongsAppearFirstCtrlZTo": {
+    "zh-CN": "已加入歌单「{0}」· 新歌曲位于顶部 · Ctrl+Z 可撤销",
+    "en-US": "Added to {0}. New songs appear first. Ctrl+Z to undo.",
+    "ja-JP": "「{0}」に追加しました。新しい曲は先頭に表示されます。Ctrl+Z で元に戻せます。"
+  },
+  "Playlists.AddedToLikedSongsCtrlZToUndo": {
+    "zh-CN": "已加入我喜欢 · Ctrl+Z 可撤销",
+    "en-US": "Added to Liked songs · Ctrl+Z to undo",
+    "ja-JP": "お気に入りに追加しました · Ctrl+Z で元に戻せます"
+  },
+  "Playlists.RemovedFromLikedSongsCtrlZToUndo": {
+    "zh-CN": "已取消收藏 · Ctrl+Z 可撤销",
+    "en-US": "Removed from Liked songs · Ctrl+Z to undo",
+    "ja-JP": "お気に入りから削除しました · Ctrl+Z で元に戻せます"
+  },
+  "Playlists.MoveUpInPlaylist": {
+    "zh-CN": "在歌单中上移",
+    "en-US": "Move up in playlist",
+    "ja-JP": "プレイリスト内で上に移動"
+  },
+  "Playlists.AddMusicToAPlaylistToSeeAlbumsAnd": {
+    "zh-CN": "在歌单中添加音乐后，这里会按歌曲标签自动整理。",
+    "en-US": "Add music to a playlist to see albums and artists organized by tags here.",
+    "ja-JP": "プレイリストに追加した曲を、タグに基づいて整理します。"
+  },
+  "Playlists.MoveDownInPlaylist": {
+    "zh-CN": "在歌单中下移",
+    "en-US": "Move down in playlist",
+    "ja-JP": "プレイリスト内で下に移動"
+  },
+  "Playlists.MusicFilesAreKeptCtrlZCanUndoThis": {
+    "zh-CN": "只删除歌单，不删除音乐文件。删除后可按 Ctrl+Z 撤销。",
+    "en-US": "Music files are kept. Ctrl+Z can undo this action.",
+    "ja-JP": "音楽ファイルは削除されません。Ctrl+Z で元に戻せます。"
+  },
+  "Playlists.RenamePlaylist": {
+    "zh-CN": "重命名歌单",
+    "en-US": "Rename playlist",
+    "ja-JP": "プレイリスト名を変更"
+  },
+  "Playlists.PlayTheFirstFileDroppedInTheMainArea": {
+    "zh-CN": "主区域自动播放第一首；拖入歌单仅添加，拖入播放栏始终临时播放。",
+    "en-US": "Play the first file dropped in the main area. Playlist drops only add files; player-bar drops always play temporarily.",
+    "ja-JP": "メイン画面へのドロップは最初の曲を再生します。プレイリストへは追加のみ、再生バーへは常に一時再生します。"
+  },
+  "Playlists.DroppingIntoTheMainAreaPlaysTheFirstTrack": {
+    "zh-CN": "主区域自动播放第一首；拖入歌单仅添加。",
+    "en-US": "Dropping into the main area plays the first track; dropping onto a playlist only adds it.",
+    "ja-JP": "メイン領域では最初の曲を再生し、プレイリストへのドロップは追加のみ行います。"
+  }
+}

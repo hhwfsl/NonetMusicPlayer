@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleIdentifier</key><string>local.nonetmusicplayer.desktop</string>
+  <key>CFBundleName</key><string>Nonet</string>
+  <key>CFBundleExecutable</key><string>Nonet</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>0.3.0</string>
+  <key>CFBundleVersion</key><string>3002</string>
+  <key>CFBundleDocumentTypes</key><array><dict>
+    <key>CFBundleTypeName</key><string>Audio</string>
+    <key>CFBundleTypeRole</key><string>Viewer</string>
+    <key>LSHandlerRank</key><string>Alternate</string>
+    <key>LSItemContentTypes</key><array><string>public.audio</string><string>public.mp3</string><string>public.mpeg-4-audio</string><string>org.xiph.flac</string><string>org.xiph.ogg-audio</string></array>
+    <key>CFBundleTypeExtensions</key><array><string>mp3</string><string>flac</string><string>wav</string><string>m4a</string><string>aac</string><string>ogg</string><string>opus</string><string>aiff</string><string>ape</string></array>
+  </dict></array>
+  <key>CFBundleIconFile</key><string>app.icns</string>
+  <key>NSHighResolutionCapable</key><true/>
+</dict></plist>

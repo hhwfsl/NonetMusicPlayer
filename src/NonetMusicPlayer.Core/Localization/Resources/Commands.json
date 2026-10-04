@@ -1,0 +1,367 @@
+{
+  "Commands.UnknownCommand": {
+    "ja-JP": "不明なコマンドです。nonet help を使用してください。",
+    "zh-CN": "未知播放器命令，请使用 nonet help。",
+    "en-US": "Unknown player command. Use nonet help."
+  },
+  "Commands.WindowRequired": {
+    "ja-JP": "このコマンドにはデスクトップ画面が必要です。",
+    "zh-CN": "此命令需要桌面窗口。",
+    "en-US": "This command requires the desktop window."
+  },
+  "Commands.ConfirmationRequired": {
+    "ja-JP": "確認が必要です。-y で確認、-n で取り消せます。",
+    "zh-CN": "此操作需要确认，可用 -y 确认或 -n 取消。",
+    "en-US": "Confirmation required. Use -y to confirm or -n to cancel."
+  },
+  "Commands.Cancelled": {
+    "ja-JP": "操作をキャンセルしました。",
+    "zh-CN": "操作已取消。",
+    "en-US": "Operation cancelled."
+  },
+  "Commands.IntegerRequired": {
+    "ja-JP": "整数を入力してください。",
+    "zh-CN": "请输入整数。",
+    "en-US": "An integer value is required."
+  },
+  "Commands.TrackNotFound": {
+    "ja-JP": "曲が見つかりません。",
+    "zh-CN": "未找到歌曲。",
+    "en-US": "Track not found."
+  },
+  "Commands.PlaylistNotFound": {
+    "ja-JP": "プレイリストが見つかりません。",
+    "zh-CN": "未找到歌单。",
+    "en-US": "Playlist not found."
+  },
+  "Commands.PluginNotFound": {
+    "ja-JP": "プラグインが見つかりません。",
+    "zh-CN": "未找到插件。",
+    "en-US": "Plugin not found."
+  },
+  "Commands.PlayerNotReady": {
+    "ja-JP": "プレイヤーの準備が完了していません。",
+    "zh-CN": "播放器尚未就绪。",
+    "en-US": "Player is not ready."
+  },
+  "Commands.PlaybackStartFailed": {
+    "ja-JP": "再生を開始できません。",
+    "zh-CN": "无法开始播放。",
+    "en-US": "Playback could not start."
+  },
+  "Commands.PlaybackResumeFailed": {
+    "ja-JP": "再生を再開できません。",
+    "zh-CN": "无法继续播放。",
+    "en-US": "Playback could not resume."
+  },
+  "Commands.UnknownMode": {
+    "ja-JP": "不明な再生モードです。",
+    "zh-CN": "未知播放方式。",
+    "en-US": "Unknown playback mode."
+  },
+  "Commands.OutputNotFound": {
+    "ja-JP": "出力デバイスが見つかりません。",
+    "zh-CN": "未找到输出设备。",
+    "en-US": "Output device not found."
+  },
+  "Commands.LikedRenameDenied": {
+    "ja-JP": "「お気に入り」は名前を変更できません。",
+    "zh-CN": "不能重命名“我喜欢”。",
+    "en-US": "The liked playlist cannot be renamed."
+  },
+  "Commands.LikedDeleteDenied": {
+    "ja-JP": "「お気に入り」は削除できません。",
+    "zh-CN": "不能删除“我喜欢”。",
+    "en-US": "The liked playlist cannot be deleted."
+  },
+  "Commands.ProvideInputs": {
+    "ja-JP": "曲 ID、ファイルまたはフォルダーを指定してください。",
+    "zh-CN": "请提供歌曲 ID、文件或文件夹。",
+    "en-US": "Provide tracks, files or folders."
+  },
+  "Commands.ProvideIds": {
+    "ja-JP": "曲 ID を指定してください。",
+    "zh-CN": "请提供歌曲 ID。",
+    "en-US": "Provide track IDs."
+  },
+  "Commands.InputMissing": {
+    "ja-JP": "入力パスが存在しません。",
+    "zh-CN": "输入路径不存在。",
+    "en-US": "An input path does not exist."
+  },
+  "Commands.NotInPlaylist": {
+    "ja-JP": "曲はこのプレイリストに含まれていません。",
+    "zh-CN": "歌曲不在此歌单中。",
+    "en-US": "Track is not in playlist."
+  },
+  "Commands.UnknownSetting": {
+    "ja-JP": "不明な設定項目です。",
+    "zh-CN": "未知设置项。",
+    "en-US": "Unknown setting."
+  },
+  "Commands.InvalidSettings": {
+    "ja-JP": "設定が無効です。",
+    "zh-CN": "设置内容无效。",
+    "en-US": "Invalid settings."
+  },
+  "Commands.BackupExists": {
+    "ja-JP": "バックアップ先は既に存在します。",
+    "zh-CN": "备份目标已存在。",
+    "en-US": "Backup destination already exists."
+  },
+  "Commands.LayoutTooLarge": {
+    "ja-JP": "レイアウトは 100 KiB 以下にしてください。",
+    "zh-CN": "布局文件不能超过 100 KiB。",
+    "en-US": "Layout exceeds 100 KiB."
+  },
+  "Commands.HostUnsupported": {
+    "ja-JP": "CLI はこのコマンドに対応していません。",
+    "zh-CN": "CLI 不支持此命令。",
+    "en-US": "This command is not available in the CLI host."
+  },
+  "Commands.PluginAlreadyInstalled": {
+    "ja-JP": "インストール済みです。置換する前にアンインストールしてください。",
+    "zh-CN": "插件已安装，请先卸载再更换。",
+    "en-US": "Plugin is already installed. Uninstall it before replacing it."
+  },
+  "Commands.PluginUiUnsupported": {
+    "ja-JP": "このプラグインにはデスクトップ UI が必要なため CLI では有効にできません。",
+    "zh-CN": "此插件需要桌面 UI，无法在 CLI 中启用。",
+    "en-US": "This plugin provides desktop UI and cannot be activated by the CLI host."
+  },
+  "Commands.ConfigObject": {
+    "ja-JP": "プラグイン設定は JSON オブジェクトである必要があります。",
+    "zh-CN": "插件配置必须是 JSON 对象。",
+    "en-US": "Plugin configuration must be an object."
+  },
+  "Commands.PathEscape": {
+    "ja-JP": "プラグインのパスがルート外です。",
+    "zh-CN": "插件路径超出插件目录。",
+    "en-US": "Plugin path escapes its root."
+  },
+  "Commands.ExternalDeleteDenied": {
+    "ja-JP": "プラグインルート外のフォルダーは削除できません。",
+    "zh-CN": "不能移除插件目录外的目录。",
+    "en-US": "Refusing to remove an external directory."
+  },
+  "Commands.EnableProvider": {
+    "ja-JP": "音源プラグインを先に有効にしてください。",
+    "zh-CN": "请先启用音源插件。",
+    "en-US": "Enable a provider plugin first."
+  },
+  "Commands.HandshakeFailed": {
+    "ja-JP": "プラグインの Contract ハンドシェイクに失敗しました。",
+    "zh-CN": "插件 Contract 握手失败。",
+    "en-US": "Plugin contract handshake failed."
+  },
+  "Commands.PaginationStopped": {
+    "ja-JP": "プラグインのページングが進みません。",
+    "zh-CN": "插件分页游标未前进。",
+    "en-US": "Plugin pagination did not advance."
+  },
+  "Commands.EmptyCatalog": {
+    "ja-JP": "音源ライブラリが空です。",
+    "zh-CN": "音源曲库为空。",
+    "en-US": "Empty provider catalog."
+  },
+  "Commands.CatalogTooLarge": {
+    "ja-JP": "音源ライブラリがページング上限を超えています。",
+    "zh-CN": "音源曲库超过分页限制。",
+    "en-US": "Provider catalog exceeds pagination limits."
+  },
+  "Commands.InvalidMetadata": {
+    "ja-JP": "音源の曲情報が無効です。",
+    "zh-CN": "音源歌曲信息无效。",
+    "en-US": "Invalid provider metadata."
+  },
+  "Commands.NoProviderAudio": {
+    "ja-JP": "音源プラグインが音声を返しませんでした。",
+    "zh-CN": "音源插件没有返回音频。",
+    "en-US": "Provider did not return audio."
+  },
+  "Commands.LoopbackOnly": {
+    "ja-JP": "認証済みのローカル loopback-http のみ対応しています。",
+    "zh-CN": "仅支持经过验证的本地 loopback-http 流。",
+    "en-US": "Only authenticated loopback-http streams are supported."
+  },
+  "Commands.MissingOption": {
+    "ja-JP": "オプションの値がありません。",
+    "zh-CN": "选项缺少参数。",
+    "en-US": "Missing option value."
+  },
+  "Commands.UnsupportedLanguage": {
+    "ja-JP": "この言語には対応していません。",
+    "zh-CN": "不支持此语言。",
+    "en-US": "Unsupported language."
+  },
+  "Commands.UnsupportedMode": {
+    "ja-JP": "この再生モードには対応していません。",
+    "zh-CN": "不支持此播放方式。",
+    "en-US": "Unsupported playback mode."
+  },
+  "Commands.UnsupportedTheme": {
+    "ja-JP": "このテーマには対応していません。",
+    "zh-CN": "不支持此主题。",
+    "en-US": "Unsupported theme."
+  },
+  "Commands.ModeRange": {
+    "ja-JP": "再生モードは 1、2、3 のいずれかです。",
+    "zh-CN": "播放方式必须为 1、2 或 3。",
+    "en-US": "Playback mode must be 1, 2 or 3."
+  },
+  "Commands.AccentFormat": {
+    "ja-JP": "テーマ色は #RRGGBB 形式で指定してください。",
+    "zh-CN": "主题色必须为 #RRGGBB。",
+    "en-US": "Accent must be #RRGGBB."
+  },
+  "Commands.HistoryInteger": {
+    "ja-JP": "履歴の上限は整数で指定してください。",
+    "zh-CN": "最近播放上限必须是整数。",
+    "en-US": "History limit must be an integer."
+  },
+  "Commands.VolumeRange": {
+    "ja-JP": "音量は 0～100 の範囲で指定してください。",
+    "zh-CN": "音量必须在 0～100 之间。",
+    "en-US": "Volume must be between 0 and 100."
+  },
+  "Commands.HistoryRange": {
+    "ja-JP": "履歴の上限は 0～100000 の範囲で指定してください。",
+    "zh-CN": "最近播放上限必须在 0～100000 之间。",
+    "en-US": "History limit must be between 0 and 100000."
+  },
+  "Commands.UnsupportedAudio": {
+    "ja-JP": "この音声ファイルには対応していません。",
+    "zh-CN": "不支持此音频文件。",
+    "en-US": "Unsupported audio file."
+  },
+  "Commands.AudioMissing": {
+    "ja-JP": "音声ファイルまたはフォルダーが存在しません。",
+    "zh-CN": "音频文件或文件夹不存在。",
+    "en-US": "Audio input does not exist."
+  },
+  "Commands.ImportTooLarge": {
+    "ja-JP": "一度に取り込める曲は 100000 曲までです。",
+    "zh-CN": "单次导入不能超过 100000 首歌曲。",
+    "en-US": "Import exceeds 100000 tracks."
+  },
+  "Commands.PeriodInvalid": {
+    "ja-JP": "集計期間は all、day、month、year のいずれかです。",
+    "zh-CN": "统计范围必须为 all、day、month 或 year。",
+    "en-US": "Period must be all, day, month or year."
+  },
+  "Commands.CoverSize": {
+    "ja-JP": "カバーは空でない 20 MiB 以下の画像を指定してください。",
+    "zh-CN": "封面不能为空且不能超过 20 MiB。",
+    "en-US": "Cover image must be non-empty and no larger than 20 MiB."
+  },
+  "Commands.CoverFormat": {
+    "ja-JP": "このカバー画像形式には対応していません。",
+    "zh-CN": "不支持此封面图片格式。",
+    "en-US": "Unsupported cover image extension."
+  },
+  "Commands.PlaylistName": {
+    "ja-JP": "プレイリスト名は 1～80 文字で指定してください。",
+    "zh-CN": "歌单名称必须为 1～80 个字符。",
+    "en-US": "Playlist name must contain 1–80 characters."
+  },
+  "Commands.SeparateData": {
+    "ja-JP": "CLI は専用データフォルダーを使用してください。デスクトップ版の Data は使用できません。",
+    "zh-CN": "CLI 必须使用独立数据目录，不能使用桌面版 Data 目录。",
+    "en-US": "CLI data must use a separate directory, not the desktop Data directory."
+  },
+  "Commands.StateTooLarge": {
+    "ja-JP": "状態バックアップは 100 MiB 以下にしてください。",
+    "zh-CN": "状态备份不能超过 100 MiB。",
+    "en-US": "State backup exceeds 100 MiB."
+  },
+  "Commands.ForeignBackup": {
+    "ja-JP": "このバックアップは CLI 用ではありません。元のデータは変更されていません。",
+    "zh-CN": "此备份不属于 CLI，原数据未修改。",
+    "en-US": "This backup belongs to a different player host."
+  },
+  "Commands.EmptyState": {
+    "ja-JP": "状態ファイルが空です。",
+    "zh-CN": "状态文件为空。",
+    "en-US": "State is empty."
+  },
+  "Commands.InvalidState": {
+    "ja-JP": "CLI 状態のバージョンに対応していないか内容が不完全です。",
+    "zh-CN": "CLI 状态版本不受支持或内容不完整。",
+    "en-US": "Unsupported or incomplete CLI state."
+  },
+  "Commands.InvalidLibrary": {
+    "ja-JP": "CLI の音楽データが無効です。",
+    "zh-CN": "CLI 音乐数据无效。",
+    "en-US": "Invalid CLI library."
+  },
+  "Commands.InvalidIdentity": {
+    "ja-JP": "CLI 状態の曲 ID が無効です。",
+    "zh-CN": "CLI 状态中的歌曲标识无效。",
+    "en-US": "Invalid music identity in CLI state."
+  },
+  "Commands.NoTrack": {
+    "ja-JP": "曲が選択されていません。",
+    "zh-CN": "尚未选择歌曲。",
+    "en-US": "No track is selected."
+  },
+  "Commands.EmptyQueue": {
+    "ja-JP": "再生キューが空です。",
+    "zh-CN": "播放队列为空。",
+    "en-US": "Playback queue is empty."
+  },
+  "Commands.EmptyPlaylist": {
+    "ja-JP": "プレイリストに再生可能な音声がありません。",
+    "zh-CN": "歌单中没有可播放的音频。",
+    "en-US": "Playlist has no available audio."
+  },
+  "Commands.DescriptionTooLong": {
+    "ja-JP": "説明は 500 文字以下にしてください。",
+    "zh-CN": "简介不能超过 500 个字符。",
+    "en-US": "Description exceeds 500 characters."
+  },
+  "Commands.SelectTrack": {
+    "ja-JP": "先に曲を選択してください。",
+    "zh-CN": "请先选择歌曲。",
+    "en-US": "Select a track first."
+  },
+  "Commands.LyricsSize": {
+    "ja-JP": "4 MiB 以下の LRC/TXT 歌詞を指定してください。",
+    "zh-CN": "请选择不超过 4 MiB 的 LRC/TXT 歌词。",
+    "en-US": "Choose LRC/TXT lyrics no larger than 4 MiB."
+  },
+  "Commands.MultiplePackages": {
+    "ja-JP": "Release に複数のパッケージがあります。.impp 添付リンクを指定してください。",
+    "zh-CN": "Release 有多个插件包，请指定 .impp 附件链接。",
+    "en-US": "Release contains multiple packages. Provide the .impp asset link."
+  },
+  "Commands.CommandTooLong": {
+    "ja-JP": "コマンドは 16 KiB 以下にしてください。",
+    "zh-CN": "命令不能超过 16 KiB。",
+    "en-US": "Command exceeds 16 KiB."
+  },
+  "Commands.ControlCharacters": {
+    "ja-JP": "コマンドに制御文字は使用できません。",
+    "zh-CN": "命令中不能包含控制字符。",
+    "en-US": "Control characters are not allowed."
+  },
+  "Commands.UnclosedQuote": {
+    "ja-JP": "引用符が閉じていません。",
+    "zh-CN": "引号未闭合。",
+    "en-US": "Unclosed quote."
+  },
+  "Commands.EnterCommand": {
+    "ja-JP": "プレイヤーコマンドを入力してください。",
+    "zh-CN": "请输入播放器命令。",
+    "en-US": "Enter a player command."
+  },
+  "Commands.NoPlayableAudio": {
+    "ja-JP": "現在のキューに再生可能な音声がありません。",
+    "zh-CN": "当前队列中没有可正常播放的音频。",
+    "en-US": "No playable audio remains in this queue."
+  },
+  "Commands.PreparingAudio": {
+    "ja-JP": "音声を準備中です。しばらくしてから再試行してください。",
+    "zh-CN": "音频正在准备，请稍后重试。",
+    "en-US": "Audio is being prepared. Try again shortly."
+  }
+}

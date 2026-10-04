@@ -1,0 +1,9 @@
+{
+  "Plugins.RuntimeEntryMissing": { "zh-CN": "该插件没有 {0} 的入口文件。", "en-US": "The plugin has no entry point for {0}.", "ja-JP": "このプラグインには {0} 用の実行ファイルがありません。" },
+  "Plugins.EntryMissing": { "zh-CN": "插件入口文件不存在。", "en-US": "The plugin entry point does not exist.", "ja-JP": "プラグインの実行ファイルが見つかりません。" },
+  "Plugins.ProcessStartFailed": { "zh-CN": "无法启动插件进程。", "en-US": "The plugin process could not start.", "ja-JP": "プラグインのプロセスを起動できません。" },
+  "Plugins.ProcessExited": { "zh-CN": "插件进程已退出。", "en-US": "The plugin process has exited.", "ja-JP": "プラグインのプロセスが終了しました。" },
+  "Plugins.ResponseTooLarge": { "zh-CN": "插件响应超过 8 MB 限制。", "en-US": "The plugin response exceeds the 8 MB limit.", "ja-JP": "プラグインの応答が 8 MB の上限を超えています。" },
+  "Plugins.InvalidRpc": { "zh-CN": "插件响应不符合 JSON-RPC 2.0。", "en-US": "The plugin response is not valid JSON-RPC 2.0.", "ja-JP": "プラグインの応答が JSON-RPC 2.0 に準拠していません。" },
+  "Plugins.ProviderFailed": { "zh-CN": "插件报告错误，请检查插件配置及服务器连接。", "en-US": "The plugin reported an error. Check its configuration and server connection.", "ja-JP": "プラグインでエラーが発生しました。設定とサーバー接続を確認してください。" }
+}

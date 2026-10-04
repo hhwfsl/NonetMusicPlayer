@@ -1,0 +1,92 @@
+{
+  "Commands.ValueRange": {
+    "zh-CN": "数值必须在 {0}～{1} 之间。",
+    "en-US": "Value must be between {0} and {1}.",
+    "ja-JP": "値は {0}～{1} の範囲で指定してください。"
+  },
+  "Commands.SettingRange": {
+    "zh-CN": "{0} 必须在 {1}～{2} 之间。",
+    "en-US": "{0} must be between {1} and {2}.",
+    "ja-JP": "{0} は {1}～{2} の範囲で指定してください。"
+  },
+  "Commands.MissingArgument": {
+    "zh-CN": "缺少参数，请使用 help {0}。",
+    "en-US": "Missing argument. Use help {0}.",
+    "ja-JP": "引数がありません。help {0} を使用してください。"
+  },
+  "Commands.Usage": {
+    "zh-CN": "用法：{0}",
+    "en-US": "Usage: {0}",
+    "ja-JP": "使い方：{0}"
+  },
+  "Commands.UnknownOption": {
+    "zh-CN": "未知 CLI 选项：{0}",
+    "en-US": "Unknown CLI option: {0}",
+    "ja-JP": "不明な CLI オプション：{0}"
+  },
+  "Commands.AudioFailed": {
+    "zh-CN": "音频播放失败：{0}",
+    "en-US": "Audio could not be played: {0}",
+    "ja-JP": "音声を再生できません：{0}"
+  },
+  "Commands.DesktopOnly": {
+    "zh-CN": " [仅桌面]",
+    "en-US": " [desktop]",
+    "ja-JP": " [デスクトップ専用]"
+  },
+  "Commands.NeedsConfirmation": {
+    "zh-CN": " [需确认]",
+    "en-US": " [confirmation]",
+    "ja-JP": " [要確認]"
+  },
+  "Terminal.CliConfirm": {
+    "zh-CN": "确认执行 {0}？按 Y 确认，其他按键取消。",
+    "en-US": "Confirm {0}? Press Y to confirm; any other key cancels.",
+    "ja-JP": "{0} を実行しますか？Y で確認、他のキーでキャンセルします。"
+  },
+  "Terminal.ConfirmPrompt": {
+    "zh-CN": "确认执行 {0}？[y/N] ",
+    "en-US": "Confirm {0}? [y/N] ",
+    "ja-JP": "{0} を実行しますか？[y/N] "
+  },
+  "Terminal.DownloadProgress": {
+    "zh-CN": "插件下载：{0:0}%",
+    "en-US": "Plugin download: {0:0}%",
+    "ja-JP": "プラグインのダウンロード：{0:0}%"
+  },
+  "Terminal.StructuredOutput": {
+    "zh-CN": "… 使用 --json 查看完整结构化输出。",
+    "en-US": "… Use --json for full structured output.",
+    "ja-JP": "… 完全な構造化出力には --json を使用してください。"
+  },
+  "Terminal.NoTrack": {
+    "zh-CN": "尚未选择歌曲",
+    "en-US": "No track selected",
+    "ja-JP": "曲が選択されていません"
+  },
+  "Terminal.Playing": {
+    "zh-CN": "播放",
+    "en-US": "PLAY",
+    "ja-JP": "再生"
+  },
+  "Terminal.Paused": {
+    "zh-CN": "暂停",
+    "en-US": "PAUSE",
+    "ja-JP": "一時停止"
+  },
+  "Terminal.Volume": {
+    "zh-CN": "音量",
+    "en-US": "Volume",
+    "ja-JP": "音量"
+  },
+  "Terminal.PrivateConfig": {
+    "zh-CN": "plugins config [私密配置]",
+    "en-US": "plugins config [private configuration]",
+    "ja-JP": "plugins config [非公開設定]"
+  },
+  "Terminal.CliHelp": {
+    "zh-CN": "NonetMusicPlayerCli\n用法：nonet [启动选项] <分类> <命令> [命令选项] [参数...]\n启动交互会话：nonet；会话内可省略 nonet 前缀。\n终端命令：help、clear、exit\n启动参数：--data <目录>、--json、--no-tui、--stay、--command <命令>\n",
+    "en-US": "NonetMusicPlayerCli\nUsage: nonet [launcher options] <category> <command> [command options] [arguments...]\nStart a session: nonet. The nonet prefix is optional inside a session.\nTerminal commands: help, clear, exit\nLauncher options: --data <directory>, --json, --no-tui, --stay, --command <command>\n",
+    "ja-JP": "NonetMusicPlayerCli\n使い方：nonet [起動オプション] <分類> <コマンド> [コマンドオプション] [引数...]\n対話セッション開始：nonet。セッション内では nonet を省略できます。\nターミナルのコマンド：help、clear、exit\n起動オプション：--data <フォルダー>、--json、--no-tui、--stay、--command <コマンド>\n"
+  }
+}

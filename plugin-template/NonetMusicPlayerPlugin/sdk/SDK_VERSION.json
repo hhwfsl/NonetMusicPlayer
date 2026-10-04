@@ -1,0 +1,18 @@
+{
+  "sdkVersion": "3.0.0",
+  "playerVersion": "0.4.0-beta.1",
+  "contractVersion": 1,
+  "pageSchemaVersion": 1,
+  "hashEncoding": "utf8-lf",
+  "files": {
+    "NonetMusicPlayer.PluginSdk.csproj": "f31f02b5281069855d36915f108c3d18e336a81c7908a5b1886cdbde5e19b30b",
+    "PluginConfigSchema.cs": "5023c25c8b2433f96db58ea69d601700cfc5d4bd60fb147ce7563da68a2f60ac",
+    "PluginContract.cs": "81353032bb7b677b6e3b0841bdd88bd5d8f0c0e91b2735a2607da8deaca718cb",
+    "PluginJson.cs": "55d638ff46e509a7c75c2de9a69e79e33f8abd4d30813319f1119d0dffa59aef",
+    "PluginPackageBuilder.cs": "19d6a1fffb560e1207bff16d17d5f139ab0f293218bfe1aa4a1d907682c17907",
+    "PluginPackageInspector.cs": "c64a1948b6789b24ab4f7107bc36d895ff3616dca4bc26fe0ccc6092512c5401",
+    "PluginPageContract.cs": "66308abd000bb727f64aeda1b727e321ce4e2d30b1794975d576ff03af85a87b",
+    "PluginPathPolicy.cs": "da75baa04986d6d04eb4b6fd71d167027097c3d4cdafd4bf228c01f82c8fb239",
+    "README.md": "25d7d6fe6e021c4298e9a1c60f31c8d6001a36348ebc4f0d6856ff4cee3a452a"
+  }
+}

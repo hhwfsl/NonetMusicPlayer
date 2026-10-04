@@ -1,0 +1,97 @@
+{
+  "Storage.BackupFolderUpdatedTheChangeIsEffectiveNow": {
+    "zh-CN": "备份目录已更新，立即生效。",
+    "en-US": "Backup folder updated. The change is effective now.",
+    "ja-JP": "バックアップフォルダーを変更しました。すぐに反映されます。"
+  },
+  "Storage.ImportLibraryBackup": {
+    "zh-CN": "导入音乐库备份？",
+    "en-US": "Import library backup?",
+    "ja-JP": "ライブラリのバックアップを取り込みますか？"
+  },
+  "Storage.CustomCoverSavedToTheDataFolder": {
+    "zh-CN": "个性封面已保存至数据目录。",
+    "en-US": "Custom cover saved to the data folder.",
+    "ja-JP": "カスタムカバーをデータフォルダーに保存しました。"
+  },
+  "Storage.ChangeBackupFolder": {
+    "zh-CN": "更换恢复文件目录",
+    "en-US": "Change backup folder",
+    "ja-JP": "バックアップフォルダーを変更"
+  },
+  "Storage.ChangeDataFolder": {
+    "zh-CN": "更换数据目录",
+    "en-US": "Change data folder",
+    "ja-JP": "データフォルダーを変更"
+  },
+  "Storage.BackupFolder": {
+    "zh-CN": "恢复文件目录",
+    "en-US": "Backup folder",
+    "ja-JP": "バックアップフォルダー"
+  },
+  "Storage.MoveAppData": {
+    "zh-CN": "迁移数据目录？",
+    "en-US": "Move app data?",
+    "ja-JP": "データフォルダーを変更しますか？"
+  },
+  "Storage.DataFolder": {
+    "zh-CN": "数据目录",
+    "en-US": "Data folder",
+    "ja-JP": "データフォルダー"
+  },
+  "Storage.DataCopiedRestartTheAppToUseTheNew": {
+    "zh-CN": "数据已迁移，请关闭并重新打开软件以使用新数据目录。",
+    "en-US": "Data copied. Restart the app to use the new folder.",
+    "ja-JP": "データをコピーしました。新しいフォルダーを使用するには再起動してください。"
+  },
+  "Storage.ReplaceTheCurrentLibraryAndSettingsTheSourceFile": {
+    "zh-CN": "替换当前音乐库与设置，保留源文件并备份当前数据。",
+    "en-US": "Replace the current library and settings. The source file is kept and current data is backed up.",
+    "ja-JP": "現在のライブラリと設定を置き換えます。元ファイルを残し、現在のデータをバックアップします。"
+  },
+  "Storage.SelectBackupAndRecoveryFolder": {
+    "zh-CN": "选择备份与恢复文件存放目录",
+    "en-US": "Select backup and recovery folder",
+    "ja-JP": "バックアップと復元ファイルの保存先を選択"
+  },
+  "Storage.ChooseBackupFolder": {
+    "zh-CN": "选择恢复文件目录",
+    "en-US": "Choose backup folder",
+    "ja-JP": "バックアップフォルダーを選択"
+  },
+  "Storage.SelectAppDataFolder": {
+    "zh-CN": "选择软件数据目录",
+    "en-US": "Select app data folder",
+    "ja-JP": "アプリのデータフォルダーを選択"
+  },
+  "Storage.ChooseDataFolder": {
+    "zh-CN": "选择数据目录",
+    "en-US": "Choose data folder",
+    "ja-JP": "データフォルダーを選択"
+  },
+  "Storage.AnotherOperationIsInProgressWaitBeforeMigratingData": {
+    "zh-CN": "正在处理其他操作，请等待完成后再迁移数据目录。",
+    "en-US": "Another operation is in progress. Wait before migrating data.",
+    "ja-JP": "別の操作を処理中です。完了後にデータを移行してください。"
+  },
+  "Storage.ThePlayerIsBusyOrClosingTryMigratingData": {
+    "zh-CN": "正在处理其他操作或关闭播放器，请稍后再迁移数据目录。",
+    "en-US": "The player is busy or closing. Try migrating data later.",
+    "ja-JP": "プレイヤーは処理中または終了中です。後でデータを移行してください。"
+  },
+  "Storage.AppDataIsBeingCopiedWaitForCompletionBefore": {
+    "zh-CN": "正在迁移数据，请等待完成后再关闭软件，避免复制被中断。",
+    "en-US": "App data is being copied. Wait for completion before closing.",
+    "ja-JP": "データをコピー中です。完了するまで終了しないでください。"
+  },
+  "Storage.DataMigrationIsInProgressWaitBeforeChangingFolders": {
+    "zh-CN": "正在迁移数据目录，请等待完成后再更改目录或恢复备份。音乐播放可以继续。",
+    "en-US": "Data migration is in progress. Wait before changing folders or restoring a backup. Playback can continue.",
+    "ja-JP": "データを移行中です。フォルダーの変更や復元は完了までお待ちください。音楽の再生は継続できます。"
+  },
+  "Storage.LibraryRestoredPreviousDataAndTheSelectedBackupWere": {
+    "zh-CN": "资料库已恢复，恢复前数据与所选备份已另存恢复归档；歌曲不会自动播放。",
+    "en-US": "Library restored. Previous data and the selected backup were archived. Playback will not start automatically.",
+    "ja-JP": "ライブラリを復元しました。以前のデータと選択したバックアップは別途保管されています。自動再生は行いません。"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "Library.InputNotFound": {"zh-CN":"不存在：{0}","en-US":"Not found: {0}","ja-JP":"見つかりません：{0}"},
+  "Library.InputUnavailable": {"zh-CN":"无法访问：{0}","en-US":"Unable to access: {0}","ja-JP":"アクセスできません：{0}"},
+  "Library.InputUnreadable": {"zh-CN":"无法读取：{0}","en-US":"Unable to read: {0}","ja-JP":"読み取れません：{0}"},
+  "Library.TagsUnreadable": {"zh-CN":"标签读取失败，保留文件名。","en-US":"Tags could not be read; file name retained.","ja-JP":"タグを読み取れません。ファイル名を使用します。"},
+  "Library.LyricsTooLarge": {"zh-CN":"歌词超过 2 MiB，未导入。","en-US":"Lyrics exceed 2 MiB and were not imported.","ja-JP":"歌詞が 2 MiB を超えるため取り込みませんでした。"}
+}

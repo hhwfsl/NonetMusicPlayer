@@ -1,0 +1,382 @@
+{
+  "Settings.TheShortcutForIsInvalid": {
+    "zh-CN": "“{0}”的快捷键无效。",
+    "en-US": "The shortcut for '{0}' is invalid.",
+    "ja-JP": "「{0}」のショートカットは無効です。"
+  },
+  "Settings.AndUseTheSameShortcut": {
+    "zh-CN": "“{0}”与“{1}”使用了相同快捷键 {2}。",
+    "en-US": "'{0}' and '{1}' use the same shortcut: {2}.",
+    "ja-JP": "「{0}」と「{1}」に同じショートカット {2} が設定されています。"
+  },
+  "Settings.PressShortcutEscCancels": {
+    "zh-CN": "按下快捷键（Esc 取消）",
+    "en-US": "Press shortcut (Esc cancels)",
+    "ja-JP": "キーを入力 (Esc で中止)"
+  },
+  "Settings.SaveShortcuts": {
+    "zh-CN": "保存快捷键",
+    "en-US": "Save shortcuts",
+    "ja-JP": "ショートカットを保存"
+  },
+  "Settings.TheBackgroundCoversTheEntireWindowAdjustEachRegion": {
+    "zh-CN": "背景覆盖整个窗口；区域遮罩可分别调整。",
+    "en-US": "The background covers the entire window. Adjust each region's overlay separately.",
+    "ja-JP": "背景はウィンドウ全体を覆います。各領域の背景マスクは個別に調整できます。"
+  },
+  "Settings.BackgroundOpacity": {
+    "zh-CN": "背景透明度",
+    "en-US": "Background opacity",
+    "ja-JP": "背景の不透明度"
+  },
+  "Settings.BackgroundImage": {
+    "zh-CN": "背景图片",
+    "en-US": "Background image",
+    "ja-JP": "背景画像"
+  },
+  "Settings.BackgroundOpacity35693E": {
+    "zh-CN": "背景图片不透明度",
+    "en-US": "Background opacity",
+    "ja-JP": "背景画像の不透明度"
+  },
+  "Settings.UnsupportedBackgroundImageOrExcessiveDimensions": {
+    "zh-CN": "背景图片格式无效或尺寸过大。",
+    "en-US": "Unsupported background image or excessive dimensions.",
+    "ja-JP": "背景画像の形式が無効、または画像サイズが大きすぎます。"
+  },
+  "Settings.TheBackgroundDestinationCannotBeAFileLink": {
+    "zh-CN": "背景图片目标不能是文件链接。",
+    "en-US": "The background destination cannot be a file link.",
+    "ja-JP": "背景画像の保存先にファイルリンクは使用できません。"
+  },
+  "Settings.AppliesWhenABackgroundImageIsEnabled": {
+    "zh-CN": "背景图片启用时生效。",
+    "en-US": "Applies when a background image is enabled.",
+    "ja-JP": "背景画像の使用時に有効です。"
+  },
+  "Settings.BackgroundFit": {
+    "zh-CN": "背景图片适配",
+    "en-US": "Background fit",
+    "ja-JP": "背景画像の表示方法"
+  },
+  "Settings.UnableToReadBackgroundImage": {
+    "zh-CN": "背景图片无法读取",
+    "en-US": "Unable to read background image",
+    "ja-JP": "背景画像を読み込めません"
+  },
+  "Settings.BackgroundImagesMustBeSmallerThanMB": {
+    "zh-CN": "背景图片须小于 20 MB。",
+    "en-US": "Background images must be smaller than 20 MB.",
+    "ja-JP": "背景画像は 20 MB 未満にしてください。"
+  },
+  "Settings.BackgroundFit34D82E": {
+    "zh-CN": "背景显示方式",
+    "en-US": "Background fit",
+    "ja-JP": "背景の表示方法"
+  },
+  "Settings.BackgroundAndControls": {
+    "zh-CN": "背景与控件",
+    "en-US": "Background and controls",
+    "ja-JP": "背景とコントロール"
+  },
+  "Settings.TitleBarOpacity": {
+    "zh-CN": "标题栏不透明度",
+    "en-US": "Title bar opacity",
+    "ja-JP": "タイトルバーの不透明度"
+  },
+  "Settings.PlayerBarOpacity": {
+    "zh-CN": "播放栏不透明度",
+    "en-US": "Player bar opacity",
+    "ja-JP": "再生バーの不透明度"
+  },
+  "Settings.LayoutConfigurationCannotExceedKB": {
+    "zh-CN": "布局配置不能超过 100 KB。",
+    "en-US": "Layout configuration cannot exceed 100 KB.",
+    "ja-JP": "レイアウト設定は 100 KB 以下にしてください。"
+  },
+  "Settings.LayoutValidatedAndAppliedPreviousLayoutBackedUpMusic": {
+    "zh-CN": "布局配置已校验并应用 · 上一份配置已备份 · 曲库与播放设置不变",
+    "en-US": "Layout validated and applied. Previous layout backed up. Music and playback settings are unchanged.",
+    "ja-JP": "レイアウトを検証して適用しました。以前の設定はバックアップしました。音楽と再生設定は変更しません。"
+  },
+  "Settings.LayoutNotAppliedCurrentInterfaceKept": {
+    "zh-CN": "布局未应用，原界面保留",
+    "en-US": "Layout not applied; current interface kept",
+    "ja-JP": "レイアウトを適用できません。現在の画面を維持します"
+  },
+  "Settings.LayoutFileNotFoundApplyAConfigurationOrRestore": {
+    "zh-CN": "布局文件不存在；请先应用配置或恢复默认布局。",
+    "en-US": "Layout file not found. Apply a configuration or restore the default layout.",
+    "ja-JP": "レイアウトファイルがありません。設定を適用するか標準レイアウトに戻してください。"
+  },
+  "Settings.CropBackgroundImage": {
+    "zh-CN": "裁剪背景图片",
+    "en-US": "Crop background image",
+    "ja-JP": "背景画像を切り抜く"
+  },
+  "Settings.SidebarOpacity": {
+    "zh-CN": "侧边栏不透明度",
+    "en-US": "Sidebar opacity",
+    "ja-JP": "サイドバーの不透明度"
+  },
+  "Settings.ThisKeyIsReservedForSystemOrFocusOperations": {
+    "zh-CN": "此按键用于系统操作或焦点切换，请选择其他快捷键。",
+    "en-US": "This key is reserved for system or focus operations. Choose another shortcut.",
+    "ja-JP": "このキーはシステム操作またはフォーカス移動に使用します。別のショートカットを選んでください。"
+  },
+  "Settings.ExportJSONLayout": {
+    "zh-CN": "导出 JSON 布局配置",
+    "en-US": "Export JSON layout",
+    "ja-JP": "JSON レイアウトを書き出す"
+  },
+  "Settings.ImportJSONLayout": {
+    "zh-CN": "导入 JSON 布局配置",
+    "en-US": "Import JSON layout",
+    "ja-JP": "JSON レイアウトを取り込む"
+  },
+  "Settings.NoPreviousConfigurationExistsApplyALayoutOrRestore": {
+    "zh-CN": "还没有上次有效配置；可先修改应用，或恢复默认布局。",
+    "en-US": "No previous configuration exists. Apply a layout or restore defaults.",
+    "ja-JP": "以前の設定はありません。レイアウトを適用するか初期設定に戻してください。"
+  },
+  "Settings.ResetLayout": {
+    "zh-CN": "恢复默认布局",
+    "en-US": "Reset layout",
+    "ja-JP": "標準レイアウトに戻す"
+  },
+  "Settings.RestoreDefaultLayout": {
+    "zh-CN": "恢复默认布局？",
+    "en-US": "Restore default layout?",
+    "ja-JP": "標準レイアウトに戻しますか？"
+  },
+  "Settings.ReplaceEditorContentAndTheCurrentLayoutWithoutChanging": {
+    "zh-CN": "会替换编辑器中的内容和当前布局；不影响音乐和播放设置。",
+    "en-US": "Replace editor content and the current layout without changing music or playback settings.",
+    "ja-JP": "エディターの内容と現在のレイアウトを置き換えます。音楽や再生設定は変更しません。"
+  },
+  "Settings.ReplacesTheConfigurationFileAndCurrentLayoutMusicAnd": {
+    "zh-CN": "会替换配置文件和当前布局；不影响音乐和播放设置。",
+    "en-US": "Replaces the configuration file and current layout; music and playback settings remain unchanged.",
+    "ja-JP": "設定ファイルと現在のレイアウトを置き換えます。音楽と再生設定には影響しません。"
+  },
+  "Settings.WindowOpacity": {
+    "zh-CN": "界面不透明度",
+    "en-US": "Window opacity",
+    "ja-JP": "ウィンドウの不透明度"
+  },
+  "Settings.InterfaceFont": {
+    "zh-CN": "界面字体",
+    "en-US": "Interface font",
+    "ja-JP": "画面のフォント"
+  },
+  "Settings.OnlyChangesTheBackgroundOverlayTextAndButtonsRemain": {
+    "zh-CN": "仅调整背景遮罩，文字和按钮保持清晰。",
+    "en-US": "Only changes the background overlay; text and buttons remain opaque.",
+    "ja-JP": "背景マスクのみ調整します。文字とボタンの不透明度は変わりません。"
+  },
+  "Settings.DisableShortcut": {
+    "zh-CN": "禁用快捷键",
+    "en-US": "Disable shortcut",
+    "ja-JP": "ショートカットを無効にする"
+  },
+  "Settings.ControlsAndBackground": {
+    "zh-CN": "控件与背景",
+    "en-US": "Controls and background",
+    "ja-JP": "コントロールと背景"
+  },
+  "Settings.KeyboardShortcuts": {
+    "zh-CN": "快捷键",
+    "en-US": "Keyboard shortcuts",
+    "ja-JP": "キーボードショートカット"
+  },
+  "Settings.InvalidOrConflictingShortcutsWereResetToDefaults": {
+    "zh-CN": "快捷键配置无效或冲突，已恢复默认快捷键。",
+    "en-US": "Invalid or conflicting shortcuts were reset to defaults.",
+    "ja-JP": "無効または重複するショートカットを既定値に戻しました。"
+  },
+  "Settings.ShortcutsSaved": {
+    "zh-CN": "快捷键已保存",
+    "en-US": "Shortcuts saved",
+    "ja-JP": "ショートカットを保存しました"
+  },
+  "Settings.ShortcutsSavedDAE541": {
+    "zh-CN": "快捷键已保存。",
+    "en-US": "Shortcuts saved.",
+    "ja-JP": "ショートカットを保存しました。"
+  },
+  "Settings.DefaultLayoutRestoredThePreviousConfigurationIsAvailableIn": {
+    "zh-CN": "默认布局已恢复，上次可用配置可从 .bak 找回。",
+    "en-US": "Default layout restored. The previous configuration is available in .bak.",
+    "ja-JP": "標準レイアウトに戻しました。以前の設定は .bak に保存されています。"
+  },
+  "Settings.DefaultFont": {
+    "zh-CN": "默认字体",
+    "en-US": "Default font",
+    "ja-JP": "既定のフォント"
+  },
+  "Settings.ChooseATTFOTFOrTTCFontFile": {
+    "zh-CN": "请选择 TTF、OTF 或 TTC 字体文件。",
+    "en-US": "Choose a TTF, OTF or TTC font file.",
+    "ja-JP": "TTF、OTF、TTC のフォントファイルを選択してください。"
+  },
+  "Settings.ColorWheelDragToSelectHueAndSaturation": {
+    "zh-CN": "色轮，拖动选择色相和饱和度",
+    "en-US": "Color wheel; drag to select hue and saturation",
+    "ja-JP": "色相環。ドラッグして色相と彩度を選択"
+  },
+  "Settings.ChooseHueAndSaturationWithTheWheelAdjustBrightness": {
+    "zh-CN": "色轮选择色相与饱和度；拖动亮度，或编辑下面的 RGB。",
+    "en-US": "Choose hue and saturation with the wheel; adjust brightness or edit RGB values.",
+    "ja-JP": "色相環で色相と彩度を選択し、明るさまたは RGB 値を調整します。"
+  },
+  "Settings.ColorWheelAndRGB": {
+    "zh-CN": "色轮与 RGB 选择",
+    "en-US": "Color wheel and RGB",
+    "ja-JP": "カラーホイールと RGB"
+  },
+  "Settings.InvalidColorEnterRRGGBBOrChooseAColorAgain": {
+    "zh-CN": "色值格式无效，请输入 #RRGGBB 或重新选择颜色。",
+    "en-US": "Invalid color. Enter #RRGGBB or choose a color again.",
+    "ja-JP": "色の形式が無効です。#RRGGBB を入力するか色を選び直してください。"
+  },
+  "Settings.SettingsLayoutConfiguration": {
+    "zh-CN": "设置 / 布局配置",
+    "en-US": "Settings / layout configuration",
+    "ja-JP": "設定・レイアウト設定"
+  },
+  "Settings.UseJSONToCustomizeNavigationContentAndPlayerControls": {
+    "zh-CN": "使用 JSON 调整导航、内容和播放栏。可校验、应用、导入、导出或恢复布局。",
+    "en-US": "Use JSON to customize navigation, content and player controls. Validate, apply, import, export or restore layouts.",
+    "ja-JP": "JSON でナビゲーション、コンテンツ、再生バーを調整できます。検証、適用、取り込み、書き出し、復元に対応します。"
+  },
+  "Settings.UseHex": {
+    "zh-CN": "使用色值",
+    "en-US": "Use hex",
+    "ja-JP": "色コードを使用"
+  },
+  "Settings.AppDataIsBeingCopiedChangeTheBackgroundAfter": {
+    "zh-CN": "数据目录正在迁移，请稍后再更换背景。",
+    "en-US": "App data is being copied. Change the background after it finishes.",
+    "ja-JP": "データをコピー中です。完了後に背景を変更してください。"
+  },
+  "Settings.NoBackgroundImage": {
+    "zh-CN": "未设置背景图片",
+    "en-US": "No background image",
+    "ja-JP": "背景画像は未設定です"
+  },
+  "Settings.OneThemeColorForHoverSelectionButtonsAndPlayback": {
+    "zh-CN": "悬停、选中、按钮和播放进度使用同一主题色。",
+    "en-US": "One theme color for hover, selection, buttons and playback progress.",
+    "ja-JP": "ホバー、選択、ボタン、再生バーに同じテーマカラーを使用します。"
+  },
+  "Settings.SelectAKeyToRecordAShortcutEscCancels": {
+    "zh-CN": "选择按键后录入组合，Esc 取消。清空可禁用该快捷键。Enter 激活按钮，Tab 切换焦点；文本输入和游戏优先使用自己的按键。macOS 使用 Command 代替 Ctrl。",
+    "en-US": "Select a key to record a shortcut; Esc cancels. Clear disables it. Enter activates buttons and Tab changes focus. Text input and games keep their own keys. Use Command instead of Ctrl on macOS.",
+    "ja-JP": "キーを選んで組み合わせを入力します。Esc で中止、クリアで無効にします。Enter はボタン操作、Tab はフォーカス移動です。入力欄とゲームのキーを優先します。macOS は Ctrl の代わりに Command を使用します。"
+  },
+  "Settings.ChooseBackgroundImage": {
+    "zh-CN": "选择背景图片",
+    "en-US": "Choose background image",
+    "ja-JP": "背景画像を選択"
+  },
+  "Settings.ChooseAnApplicationWideBackgroundImageUpToMB": {
+    "zh-CN": "选择覆盖整个应用的背景图片，最大 20 MB。",
+    "en-US": "Choose an application-wide background image, up to 20 MB.",
+    "ja-JP": "アプリ全体の背景画像を選択します。最大20 MBです。"
+  },
+  "Settings.ChooseASystemFontOrImportAFontFile": {
+    "zh-CN": "选择系统字体或导入字体文件，立即生效；缺失字符使用后备字体。",
+    "en-US": "Choose a system font or import a font file. Applies immediately with fallback for missing characters.",
+    "ja-JP": "システムフォントを選択するかファイルを読み込むと即時反映します。未収録の文字には代替フォントを使用します。"
+  },
+  "Settings.ChooseAnInstalledFontAppliesImmediatelyWithFallbackFor": {
+    "zh-CN": "选择已安装字体，立即生效；缺失字符使用后备字体。",
+    "en-US": "Choose an installed font; applies immediately with fallback for missing characters.",
+    "ja-JP": "インストール済みフォントを選択すると即時反映します。欠けた文字は代替フォントで表示します。"
+  },
+  "Settings.ChooseThemeColor": {
+    "zh-CN": "选择主题色",
+    "en-US": "Choose theme color",
+    "ja-JP": "テーマカラーを選択"
+  },
+  "Settings.ChooseFontFile": {
+    "zh-CN": "选择字体文件",
+    "en-US": "Choose font file",
+    "ja-JP": "フォントファイルを選択"
+  },
+  "Settings.ContentAreaOpacity": {
+    "zh-CN": "页面区域不透明度",
+    "en-US": "Content area opacity",
+    "ja-JP": "ページ領域の不透明度"
+  },
+  "Settings.RemoveBackgroundImage": {
+    "zh-CN": "移除背景图片",
+    "en-US": "Remove background image",
+    "ja-JP": "背景画像を削除"
+  },
+  "Settings.Theme": {
+    "zh-CN": "主题",
+    "en-US": "Theme",
+    "ja-JP": "テーマ"
+  },
+  "Settings.ThemeColor": {
+    "zh-CN": "主题色",
+    "en-US": "Theme color",
+    "ja-JP": "テーマカラー"
+  },
+  "Settings.FontFile": {
+    "zh-CN": "字体文件",
+    "en-US": "Font file",
+    "ja-JP": "フォントファイル"
+  },
+  "Settings.FontFileIsMissingEmptyOrExceedsMB": {
+    "zh-CN": "字体文件不存在、为空或超过 32 MB。",
+    "en-US": "Font file is missing, empty or exceeds 32 MB.",
+    "ja-JP": "フォントファイルが存在しない、空、または32 MBを超えています。"
+  },
+  "Settings.FontFilesMustBeNonEmptyAndNoLarger": {
+    "zh-CN": "字体文件不能超过 32 MB，且不能为空。",
+    "en-US": "Font files must be non-empty and no larger than 32 MB.",
+    "ja-JP": "空のファイルは使用できません。フォントファイルは32 MBまでです。"
+  },
+  "Settings.InvalidOrUnsupportedFontFile": {
+    "zh-CN": "字体文件无效或不受支持。",
+    "en-US": "Invalid or unsupported font file.",
+    "ja-JP": "無効または未対応のフォントファイルです。"
+  },
+  "Settings.CustomUIJSONLayout": {
+    "zh-CN": "自定义 UI · JSON 布局配置",
+    "en-US": "Custom UI · JSON layout",
+    "ja-JP": "UI カスタマイズ・JSON レイアウト"
+  },
+  "Settings.TheCustomLayoutDoesNotFitThisWindowUsing": {
+    "zh-CN": "自定义布局不适合当前窗口，临时使用默认布局（配置文件保留）：",
+    "en-US": "The custom layout does not fit this window. Using the default layout temporarily; the configuration is preserved:",
+    "ja-JP": "カスタムレイアウトが現在のウィンドウに収まりません。一時的に既定のレイアウトを使用します。設定ファイルは保持されます："
+  },
+  "Settings.TheCustomLayoutDoesNotFitThisWindowUsing39F620": {
+    "zh-CN": "自定义布局不适合当前窗口，临时使用默认布局（配置文件保留）：{0}",
+    "en-US": "The custom layout does not fit this window. Using the default temporarily; the configuration is kept: {0}",
+    "ja-JP": "カスタムレイアウトがウィンドウに収まりません。設定ファイルを残して標準レイアウトを一時的に使用します：{0}"
+  },
+  "Settings.CustomFontsMustBeStoredInTheDataDirectory": {
+    "zh-CN": "自定义字体必须位于数据目录的 Fonts 文件夹。",
+    "en-US": "Custom fonts must be stored in the data directory's Fonts folder.",
+    "ja-JP": "カスタムフォントはデータディレクトリのFontsフォルダーに保存してください。"
+  },
+  "Settings.CustomFontFile": {
+    "zh-CN": "自定义字体文件",
+    "en-US": "Custom font file",
+    "ja-JP": "カスタムフォントファイル"
+  },
+  "Settings.CustomFontCouldNotBeReadUsingTheDefault": {
+    "zh-CN": "自定义字体无法读取，已使用默认字体。",
+    "en-US": "Custom font could not be read. Using the default font.",
+    "ja-JP": "カスタムフォントを読み込めなかったため、既定のフォントを使用します。"
+  },
+  "Settings.JSONLayoutEditor": {
+    "zh-CN": "JSON 布局配置编辑器",
+    "en-US": "JSON layout editor",
+    "ja-JP": "JSON レイアウトエディター"
+  }
+}

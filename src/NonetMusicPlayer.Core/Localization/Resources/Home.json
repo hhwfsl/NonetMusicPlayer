@@ -1,0 +1,12 @@
+{
+  "Home.Music": { "zh-CN": "音乐", "en-US": "Music", "ja-JP": "音楽" },
+  "Home.Overview": { "zh-CN": "总览", "en-US": "Overview", "ja-JP": "概要" },
+  "Home.Back": { "zh-CN": "返回", "en-US": "Back", "ja-JP": "戻る" },
+  "Home.BrowseTracks": { "zh-CN": "浏览歌曲", "en-US": "Browse tracks", "ja-JP": "曲を表示" },
+  "Home.ViewAll": { "zh-CN": "查看全部", "en-US": "View all", "ja-JP": "すべて表示" },
+  "Home.CollectionSummary": { "zh-CN": "{0} 首歌曲 · {1} 个专辑 · {2} 位艺术家", "en-US": "{0} tracks · {1} albums · {2} artists", "ja-JP": "{0} 曲 · {1} アルバム · {2} アーティスト" },
+  "Home.Playlists": { "zh-CN": "我的歌单", "en-US": "My playlists", "ja-JP": "マイプレイリスト" },
+  "Home.Songs": { "zh-CN": "歌曲", "en-US": "Tracks", "ja-JP": "曲" },
+  "Home.EmptyTitle": { "zh-CN": "还没有音乐", "en-US": "No music yet", "ja-JP": "まだ曲がありません" },
+  "Home.EmptyHint": { "zh-CN": "在歌单中添加音乐后，这里会按歌曲标签自动整理。", "en-US": "Add music to a playlist to see albums and artists here.", "ja-JP": "プレイリストに曲を追加すると、アルバムやアーティストがここに表示されます。" }
+}

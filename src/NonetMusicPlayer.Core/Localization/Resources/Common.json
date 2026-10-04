@@ -1,0 +1,1742 @@
+{
+  "Common.Min": {
+    "zh-CN": "{0:0.0} 分钟",
+    "en-US": "{0:0.0} min",
+    "ja-JP": "{0:0.0} 分"
+  },
+  "Common.H": {
+    "zh-CN": "{0:0.0} 小时",
+    "en-US": "{0:0.0} h",
+    "ja-JP": "{0:0.0} 時間"
+  },
+  "Common.Plays": {
+    "zh-CN": "{0} 次",
+    "en-US": "{0} plays",
+    "ja-JP": "{0} 回"
+  },
+  "Common.MinC65627": {
+    "zh-CN": "{0} 分钟",
+    "en-US": "{0} min",
+    "ja-JP": "{0} 分"
+  },
+  "Common.S": {
+    "zh-CN": "{0} 秒",
+    "en-US": "{0} s",
+    "ja-JP": "{0} 秒"
+  },
+  "Common.Tracks": {
+    "zh-CN": "{0} 首歌曲",
+    "en-US": "{0} tracks",
+    "ja-JP": "{0} 曲"
+  },
+  "Common.Days": {
+    "zh-CN": "{0} 天",
+    "en-US": "{0} days",
+    "ja-JP": "{0} 日"
+  },
+  "Common.H2A1D95": {
+    "zh-CN": "{0} 小时",
+    "en-US": "{0} h",
+    "ja-JP": "{0} 時間"
+  },
+  "Common.Minutes": {
+    "zh-CN": "15 分钟",
+    "en-US": "15 minutes",
+    "ja-JP": "15 分"
+  },
+  "Common.MinutesA01A28": {
+    "zh-CN": "30 分钟",
+    "en-US": "30 minutes",
+    "ja-JP": "30 分"
+  },
+  "Common.Days84AD29": {
+    "zh-CN": "30 天",
+    "en-US": "30 days",
+    "ja-JP": "30 日間"
+  },
+  "Common.MinutesBF6201": {
+    "zh-CN": "60 分钟",
+    "en-US": "60 minutes",
+    "ja-JP": "60 分"
+  },
+  "Common.Days38EEFA": {
+    "zh-CN": "7 天",
+    "en-US": "7 days",
+    "ja-JP": "7 日間"
+  },
+  "Common.Minutes928FF2": {
+    "zh-CN": "90 分钟",
+    "en-US": "90 minutes",
+    "ja-JP": "90 分"
+  },
+  "Common.Install": {
+    "zh-CN": "安装 {0}？",
+    "en-US": "Install {0}?",
+    "ja-JP": "{0} をインストールしますか？"
+  },
+  "Common.PressAShortcut": {
+    "zh-CN": "按下组合键…",
+    "en-US": "Press a shortcut…",
+    "ja-JP": "キーを押してください…"
+  },
+  "Common.KeepYourFavoriteSongsHere": {
+    "zh-CN": "把喜欢的歌曲留在这里",
+    "en-US": "Keep your favorite songs here",
+    "ja-JP": "お気に入りの曲をここに"
+  },
+  "Common.KeepCurrentSetting": {
+    "zh-CN": "保持当前设置",
+    "en-US": "Keep current setting",
+    "ja-JP": "現在の設定を維持"
+  },
+  "Common.KeepForegroundTextReadable": {
+    "zh-CN": "保持前景文字清晰可读。",
+    "en-US": "Keep foreground text readable.",
+    "ja-JP": "前景の文字を読みやすく保ちます。"
+  },
+  "Common.Save": {
+    "zh-CN": "保存",
+    "en-US": "Save",
+    "ja-JP": "保存"
+  },
+  "Common.SaveAndClose": {
+    "zh-CN": "保存并关闭",
+    "en-US": "Save and close",
+    "ja-JP": "保存して閉じる"
+  },
+  "Common.HistoryLimitMustBeAnInteger": {
+    "zh-CN": "保留上限必须是整数。",
+    "en-US": "History limit must be an integer.",
+    "ja-JP": "保存上限は整数で指定してください。"
+  },
+  "Common.Local": {
+    "zh-CN": "本地",
+    "en-US": "Local",
+    "ja-JP": "ローカル"
+  },
+  "Common.NativeProcess": {
+    "zh-CN": "本机进程",
+    "en-US": "Native process",
+    "ja-JP": "ネイティブプロセス"
+  },
+  "Common.SidePixels": {
+    "zh-CN": "边长（像素）",
+    "en-US": "Side (pixels)",
+    "ja-JP": "一辺（ピクセル）"
+  },
+  "Common.EditDescriptionAndCover": {
+    "zh-CN": "编辑描述与封面",
+    "en-US": "Edit description and cover",
+    "ja-JP": "説明とカバーを編集"
+  },
+  "Common.ValidateBeforeApplyingUnappliedEditsDoNotChangeThe": {
+    "zh-CN": "编辑配置后先校验再应用；未应用的内容不会影响当前界面。",
+    "en-US": "Validate before applying. Unapplied edits do not change the interface.",
+    "ja-JP": "適用前に検証してください。未適用の編集は現在の画面に影響しません。"
+  },
+  "Common.DiscardTheseChanges": {
+    "zh-CN": "不保存本次修改",
+    "en-US": "Discard these changes",
+    "ja-JP": "変更を保存せず閉じる"
+  },
+  "Common.Off": {
+    "zh-CN": "不启用",
+    "en-US": "Off",
+    "ja-JP": "オフ"
+  },
+  "Common.ClickToSelectAllMixedStateMeansPartialSelection": {
+    "zh-CN": "部分勾选时显示半选状态；点击选择全部",
+    "en-US": "Click to select all; mixed state means partial selection",
+    "ja-JP": "一部選択の場合は中間状態。クリックですべて選択"
+  },
+  "Common.CropCover": {
+    "zh-CN": "裁剪封面",
+    "en-US": "Crop cover",
+    "ja-JP": "ジャケットをトリミング"
+  },
+  "Common.TheCropIsOutsideTheImage": {
+    "zh-CN": "裁剪区域超出图片范围。",
+    "en-US": "The crop is outside the image.",
+    "ja-JP": "トリミング範囲が画像を超えています。"
+  },
+  "Common.Actions": {
+    "zh-CN": "操作",
+    "en-US": "Actions",
+    "ja-JP": "操作"
+  },
+  "Common.SelectedTrackActions": {
+    "zh-CN": "操作所选歌曲",
+    "en-US": "Selected track actions",
+    "ja-JP": "選択した曲の操作"
+  },
+  "Common.Notice": {
+    "zh-CN": "操作提示",
+    "en-US": "Notice",
+    "ja-JP": "お知らせ"
+  },
+  "Common.ActionFailed": {
+    "zh-CN": "操作未完成",
+    "en-US": "Action failed",
+    "ja-JP": "操作を完了できませんでした"
+  },
+  "Common.TrackInformation": {
+    "zh-CN": "查看歌曲信息",
+    "en-US": "Track information",
+    "ja-JP": "曲の情報"
+  },
+  "Common.UndoLastAction": {
+    "zh-CN": "撤销上次操作",
+    "en-US": "Undo last action",
+    "ja-JP": "前の操作を元に戻す"
+  },
+  "Common.UndoFailed": {
+    "zh-CN": "撤销失败",
+    "en-US": "Undo failed",
+    "ja-JP": "元に戻せませんでした"
+  },
+  "Common.TouchMode": {
+    "zh-CN": "触摸模式",
+    "en-US": "Touch mode",
+    "ja-JP": "タッチモード"
+  },
+  "Common.TouchOptimization": {
+    "zh-CN": "触摸优化",
+    "en-US": "Touch optimization",
+    "ja-JP": "タッチ操作の最適化"
+  },
+  "Common.WindowButtonPosition": {
+    "zh-CN": "窗口按钮位置",
+    "en-US": "Window button position",
+    "ja-JP": "ウィンドウボタンの位置"
+  },
+  "Common.WindowAspectRatio": {
+    "zh-CN": "窗口比例",
+    "en-US": "Window aspect ratio",
+    "ja-JP": "ウィンドウの縦横比"
+  },
+  "Common.CreationFailed": {
+    "zh-CN": "创建失败",
+    "en-US": "Creation failed",
+    "ja-JP": "作成できませんでした"
+  },
+  "Common.NoTracksHere": {
+    "zh-CN": "此处没有歌曲",
+    "en-US": "No tracks here",
+    "ja-JP": "曲がありません"
+  },
+  "Common.RestoreFromFileImportLibrary": {
+    "zh-CN": "从文件恢复 / 导入旧资料库",
+    "en-US": "Restore from file / Import library",
+    "ja-JP": "ファイルから復元・旧ライブラリを取り込む"
+  },
+  "Common.RemoveFromLibrary": {
+    "zh-CN": "从资料库移除引用",
+    "en-US": "Remove from library",
+    "ja-JP": "ライブラリから削除"
+  },
+  "Common.OpenTrackFolder": {
+    "zh-CN": "打开歌曲所在文件夹",
+    "en-US": "Open track folder",
+    "ja-JP": "曲のフォルダーを開く"
+  },
+  "Common.OpenLocation": {
+    "zh-CN": "打开路径",
+    "en-US": "Open location",
+    "ja-JP": "保存先を開く"
+  },
+  "Common.OpenConfigurationFile": {
+    "zh-CN": "打开配置文件",
+    "en-US": "Open configuration file",
+    "ja-JP": "設定ファイルを開く"
+  },
+  "Common.OpenApplication": {
+    "zh-CN": "打开软件",
+    "en-US": "Open application",
+    "ja-JP": "アプリを開く"
+  },
+  "Common.OpenUserManual": {
+    "zh-CN": "打开使用手册",
+    "en-US": "Open user manual",
+    "ja-JP": "マニュアルを開く"
+  },
+  "Common.MoreActionsForTheCurrentSong": {
+    "zh-CN": "当前歌曲更多操作",
+    "en-US": "More actions for the current song",
+    "ja-JP": "現在の曲のその他の操作"
+  },
+  "Common.ExportLocalTrackList": {
+    "zh-CN": "导出本地歌曲列表",
+    "en-US": "Export local track list",
+    "ja-JP": "ローカル曲リストを書き出す"
+  },
+  "Common.ExportCurrentListAsM3U": {
+    "zh-CN": "导出当前列表为 M3U",
+    "en-US": "Export current list as M3U",
+    "ja-JP": "現在のリストを M3U に書き出す"
+  },
+  "Common.ExportLayout": {
+    "zh-CN": "导出配置",
+    "en-US": "Export layout",
+    "ja-JP": "設定を書き出す"
+  },
+  "Common.ExportFailed": {
+    "zh-CN": "导出失败",
+    "en-US": "Export failed",
+    "ja-JP": "書き出せませんでした"
+  },
+  "Common.Navigation": {
+    "zh-CN": "导航",
+    "en-US": "Navigation",
+    "ja-JP": "ナビゲーション"
+  },
+  "Common.NavigationAndSearch": {
+    "zh-CN": "导航与搜索",
+    "en-US": "Navigation and search",
+    "ja-JP": "ナビゲーションと検索"
+  },
+  "Common.Import": {
+    "zh-CN": "导入",
+    "en-US": "Import",
+    "ja-JP": "インポート"
+  },
+  "Common.ImportAndRestore": {
+    "zh-CN": "导入并恢复",
+    "en-US": "Import and restore",
+    "ja-JP": "取り込んで復元"
+  },
+  "Common.ImportLayout": {
+    "zh-CN": "导入配置",
+    "en-US": "Import layout",
+    "ja-JP": "設定を取り込む"
+  },
+  "Common.ImportFailed": {
+    "zh-CN": "导入失败",
+    "en-US": "Import failed",
+    "ja-JP": "インポートに失敗しました"
+  },
+  "Common.ImportedSongs": {
+    "zh-CN": "导入完成 · {0} 首歌曲",
+    "en-US": "Imported {0} songs",
+    "ja-JP": "{0} 曲をインポートしました"
+  },
+  "Common.Score": {
+    "zh-CN": "得分 {0} · {1}",
+    "en-US": "Score {0} · {1}",
+    "ja-JP": "スコア {0} · {1}"
+  },
+  "Common.WaitingForDownload": {
+    "zh-CN": "等待下载…",
+    "en-US": "Waiting for download…",
+    "ja-JP": "ダウンロード待機中…"
+  },
+  "Common.Bass": {
+    "zh-CN": "低音",
+    "en-US": "Bass",
+    "ja-JP": "低音"
+  },
+  "Common.OpenThisPath": {
+    "zh-CN": "点击打开路径",
+    "en-US": "Open this path",
+    "ja-JP": "このパスを開く"
+  },
+  "Common.CloseButtonAction": {
+    "zh-CN": "点击关闭按钮",
+    "en-US": "Close button action",
+    "ja-JP": "閉じるボタンの動作"
+  },
+  "Common.AdjustRoundedCornersOnButtonsInputsAndSelectedItems": {
+    "zh-CN": "调整按钮、输入框和选中区域的圆角。",
+    "en-US": "Adjust rounded corners on buttons, inputs and selected items.",
+    "ja-JP": "ボタン、入力欄、選択項目の角の丸みを調整します。"
+  },
+  "Common.AdjustTheOpacityOfTheEntireWindow": {
+    "zh-CN": "调整整个窗口的透明程度。",
+    "en-US": "Adjust the opacity of the entire window.",
+    "ja-JP": "ウィンドウ全体の透明度を調整します。"
+  },
+  "Common.AdjustBodyTextSize": {
+    "zh-CN": "调整正文文字大小。",
+    "en-US": "Adjust body text size.",
+    "ja-JP": "本文の文字サイズを調整します。"
+  },
+  "Common.LoadCatalog": {
+    "zh-CN": "读取曲库",
+    "en-US": "Load Catalog",
+    "ja-JP": "ライブラリを読み込む"
+  },
+  "Common.BackToPreviousPage": {
+    "zh-CN": "返回上一页面",
+    "en-US": "Back to previous page",
+    "ja-JP": "前のページに戻る"
+  },
+  "Common.ArrowsWASDToTurnSpaceToPauseResumeR": {
+    "zh-CN": "方向键 / WASD 转向 · 空格暂停 / 继续 · R 重开。吃到红色食物得 10 分，避免撞墙和自己。",
+    "en-US": "Arrows / WASD to turn · Space to pause / resume · R to restart. Eat red food for 10 points; avoid walls and yourself.",
+    "ja-JP": "矢印 / WASDで方向転換 · 空白で一時停止 / 続行 · Rで再開。赤い餌で10点、壁と自分にぶつからないでください。"
+  },
+  "Common.MinBD957B": {
+    "zh-CN": "分钟",
+    "en-US": "min",
+    "ja-JP": "分"
+  },
+  "Common.Artwork": {
+    "zh-CN": "封面",
+    "en-US": "Artwork",
+    "ja-JP": "カバー"
+  },
+  "Common.UnableToReadCover": {
+    "zh-CN": "封面读取失败",
+    "en-US": "Unable to read cover",
+    "ja-JP": "カバーを読み込めません"
+  },
+  "Common.UnableToReadCoverSelectAValidImage": {
+    "zh-CN": "封面读取失败，请选择有效的图片。",
+    "en-US": "Unable to read cover. Select a valid image.",
+    "ja-JP": "カバーを読み込めません。有効な画像を選択してください。"
+  },
+  "Common.CoverTypeMustBeArtistOrAlbum": {
+    "zh-CN": "封面类型只支持 artist 或 album。",
+    "en-US": "Cover type must be artist or album.",
+    "ja-JP": "カバーの種類は artist または album を指定してください。"
+  },
+  "Common.CoverImagesCannotExceedMB": {
+    "zh-CN": "封面图片不能超过 20 MB。",
+    "en-US": "Cover images cannot exceed 20 MB.",
+    "ja-JP": "カバー画像は20 MB以内にしてください。"
+  },
+  "Common.TheCoverFileDoesNotExistChooseAnotherImage": {
+    "zh-CN": "封面文件不存在，请重新选择。",
+    "en-US": "The cover file does not exist. Choose another image.",
+    "ja-JP": "カバー画像が見つかりません。別の画像を選択してください。"
+  },
+  "Common.CoverFilesCannotExceedMB": {
+    "zh-CN": "封面文件不能超过 20 MB。",
+    "en-US": "Cover files cannot exceed 20 MB.",
+    "ja-JP": "カバー画像は 20 MB 以下にしてください。"
+  },
+  "Common.TheCoverImageDimensionsAreTooLargeResizeIt": {
+    "zh-CN": "封面像素尺寸过大，请先缩小图片。",
+    "en-US": "The cover image dimensions are too large. Resize it first.",
+    "ja-JP": "カバー画像のピクセル数が多すぎます。先に縮小してください。"
+  },
+  "Common.CopyApplyAfterRestart": {
+    "zh-CN": "复制并重启生效",
+    "en-US": "Copy; apply after restart",
+    "ja-JP": "コピーして再起動後に適用"
+  },
+  "Common.HeightPx": {
+    "zh-CN": "高（像素）",
+    "en-US": "Height (px)",
+    "ja-JP": "高さ（px）"
+  },
+  "Common.Title": {
+    "zh-CN": "歌曲",
+    "en-US": "Title",
+    "ja-JP": "曲名"
+  },
+  "Common.TrackInformation412578": {
+    "zh-CN": "歌曲信息",
+    "en-US": "Track information",
+    "ja-JP": "曲の情報"
+  },
+  "Common.Format": {
+    "zh-CN": "格式",
+    "en-US": "Format",
+    "ja-JP": "形式"
+  },
+  "Common.FollowSystem": {
+    "zh-CN": "跟随系统",
+    "en-US": "Follow system",
+    "ja-JP": "システムに合わせる"
+  },
+  "Common.UseSystemLightOrDarkAppearance": {
+    "zh-CN": "跟随系统、浅色或深色。",
+    "en-US": "Use system, light or dark appearance.",
+    "ja-JP": "システム、ライト、ダークから選択します。"
+  },
+  "Common.More": {
+    "zh-CN": "更多",
+    "en-US": "More",
+    "ja-JP": "その他"
+  },
+  "Common.More9F07D2": {
+    "zh-CN": "更多操作",
+    "en-US": "More",
+    "ja-JP": "その他"
+  },
+  "Common.MoreTrackActions": {
+    "zh-CN": "更多歌曲操作",
+    "en-US": "More track actions",
+    "ja-JP": "曲のその他の操作"
+  },
+  "Common.ChangesTakeEffectImmediately": {
+    "zh-CN": "更改后立即生效。",
+    "en-US": "Changes take effect immediately.",
+    "ja-JP": "変更はすぐに反映されます。"
+  },
+  "Common.ChangeArtwork": {
+    "zh-CN": "更换封面",
+    "en-US": "Change artwork",
+    "ja-JP": "カバーを変更"
+  },
+  "Common.Classical": {
+    "zh-CN": "古典",
+    "en-US": "Classical",
+    "ja-JP": "クラシック"
+  },
+  "Common.Close": {
+    "zh-CN": "关闭",
+    "en-US": "Close",
+    "ja-JP": "閉じる"
+  },
+  "Common.ConfirmBeforeClosing": {
+    "zh-CN": "关闭前确认",
+    "en-US": "Confirm before closing",
+    "ja-JP": "終了前に確認"
+  },
+  "Common.ShowAConfirmationBeforeClosing": {
+    "zh-CN": "关闭前显示确认窗口。",
+    "en-US": "Show a confirmation before closing.",
+    "ja-JP": "終了前に確認画面を表示します。"
+  },
+  "Common.ExitApplication": {
+    "zh-CN": "关闭软件",
+    "en-US": "Exit application",
+    "ja-JP": "アプリを終了"
+  },
+  "Common.ConfirmBeforeClosing784150": {
+    "zh-CN": "关闭时确认",
+    "en-US": "Confirm before closing",
+    "ja-JP": "終了時に確認"
+  },
+  "Common.ExitApplication56F252": {
+    "zh-CN": "关闭提醒",
+    "en-US": "Exit application",
+    "ja-JP": "アプリを終了"
+  },
+  "Common.ClosePet": {
+    "zh-CN": "关闭桌宠",
+    "en-US": "Close pet",
+    "ja-JP": "デスクトップペットを閉じる"
+  },
+  "Common.Red": {
+    "zh-CN": "红",
+    "en-US": "Red",
+    "ja-JP": "赤"
+  },
+  "Common.RedRTo": {
+    "zh-CN": "红色 R，0 到 255",
+    "en-US": "Red R, 0 to 255",
+    "ja-JP": "赤 R、0〜255"
+  },
+  "Common.BackgroundTaskFailed": {
+    "zh-CN": "后台任务未完成",
+    "en-US": "Background task failed",
+    "ja-JP": "バックグラウンド処理に失敗しました"
+  },
+  "Common.SeekBackwardSeconds": {
+    "zh-CN": "后退 5 秒",
+    "en-US": "Seek backward 5 seconds",
+    "ja-JP": "5 秒戻る"
+  },
+  "Common.Restore": {
+    "zh-CN": "恢复",
+    "en-US": "Restore",
+    "ja-JP": "復元"
+  },
+  "Common.UseTrackArtwork": {
+    "zh-CN": "恢复歌曲默认封面",
+    "en-US": "Use track artwork",
+    "ja-JP": "曲のカバーに戻す"
+  },
+  "Common.RestoreDefaults": {
+    "zh-CN": "恢复默认",
+    "en-US": "Restore defaults",
+    "ja-JP": "標準に戻す"
+  },
+  "Common.RestoreDefaultShortcuts": {
+    "zh-CN": "恢复默认按键",
+    "en-US": "Restore default shortcuts",
+    "ja-JP": "標準のショートカットに戻す"
+  },
+  "Common.RestoreDefaultCover": {
+    "zh-CN": "恢复默认封面",
+    "en-US": "Restore default cover",
+    "ja-JP": "既定のカバーに戻す"
+  },
+  "Common.ResetSettings": {
+    "zh-CN": "恢复默认设置",
+    "en-US": "Reset settings",
+    "ja-JP": "設定を初期化"
+  },
+  "Common.ResetSettings4D41F7": {
+    "zh-CN": "恢复默认设置？",
+    "en-US": "Reset settings?",
+    "ja-JP": "設定を初期化しますか？"
+  },
+  "Common.ResetToDefault": {
+    "zh-CN": "恢复默认值",
+    "en-US": "Reset to default",
+    "ja-JP": "既定値に戻す"
+  },
+  "Common.RestorePreviousConfiguration": {
+    "zh-CN": "恢复上次配置",
+    "en-US": "Restore previous configuration",
+    "ja-JP": "前の設定を復元"
+  },
+  "Common.RestorePreviousLayout": {
+    "zh-CN": "恢复上次有效配置",
+    "en-US": "Restore previous layout",
+    "ja-JP": "前の有効な設定に戻す"
+  },
+  "Common.RestorePreviousValidConfiguration": {
+    "zh-CN": "恢复上次有效配置？",
+    "en-US": "Restore previous valid configuration?",
+    "ja-JP": "前の有効な設定を復元しますか？"
+  },
+  "Common.RestorePreviousLibrary": {
+    "zh-CN": "恢复上次资料库",
+    "en-US": "Restore previous library",
+    "ja-JP": "前のライブラリを復元"
+  },
+  "Common.HideToTray": {
+    "zh-CN": "回到托盘",
+    "en-US": "Hide to tray",
+    "ja-JP": "トレイに格納"
+  },
+  "Common.KeepRunningInTheTrayExitFromItsMenu": {
+    "zh-CN": "回到托盘后继续运行；从托盘菜单关闭软件会完全退出。",
+    "en-US": "Keep running in the tray. Exit from its menu to close completely.",
+    "ja-JP": "トレイに格納後も実行を続けます。トレイメニューから完全に終了できます。"
+  },
+  "Common.RegisterThisAppInTheCurrentUserSSystem": {
+    "zh-CN": "会向当前用户的系统应用列表注册本软件。默认打开方式仍由系统中的用户选择决定。",
+    "en-US": "Register this app in the current user's system application list. Default handlers remain the user's choice.",
+    "ja-JP": "現在のユーザーのシステムアプリ一覧に登録します。既定アプリはユーザーが選択します。"
+  },
+  "Common.ResumeGame": {
+    "zh-CN": "继续游戏",
+    "en-US": "Resume Game",
+    "ja-JP": "ゲームを続ける"
+  },
+  "Common.Decrease": {
+    "zh-CN": "减少",
+    "en-US": "Decrease",
+    "ja-JP": "減らす"
+  },
+  "Common.Description": {
+    "zh-CN": "简介",
+    "en-US": "Description",
+    "ja-JP": "説明"
+  },
+  "Common.StructureValidatedApplyingAlsoChecksTheAvailableWindowDimensions": {
+    "zh-CN": "结构校验通过 · 点击应用还会检查窗口中的实际尺寸。",
+    "en-US": "Structure validated. Applying also checks the available window dimensions.",
+    "ja-JP": "構造を検証しました。適用時にウィンドウ内の実際の寸法も確認します。"
+  },
+  "Common.StructureValidatedReloadingAlsoChecksTheActualControlSizes": {
+    "zh-CN": "结构校验通过 · 重新加载时还会检查实际尺寸。",
+    "en-US": "Structure validated. Reloading also checks the actual control sizes.",
+    "ja-JP": "構造の検証に成功しました。再読み込み時に実際のサイズも確認します。"
+  },
+  "Common.DisplayLanguage": {
+    "zh-CN": "界面语言",
+    "en-US": "Display language",
+    "ja-JP": "表示言語"
+  },
+  "Common.Today": {
+    "zh-CN": "今天",
+    "en-US": "Today",
+    "ja-JP": "今日"
+  },
+  "Common.CompactRows": {
+    "zh-CN": "紧凑列表",
+    "en-US": "Compact rows",
+    "ja-JP": "コンパクトな行"
+  },
+  "Common.Mute": {
+    "zh-CN": "静音",
+    "en-US": "Mute",
+    "ja-JP": "ミュート"
+  },
+  "Common.Equalizer": {
+    "zh-CN": "均衡器",
+    "en-US": "Equalizer",
+    "ja-JP": "イコライザー"
+  },
+  "Common.Cards": {
+    "zh-CN": "卡片",
+    "en-US": "Cards",
+    "ja-JP": "カード"
+  },
+  "Common.StartGame": {
+    "zh-CN": "开始游戏",
+    "en-US": "Start Game",
+    "ja-JP": "ゲーム開始"
+  },
+  "Common.CornerRadius": {
+    "zh-CN": "控件圆角",
+    "en-US": "Corner radius",
+    "ja-JP": "角の丸み"
+  },
+  "Common.WidthPx": {
+    "zh-CN": "宽（像素）",
+    "en-US": "Width (px)",
+    "ja-JP": "幅（px）"
+  },
+  "Common.Source": {
+    "zh-CN": "来源",
+    "en-US": "Source",
+    "ja-JP": "音源"
+  },
+  "Common.Blue": {
+    "zh-CN": "蓝",
+    "en-US": "Blue",
+    "ja-JP": "青"
+  },
+  "Common.BlueBTo": {
+    "zh-CN": "蓝色 B，0 到 255",
+    "en-US": "Blue B, 0 to 255",
+    "ja-JP": "青 B、0〜255"
+  },
+  "Common.Brightness": {
+    "zh-CN": "亮度",
+    "en-US": "Brightness",
+    "ja-JP": "明るさ"
+  },
+  "Common.ListsCannotExceedItems": {
+    "zh-CN": "列表最多 200 项。",
+    "en-US": "Lists cannot exceed 200 items.",
+    "ja-JP": "リストは200項目以内にしてください。"
+  },
+  "Common.Pop": {
+    "zh-CN": "流行",
+    "en-US": "Pop",
+    "ja-JP": "ポップ"
+  },
+  "Common.Record": {
+    "zh-CN": "录入",
+    "en-US": "Record",
+    "ja-JP": "入力"
+  },
+  "Common.RecordShortcut": {
+    "zh-CN": "录入按键",
+    "en-US": "Record shortcut",
+    "ja-JP": "キーを入力"
+  },
+  "Common.ThisLocationNoLongerExistsChooseAFolderIn": {
+    "zh-CN": "路径已不存在，请在设置中重新选择目录。",
+    "en-US": "This location no longer exists. Choose a folder in settings.",
+    "ja-JP": "保存先が存在しません。設定でフォルダーを選び直してください。"
+  },
+  "Common.Green": {
+    "zh-CN": "绿",
+    "en-US": "Green",
+    "ja-JP": "緑"
+  },
+  "Common.GreenGTo": {
+    "zh-CN": "绿色 G，0 到 255",
+    "en-US": "Green G, 0 to 255",
+    "ja-JP": "緑 G、0〜255"
+  },
+  "Common.NothingToUndo": {
+    "zh-CN": "没有可以撤销的操作。",
+    "en-US": "Nothing to undo.",
+    "ja-JP": "元に戻せる操作はありません。"
+  },
+  "Common.NoMatchingSettings": {
+    "zh-CN": "没有匹配的设置",
+    "en-US": "No matching settings",
+    "ja-JP": "一致する設定はありません"
+  },
+  "Common.NoMatchingSettings1616FA": {
+    "zh-CN": "没有匹配的设置项",
+    "en-US": "No matching settings",
+    "ja-JP": "一致する設定項目はありません"
+  },
+  "Common.NoMatchingSongs": {
+    "zh-CN": "没有找到匹配的歌曲",
+    "en-US": "No matching songs",
+    "ja-JP": "一致する曲はありません"
+  },
+  "Common.Bright": {
+    "zh-CN": "明亮",
+    "en-US": "Bright",
+    "ja-JP": "明瞭"
+  },
+  "Common.Default": {
+    "zh-CN": "默认",
+    "en-US": "Default",
+    "ja-JP": "標準"
+  },
+  "Common.DefaultPxResizingKeepsTheFontSizeFixedLong": {
+    "zh-CN": "默认 28 px；窗口大小不会改变字号。长句自动换行，翻译按固定比例显示。",
+    "en-US": "Default: 28 px. Resizing keeps the font size fixed. Long lines wrap; translations use a fixed ratio.",
+    "ja-JP": "初期値は 28 px。ウィンドウの大きさによらず固定です。長い歌詞は折り返し、翻訳は一定比率で表示します。"
+  },
+  "Common.KeepTracksByDefaultZeroDisablesHistoryLoweringThe": {
+    "zh-CN": "默认保留 1000 首；设为 0 不保留，降低上限会移除最早的记录。",
+    "en-US": "Keep 1,000 tracks by default. Zero disables history; lowering the limit removes oldest entries.",
+    "ja-JP": "既定は1,000曲です。0で履歴を無効化し、上限を減らすと古い記録を削除します。"
+  },
+  "Common.NavigationWidth": {
+    "zh-CN": "默认导航宽度",
+    "en-US": "Navigation width",
+    "ja-JP": "ナビゲーションの幅"
+  },
+  "Common.NavigationOnTheRight": {
+    "zh-CN": "默认导航在右侧",
+    "en-US": "Navigation on the right",
+    "ja-JP": "ナビゲーションを右側に表示"
+  },
+  "Common.BottomByDefaultAvailableWhenWorkspaceIsEmpty": {
+    "zh-CN": "默认固定底部。workspace 为空时可切换。",
+    "en-US": "Bottom by default. Available when workspace is empty.",
+    "ja-JP": "標準は下部です。workspace が空の場合に変更できます。"
+  },
+  "Common.RequiredControlsCannotBeRemovedSeeTheUserManual": {
+    "zh-CN": "内置控件不可删除。完整参数及示例参见使用手册。",
+    "en-US": "Required controls cannot be removed. See the user manual for parameters and examples.",
+    "ja-JP": "必須のコントロールは削除できません。パラメーターと例はマニュアルをご覧ください。"
+  },
+  "Common.Year": {
+    "zh-CN": "年份",
+    "en-US": "Year",
+    "ja-JP": "年"
+  },
+  "Common.YearTypeToJump": {
+    "zh-CN": "年份（可直接输入）",
+    "en-US": "Year (type to jump)",
+    "ja-JP": "年（直接入力できます）"
+  },
+  "Common.YearMustBeAnInteger": {
+    "zh-CN": "年份必须是整数。",
+    "en-US": "Year must be an integer.",
+    "ja-JP": "年は整数で入力してください。"
+  },
+  "Common.Configure": {
+    "zh-CN": "配置",
+    "en-US": "Configure",
+    "ja-JP": "設定"
+  },
+  "Common.TheConfigurationKeyIsEmptyOrAlreadyExists": {
+    "zh-CN": "配置键为空或已存在。",
+    "en-US": "The configuration key is empty or already exists.",
+    "ja-JP": "設定キーが空か、既に存在します。"
+  },
+  "Common.ConfigurationFile": {
+    "zh-CN": "配置文件",
+    "en-US": "Configuration file",
+    "ja-JP": "設定ファイル"
+  },
+  "Common.ConfigurationSavedSensitiveFieldsAreSessionOnly": {
+    "zh-CN": "配置已保存，敏感字段仅本次会话有效",
+    "en-US": "Configuration saved; sensitive fields are session-only",
+    "ja-JP": "設定を保存しました。機密欄はこのセッションのみ有効です"
+  },
+  "Common.ConfigurationImportedAndApplied": {
+    "zh-CN": "配置已导入并应用。",
+    "en-US": "Configuration imported and applied.",
+    "ja-JP": "設定をインポートして適用しました。"
+  },
+  "Common.ConfigurationCannotExceedEntries": {
+    "zh-CN": "配置最多 200 项。",
+    "en-US": "Configuration cannot exceed 200 entries.",
+    "ja-JP": "設定は200項目以内にしてください。"
+  },
+  "Common.On": {
+    "zh-CN": "启用",
+    "en-US": "On",
+    "ja-JP": "オン"
+  },
+  "Common.SeekForwardSeconds": {
+    "zh-CN": "前进 5 秒",
+    "en-US": "Seek forward 5 seconds",
+    "ja-JP": "5 秒進む"
+  },
+  "Common.Light": {
+    "zh-CN": "浅色",
+    "en-US": "Light",
+    "ja-JP": "ライト"
+  },
+  "Common.ThemeColor": {
+    "zh-CN": "强调色",
+    "en-US": "Theme color",
+    "ja-JP": "テーマカラー"
+  },
+  "Common.Change": {
+    "zh-CN": "切换",
+    "en-US": "Change",
+    "ja-JP": "変更"
+  },
+  "Common.Clear": {
+    "zh-CN": "清空",
+    "en-US": "Clear",
+    "ja-JP": "クリア"
+  },
+  "Common.ClearSearch": {
+    "zh-CN": "清空搜索",
+    "en-US": "Clear search",
+    "ja-JP": "検索をクリア"
+  },
+  "Common.ClearSearchEsc": {
+    "zh-CN": "清空搜索（Esc）",
+    "en-US": "Clear search (Esc)",
+    "ja-JP": "検索をクリア (Esc)"
+  },
+  "Common.TheRequestTimedOutOrWasCancelledTryAgain": {
+    "zh-CN": "请求超时或已取消，请重试。",
+    "en-US": "The request timed out or was cancelled. Try again.",
+    "ja-JP": "要求がタイムアウトしたか、キャンセルされました。再試行してください。"
+  },
+  "Common.EnterRRGGBBSuchAsA895FF": {
+    "zh-CN": "请输入 #RRGGBB，例如 #A895FF。",
+    "en-US": "Enter #RRGGBB, such as #A895FF.",
+    "ja-JP": "#A895FF などの #RRGGBB を入力してください。"
+  },
+  "Common.EnterText": {
+    "zh-CN": "请输入内容",
+    "en-US": "Enter text",
+    "ja-JP": "内容を入力"
+  },
+  "Common.CouldNotSavePanelDimensions": {
+    "zh-CN": "区域尺寸无法保存",
+    "en-US": "Could not save panel dimensions",
+    "ja-JP": "パネルのサイズを保存できませんでした"
+  },
+  "Common.Cancel": {
+    "zh-CN": "取消",
+    "en-US": "Cancel",
+    "ja-JP": "キャンセル"
+  },
+  "Common.CancelImport": {
+    "zh-CN": "取消导入",
+    "en-US": "Cancel import",
+    "ja-JP": "取り込みを中止"
+  },
+  "Common.CancelDownload": {
+    "zh-CN": "取消下载",
+    "en-US": "Cancel download",
+    "ja-JP": "ダウンロードをキャンセル"
+  },
+  "Common.OK": {
+    "zh-CN": "确定",
+    "en-US": "OK",
+    "ja-JP": "OK"
+  },
+  "Common.Confirm": {
+    "zh-CN": "确认",
+    "en-US": "Confirm",
+    "ja-JP": "確認"
+  },
+  "Common.Vocals": {
+    "zh-CN": "人声",
+    "en-US": "Vocals",
+    "ja-JP": "ボーカル"
+  },
+  "Common.Delete": {
+    "zh-CN": "删除",
+    "en-US": "Delete",
+    "ja-JP": "削除"
+  },
+  "Common.PreviousValidConfigurationRestored": {
+    "zh-CN": "上次有效配置已恢复。",
+    "en-US": "Previous valid configuration restored.",
+    "ja-JP": "前の有効な設定を復元しました。"
+  },
+  "Common.PreviousMonth": {
+    "zh-CN": "上个月",
+    "en-US": "Previous month",
+    "ja-JP": "前の月"
+  },
+  "Common.Previous": {
+    "zh-CN": "上一首",
+    "en-US": "Previous",
+    "ja-JP": "前の曲"
+  },
+  "Common.PreviousCtrl": {
+    "zh-CN": "上一首（Ctrl+←）",
+    "en-US": "Previous (Ctrl+←)",
+    "ja-JP": "前の曲（Ctrl+←）"
+  },
+  "Common.Settings": {
+    "zh-CN": "设置",
+    "en-US": "Settings",
+    "ja-JP": "設定"
+  },
+  "Common.UseApplicationDefaultCover": {
+    "zh-CN": "设置为软件默认封面",
+    "en-US": "Use application default cover",
+    "ja-JP": "アプリの既定カバーを使用"
+  },
+  "Common.UnableToApplySettings": {
+    "zh-CN": "设置无法应用",
+    "en-US": "Unable to apply settings",
+    "ja-JP": "設定を適用できません"
+  },
+  "Common.Dark": {
+    "zh-CN": "深色",
+    "en-US": "Dark",
+    "ja-JP": "ダーク"
+  },
+  "Common.HexColorRRGGBB": {
+    "zh-CN": "十六进制颜色 RRGGBB",
+    "en-US": "Hex color RRGGBB",
+    "ja-JP": "16 進数カラー RRGGBB"
+  },
+  "Common.Duration": {
+    "zh-CN": "时长",
+    "en-US": "Duration",
+    "ja-JP": "時間"
+  },
+  "Common.UseCrop": {
+    "zh-CN": "使用裁剪",
+    "en-US": "Use crop",
+    "ja-JP": "トリミングを適用"
+  },
+  "Common.UseDefaultCover": {
+    "zh-CN": "使用默认封面",
+    "en-US": "Use default cover",
+    "ja-JP": "標準のカバーを使用"
+  },
+  "Common.UserManual": {
+    "zh-CN": "使用手册",
+    "en-US": "User manual",
+    "ja-JP": "ユーザーマニュアル"
+  },
+  "Common.TheUserManualCouldNotBeFound": {
+    "zh-CN": "使用手册文件不存在。",
+    "en-US": "The user manual could not be found.",
+    "ja-JP": "ユーザーマニュアルが見つかりません。"
+  },
+  "Common.Collapse": {
+    "zh-CN": "收起",
+    "en-US": "Collapse",
+    "ja-JP": "折りたたむ"
+  },
+  "Common.InputNotApplied": {
+    "zh-CN": "输入未应用",
+    "en-US": "Input not applied",
+    "ja-JP": "入力は適用されませんでした"
+  },
+  "Common.DataCopiedTheOriginalFolderIsRetainedTheNew": {
+    "zh-CN": "数据已复制，原目录保留；新目录将在重新启动后生效。",
+    "en-US": "Data copied; the original folder is retained. The new folder takes effect after restart.",
+    "ja-JP": "データをコピーしました。元のフォルダーは保持され、新しいフォルダーは再起動後に使用されます。"
+  },
+  "Common.DataAndRecovery": {
+    "zh-CN": "数据与恢复",
+    "en-US": "Data and recovery",
+    "ja-JP": "データと復元"
+  },
+  "Common.Search": {
+    "zh-CN": "搜索",
+    "en-US": "Search",
+    "ja-JP": "検索"
+  },
+  "Common.SearchSettings": {
+    "zh-CN": "搜索设置",
+    "en-US": "Search settings",
+    "ja-JP": "設定を検索"
+  },
+  "Common.SearchSettingsA44672": {
+    "zh-CN": "搜索设置项",
+    "en-US": "Search settings",
+    "ja-JP": "設定を検索"
+  },
+  "Common.Zoom": {
+    "zh-CN": "缩放",
+    "en-US": "Zoom",
+    "ja-JP": "拡大"
+  },
+  "Common.SmallerTrackRowsTouchModeTakesPrecedence": {
+    "zh-CN": "缩小歌曲行；触摸优化开启时优先使用触控尺寸。",
+    "en-US": "Smaller track rows. Touch mode takes precedence.",
+    "ja-JP": "曲の行を小さくします。タッチ最適化が優先されます。"
+  },
+  "Common.UseCompactTrackRowsTouchInputAutomaticallyUsesLarger": {
+    "zh-CN": "缩小歌曲行；使用触摸输入时自动适配触控尺寸。",
+    "en-US": "Use compact track rows. Touch input automatically uses larger targets.",
+    "ja-JP": "曲の行をコンパクトにします。タッチ操作では自動的に操作しやすいサイズになります。"
+  },
+  "Common.SnakeBoardArrowsOrWASDToTurnSpaceTo": {
+    "zh-CN": "贪吃蛇棋盘。方向键或 WASD 转向，空格暂停，R 重新开始。",
+    "en-US": "Snake board. Arrows or WASD to turn, Space to pause, R to restart.",
+    "ja-JP": "ヘビゲーム。矢印 / WASDで方向転換、空白で一時停止、Rで再開。"
+  },
+  "Common.Replace": {
+    "zh-CN": "替换",
+    "en-US": "Replace",
+    "ja-JP": "置き換える"
+  },
+  "Common.Add": {
+    "zh-CN": "添加",
+    "en-US": "Add",
+    "ja-JP": "追加"
+  },
+  "Common.AddAnother": {
+    "zh-CN": "添加更多",
+    "en-US": "Add another",
+    "ja-JP": "追加"
+  },
+  "Common.AddFolder": {
+    "zh-CN": "添加文件夹",
+    "en-US": "Add folder",
+    "ja-JP": "フォルダーを追加"
+  },
+  "Common.Fill": {
+    "zh-CN": "填充",
+    "en-US": "Fill",
+    "ja-JP": "画面に合わせて埋める"
+  },
+  "Common.FillCropsEdgesFitKeepsTheCompleteImageAt": {
+    "zh-CN": "填充会裁剪边缘，完整显示保留原比例。",
+    "en-US": "Fill crops edges; Fit keeps the complete image at its original proportions.",
+    "ja-JP": "埋める場合は端を切り抜き、全体表示は縦横比を保ちます。"
+  },
+  "Common.ImagesMustNotExceedMB": {
+    "zh-CN": "图片不能超过 20 MB。",
+    "en-US": "Images must not exceed 20 MB.",
+    "ja-JP": "画像は20 MB以下にしてください。"
+  },
+  "Common.InvalidImageFormatOrExcessivePixelDimensions": {
+    "zh-CN": "图片格式无效或像素尺寸过大。",
+    "en-US": "Invalid image format or excessive pixel dimensions.",
+    "ja-JP": "画像形式が無効か、ピクセル数が多すぎます。"
+  },
+  "Common.DragTheImageToChooseTheCropZoomWith": {
+    "zh-CN": "拖动图片选择保留区域；滚轮或滑块缩放，也可输入精确像素。图片不能超过 20 MB。",
+    "en-US": "Drag the image to choose the crop. Zoom with the wheel or slider, or enter exact pixels. Maximum image size: 20 MB.",
+    "ja-JP": "画像をドラッグして範囲を選びます。ホイールやスライダーで拡大し、正確なピクセル値も入力できます。画像は20 MBまでです。"
+  },
+  "Common.DroppedTracksAreNoLongerInTheLibrarySelect": {
+    "zh-CN": "拖入的歌曲已不在资料库中，请重新选择。",
+    "en-US": "Dropped tracks are no longer in the library. Select them again.",
+    "ja-JP": "ドロップした曲はライブラリにありません。選び直してください。"
+  },
+  "Common.DropFailed": {
+    "zh-CN": "拖入失败",
+    "en-US": "Drop failed",
+    "ja-JP": "ドロップ操作に失敗しました"
+  },
+  "Common.ExternalConfigurationReloadedAndApplied": {
+    "zh-CN": "外部文件已重新加载并应用。",
+    "en-US": "External configuration reloaded and applied.",
+    "ja-JP": "外部の設定ファイルを再読み込みして適用しました。"
+  },
+  "Common.Appearance": {
+    "zh-CN": "外观与阅读",
+    "en-US": "Appearance",
+    "ja-JP": "外観"
+  },
+  "Common.BoardCompleted": {
+    "zh-CN": "完成棋盘！",
+    "en-US": "Board completed!",
+    "ja-JP": "ボード完成！"
+  },
+  "Common.Fit": {
+    "zh-CN": "完整显示",
+    "en-US": "Fit",
+    "ja-JP": "全体を表示"
+  },
+  "Common.Network": {
+    "zh-CN": "网络",
+    "en-US": "Network",
+    "ja-JP": "ネットワーク"
+  },
+  "Common.NotAssigned": {
+    "zh-CN": "未设置",
+    "en-US": "Not assigned",
+    "ja-JP": "未設定"
+  },
+  "Common.NotSetClickToRecord": {
+    "zh-CN": "未设置 · 点击录入",
+    "en-US": "Not set · Click to record",
+    "ja-JP": "未設定・クリックして入力"
+  },
+  "Common.UnknownAuthor": {
+    "zh-CN": "未提供作者",
+    "en-US": "Unknown author",
+    "ja-JP": "作者未指定"
+  },
+  "Common.NoTracksFound": {
+    "zh-CN": "未找到歌曲",
+    "en-US": "No tracks found",
+    "ja-JP": "曲が見つかりません"
+  },
+  "Common.FileSize": {
+    "zh-CN": "文件大小",
+    "en-US": "File size",
+    "ja-JP": "ファイルサイズ"
+  },
+  "Common.FilePath": {
+    "zh-CN": "文件路径",
+    "en-US": "File path",
+    "ja-JP": "ファイルパス"
+  },
+  "Common.FileSystem": {
+    "zh-CN": "文件系统",
+    "en-US": "File system",
+    "ja-JP": "ファイルシステム"
+  },
+  "Common.TextSize": {
+    "zh-CN": "文字大小",
+    "en-US": "Text size",
+    "ja-JP": "文字サイズ"
+  },
+  "Common.None": {
+    "zh-CN": "无",
+    "en-US": "None",
+    "ja-JP": "なし"
+  },
+  "Common.UnableToOpenUserManual": {
+    "zh-CN": "无法打开使用手册",
+    "en-US": "Unable to open user manual",
+    "ja-JP": "マニュアルを開けません"
+  },
+  "Common.CouldNotStartTheSystemAssociationTool": {
+    "zh-CN": "无法启动系统关联工具。",
+    "en-US": "Could not start the system association tool.",
+    "ja-JP": "システム関連付けツールを起動できませんでした。"
+  },
+  "Common.TheCoverImageFormatIsNotSupported": {
+    "zh-CN": "无法识别封面图片格式。",
+    "en-US": "The cover image format is not supported.",
+    "ja-JP": "カバー画像の形式を認識できません。"
+  },
+  "Common.LikeUnlike": {
+    "zh-CN": "喜欢 / 取消喜欢",
+    "en-US": "Like / Unlike",
+    "ja-JP": "お気に入りに追加・解除"
+  },
+  "Common.LikeUnlikeCurrentTrack": {
+    "zh-CN": "喜欢 / 取消喜欢当前歌曲",
+    "en-US": "Like / unlike current track",
+    "ja-JP": "現在の曲をお気に入りに追加・解除"
+  },
+  "Common.SystemRegistrationFailedCheckXdgUtilsAndYourDesktop": {
+    "zh-CN": "系统关联注册失败，请检查 xdg-utils 和桌面环境。",
+    "en-US": "System registration failed. Check xdg-utils and your desktop environment.",
+    "ja-JP": "登録に失敗しました。xdg-utilsとデスクトップ環境を確認してください。"
+  },
+  "Common.SystemTrayUnavailable": {
+    "zh-CN": "系统托盘不可用",
+    "en-US": "System tray unavailable",
+    "ja-JP": "システムトレイを利用できません"
+  },
+  "Common.NextMonth": {
+    "zh-CN": "下个月",
+    "en-US": "Next month",
+    "ja-JP": "次の月"
+  },
+  "Common.Next": {
+    "zh-CN": "下一首",
+    "en-US": "Next",
+    "ja-JP": "次の曲"
+  },
+  "Common.NextCtrl": {
+    "zh-CN": "下一首（Ctrl+→）",
+    "en-US": "Next (Ctrl+→)",
+    "ja-JP": "次の曲（Ctrl+→）"
+  },
+  "Common.DataIsCopiedAndOriginalsAreKeptTheNew": {
+    "zh-CN": "现有数据会复制到新目录，原文件保留。重启后使用新目录；软件安装目录仍保留一份目录配置文件。目标目录不能和当前目录互相嵌套。",
+    "en-US": "Data is copied and originals are kept. The new folder is used after restart. A location configuration remains beside the app. The old and new folders cannot contain each other.",
+    "ja-JP": "元のデータを残して新しい場所へコピーし、再起動後に使用します。アプリ横には保存先の設定が残ります。元と新しいフォルダーは互いの配下にできません。"
+  },
+  "Common.Validate": {
+    "zh-CN": "校验",
+    "en-US": "Validate",
+    "ja-JP": "検証"
+  },
+  "Common.ValidateJSON": {
+    "zh-CN": "校验 JSON",
+    "en-US": "Validate JSON",
+    "ja-JP": "JSON を検証"
+  },
+  "Common.ValidateConfigurationFile": {
+    "zh-CN": "校验配置文件",
+    "en-US": "Validate configuration file",
+    "ja-JP": "設定ファイルを検証"
+  },
+  "Common.Uninstall": {
+    "zh-CN": "卸载",
+    "en-US": "Uninstall",
+    "ja-JP": "アンインストール"
+  },
+  "Common.Uninstall097DD9": {
+    "zh-CN": "卸载 {0}？",
+    "en-US": "Uninstall {0}?",
+    "ja-JP": "{0} をアンインストールしますか？"
+  },
+  "Common.UninstallFailed": {
+    "zh-CN": "卸载失败",
+    "en-US": "Uninstall failed",
+    "ja-JP": "アンインストールに失敗しました"
+  },
+  "Common.TrustAndInstall": {
+    "zh-CN": "信任并安装",
+    "en-US": "Trust and Install",
+    "ja-JP": "信頼してインストール"
+  },
+  "Common.Select": {
+    "zh-CN": "选",
+    "en-US": "Select",
+    "ja-JP": "選択"
+  },
+  "Common.Choose": {
+    "zh-CN": "选择",
+    "en-US": "Choose",
+    "ja-JP": "選択"
+  },
+  "Common.SelectStateJsonOrBak": {
+    "zh-CN": "选择 state.json 或 .bak",
+    "en-US": "Select state.json or .bak",
+    "ja-JP": "state.json または .bak を選択"
+  },
+  "Common.SelectYear": {
+    "zh-CN": "选择年份",
+    "en-US": "Select year",
+    "ja-JP": "年を選択"
+  },
+  "Common.ChooseASongToPlay": {
+    "zh-CN": "选择一首喜欢的歌",
+    "en-US": "Choose a song to play",
+    "ja-JP": "聴きたい曲を選択"
+  },
+  "Common.SelectThisTrack": {
+    "zh-CN": "选择这首歌曲",
+    "en-US": "Select this track",
+    "ja-JP": "この曲を選択"
+  },
+  "Common.BrightnessTo": {
+    "zh-CN": "颜色亮度，0 到 100",
+    "en-US": "Brightness, 0 to 100",
+    "ja-JP": "明るさ、0〜100"
+  },
+  "Common.UseRRGGBBSuchAsA895FF": {
+    "zh-CN": "颜色请填写 #RRGGBB，例如 #A895FF。",
+    "en-US": "Use #RRGGBB, such as #A895FF.",
+    "ja-JP": "#A895FF などの #RRGGBB を指定してください。"
+  },
+  "Common.ColorPicker": {
+    "zh-CN": "颜色选择",
+    "en-US": "Color picker",
+    "ja-JP": "色を選択"
+  },
+  "Common.Rock": {
+    "zh-CN": "摇滚",
+    "en-US": "Rock",
+    "ja-JP": "ロック"
+  },
+  "Common.Page": {
+    "zh-CN": "页面",
+    "en-US": "Page",
+    "ja-JP": "ページ"
+  },
+  "Common.PageFailedToLoad": {
+    "zh-CN": "页面加载失败",
+    "en-US": "Page failed to load",
+    "ja-JP": "ページを読み込めませんでした"
+  },
+  "Common.Remove": {
+    "zh-CN": "移除",
+    "en-US": "Remove",
+    "ja-JP": "削除"
+  },
+  "Common.RemoveTracks": {
+    "zh-CN": "移除 {0} 首歌曲？",
+    "en-US": "Remove {0} tracks?",
+    "ja-JP": "{0} 曲を削除しますか？"
+  },
+  "Common.LastOperationUndone": {
+    "zh-CN": "已撤销上次操作",
+    "en-US": "Last operation undone",
+    "ja-JP": "直前の操作を元に戻しました"
+  },
+  "Common.Disabled": {
+    "zh-CN": "已关闭",
+    "en-US": "Disabled",
+    "ja-JP": "無効"
+  },
+  "Common.DefaultCoverRestored": {
+    "zh-CN": "已恢复默认封面。",
+    "en-US": "Default cover restored.",
+    "ja-JP": "既定のカバーに戻しました。"
+  },
+  "Common.Enabled": {
+    "zh-CN": "已启用",
+    "en-US": "Enabled",
+    "ja-JP": "有効"
+  },
+  "Common.ImportCancelledYourLibraryIsUnchanged": {
+    "zh-CN": "已取消导入，已有资料库未改变。",
+    "en-US": "Import cancelled. Your library is unchanged.",
+    "ja-JP": "インポートをキャンセルしました。ライブラリは変更されていません。"
+  },
+  "Common.ApplicationDefaultCoverApplied": {
+    "zh-CN": "已设置为软件默认封面。",
+    "en-US": "Application default cover applied.",
+    "ja-JP": "アプリの既定カバーを適用しました。"
+  },
+  "Common.Selected": {
+    "zh-CN": "已选 {0} 首",
+    "en-US": "{0} selected",
+    "ja-JP": "{0} 曲を選択"
+  },
+  "Common.TracksSelected": {
+    "zh-CN": "已选 0 首",
+    "en-US": "0 tracks selected",
+    "ja-JP": "0 曲選択中"
+  },
+  "Common.AppliedAndSavedThePreviousValidConfigurationIsBacked": {
+    "zh-CN": "已应用并保存。上一份有效配置保存在 .bak，可继续修改或恢复。",
+    "en-US": "Applied and saved. The previous valid configuration is backed up as .bak.",
+    "ja-JP": "適用して保存しました。前の有効な設定は .bak に保存されています。"
+  },
+  "Common.Paused": {
+    "zh-CN": "已暂停",
+    "en-US": "Paused",
+    "ja-JP": "一時停止中"
+  },
+  "Common.Provider": {
+    "zh-CN": "音源",
+    "en-US": "Provider",
+    "ja-JP": "音源"
+  },
+  "Common.UnableToLoadTheSourceCheckItsConfigurationAnd": {
+    "zh-CN": "音源加载失败，请检查配置后重试",
+    "en-US": "Unable to load the source. Check its configuration and try again.",
+    "ja-JP": "音源を読み込めません。設定をご確認のうえ、再試行してください。"
+  },
+  "Common.ProviderConfiguration": {
+    "zh-CN": "音源配置",
+    "en-US": "Provider Configuration",
+    "ja-JP": "音源の設定"
+  },
+  "Common.SourceUpdatedSongs": {
+    "zh-CN": "音源已更新 · {0} 首歌曲",
+    "en-US": "Source updated · {0} songs",
+    "ja-JP": "音源を更新しました · {0} 曲"
+  },
+  "Common.Apply": {
+    "zh-CN": "应用",
+    "en-US": "Apply",
+    "ja-JP": "適用"
+  },
+  "Common.InvalidApplicationPath": {
+    "zh-CN": "应用路径无效。",
+    "en-US": "Invalid application path.",
+    "ja-JP": "アプリのパスが無効です。"
+  },
+  "Common.ApplyConfiguration": {
+    "zh-CN": "应用配置",
+    "en-US": "Apply configuration",
+    "ja-JP": "設定を適用"
+  },
+  "Common.ApplyColor": {
+    "zh-CN": "应用颜色",
+    "en-US": "Apply color",
+    "ja-JP": "色を適用"
+  },
+  "Common.GameOverRestartToPlayAgain": {
+    "zh-CN": "游戏结束，点击重开",
+    "en-US": "Game over; restart to play again",
+    "ja-JP": "ゲーム終了。再開してください"
+  },
+  "Common.Playing": {
+    "zh-CN": "游戏进行中",
+    "en-US": "Playing",
+    "ja-JP": "プレイ中"
+  },
+  "Common.WindowsOrderOnTheRightMacOSOrderOnThe": {
+    "zh-CN": "右侧使用 Windows 顺序，左侧使用 macOS 顺序。",
+    "en-US": "Windows order on the right; macOS order on the left.",
+    "ja-JP": "右側は Windows、左側は macOS の順序です。"
+  },
+  "Common.TopRight": {
+    "zh-CN": "右上角",
+    "en-US": "Top right",
+    "ja-JP": "右上"
+  },
+  "Common.Language": {
+    "zh-CN": "语言",
+    "en-US": "Language",
+    "ja-JP": "言語"
+  },
+  "Common.Original": {
+    "zh-CN": "原声",
+    "en-US": "Original",
+    "ja-JP": "原音"
+  },
+  "Common.OriginalBassVocalOrBrightChangesApplyImmediately": {
+    "zh-CN": "原声 / 低音 / 人声 / 明亮，实时生效。",
+    "en-US": "Original, bass, vocal or bright; changes apply immediately.",
+    "ja-JP": "原音、低音、ボーカル、明瞭。変更はすぐに反映されます。"
+  },
+  "Common.OriginalAspectRatio": {
+    "zh-CN": "原图比例",
+    "en-US": "Original aspect ratio",
+    "ja-JP": "元画像の縦横比"
+  },
+  "Common.Month": {
+    "zh-CN": "月份",
+    "en-US": "Month",
+    "ja-JP": "月"
+  },
+  "Common.EditTheConfigurationInAnExternalEditorThenReload": {
+    "zh-CN": "在外部编辑器中修改配置文件，然后重新加载。无效配置不会覆盖当前界面。",
+    "en-US": "Edit the configuration in an external editor, then reload it. Invalid layouts will not replace the current interface.",
+    "ja-JP": "外部エディターで設定ファイルを編集してから再読み込みします。無効な設定で現在の画面は置き換わりません。"
+  },
+  "Common.RevealTrackInFileExplorer": {
+    "zh-CN": "在文件资源管理器中定位这首歌曲",
+    "en-US": "Reveal track in File Explorer",
+    "ja-JP": "エクスプローラーで曲を表示"
+  },
+  "Common.Pause": {
+    "zh-CN": "暂停",
+    "en-US": "Pause",
+    "ja-JP": "一時停止"
+  },
+  "Common.PauseGame": {
+    "zh-CN": "暂停游戏",
+    "en-US": "Pause Game",
+    "ja-JP": "ゲームを一時停止"
+  },
+  "Common.NoDataYet": {
+    "zh-CN": "暂无记录",
+    "en-US": "No data yet",
+    "ja-JP": "記録はありません"
+  },
+  "Common.NoListeningHistoryYet": {
+    "zh-CN": "暂无记录。",
+    "en-US": "No listening history yet.",
+    "ja-JP": "再生記録はありません。"
+  },
+  "Common.NoDescription": {
+    "zh-CN": "暂无简介",
+    "en-US": "No description",
+    "ja-JP": "説明はありません"
+  },
+  "Common.NoListeningDataYet": {
+    "zh-CN": "暂无听歌数据",
+    "en-US": "No listening data yet",
+    "ja-JP": "聴取データはありません"
+  },
+  "Common.LargerControlsAndTrackRowsForTouchscreens": {
+    "zh-CN": "增大触控目标和歌曲行，适合触摸屏。",
+    "en-US": "Larger controls and track rows for touchscreens.",
+    "ja-JP": "タッチ画面向けに操作領域と曲の行を大きくします。"
+  },
+  "Common.Increase": {
+    "zh-CN": "增加",
+    "en-US": "Increase",
+    "ja-JP": "増やす"
+  },
+  "Common.Expand": {
+    "zh-CN": "展开",
+    "en-US": "Expand",
+    "ja-JP": "展開"
+  },
+  "Common.CouldNotLocateTheApplicationExecutable": {
+    "zh-CN": "找不到应用程序路径。",
+    "en-US": "Could not locate the application executable.",
+    "ja-JP": "実行ファイルのパスが見つかりません。"
+  },
+  "Common.AnImportIsInProgressWaitForItTo": {
+    "zh-CN": "正在导入，请等待完成或先取消。",
+    "en-US": "An import is in progress. Wait for it to finish or cancel it first.",
+    "ja-JP": "インポート中です。完了を待つか、先にキャンセルしてください。"
+  },
+  "Common.Downloading": {
+    "zh-CN": "正在下载…",
+    "en-US": "Downloading…",
+    "ja-JP": "ダウンロード中…"
+  },
+  "Common.PlaybackSpeedFromTo": {
+    "zh-CN": "支持 0.5–2 倍速。",
+    "en-US": "Playback speed from 0.5× to 2×.",
+    "ja-JP": "0.5〜2 倍速で再生できます。"
+  },
+  "Common.SupportedFiles": {
+    "zh-CN": "支持的文件",
+    "en-US": "Supported files",
+    "ja-JP": "対応するファイル"
+  },
+  "Common.ExitApplication4A67B7": {
+    "zh-CN": "直接关闭",
+    "en-US": "Exit application",
+    "ja-JP": "アプリを終了"
+  },
+  "Common.RenameFailed": {
+    "zh-CN": "重命名失败",
+    "en-US": "Rename failed",
+    "ja-JP": "名前を変更できませんでした"
+  },
+  "Common.AfterRestart": {
+    "zh-CN": "重启后使用",
+    "en-US": "After restart",
+    "ja-JP": "再起動後"
+  },
+  "Common.ReloadFile": {
+    "zh-CN": "重新加载文件",
+    "en-US": "Reload file",
+    "ja-JP": "ファイルを再読み込み"
+  },
+  "Common.Restart": {
+    "zh-CN": "重新开始",
+    "en-US": "Restart",
+    "ja-JP": "再開"
+  },
+  "Common.Reset": {
+    "zh-CN": "重置",
+    "en-US": "Reset",
+    "ja-JP": "リセット"
+  },
+  "Common.Content": {
+    "zh-CN": "主内容",
+    "en-US": "Content",
+    "ja-JP": "コンテンツ"
+  },
+  "Common.Register": {
+    "zh-CN": "注册",
+    "en-US": "Register",
+    "ja-JP": "登録"
+  },
+  "Common.RegisterAndOpenSettings": {
+    "zh-CN": "注册并打开设置",
+    "en-US": "Register and open settings",
+    "ja-JP": "登録して設定を開く"
+  },
+  "Common.Ready": {
+    "zh-CN": "准备开始",
+    "en-US": "Ready",
+    "ja-JP": "開始待ち"
+  },
+  "Common.CouldNotStartDesktopPet": {
+    "zh-CN": "桌宠启动失败",
+    "en-US": "Could not start desktop pet",
+    "ja-JP": "デスクトップペットを起動できませんでした"
+  },
+  "Common.DesktopWidget": {
+    "zh-CN": "桌面部件",
+    "en-US": "Desktop widget",
+    "ja-JP": "デスクトップウィジェット"
+  },
+  "Common.FontSizeMustBeAnInteger": {
+    "zh-CN": "字号必须是整数。",
+    "en-US": "Font size must be an integer.",
+    "ja-JP": "文字サイズは整数で入力してください。"
+  },
+  "Common.CustomizeUI": {
+    "zh-CN": "自定义 UI",
+    "en-US": "Customize UI",
+    "ja-JP": "UI のカスタマイズ"
+  },
+  "Common.AutoScroll": {
+    "zh-CN": "自动滚动",
+    "en-US": "Auto-scroll",
+    "ja-JP": "自動スクロール"
+  },
+  "Common.TopTracks": {
+    "zh-CN": "最常听的歌曲",
+    "en-US": "Top tracks",
+    "ja-JP": "よく聴く曲"
+  },
+  "Common.MaximizeRestore": {
+    "zh-CN": "最大化 / 还原",
+    "en-US": "Maximize / Restore",
+    "ja-JP": "最大化・元に戻す"
+  },
+  "Common.MaximizeOrRestore": {
+    "zh-CN": "最大化或还原",
+    "en-US": "Maximize or restore",
+    "ja-JP": "最大化または元に戻す"
+  },
+  "Common.AtMostDesktopPetsCanBeShownAtOnce": {
+    "zh-CN": "最多同时显示 8 个桌宠。",
+    "en-US": "At most 8 desktop pets can be shown at once.",
+    "ja-JP": "同時に表示できるデスクトップペットは8個までです。"
+  },
+  "Common.RecentListeningDays": {
+    "zh-CN": "最近 7 个听歌日",
+    "en-US": "Recent listening days",
+    "ja-JP": "最近の再生日"
+  },
+  "Common.LastDays": {
+    "zh-CN": "最近 7 天",
+    "en-US": "Last 7 days",
+    "ja-JP": "過去 7 日"
+  },
+  "Common.NewestFirstDragToReorder": {
+    "zh-CN": "最近添加在最前 · 可拖动调整顺序",
+    "en-US": "Newest first · Drag to reorder",
+    "ja-JP": "新しい曲が先頭・ドラッグで並べ替え"
+  },
+  "Common.Minimize": {
+    "zh-CN": "最小化",
+    "en-US": "Minimize",
+    "ja-JP": "最小化"
+  },
+  "Common.OptimizeMemoryWhenMinimized": {
+    "zh-CN": "最小化时优化内存",
+    "en-US": "Optimize memory when minimized",
+    "ja-JP": "最小化時にメモリを最適化"
+  },
+  "Common.TopLeft": {
+    "zh-CN": "左上角",
+    "en-US": "Top left",
+    "ja-JP": "左上"
+  },
+  "Common.PlayerExceedsItsAllocatedRowsOrColumnsAndMay": {
+    "zh-CN": "player.{0} 超出分配的行列，可能遮挡其他控件；请扩大格位或减小控件。",
+    "en-US": "player.{0} exceeds its allocated rows or columns and may overlap controls. Enlarge the grid cell or reduce the control size.",
+    "ja-JP": "player.{0} が割り当てた行・列を超えて他のコントロールと重なる可能性があります。セルを広げるかコントロールを小さくしてください。"
+  },
+  "Common.PlayerExceedsItsCellEnlargeTheGridCellOr": {
+    "zh-CN": "player.{0} 超出所在格位；请增加行列尺寸或减小控件。",
+    "en-US": "player.{0} exceeds its cell. Enlarge the grid cell or reduce the control size.",
+    "ja-JP": "player.{0} がセルに収まりません。行・列を広げるかコントロールを小さくしてください。"
+  },
+  "Common.PlayerIsTooSmallAtLeastPixelsAreRequired": {
+    "zh-CN": "player.{0} 太小，至少需要 {1}×{2} 像素。",
+    "en-US": "player.{0} is too small; at least {1}×{2} pixels are required.",
+    "ja-JP": "player.{0} が小さすぎます。最低 {1}×{2} ピクセルが必要です。"
+  },
+  "Common.PxAppliesWhenWorkspaceIsEmpty": {
+    "zh-CN": "workspace 为空时生效，108–180 px。",
+    "en-US": "108–180 px; applies when workspace is empty.",
+    "ja-JP": "108〜180 px。workspace が空の場合に適用します。"
+  },
+  "Common.PxAppliesWhenWorkspaceIsEmpty35ED03": {
+    "zh-CN": "workspace 为空时生效，170–320 px。",
+    "en-US": "170–320 px; applies when workspace is empty.",
+    "ja-JP": "170〜320 px。workspace が空の場合に適用します。"
+  },
+  "Common.AppliesWhenWorkspaceIsEmptyExplicitCoordinatesTakePrecedence": {
+    "zh-CN": "workspace 为空时生效；具体坐标配置优先。",
+    "en-US": "Applies when workspace is empty; explicit coordinates take precedence.",
+    "ja-JP": "workspace が空の場合に適用します。指定した座標が優先されます。"
+  },
+  "Common.WorkspaceIsTooSmallAtLeastPixelsAreRequired": {
+    "zh-CN": "workspace.{0} 太小，至少需要 {1}×{2} 像素。",
+    "en-US": "workspace.{0} is too small; at least {1}×{2} pixels are required.",
+    "ja-JP": "workspace.{0} が小さすぎます。最低 {1}×{2} ピクセルが必要です。"
+  },
+  "Common.XPixels": {
+    "zh-CN": "X（像素）",
+    "en-US": "X (pixels)",
+    "ja-JP": "X（ピクセル）"
+  },
+  "Common.BackToTop": {
+    "zh-CN": "回到顶部",
+    "en-US": "Back to top",
+    "ja-JP": "先頭に戻る"
+  },
+  "Common.YPixels": {
+    "zh-CN": "Y（像素）",
+    "en-US": "Y (pixels)",
+    "ja-JP": "Y（ピクセル）"
+  }
+}

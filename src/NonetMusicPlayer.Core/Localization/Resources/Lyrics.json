@@ -1,0 +1,232 @@
+{
+  "Lyrics.PlayPreviewedLine": {
+    "zh-CN": "播放当前预览歌词",
+    "en-US": "Play previewed line",
+    "ja-JP": "プレビュー中の行から再生"
+  },
+  "Lyrics.PlayFromThisLyric": {
+    "zh-CN": "从这句歌词开始播放",
+    "en-US": "Play from this lyric",
+    "ja-JP": "この歌詞から再生"
+  },
+  "Lyrics.OpenLyrics": {
+    "zh-CN": "打开封面与歌词",
+    "en-US": "Open lyrics",
+    "ja-JP": "歌詞を開く"
+  },
+  "Lyrics.OpenLyricsFolder": {
+    "zh-CN": "打开歌词文件夹",
+    "en-US": "Open lyrics folder",
+    "ja-JP": "歌詞フォルダーを開く"
+  },
+  "Lyrics.ShowLyricFileInFolder": {
+    "zh-CN": "打开歌词文件位置",
+    "en-US": "Show lyric file in folder",
+    "ja-JP": "歌詞ファイルの場所を開く"
+  },
+  "Lyrics.ImportLyrics": {
+    "zh-CN": "导入歌词",
+    "en-US": "Import lyrics",
+    "ja-JP": "歌詞を取り込む"
+  },
+  "Lyrics.LyricsImportFailed": {
+    "zh-CN": "导入歌词失败",
+    "en-US": "Lyrics import failed",
+    "ja-JP": "歌詞を取り込めませんでした"
+  },
+  "Lyrics.ImportAnLRCOrTXTFileMatchingThisTrack": {
+    "zh-CN": "导入与歌曲匹配的 LRC 或 TXT 文件。",
+    "en-US": "Import an LRC or TXT file matching this track.",
+    "ja-JP": "この曲に対応する LRC または TXT を取り込んでください。"
+  },
+  "Lyrics.Lyrics": {
+    "zh-CN": "歌词",
+    "en-US": "Lyrics",
+    "ja-JP": "歌詞"
+  },
+  "Lyrics.LyricsOffset": {
+    "zh-CN": "歌词偏移",
+    "en-US": "Lyrics offset",
+    "ja-JP": "歌詞の時間調整"
+  },
+  "Lyrics.LyricsOffsetAD07C1": {
+    "zh-CN": "歌词时间偏移",
+    "en-US": "Lyrics offset",
+    "ja-JP": "歌詞の時間調整"
+  },
+  "Lyrics.LyricsTimingOffset": {
+    "zh-CN": "歌词时间微调",
+    "en-US": "Lyrics timing offset",
+    "ja-JP": "歌詞の時間調整"
+  },
+  "Lyrics.LyricsSecondsEarlier": {
+    "zh-CN": "歌词提前 0.5 秒",
+    "en-US": "Lyrics 0.5 seconds earlier",
+    "ja-JP": "歌詞を 0.5 秒早く表示"
+  },
+  "Lyrics.LyricsFolder": {
+    "zh-CN": "歌词文件夹",
+    "en-US": "Lyrics folder",
+    "ja-JP": "歌詞フォルダー"
+  },
+  "Lyrics.UnableToReadLyricsCheckTheLyricsFolderPermissions": {
+    "zh-CN": "歌词无法读取，请检查歌词文件夹权限",
+    "en-US": "Unable to read lyrics. Check the lyrics folder permissions.",
+    "ja-JP": "歌詞を読み込めません。歌詞フォルダーの権限をご確認ください。"
+  },
+  "Lyrics.LyricsSecondsLater": {
+    "zh-CN": "歌词延后 0.5 秒",
+    "en-US": "Lyrics 0.5 seconds later",
+    "ja-JP": "歌詞を 0.5 秒遅く表示"
+  },
+  "Lyrics.LyricsImportedIntoTheLyricsFolder": {
+    "zh-CN": "歌词已导入独立文件夹",
+    "en-US": "Lyrics imported into the lyrics folder",
+    "ja-JP": "歌詞フォルダーにインポートしました"
+  },
+  "Lyrics.LyricsAndTiming": {
+    "zh-CN": "歌词与时间轴",
+    "en-US": "Lyrics and timing",
+    "ja-JP": "歌詞とタイミング"
+  },
+  "Lyrics.CloseDesktopLyrics": {
+    "zh-CN": "关闭桌面歌词",
+    "en-US": "Close desktop lyrics",
+    "ja-JP": "デスクトップ歌詞を閉じる"
+  },
+  "Lyrics.ReturnToCurrentLine": {
+    "zh-CN": "回到当前歌词",
+    "en-US": "Return to current line",
+    "ja-JP": "現在の行に戻る"
+  },
+  "Lyrics.ResetAppearancePlaybackShortcutsAndLayoutMusicPlaylistsPlugins": {
+    "zh-CN": "将重置外观、播放、快捷键和布局设置。音乐、歌单、插件、统计及数据与歌词目录保留。",
+    "en-US": "Reset appearance, playback, shortcuts and layout. Music, playlists, plugins, statistics, and data and lyrics directories are kept.",
+    "ja-JP": "外観、再生、ショートカット、レイアウトを初期化します。音楽、プレイリスト、プラグイン、統計、データと歌詞の保存先は保持されます。"
+  },
+  "Lyrics.UnlockDesktopLyrics": {
+    "zh-CN": "解锁桌面歌词",
+    "en-US": "Unlock desktop lyrics",
+    "ja-JP": "デスクトップ歌詞の固定を解除"
+  },
+  "Lyrics.NoLyrics": {
+    "zh-CN": "没有歌词",
+    "en-US": "No lyrics",
+    "ja-JP": "歌詞がありません"
+  },
+  "Lyrics.ChangeLyricsFolder": {
+    "zh-CN": "切换歌词文件夹？",
+    "en-US": "Change lyrics folder?",
+    "ja-JP": "歌詞フォルダーを変更しますか？"
+  },
+  "Lyrics.ReleaseRebuildablePagesAndImageCachesWithoutInterruptingPlayback": {
+    "zh-CN": "释放可重建的页面和图片缓存；不影响播放和桌面歌词。",
+    "en-US": "Release rebuildable pages and image caches without interrupting playback or desktop lyrics.",
+    "ja-JP": "再構築できるページと画像キャッシュを解放します。再生とデスクトップ歌詞には影響しません。"
+  },
+  "Lyrics.LockDesktopLyrics": {
+    "zh-CN": "锁定桌面歌词",
+    "en-US": "Lock desktop lyrics",
+    "ja-JP": "デスクトップ歌詞を固定"
+  },
+  "Lyrics.ReplaceCurrentLyrics": {
+    "zh-CN": "替换当前歌词？",
+    "en-US": "Replace current lyrics?",
+    "ja-JP": "現在の歌詞を置き換えますか？"
+  },
+  "Lyrics.MatchingLRCTXTFilesNextToMusicFilesAre": {
+    "zh-CN": "同目录的同名 LRC / TXT 会随歌曲导入到歌词文件夹。",
+    "en-US": "Matching LRC/TXT files next to music files are imported into the lyrics folder.",
+    "ja-JP": "曲と同じフォルダーにある同名の LRC / TXT を歌詞フォルダーに取り込みます。"
+  },
+  "Lyrics.DragToResizeTheLyricsWindow": {
+    "zh-CN": "拖动调整歌词窗口大小",
+    "en-US": "Drag to resize the lyrics window",
+    "ja-JP": "ドラッグして歌詞ウィンドウのサイズを変更"
+  },
+  "Lyrics.UnableToLocateTheLyricFile": {
+    "zh-CN": "无法打开歌词文件位置",
+    "en-US": "Unable to locate the lyric file",
+    "ja-JP": "歌詞ファイルの場所を開けません"
+  },
+  "Lyrics.ShowHideDesktopLyrics": {
+    "zh-CN": "显示 / 隐藏桌面歌词",
+    "en-US": "Show / hide desktop lyrics",
+    "ja-JP": "デスクトップ歌詞を表示・非表示"
+  },
+  "Lyrics.ShowDesktopLyrics": {
+    "zh-CN": "显示桌面歌词",
+    "en-US": "Show desktop lyrics",
+    "ja-JP": "デスクトップ歌詞を表示"
+  },
+  "Lyrics.SelectLyricsFolder": {
+    "zh-CN": "选择独立歌词文件夹",
+    "en-US": "Select lyrics folder",
+    "ja-JP": "歌詞フォルダーを選択"
+  },
+  "Lyrics.SelectLyrics": {
+    "zh-CN": "选择歌词",
+    "en-US": "Select lyrics",
+    "ja-JP": "歌詞を選択"
+  },
+  "Lyrics.ChooseLyricsFolder": {
+    "zh-CN": "选择歌词文件夹",
+    "en-US": "Choose lyrics folder",
+    "ja-JP": "歌詞フォルダーを選択"
+  },
+  "Lyrics.ExistingLyricsAreKeptAndNotMovedAutomaticallyThey": {
+    "zh-CN": "已有歌词不会删除或自动移动。可将旧 Lyrics 文件夹中的文件复制到新位置。",
+    "en-US": "Existing lyrics are kept and not moved automatically. They can be copied from the old Lyrics folder.",
+    "ja-JP": "既存の歌詞は削除・自動移動されません。以前の Lyrics フォルダーからコピーできます。"
+  },
+  "Lyrics.ReplaceExistingLyricsWithTheSelectedFileTheMusic": {
+    "zh-CN": "已有歌词会被选中的文件替换，原音乐文件不会改变。",
+    "en-US": "Replace existing lyrics with the selected file. The music file is unchanged.",
+    "ja-JP": "選択したファイルで既存の歌詞を置き換えます。音楽ファイルは変更しません。"
+  },
+  "Lyrics.HideDesktopLyrics": {
+    "zh-CN": "隐藏桌面歌词",
+    "en-US": "Hide desktop lyrics",
+    "ja-JP": "デスクトップ歌詞を非表示"
+  },
+  "Lyrics.NoLyricsAvailable": {
+    "zh-CN": "暂时没有歌词",
+    "en-US": "No lyrics available",
+    "ja-JP": "歌詞がありません"
+  },
+  "Lyrics.NoLyricsAvailable0245E1": {
+    "zh-CN": "暂无歌词",
+    "en-US": "No lyrics available",
+    "ja-JP": "歌詞はありません"
+  },
+  "Lyrics.ScanningMusicArtworkAndLyrics": {
+    "zh-CN": "正在扫描文件、封面与歌词…",
+    "en-US": "Scanning music, artwork and lyrics…",
+    "ja-JP": "音楽・カバー・歌詞をスキャン中…"
+  },
+  "Lyrics.PositiveValuesShowLyricsEarlierNegativeValuesLaterUnit": {
+    "zh-CN": "正值让歌词更早显示，负值更晚显示；单位秒。",
+    "en-US": "Positive values show lyrics earlier; negative values later. Unit: seconds.",
+    "ja-JP": "正の値で早く、負の値で遅く表示します。単位は秒です。"
+  },
+  "Lyrics.ResetLyricsOffset": {
+    "zh-CN": "重置歌词偏移",
+    "en-US": "Reset lyrics offset",
+    "ja-JP": "歌詞の時間調整をリセット"
+  },
+  "Lyrics.DesktopLyrics": {
+    "zh-CN": "桌面歌词",
+    "en-US": "Desktop lyrics",
+    "ja-JP": "デスクトップ歌詞"
+  },
+  "Lyrics.DesktopLyricsFontSize": {
+    "zh-CN": "桌面歌词字号",
+    "en-US": "Desktop lyrics font size",
+    "ja-JP": "デスクトップ歌詞の文字サイズ"
+  },
+  "Lyrics.TheCustomLyricsFolderIsUnavailableUsingTheDefault": {
+    "zh-CN": "自定义歌词目录无法访问，本次使用默认目录",
+    "en-US": "The custom lyrics folder is unavailable. Using the default folder for this session.",
+    "ja-JP": "指定した歌詞フォルダーにアクセスできません。今回は既定のフォルダーを使用します。"
+  }
+}

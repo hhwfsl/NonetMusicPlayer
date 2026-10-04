@@ -1,0 +1,5 @@
+{
+  "Application.InstanceNotResponding": { "zh-CN": "已运行的播放器暂时无法响应，请稍后重试。", "en-US": "The running player is not responding. Try again shortly.", "ja-JP": "起動中のプレイヤーが応答していません。しばらくしてから再試行してください。" },
+  "Application.StartupFailed": { "zh-CN": "播放器无法启动，请检查音频设备和数据目录。错误详情已写入数据目录下的 Logs。", "en-US": "The player could not start. Check the audio device and data directory. Details are recorded in the data directory's Logs folder.", "ja-JP": "プレイヤーを起動できません。音声デバイスとデータフォルダーを確認してください。詳細はデータフォルダーの Logs に記録されています。" },
+  "Library.ArtworkUnreadable": { "zh-CN": "封面文件无法读取，将使用默认封面。", "en-US": "The artwork file could not be read. The default artwork will be used.", "ja-JP": "カバー画像を読み込めないため、既定の画像を使用します。" }
+}

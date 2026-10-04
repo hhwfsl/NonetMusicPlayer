@@ -1,0 +1,167 @@
+{
+  "Library.LocalMusic": {
+    "zh-CN": "本地音乐",
+    "en-US": "Local music",
+    "ja-JP": "ローカル音楽"
+  },
+  "Library.RestoreLibraryFromFile": {
+    "zh-CN": "从文件恢复音乐库",
+    "en-US": "Restore library from file",
+    "ja-JP": "ファイルからライブラリを復元"
+  },
+  "Library.RemoveFromLibrary": {
+    "zh-CN": "从音乐库移除引用",
+    "en-US": "Remove from library",
+    "ja-JP": "ライブラリから削除"
+  },
+  "Library.ImportedMusic": {
+    "zh-CN": "导入的音乐",
+    "en-US": "Imported music",
+    "ja-JP": "インポートした音楽"
+  },
+  "Library.NoMusicYet": {
+    "zh-CN": "还没有音乐",
+    "en-US": "No music yet",
+    "ja-JP": "音楽がありません"
+  },
+  "Library.RestorePreviousLibrary": {
+    "zh-CN": "恢复上次音乐库",
+    "en-US": "Restore previous library",
+    "ja-JP": "以前のライブラリを復元"
+  },
+  "Library.RestorePreviousLibrary4E6137": {
+    "zh-CN": "恢复上次音乐库？",
+    "en-US": "Restore previous library?",
+    "ja-JP": "以前のライブラリを復元しますか？"
+  },
+  "Library.MakeMusicPartOfYourDay": {
+    "zh-CN": "让音乐成为日常的一部分",
+    "en-US": "Make music part of your day",
+    "ja-JP": "毎日に音楽を"
+  },
+  "Library.DataIsStoredInDataBesideTheAppChanging": {
+    "zh-CN": "数据默认保存在软件目录下 Data。更换目录会复制数据并保留原文件，重启后使用新目录；音乐源文件不受影响。",
+    "en-US": "Data is stored in Data beside the app. Changing folders copies data and keeps the originals; the new folder is used after restart. Music source files are unchanged.",
+    "ja-JP": "データはアプリ横の Data に保存します。フォルダー変更時は元のデータを残してコピーし、再起動後に新しい場所を使用します。元の音楽ファイルは変更しません。"
+  },
+  "Library.SearchTracksArtistsAlbums": {
+    "zh-CN": "搜索歌曲、艺术家、专辑",
+    "en-US": "Search tracks, artists, albums",
+    "ja-JP": "曲・アーティスト・アルバムを検索"
+  },
+  "Library.SearchSongsArtistsAlbumsOrSourcesPressEscTo": {
+    "zh-CN": "搜索歌曲、艺术家、专辑或音源；按 Esc 清空搜索。",
+    "en-US": "Search songs, artists, albums or sources. Press Esc to clear.",
+    "ja-JP": "曲・アーティスト・アルバム・音源を検索できます。Esc で検索を解除します。"
+  },
+  "Library.SearchMusic": {
+    "zh-CN": "搜索音乐",
+    "en-US": "Search music",
+    "ja-JP": "音楽を検索"
+  },
+  "Library.SearchMusicLibrary": {
+    "zh-CN": "搜索音乐库",
+    "en-US": "Search music library",
+    "ja-JP": "音楽ライブラリを検索"
+  },
+  "Library.AddMusic": {
+    "zh-CN": "添加音乐",
+    "en-US": "Add music",
+    "ja-JP": "音楽を追加"
+  },
+  "Library.ImportedTracksAreGroupedByTheirTags": {
+    "zh-CN": "添加音乐后，这里会按歌曲标签自动整理。",
+    "en-US": "Imported tracks are grouped by their tags.",
+    "ja-JP": "取り込んだ曲をタグで分類します。"
+  },
+  "Library.AddMusicFiles": {
+    "zh-CN": "添加音乐文件",
+    "en-US": "Add music files",
+    "ja-JP": "音楽ファイルを追加"
+  },
+  "Library.AddMusicFolder": {
+    "zh-CN": "添加音乐文件夹",
+    "en-US": "Add music folder",
+    "ja-JP": "音楽フォルダーを追加"
+  },
+  "Library.DroppedTracksAreNoLongerInTheLibrarySelect": {
+    "zh-CN": "拖入的歌曲已不在音乐库中，请重新选择。",
+    "en-US": "Dropped tracks are no longer in the library. Select them again.",
+    "ja-JP": "ドロップした曲はライブラリにありません。選び直してください。"
+  },
+  "Library.UnknownArtist": {
+    "zh-CN": "未知艺术家",
+    "en-US": "Unknown artist",
+    "ja-JP": "不明なアーティスト"
+  },
+  "Library.UnknownAlbum": {
+    "zh-CN": "未知专辑",
+    "en-US": "Unknown album",
+    "ja-JP": "不明なアルバム"
+  },
+  "Library.MyMusic": {
+    "zh-CN": "我的音乐",
+    "en-US": "My music",
+    "ja-JP": "マイミュージック"
+  },
+  "Library.UnableToLocateMusicFile": {
+    "zh-CN": "无法定位音乐文件",
+    "en-US": "Unable to locate music file",
+    "ja-JP": "音楽ファイルの場所を表示できません"
+  },
+  "Library.SelectArtistCover": {
+    "zh-CN": "选择艺术家封面",
+    "en-US": "Select artist cover",
+    "ja-JP": "アーティストのカバーを選択"
+  },
+  "Library.SelectAlbumCover": {
+    "zh-CN": "选择专辑封面",
+    "en-US": "Select album cover",
+    "ja-JP": "アルバムのカバーを選択"
+  },
+  "Library.RemovedFromThisListFilesKeptCtrlZTo": {
+    "zh-CN": "已移除引用，磁盘音乐文件未删除 · Ctrl+Z 可撤销",
+    "en-US": "Removed from this list; files kept · Ctrl+Z to undo",
+    "ja-JP": "リストから削除しました。音楽ファイルは保持されます · Ctrl+Z で元に戻せます"
+  },
+  "Library.Artists": {
+    "zh-CN": "艺术家",
+    "en-US": "Artists",
+    "ja-JP": "アーティスト"
+  },
+  "Library.TheArtistOrAlbumNameCannotBeEmpty": {
+    "zh-CN": "艺术家或专辑名不能为空。",
+    "en-US": "The artist or album name cannot be empty.",
+    "ja-JP": "アーティスト名またはアルバム名を指定してください。"
+  },
+  "Library.MusicLibrary": {
+    "zh-CN": "音乐库",
+    "en-US": "Music library",
+    "ja-JP": "ライブラリ"
+  },
+  "Library.TheMusicFileMayHaveMovedOrBeenDeleted": {
+    "zh-CN": "音乐文件可能已移动或删除，请重新添加。",
+    "en-US": "The music file may have moved or been deleted. Add it again.",
+    "ja-JP": "音楽ファイルが移動・削除された可能性があります。追加し直してください。"
+  },
+  "Library.MusicLibrary086520": {
+    "zh-CN": "音乐资料库",
+    "en-US": "Music library",
+    "ja-JP": "ライブラリ"
+  },
+  "Library.Albums": {
+    "zh-CN": "专辑",
+    "en-US": "Albums",
+    "ja-JP": "アルバム"
+  },
+  "Library.ReadyDragSongsIntoAPlaylistOrAddA": {
+    "zh-CN": "准备就绪 · 拖入歌曲或添加音乐文件夹",
+    "en-US": "Ready · Drag songs into a playlist or add a music folder",
+    "ja-JP": "準備完了 · プレイリストに曲をドラッグするか、音楽フォルダーを追加してください"
+  },
+  "Library.TopArtists": {
+    "zh-CN": "最常听的艺术家",
+    "en-US": "Top artists",
+    "ja-JP": "よく聴くアーティスト"
+  }
+}

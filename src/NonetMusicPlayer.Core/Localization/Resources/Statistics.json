@@ -1,0 +1,102 @@
+{
+  "Statistics.Plays": {
+    "zh-CN": "{0} 次播放",
+    "en-US": "{0} plays",
+    "ja-JP": "再生 {0} 回"
+  },
+  "Statistics.YourMusicYourWay": {
+    "zh-CN": "本地音乐 · 自由聆听",
+    "en-US": "Your music, your way",
+    "ja-JP": "ローカル音楽を自由に楽しもう"
+  },
+  "Statistics.LibraryPlaylistsStatisticsAndSettingsWillBeReplacedAfter": {
+    "zh-CN": "当前音乐库、歌单、统计和设置会替换，当前数据会先备份。音乐文件不会删除。",
+    "en-US": "Library, playlists, statistics and settings will be replaced after backing up current data. Music files are kept.",
+    "ja-JP": "現在のデータをバックアップしてからライブラリ、プレイリスト、統計、設定を置き換えます。音楽ファイルは削除しません。"
+  },
+  "Statistics.TodayMinTotalHoursPlays": {
+    "zh-CN": "今日 {0} 分钟 · 累计 {1} 小时 · {2} 次播放",
+    "en-US": "Today {0} min · Total {1} hours · {2} plays",
+    "ja-JP": "今日 {0} 分 · 合計 {1} 時間 · {2} 回再生"
+  },
+  "Statistics.Today": {
+    "zh-CN": "今天聆听",
+    "en-US": "Today",
+    "ja-JP": "今日の再生時間"
+  },
+  "Statistics.ListeningTime": {
+    "zh-CN": "累计聆听",
+    "en-US": "Listening time",
+    "ja-JP": "累計再生時間"
+  },
+  "Statistics.ListeningTrend": {
+    "zh-CN": "聆听趋势",
+    "en-US": "Listening trend",
+    "ja-JP": "聴取時間の推移"
+  },
+  "Statistics.SongWithMostListeningTime": {
+    "zh-CN": "聆听时间最长的歌曲",
+    "en-US": "Song with most listening time",
+    "ja-JP": "最も長く聴いた曲"
+  },
+  "Statistics.ArtistWithMostListeningTime": {
+    "zh-CN": "聆听时间最长的艺术家",
+    "en-US": "Artist with most listening time",
+    "ja-JP": "最も長く聴いたアーティスト"
+  },
+  "Statistics.YearlyStatistics": {
+    "zh-CN": "每年统计",
+    "en-US": "Yearly statistics",
+    "ja-JP": "年別集計"
+  },
+  "Statistics.DailyListening": {
+    "zh-CN": "每日聆听",
+    "en-US": "Daily listening",
+    "ja-JP": "日別の再生記録"
+  },
+  "Statistics.DailyStatistics": {
+    "zh-CN": "每日统计",
+    "en-US": "Daily statistics",
+    "ja-JP": "日別集計"
+  },
+  "Statistics.MonthlyStatistics": {
+    "zh-CN": "每月统计",
+    "en-US": "Monthly statistics",
+    "ja-JP": "月別集計"
+  },
+  "Statistics.ActiveDays": {
+    "zh-CN": "听歌天数",
+    "en-US": "Active days",
+    "ja-JP": "再生した日数"
+  },
+  "Statistics.ListeningStatistics": {
+    "zh-CN": "听歌统计",
+    "en-US": "Listening statistics",
+    "ja-JP": "再生統計"
+  },
+  "Statistics.StatisticsDate": {
+    "zh-CN": "统计日期",
+    "en-US": "Statistics date",
+    "ja-JP": "集計日"
+  },
+  "Statistics.MeasuresActualListeningTimeExcludingPausesLoadingAndSeeking": {
+    "zh-CN": "统计真实聆听时间，不计入暂停、加载和进度跳转。数据保存在本地。",
+    "en-US": "Measures actual listening time, excluding pauses, loading and seeking. Data is stored locally.",
+    "ja-JP": "実際の聴取時間を記録します。一時停止、読み込み、シークは含みません。データはローカルに保存します。"
+  },
+  "Statistics.ChooseADateToViewItsDayMonthAnd": {
+    "zh-CN": "选择一天，同时查看该日、该月和该年的统计。",
+    "en-US": "Choose a date to view its day, month and year together.",
+    "ja-JP": "日付を選択すると、その日・月・年の集計を同時に表示します。"
+  },
+  "Statistics.CopyingDataPlaybackAndStatisticsContinueTheOriginalFolder": {
+    "zh-CN": "正在复制数据目录…播放与听歌统计仍会继续，原目录保留。",
+    "en-US": "Copying data… Playback and statistics continue; the original folder is retained.",
+    "ja-JP": "データをコピー中… 再生と統計は継続し、元のフォルダーは保持されます。"
+  },
+  "Statistics.TotalListeningTime": {
+    "zh-CN": "总聆听时长",
+    "en-US": "Total listening time",
+    "ja-JP": "合計再生時間"
+  }
+}
