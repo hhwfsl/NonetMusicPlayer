@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="821.5 -64.0 860 860">
-<title>Little Music Player — centered draft-v4 head icon</title>
-<desc>Vector head crop of approved draft-v4; no embedded bitmap. Head silhouette centered on a square transparent canvas.</desc>
+<title>Nonet application icon</title>
+<desc>Vector head silhouette centered on a square transparent canvas; no embedded bitmap.</desc>
 <defs>
     <radialGradient id="v4-cheek" cx=".5" cy=".5" r=".5">
       <stop stop-color="#ea9b91" stop-opacity=".28"/>

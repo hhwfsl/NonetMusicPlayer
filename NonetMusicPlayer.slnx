@@ -8,4 +8,3 @@
   <Project Path="tests/NonetMusicPlayer.PluginUiChecks.Desktop/NonetMusicPlayer.PluginUiChecks.Desktop.csproj" />
   <Project Path="samples/NonetMusicPlayer.SampleProvider.Desktop/NonetMusicPlayer.SampleProvider.Desktop.csproj" />
 </Solution>
-
