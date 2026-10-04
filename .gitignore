@@ -20,3 +20,32 @@ samples/NonetMusicPlayer.LyricsTimingPlugin/dist/
 *.jks
 *.keystore
 
+# 移动端当前仅本地开发，不进入桌面公开仓库。
+/src/NonetMusicPlayer.Android/
+/src/NonetMusicPlayer.IOS/
+
+# 运行数据、引导配置、凭据和生成包不得进入源码提交。
+/Data/
+/Logs/
+/Backups/
+/Artwork/
+/Lyrics/
+/Backgrounds/
+/Fonts/
+/Plugins/
+/Updates/
+*.bootstrap.json
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.impp
+*.zip
+.env
+.env.*
+*.key
+*.pem
+*.pfx
+*.p12
+

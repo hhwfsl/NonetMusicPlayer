@@ -80,6 +80,8 @@ macOS ZIP 从 `Contents/` 开始组织，解压到 `Nonet.app/` 内；Linux/macO
 
 ## 项目组织
 
+本地开发与发布使用同一个 `NonetMusicPlayer` 目录。移动端源码可保留在本地，但当前被 Git 忽略，不在公开仓库范围内。`publish`、`artifacts` 和 NuGet 缓存均不提交；本地归档中的旧开发历史及使用数据不得合入公开 Git 历史。
+
 ```text
 src/NonetMusicPlayer.Desktop/           Avalonia 桌面宿主
 src/NonetMusicPlayerCli/                独立终端 / TUI 宿主

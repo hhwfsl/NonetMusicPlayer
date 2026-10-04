@@ -104,12 +104,13 @@ foreach ($target in $targets) {
         # Preserve portable state; retain the complete previous package as a recoverable copy.
         $portableSource = if ($target.Name -eq "macos") { Join-Path $output "Nonet.app/Contents/MacOS" } else { $output }
         $portableDestination = if ($target.Name -eq "macos") { Join-Path $package "Nonet.app/Contents/MacOS" } else { $package }
-        foreach ($dataName in @("Data", "Nonet.bootstrap.json")) {
+        # 升级旧品牌便携版时也保留原引导配置，防止自定义数据目录失联。
+        foreach ($dataName in @("Data", "Nonet.bootstrap.json", "LittleMusicPlayer.bootstrap.json")) {
             $portableData = Join-Path $portableSource $dataName
             if (Test-Path -LiteralPath $portableData) { Copy-Item -LiteralPath $portableData -Destination (Join-Path $portableDestination $dataName) -Recurse }
         }
-        $bootstrap = Join-Path $portableSource "Nonet.bootstrap.json"
-        if (Test-Path -LiteralPath $bootstrap) {
+        $bootstrap = @('Nonet.bootstrap.json','LittleMusicPlayer.bootstrap.json') | ForEach-Object { Join-Path $portableSource $_ } | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+        if ($bootstrap) {
             try {
                 $portableConfig = Get-Content -Raw -LiteralPath $bootstrap | ConvertFrom-Json
                 foreach ($configuredData in @($portableConfig.dataDirectory, $portableConfig.backupDirectory)) {
