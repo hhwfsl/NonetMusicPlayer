@@ -25,6 +25,14 @@ public sealed partial class PluginManager : IDisposable
             if (File.Exists(IndexPath)) Installed = JsonSerializer.Deserialize<List<PluginManifest>>(File.ReadAllText(IndexPath), AppStorage.Json) ?? [];
             Installed = Installed.OfType<PluginManifest>().ToList();
             foreach (var manifest in Installed) manifest.Validate();
+            var pruned = false;
+            foreach (var manifest in Installed)
+            {
+                try { pruned |= PluginPlatformPolicy.PruneInstalled(Path.Combine(storage.PluginsFolder, manifest.Id), manifest); }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
+                { AppLog.Warning("Plugins", "Unable to prune foreign-platform payload: " + manifest.Id, error); }
+            }
+            if (pruned) Save();
         }
         catch (Exception e) when (e is JsonException or IOException or InvalidDataException) { Installed = []; RecoveryMessage = L10n.T("Plugins.ThePluginIndexIsDamagedPluginsWereNotStarted"); }
     }
@@ -159,7 +167,11 @@ public sealed partial class PluginManager : IDisposable
         if (Directory.Exists(directory))
         {
             if (deleteFiles) Core.Plugins.PluginPathPolicy.AfterProcessExit(() => Directory.Delete(directory, true));
-            else { var retained = Path.Combine(_storage.PluginsFolder, "Retained", manifest.Id + "-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(Path.GetDirectoryName(retained)!); Core.Plugins.PluginPathPolicy.AfterProcessExit(() => Directory.Move(directory, retained)); }
+            else
+            {
+                // 断开注册但不移动文件；将非敏感配置/来源保存在原清单，便于同 ID 重新接入。
+                AppStorage.AtomicWrite(Path.Combine(directory, "manifest.json"), JsonSerializer.Serialize(manifest, AppStorage.Json), false);
+            }
         }
         Installed.Remove(manifest); Save(); OperationCompleted?.Invoke(this, CommandResults.Completed("plugins.uninstall"));
     }

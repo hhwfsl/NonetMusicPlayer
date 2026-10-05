@@ -1,6 +1,6 @@
 # 命令行播放器
 
-NonetMusicPlayerCli 0.4.0-beta.1 是无图形框架依赖的播放器。发布程序名为 `nonet`，使用独立数据目录和音频会话，不连接桌面版实例。
+NonetMusicPlayerCli 0.4.0-beta.5 是无图形框架依赖的播放器。发布程序名为 `nonet`，使用独立数据目录和音频会话，不连接桌面版实例。
 
 ## 启动与 PATH
 
@@ -79,3 +79,7 @@ JSON 模式仅输出命令结果，字段为 `operation`、`success`、`message`
 CLI 可用于纯命令行登录、SSH，不依赖 Avalonia、X11、Wayland 或桌面窗口。非播放事务不初始化音频设备。实际发声需要本机音频设备/服务；SSH 不会自动传输声音。Linux 可能需要发行版提供 FFmpeg 原生依赖。Windows 最低 Windows 10 22H2；当前包均为 x64，macOS/Linux 尚需实机验证。
 
 音源插件使用相同 .impp 包验证、配置、进程握手和流媒体 Contract。UI、桌宠和主题插件不能在 CLI 启用。远程仅支持公开 GitHub Release 的 HTTPS .impp 附件。程序不执行系统 Shell，也不会拉取和执行任意仓库源码。
+
+## 插件包与重新接入
+
+原生插件按平台分别发布 `.impp`；CLI 只安装本机平台内容，同时兼容旧版 Contract v1 多平台包。更新保留插件 ID 和配置，拒绝降级。卸载时不删除文件会解除注册、保留原插件目录；再次导入同 ID、同版本的包即可接入，不会移动到 Retained。删除插件文件为不可撤销操作。

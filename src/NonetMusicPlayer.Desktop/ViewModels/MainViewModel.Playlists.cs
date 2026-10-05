@@ -73,6 +73,9 @@ public sealed partial class MainViewModel
         }
         return _trackIndex;
     }
+    public string? GetPlaylistArtworkPath(Playlist playlist)
+        => !string.IsNullOrWhiteSpace(playlist.CoverPath) ? playlist.CoverPath
+            : !playlist.IsSystem && playlist.TrackIds.Count > 0 ? TrackIndex().GetValueOrDefault(playlist.TrackIds[0])?.CoverPath : null;
     public Avalonia.Media.IImage? GetPlaylistArtwork(Playlist playlist)
     {
         if (!string.IsNullOrWhiteSpace(playlist.CoverPath)) return playlist.Artwork;

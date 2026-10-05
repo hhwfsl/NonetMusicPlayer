@@ -36,11 +36,15 @@ public static class PluginUpdatePolicy
         if (installed is null) return PluginInstallKind.New;
         if (installed.Id != candidate.Id || installed.Type != candidate.Type || installed.ContractVersion != candidate.ContractVersion)
             throw new InvalidDataException(PluginMessages.Get("Plugins.UpdateIdentityMismatch"));
+        var comparison = CompareVersions(candidate.Version, installed.Version);
+        return comparison == 0 ? PluginInstallKind.SameVersion : comparison > 0 ? PluginInstallKind.Upgrade : PluginInstallKind.Downgrade;
+    }
+    public static int CompareVersions(string left, string right)
+    {
         static Version Normalize(string value)
         {
             var version = Version.Parse(value); return new(version.Major, version.Minor, Math.Max(0, version.Build), Math.Max(0, version.Revision));
         }
-        var comparison = Normalize(candidate.Version).CompareTo(Normalize(installed.Version));
-        return comparison == 0 ? PluginInstallKind.SameVersion : comparison > 0 ? PluginInstallKind.Upgrade : PluginInstallKind.Downgrade;
+        return Normalize(left).CompareTo(Normalize(right));
     }
 }

@@ -14,8 +14,11 @@ public sealed class PluginsView : UserControl, IDisposable
     private readonly CancellationTokenSource _downloadCancellation = new();
     private bool _disposed;
     private bool _remoteBusy;
+    private readonly MainWindow _owner;
+    private readonly List<(string Id, Button Badge)> _badges = [];
     public PluginsView(MainWindow owner, MainViewModel vm)
     {
+        _owner = owner; owner.PluginUpdatesChanged += UpdatesChanged;
         async Task Install(string path, string? origin = null, PluginManifest? updating = null)
         {
             if (_disposed) return;
@@ -36,7 +39,7 @@ public sealed class PluginsView : UserControl, IDisposable
                     vm.IsBusy = true;
                     try { await vm.Plugins.InstallAsync(path, origin); }
                     finally { vm.IsBusy = false; }
-                    vm.ApplySettings(); owner.RefreshPluginNavigation();
+                    owner.ForgetPluginUpdate(manifest.Id); vm.ApplySettings(); owner.RefreshPluginNavigation();
                     vm.StatusText = L10n.T(previous is null ? "Plugins.PluginInstalled" : "Plugins.PluginUpdated"); owner.ShowPage();
             }
             catch (Exception e) { vm.ReportError(L10n.T("Plugins.PluginInstallationFailed"), e); }
@@ -93,23 +96,33 @@ public sealed class PluginsView : UserControl, IDisposable
             Avalonia.Automation.AutomationProperties.SetName(enabled, plugin.Name + " · " + L10n.T("Common.On"));
             ToolTip.SetTip(enabled, L10n.T(plugin.Enabled ? L10n.T("Plugins.DisablePlugin") : L10n.T("Plugins.EnablePlugin")));
             var author = string.IsNullOrWhiteSpace(plugin.Author) ? L10n.T("Common.UnknownAuthor") : plugin.Author;
-            var info = Ui.Stack(Ui.RawText(plugin.Name, 17), Ui.RawText($"{author} · {plugin.Version} · {TypeName(plugin.Type)}", 12, true));
+            var title = Ui.RawText(plugin.Name, 17); title.VerticalAlignment = VerticalAlignment.Center; title.MaxLines = 1; title.TextWrapping = Avalonia.Media.TextWrapping.NoWrap;
+            var badge = Ui.AsyncButton("New", async () => { if (owner.PluginUpdate(plugin.Id) is { } info) await owner.ConfirmPluginUpdateAsync(plugin, info); });
+            badge.Name = "PluginNewVersion"; badge.FontSize = 10; badge.MinWidth = 38; badge.MinHeight = 22; badge.Padding = new(8, 1);
+            badge.Classes.Add("primary"); badge.VerticalAlignment = VerticalAlignment.Center; badge.IsVisible = owner.PluginUpdate(plugin.Id) is not null;
+            ToolTip.SetTip(badge, L10n.T("Update.New")); _badges.Add((plugin.Id, badge));
+            var titleRow = new Grid { ColumnDefinitions = new("*,Auto"), ColumnSpacing = 8, HorizontalAlignment = HorizontalAlignment.Left }; titleRow.Children.Add(title); Grid.SetColumn(badge, 1); titleRow.Children.Add(badge);
+            var info = Ui.Stack(titleRow, Ui.RawText($"{author} · {plugin.Version} · {TypeName(plugin.Type)}", 12, true));
             info.Spacing = 5;
             if (!string.IsNullOrWhiteSpace(plugin.Description)) info.Children.Add(Ui.RawText(plugin.Description, 12, true));
             if (plugin.Permissions.Count > 0) info.Children.Add(Ui.RawText(L10n.T("Plugins.Permissions") + ": " + string.Join(" / ", plugin.Permissions.Select(PermissionName)), 11, true));
             info.Margin = new Thickness(0, 0, 16, 0);
-            var actions = new Grid { ColumnDefinitions = new("Auto,Auto,Auto,Auto,Auto"), ColumnSpacing = 6, VerticalAlignment = VerticalAlignment.Center }; actions.Children.Add(enabled);
+            var actions = new Grid { ColumnDefinitions = new("Auto,Auto,Auto,Auto,Auto,Auto"), ColumnSpacing = 6, VerticalAlignment = VerticalAlignment.Center }; actions.Children.Add(enabled);
             var configureButton = Ui.AsyncButton("", async () => await owner.OpenPluginConfigurationAsync(plugin)); configureButton.Name = "PluginConfigure";
             configureButton.Content = Icon(IconKind.Settings); ToolTip.SetTip(configureButton, L10n.T("Plugins.PluginConfiguration")); Avalonia.Automation.AutomationProperties.SetName(configureButton, plugin.Name + " · " + L10n.T("Plugins.PluginConfiguration")); Grid.SetColumn(configureButton, 1); configureButton.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(configureButton);
             var update = Ui.AsyncButton("", async () =>
             {
                 if (string.IsNullOrEmpty(plugin.OriginRepository) && string.IsNullOrEmpty(plugin.RepositoryName)) { vm.ReportWarning(L10n.T("Plugins.RepositoryNotDeclared")); return; }
-                try { await DownloadRelease(PluginRepository.ForUpdate(plugin).LatestReleaseUrl, plugin); }
+                try { await owner.CheckPluginUpdateAsync(plugin); }
                 catch (Exception error) { vm.ReportError(L10n.T("Plugins.PluginDownloadFailed"), error); }
             });
             update.Name = "PluginUpdate"; update.Content = Icon(IconKind.Refresh); update.VerticalAlignment = VerticalAlignment.Center;
             ToolTip.SetTip(update, L10n.T("Plugins.CheckUpdate")); Avalonia.Automation.AutomationProperties.SetName(update, plugin.Name + " · " + L10n.T("Plugins.CheckUpdate"));
             Grid.SetColumn(update, 2); actions.Children.Add(update);
+            var folder = Ui.Button("", () => MainWindow.OpenPath(Path.Combine(vm.Storage.PluginsFolder, plugin.Id)));
+            folder.Name = "PluginOpenFolder"; folder.Content = Icon(IconKind.Folder); folder.VerticalAlignment = VerticalAlignment.Center;
+            ToolTip.SetTip(folder, L10n.T("Plugins.OpenFolder")); Avalonia.Automation.AutomationProperties.SetName(folder, L10n.T("Plugins.OpenFolder"));
+            Grid.SetColumn(folder, 3); actions.Children.Add(folder);
             if (plugin.Type == "provider")
             {
                 var more = Ui.Button("", () => { }); more.Name = "PluginMore";
@@ -122,23 +135,24 @@ public sealed class PluginsView : UserControl, IDisposable
                 };
                 var refresh = new MenuItem { Header = L10n.T("Common.LoadCatalog"), Icon = Icon(IconKind.Library) };
                 refresh.Click += async (_, _) => await vm.RefreshProviderAsync(plugin);
-                menu.ItemsSource = new[] { configure, refresh }; more.Click += (_, _) => owner.OpenMenu(more, menu); Grid.SetColumn(more, 3); more.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(more);
+                menu.ItemsSource = new[] { configure, refresh }; more.Click += (_, _) => owner.OpenMenu(more, menu); Grid.SetColumn(more, 4); more.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(more);
             }
             var uninstall = Ui.AsyncButton("", async () =>
             {
                 var deleteFiles = await PlayerDialog.Uninstall(owner, L10n.Format("Common.Uninstall097DD9", plugin.Name)); if (deleteFiles is null) return;
-                try { vm.DisablePlugin(plugin); vm.Plugins.Uninstall(plugin, deleteFiles.Value); vm.ApplySettings(); owner.ShowPage(); vm.StatusText = L10n.T("Plugins.PluginUninstalled"); }
+                try { vm.DisablePlugin(plugin); vm.Plugins.Uninstall(plugin, deleteFiles.Value); owner.ForgetPluginUpdate(plugin.Id); vm.ApplySettings(); owner.ShowPage(); vm.StatusText = L10n.T("Plugins.PluginUninstalled"); }
                 catch (Exception e) { vm.ReportError(L10n.T("Common.UninstallFailed"), e); }
             });
             uninstall.Name = "PluginUninstall"; uninstall.Content = Icon(IconKind.Trash);
             ToolTip.SetTip(uninstall, L10n.T("Common.Uninstall")); Avalonia.Automation.AutomationProperties.SetName(uninstall, plugin.Name + " · " + L10n.T("Common.Uninstall"));
-            Grid.SetColumn(uninstall, 4); uninstall.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(uninstall);
+            Grid.SetColumn(uninstall, 5); uninstall.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(uninstall);
             var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") }; grid.Children.Add(info); Grid.SetColumn(actions, 1); grid.Children.Add(actions);
             panel.Children.Add(new Border { Child = grid, Padding = new Thickness(20), CornerRadius = new CornerRadius(12), BorderBrush = Ui.Brush("DividerBrush"), BorderThickness = new Thickness(1), Background = Ui.Brush("SurfaceBrush") });
         }
         Content = Ui.Scroll(panel);
     }
-    public void Dispose() { if (_disposed) return; _disposed = true; _downloadCancellation.Cancel(); _downloadCancellation.Dispose(); }
+    private void UpdatesChanged(object? sender, EventArgs e) { foreach (var (id, badge) in _badges) badge.IsVisible = _owner.PluginUpdate(id) is not null; }
+    public void Dispose() { _owner.PluginUpdatesChanged -= UpdatesChanged; if (_disposed) return; _disposed = true; _downloadCancellation.Cancel(); _downloadCancellation.Dispose(); }
     private static VectorIcon Icon(IconKind kind) => new() { Kind = kind, Width = 18, Height = 18, Brush = Ui.Brush("TextPrimaryBrush") };
     private static string TypeName(string type) => L10n.T(type switch { "provider" => L10n.T("Common.Provider"), "theme" => L10n.T("Settings.Theme"), "widget" => L10n.T("Common.Cards"), "lyrics" => L10n.T("LyricsSearch.PluginType"), _ => L10n.T("Common.Page") });
     private static string PermissionName(string name) => L10n.T(name switch { "player-control" => L10n.T("Playback.PlaybackControl"), "navigation" => L10n.T("Common.NavigationAndSearch"), "statistics" => L10n.T("Statistics.ListeningStatistics"), "desktop-widget" => L10n.T("Common.DesktopWidget"), "network" => L10n.T("Common.Network"), "process" => L10n.T("Common.NativeProcess"), "filesystem" => L10n.T("Common.FileSystem"), _ => name });

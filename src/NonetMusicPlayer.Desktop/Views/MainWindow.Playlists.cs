@@ -11,12 +11,14 @@ namespace NonetMusicPlayer.Desktop.Views;
 public sealed partial class MainWindow
 {
     private int _playlistHeaderProfile = -1;
-    private Border PlaylistArtwork(Playlist playlist, double size)
+    private Border PlaylistArtwork(Playlist playlist, double size, bool original = false)
     {
         var artwork = new Grid();
         artwork.Children.Add(new VectorIcon { Kind = playlist.IsSystem ? IconKind.Heart : IconKind.Playlist, Filled = playlist.IsSystem, Width = size * .55, Height = size * .55, Brush = playlist.IsSystem ? new SolidColorBrush(Color.Parse("#F0526C")) : Ui.Brush("TextSecondaryBrush") });
         var image = _vm?.GetPlaylistArtwork(playlist) ?? playlist.Artwork;
-        artwork.Children.Add(new Image { Source = image, Stretch = Stretch.UniformToFill, IsVisible = image is not null });
+        var path = _vm?.GetPlaylistArtworkPath(playlist) ?? playlist.CoverPath;
+        artwork.Children.Add(original ? new OriginalArtworkImage(path, image) { Name = "PlaylistOriginalCover" }
+            : new Image { Source = image, Stretch = Stretch.UniformToFill, IsVisible = image is not null });
         return new Border { Width = size, Height = size, CornerRadius = new CornerRadius(Math.Min(12, size / 5)), ClipToBounds = true, Background = Ui.Brush("SurfaceRaisedBrush"), Child = artwork };
     }
     private void BuildPlaylistHeader()
@@ -27,7 +29,7 @@ public sealed partial class MainWindow
         _playlistHeaderProfile = Bounds.Height < 620 ? 0 : Bounds.Width < 1000 || Bounds.Height < 650 ? 1 : 2;
         var small = Bounds.Width < 1000 || Bounds.Height < 650; var coverSize = small ? 112 : 180;
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions((coverSize + 24) + ",*"), Margin = new(0, 0, 0, 6) };
-        grid.Children.Add(PlaylistArtwork(playlist, coverSize));
+        grid.Children.Add(PlaylistArtwork(playlist, coverSize, original: true));
         var title = Ui.RawText(PlaylistName(playlist), small ? 25 : 30); title.FontWeight = FontWeight.SemiBold; title.MaxLines = 1; title.TextTrimming = TextTrimming.CharacterEllipsis;
         var description = string.IsNullOrWhiteSpace(playlist.Description) ? Ui.Text(L10n.T("Playlists.AddPlaylistDescription"), 13, true) : Ui.RawText(playlist.Description, 13, true);
         description.MaxLines = 2; description.TextTrimming = TextTrimming.CharacterEllipsis;

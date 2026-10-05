@@ -3,7 +3,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>3.2.0</Version>
+    <Version>3.3.0</Version>
     <Description>NonetMusicPlayer Contract v1 validation and impp packaging. No UI or audio dependency.</Description>
   </PropertyGroup>
 </Project>

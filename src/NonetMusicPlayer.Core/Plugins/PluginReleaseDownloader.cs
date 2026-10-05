@@ -6,6 +6,7 @@ using NonetMusicPlayer.Core.Persistence;
 
 namespace NonetMusicPlayer.Core.Plugins;
 
+public sealed record PluginReleaseInfo(string Version, string Notes, IReadOnlyList<PluginReleaseAsset> Assets);
 public sealed record PluginReleaseAsset(string Name, Uri DownloadUrl, long Size = 0, string? Digest = null);
 public sealed class DownloadedPlugin(string path) : IDisposable
 {
@@ -33,6 +34,10 @@ public sealed class PluginReleaseDownloader : IDisposable
         PluginRepository.Validate(parts[0], parts[1]); return new(parts[0], parts[1]);
     }
     public async Task<IReadOnlyList<PluginReleaseAsset>> ResolveAsync(string link, CancellationToken cancellationToken = default)
+        => (await ResolveReleaseAsync(link, cancellationToken).ConfigureAwait(false)).Assets;
+
+    /// <summary>启动检查只读取轻量 Release 元数据；安装前仍以包内 ID/版本为最终依据。</summary>
+    public async Task<PluginReleaseInfo> ResolveReleaseAsync(string link, CancellationToken cancellationToken = default)
     {
         RepositoryFromRelease(link);
         var uri = new Uri(link.Trim());
@@ -40,7 +45,9 @@ public sealed class PluginReleaseDownloader : IDisposable
         if (segments.Length < 4 || segments[2] != "releases" || segments.Take(2).Any(s => !System.Text.RegularExpressions.Regex.IsMatch(s, "^[A-Za-z0-9_.-]{1,100}$"))) throw new InvalidDataException("链接需要指向 GitHub Release，而不是仓库首页或源码归档。");
         if (segments.Length >= 6 && segments[3] == "download")
         {
-            var name = Uri.UnescapeDataString(segments[^1]); ValidateName(name); return [new(name, uri)];
+            var name = Uri.UnescapeDataString(segments[^1]); ValidateName(name);
+            if (!PluginPlatformPolicy.MatchesAsset(name, PluginPlatformPolicy.CurrentRid)) throw new InvalidDataException(PluginMessages.Get("Plugins.NoPlatformPackage"));
+            return new("", "", [new(name, uri)]);
         }
         var endpoint = segments.Length == 4 && segments[3] == "latest" ? "latest" : segments.Length >= 5 && segments[3] == "tag" ? "tags/" + string.Join('/', segments.Skip(4)) : throw new InvalidDataException("请选择 Release 版本页、latest 页或 .impp 附件链接。");
         using var response = await GetAsync(new Uri($"https://api.github.com/repos/{segments[0]}/{segments[1]}/releases/{endpoint}"), true, cancellationToken).ConfigureAwait(false);
@@ -57,8 +64,16 @@ public sealed class PluginReleaseDownloader : IDisposable
             result.Add(new(name, download, size, asset.TryGetProperty("digest", out var digest) ? digest.GetString() : null));
         }
         if (result.Count == 0) throw new InvalidDataException("此 Release 没有可安装的 .impp 附件，或附件超过 128 MB。");
-        var rid = System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier;
-        return result.OrderByDescending(asset => asset.Name.Contains(rid, StringComparison.OrdinalIgnoreCase)).ToArray();
+        var rid = PluginPlatformPolicy.CurrentRid;
+        var compatible = result.Where(asset => PluginPlatformPolicy.MatchesAsset(asset.Name, rid)).ToArray();
+        // 精确 RID 包优先；只有没有分平台附件的旧 Release 才退回无 RID 附件。
+        var exact = compatible.Where(asset => PluginPlatformPolicy.AssetRid(asset.Name) == rid).ToArray();
+        if (exact.Length > 0) compatible = exact;
+        if (compatible.Length == 0) throw new InvalidDataException(PluginMessages.Get("Plugins.NoPlatformPackage"));
+        var tag = document.RootElement.TryGetProperty("tag_name", out var tagNode) ? tagNode.GetString()?.TrimStart('v', 'V') ?? "" : "";
+        var notes = document.RootElement.TryGetProperty("body", out var body) && body.ValueKind == JsonValueKind.String ? body.GetString() ?? "" : "";
+        if (notes.Length > 100_000) notes = notes[..100_000];
+        return new(System.Version.TryParse(tag, out _) ? tag : "", notes, compatible);
     }
     public async Task<DownloadedPlugin> DownloadAsync(PluginReleaseAsset asset, string pluginsFolder, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
     {

@@ -1,3 +1,28 @@
+# Nonet 0.4.0-beta.5 更新与平台插件验证
+
+日期：2026-10-05。仅 Windows 环境执行；macOS/Linux 跨平台编译不代表实机交互通过。
+
+- 主解决方案、共享核心 / 命令 / TUI、当前桌面状态连续性、冻结旧 Contract v1、插件基础工程检查通过。
+- 离线 HTTP 夹具覆盖本机 Release 资产筛选、启动后台检查、New 标记即时更新、确认升级、配置及安装来源保留、下载数据清理，不向私人插件仓库上传内容。
+- 更新弹窗的发行日志只读且无 tooltip；下载按钮立即关闭弹窗，进度条右侧取消可终止下载并清理暂存。更新助手重启夹具包含下载 ZIP 删除断言。
+- 插件卸载但保留文件时留在原目录，重新导入相同版本恢复注册和配置；旧多平台包只提取本机文件，冻结旧 SDK Contract 与包格式继续兼容。
+- 原图封面检查覆盖 1024 像素图像导入、裁剪、详情页解码及控件离开页面后的图像释放；已有被缩小保存的封面需要重新选择原图。
+- 发布脚本从新暂存构建三个平台 ZIP，使用逐文件 SHA-256、清单、禁止用户数据 / 引导配置 / 调试文件和 POSIX 执行权限检查。Windows 实际程序启动、CLI 与更新助手分别使用隔离数据夹具，不操作用户源音频。
+- 原 Windows 目录替换前后核对 Data 和引导配置逐文件 SHA-256，旧程序仅保存在本地 artifacts。GitHub 仅提交主项目公开树，不包含具体插件、模板、移动端、用户数据或旧私有历史。
+
+复现命令：
+
+```powershell
+$env:NUGET_PACKAGES = "$PWD/.packages"
+dotnet build NonetMusicPlayer.slnx -c Release
+dotnet run --project tests/NonetMusicPlayer.CoreChecks -c Release --no-build
+dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release --no-build -- artifacts/plugin-beta5 --update-layout
+dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release --no-build -- artifacts/plugin-compatibility --compatibility
+pwsh -File scripts/verify-clean-desktop.ps1 -Version 0.4.0-beta.5
+pwsh -File tests/verify-update-restart.ps1 -PublishedDirectory publish/desktop/windows
+pwsh -File tests/verify-published-startup.ps1 -Zip publish/desktop/archives/NonetMusicPlayer.Desktop-0.4.0-beta.5-win-x64.zip -CliDirectory publish/cli/windows
+```
+
 # Nonet 0.4.0-beta.4 插件开发关系与更新验证
 
 日期：2026-10-05。测试运行于 Windows，Surface 实机及 macOS/Linux 实机尚未验证。

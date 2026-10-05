@@ -16,6 +16,7 @@ internal static class Program
             NonetMusicPlayer.Core.Diagnostics.AppLog.Initialize(Path.Combine(root, "initial-logs-" + Guid.NewGuid().ToString("N")));
             await TerminalContractChecks.RunAsync(root);
             await PluginUpdateChecks.RunAsync(root);
+            await PluginPlatformChecks.RunAsync(root);
             await TuiInteractionChecks.RunAsync(root);
             var shuffled = new WeightedShuffleSelector(new Random(174));
             Require(shuffled.Choose([], null) is null, "Empty shuffle"); Require(shuffled.Choose(["only", "only"], "only") == "only", "One distinct song repeats");

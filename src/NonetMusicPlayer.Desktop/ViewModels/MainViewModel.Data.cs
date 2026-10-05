@@ -163,7 +163,7 @@ public sealed partial class MainViewModel
         if (!File.Exists(source)) throw new FileNotFoundException(L10n.T("Common.TheCoverFileDoesNotExistChooseAnotherImage"));
         if (new FileInfo(source).Length > 20 * 1024 * 1024) throw new InvalidDataException(L10n.T("Common.CoverImagesCannotExceedMB"));
         using var stream = File.OpenRead(source); var contentHash = Convert.ToHexString(SHA256.HashData(stream)); stream.Position = 0;
-        var file = Path.Combine(Storage.ArtworkFolder, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)))[..16] + "-" + contentHash[..16] + ".png");
+        var file = Path.Combine(Storage.ArtworkFolder, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)))[..16] + "-" + contentHash[..16] + "-original.png");
         if (File.Exists(file)) return file;
         var temporary = file + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
@@ -176,7 +176,8 @@ public sealed partial class MainViewModel
                 width = codec.Info.Width; height = codec.Info.Height;
             }
             if (width <= 0 || height <= 0 || (long)width * height > 64 * 1024 * 1024) throw new InvalidDataException(L10n.T("Common.TheCoverImageDimensionsAreTooLargeResizeIt"));
-            using var image = width >= height ? Bitmap.DecodeToWidth(stream, Math.Min(320, width)) : Bitmap.DecodeToHeight(stream, Math.Min(320, height));
+            // 存储保留原始分辨率；低内存缩略图由列表缓存按需生成。
+            using var image = new Bitmap(stream);
             image.Save(temporary, PngBitmapEncoderOptions.Default); File.Move(temporary, file, true); return file;
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }

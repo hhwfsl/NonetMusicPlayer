@@ -15,6 +15,8 @@ public sealed class PluginManifest
     public string RepositoryName { get; set; } = "";
     /// <summary>仅宿主记录实际远程导入来源，安装包不能预授予或伪造此来源。</summary>
     public string OriginRepository { get; set; } = "";
+    /// <summary>可选发行平台；空值兼容旧包或平台无关包，不改变 Contract。</summary>
+    public string Platform { get; set; } = "";
     public List<string> Permissions { get; set; } = [];
     public Dictionary<string, string> EntryPoints { get; set; } = [];
     public Dictionary<string, string> Tokens { get; set; } = [];
@@ -31,7 +33,8 @@ public sealed class PluginManifest
     {
         Permissions ??= []; EntryPoints ??= []; Tokens ??= []; Widgets ??= []; MenuContributions ??= []; Configuration ??= "{}";
         LifecycleMethods ??= [];
-        RepositoryOwner ??= ""; RepositoryName ??= ""; OriginRepository ??= "";
+        RepositoryOwner ??= ""; RepositoryName ??= ""; OriginRepository ??= ""; Platform ??= "";
+        if (Platform.Length > 0 && !PluginPlatformPolicy.IsRid(Platform)) throw new InvalidDataException("Invalid plugin platform.");
         if (RepositoryOwner.Length != 0 || RepositoryName.Length != 0) PluginRepository.Validate(RepositoryOwner, RepositoryName);
         if (OriginRepository.Length != 0) PluginRepository.Parse(OriginRepository);
         if (LifecycleMethods.Count > 3 || LifecycleMethods.Any(m => m is not ("lifecycle.disable" or "lifecycle.uninstall" or "lifecycle.shutdown")) || LifecycleMethods.Count > 0 && Type is not ("provider" or "lyrics")) throw new InvalidDataException("只有进程插件可声明受支持的进程生命周期方法。");

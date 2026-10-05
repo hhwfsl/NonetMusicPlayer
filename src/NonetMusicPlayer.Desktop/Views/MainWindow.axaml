@@ -111,10 +111,10 @@
                                                 Click="ToggleMyMusic_Click">
                                                 <Grid ColumnDefinitions="*,Auto">
                                                     <TextBlock Classes="eyebrow" Text="{ui:Loc Key='Library.MyMusic'}" />
-                                                    <TextBlock
+                                                    <ui:VectorIcon
                                                         x:Name="MyMusicChevron"
                                                         Grid.Column="1"
-                                                        Text="⌃" />
+                                                        Kind="ChevronUp" Width="22" Height="22" />
                                                 </Grid>
                                             </Button>
                                             <StackPanel x:Name="MyMusicNavigation" Spacing="4">
@@ -174,7 +174,7 @@
                                                 <Button x:Name="PlaylistsCollapseButton" Grid.Column="2"
                                                         Classes="transport" Click="TogglePlaylists_Click"
                                                         ToolTip.Tip="{ui:Loc Key='Common.Collapse'}">
-                                                    <ui:VectorIcon x:Name="PlaylistsChevron" Kind="ChevronUp" />
+                                                    <ui:VectorIcon x:Name="PlaylistsChevron" Kind="ChevronUp" Width="22" Height="22" />
                                                 </Button>
                                             </Grid>
                                             <StackPanel x:Name="PlaylistNavigation" Spacing="3" />
@@ -189,10 +189,10 @@
                                                 <Button Classes="section-heading" Click="TogglePlugins_Click">
                                                     <Grid ColumnDefinitions="*,Auto">
                                                         <TextBlock Classes="eyebrow" Text="{ui:Loc Key='Plugins.Plugins'}" />
-                                                        <TextBlock
+                                                        <ui:VectorIcon
                                                             x:Name="PluginsChevron"
                                                             Grid.Column="1"
-                                                            Text="⌃" />
+                                                            Kind="ChevronUp" Width="22" Height="22" />
                                                     </Grid>
                                                 </Button>
                                                 <StackPanel x:Name="PluginNavigation" Spacing="3" />

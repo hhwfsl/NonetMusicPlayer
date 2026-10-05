@@ -63,7 +63,10 @@ internal static class PluginUiChecks
         var removedGame = removedView.GetLogicalDescendants().OfType<SnakeGameControl>().Single(); removedGame.Restart();
         manager.Uninstall(manifest);
         Check(removedView.IsDisposed && removedGame.IsDisposed && !removedGame.IsTimerRunning, "Uninstall disposes detached view and timer");
-        Check(manager.Installed.Count == 0 && !Directory.Exists(Path.Combine(storage.PluginsFolder, manifest.Id)), "Uninstall removes only exact plugin");
+        Check(manager.Installed.Count == 0 && Directory.Exists(Path.Combine(storage.PluginsFolder, manifest.Id)), "Uninstall disconnects and keeps original plugin folder");
+        // 同版本重新接入后显式删除，分别验证保留和不可撤销删除两条路径。
+        var restored = manager.Install(package); manager.Uninstall(restored, true);
+        Check(!Directory.Exists(Path.Combine(storage.PluginsFolder, manifest.Id)), "Explicit uninstall deletes only exact plugin");
         Check(storage.PluginsFolder.StartsWith(Path.Combine(run, "data") + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase), "Plugin installation stays inside isolated test data");
         Reject(() => PluginManager.Inspect(Package(run, "script", manifestText, pageText, ("evil.js", "alert(1)"))), "UI code files rejected");
         Reject(() => PluginManager.Inspect(Package(run, "path", manifestText.Replace("pages/game.json", "../game.json"), pageText)), "Traversal rejected");

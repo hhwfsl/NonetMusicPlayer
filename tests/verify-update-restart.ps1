@@ -23,6 +23,7 @@ foreach ($taskFile in Get-ChildItem -LiteralPath $taskPublished -File) {
     if ($taskFile.Name -eq 'Nonet.exe' -or $taskFile.Extension -eq '.dll') { Copy-Item -LiteralPath $taskFile.FullName -Destination (Join-Path $taskHelper $taskFile.Name) }
 }
 [IO.File]::WriteAllText((Join-Path $taskData 'keep.txt'), 'original user data')
+[IO.File]::WriteAllText((Join-Path $taskStage 'download.zip'), 'verified download fixture')
 [IO.File]::WriteAllText((Join-Path $taskInstall 'notes.txt'), 'obsolete application notes')
 # 旧替身先运行，真正的发行程序助手等待该 PID 退出，再替换并启动新替身。
 $taskParent = Start-Process -FilePath (Join-Path $taskInstall 'Nonet.exe') -ArgumentList 'wait' -WindowStyle Hidden -PassThru
@@ -40,4 +41,5 @@ if (-not $taskUpdater.WaitForExit(20000) -or $taskUpdater.ExitCode -ne 0) { thro
 $taskDeadline = [DateTimeOffset]::UtcNow.AddSeconds(10)
 while (-not (Test-Path -LiteralPath (Join-Path $taskInstall 'restarted.txt')) -and [DateTimeOffset]::UtcNow -lt $taskDeadline) { Start-Sleep -Milliseconds 50 }
 if (-not (Test-Path -LiteralPath (Join-Path $taskInstall 'restarted.txt')) -or (Get-Content -LiteralPath (Join-Path $taskData 'keep.txt') -Raw) -ne 'original user data' -or (Get-Content -LiteralPath (Join-Path $taskStage 'result.txt') -Raw) -ne 'success' -or (Get-Content -LiteralPath (Join-Path $taskInstall 'notes.txt') -Raw) -ne 'updated application notes') { throw 'Restart or data preservation failed.' }
+if (Test-Path -LiteralPath (Join-Path $taskStage 'download.zip')) { throw 'Completed update retained its downloaded ZIP.' }
 Write-Host "PASS published update helper: waits for PID exit, replaces files, restarts and preserves Data. $taskRoot"

@@ -85,6 +85,15 @@ public sealed class ReleaseUpdateService(HttpClient? client = null)
             DataDirectoryService.RejectLinkedAncestors(folder); Directory.Delete(folder, true); throw;
         }
     }
+    /// <summary>取消恰好发生在解压完成之后时，也回收本次 GUID 暂存，绝不触及安装目录。</summary>
+    public static void Discard(PreparedUpdate update)
+    {
+        var stage = Path.GetFullPath(update.StageRoot);
+        if (Path.GetFileName(Path.GetDirectoryName(stage)) != "Updates" || !Guid.TryParseExact(Path.GetFileName(stage), "N", out _)
+            || Path.GetFullPath(update.Payload) != Path.Combine(stage, "payload")) throw new InvalidDataException("Invalid update stage");
+        DataDirectoryService.RejectLinkedAncestors(stage);
+        if (Directory.Exists(stage)) Directory.Delete(stage, true);
+    }
     /// <summary>校验安全相对路径、平台清单和逐文件摘要，不允许更新包携带用户数据。</summary>
     public static PreparedUpdate ExtractVerified(string archivePath, string stageRoot, string version, string rid, CancellationToken cancellationToken = default)
     {

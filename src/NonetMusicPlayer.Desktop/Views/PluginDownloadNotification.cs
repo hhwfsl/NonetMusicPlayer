@@ -24,7 +24,13 @@ public sealed class PluginDownloadNotification : IDisposable, IProgress<double>
         _message = Ui.Text(L10n.T("Plugins.ReadingGitHubReleaseInformation"), 12, true);
         _percent = Ui.Text("", 12, true); _percent.HorizontalAlignment = HorizontalAlignment.Right;
         _progress = new ProgressBar { Name = "PluginDownloadProgress", Minimum = 0, Maximum = 100, Height = 6, IsIndeterminate = true };
-        _toast = Build(Ui.Stack(_title, _message, _progress, _percent), () => { cancel(); Dispose(); }, L10n.T("Common.CancelDownload"));
+        var stop = Ui.Button(L10n.T("Common.Cancel"), () => { cancel(); Dispose(); }); stop.Name = "CancelDownload";
+        stop.Classes.Add("quiet"); stop.VerticalAlignment = VerticalAlignment.Center;
+        ToolTip.SetTip(stop, L10n.T("Common.CancelDownload"));
+        var progressRow = new Grid { ColumnDefinitions = new("*,Auto"), ColumnSpacing = 12 };
+        var progressBody = Ui.Stack(_progress, _percent); progressBody.Spacing = 4; progressBody.VerticalAlignment = VerticalAlignment.Center;
+        progressRow.Children.Add(progressBody); Grid.SetColumn(stop, 1); progressRow.Children.Add(stop);
+        _toast = Build(Ui.Stack(_title, _message, progressRow), () => { cancel(); Dispose(); }, L10n.T("Common.CancelDownload"), false);
         _toast.Name = "PluginDownloadToast"; host.Children.Insert(0, _toast); owner.Closed += OwnerClosed;
     }
     public void Downloading(string filename, string? title = null)
@@ -65,12 +71,12 @@ public sealed class PluginDownloadNotification : IDisposable, IProgress<double>
         }
         _ = Expire();
     }
-    private static Border Build(Control content, Action close, string closeTip)
+    private static Border Build(Control content, Action close, string closeTip, bool closable = true)
     {
         var icon = new VectorIcon { Kind = IconKind.Plugins, Brush = Ui.Brush("AccentBrush"), VerticalAlignment = VerticalAlignment.Top, Margin = new(0, 2, 0, 0) };
         var button = Ui.Button("", close); button.Content = new VectorIcon { Kind = IconKind.Close, Width = 16, Height = 16 }; button.Classes.Add("transport"); button.Width = button.Height = 28; button.MinHeight = button.MinWidth = 28;
         ToolTip.SetTip(button, L10n.T(closeTip)); Avalonia.Automation.AutomationProperties.SetName(button, L10n.T(closeTip));
-        content.Margin = new(10, 0); var grid = new Grid { ColumnDefinitions = new("24,*,28") }; grid.Children.Add(icon); Grid.SetColumn(content, 1); grid.Children.Add(content); Grid.SetColumn(button, 2); grid.Children.Add(button);
+        content.Margin = new(10, 0); var grid = new Grid { ColumnDefinitions = new(closable ? "24,*,28" : "24,*") }; grid.Children.Add(icon); Grid.SetColumn(content, 1); grid.Children.Add(content); if (closable) { Grid.SetColumn(button, 2); grid.Children.Add(button); }
         return new Border { Padding = new(16), CornerRadius = new(12), Background = Ui.Brush("SurfaceRaisedBrush"), BorderBrush = Ui.Brush("AccentBrush"), BorderThickness = new(1), Child = grid };
     }
     private void OwnerClosed(object? sender, EventArgs e) => Dispose();

@@ -65,7 +65,7 @@ internal static class DesktopLyricsAndDownloadChecks
         Settle(owner, 4250); Require(!owner.GetVisualDescendants().Any(v => v is Border b && b.Name == "PluginDownloadComplete"), "Completion toast closes automatically");
         using (var cancelNotice = owner.ShowPluginDownload(() => canceled = true))
         {
-            Pump(owner); Find<Border>(owner, "PluginDownloadToast").GetVisualDescendants().OfType<Button>().Single().RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Pump(owner); Find<Border>(owner, "PluginDownloadToast").GetVisualDescendants().OfType<Button>().Single(b => b.Name == "CancelDownload").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Require(canceled && !owner.GetVisualDescendants().Any(v => v is Border b && b.Name == "PluginDownloadToast"), "Cancel cleans up toast and requests download cancellation");
         }
         DownloadProgress(vm);

@@ -27,9 +27,13 @@ public sealed partial class MainWindow
         Opened += async (_, _) =>
         {
             // 测试宿主和设计器不访问网络。离线检查只记录日志，不打断启动。
-            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime) await CheckUpdatesAsync(false);
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime)
+            {
+                // 两类检查独立进行，软件 Release 的慢请求不会阻塞插件检查或首屏。
+                await Task.WhenAll(CheckUpdatesAsync(false), CheckPluginUpdatesAsync());
+            }
         };
-        Closed += (_, _) => { _updateStop.Cancel(); _releaseWindow?.Close(); _updateStop.Dispose(); };
+        Closed += (_, _) => { _updateStop.Cancel(); _releaseWindow?.Close(); };
     }
     public async Task CheckUpdatesAsync(bool manual = true)
     {
@@ -58,6 +62,7 @@ public sealed partial class MainWindow
         if (_availableUpdate is not { } release || _vm is null) return Task.CompletedTask;
         if (_releaseWindow is not null) { _releaseWindow.Activate(); return Task.CompletedTask; }
         var notes = new TextBox { Text = string.IsNullOrWhiteSpace(release.Notes) ? L10n.T("Update.NoNotes") : release.Notes, IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, BorderThickness = new(0), Background = Brushes.Transparent };
+        FullTextToolTips.SetEnabled(notes, false); ToolTip.SetTip(notes, null); notes.Name = "UpdateReleaseNotes";
         var heading = Ui.Text(L10n.T("Update.New") + " · " + release.Version, 22); heading.FontWeight = FontWeight.SemiBold;
         var window = new Window { Title = L10n.T("Update.New"), Width = Math.Clamp(Bounds.Width - 50, 360, 680), Height = Math.Clamp(Bounds.Height - 70, 330, 560), MinWidth = 340, MinHeight = 300, WindowStartupLocation = WindowStartupLocation.CenterOwner, WindowDecorations = WindowDecorations.None, Icon = Icon, DataContext = _vm };
         var buttons = Ui.Actions(); buttons.HorizontalAlignment = HorizontalAlignment.Right;
@@ -72,17 +77,24 @@ public sealed partial class MainWindow
                 window.Close(); ExitApplication(); return;
             }
             if (_downloadingUpdate) return; _downloadingUpdate = true;
+            window.Close();
             using var download = CancellationTokenSource.CreateLinkedTokenSource(_updateStop.Token);
             using var toast = ShowPluginDownload(download.Cancel); toast.Downloading(release.Asset!.Name!, "Update.Downloading");
             status.Text = L10n.T("Update.Downloading");
             try
             {
                 _preparedUpdate = await _updates.DownloadAsync(release, _vm.Storage.Root, new Progress<double>(v => toast.Report(v * 100)), download.Token);
-                toast.Complete(release.Version, "Update.Ready"); status.Text = L10n.T("Update.Ready");
-                // 已校验的暂存包保留至用户选择重启；不强制退出正在使用的播放器。
-                foreach (var button in buttons.Children.OfType<Button>().Where(b => b != cancel)) button.Content = L10n.T("Update.Restart");
+                download.Token.ThrowIfCancellationRequested();
+                // 用户点击下载即授权本次自动更新；校验完成、数据落盘后才交给独立助手并退出。
+                if (_vm.IsMigratingData) throw new InvalidOperationException(L10n.T("Storage.AppDataIsBeingCopiedWaitForCompletionBefore"));
+                _vm.Save(); using var helper = UpdateInstaller.LaunchHelper(_preparedUpdate, _vm.Storage.Root, _vm.Storage.BackupFolder);
+                toast.Complete(release.Version, "Update.Ready"); ExitApplication();
             }
-            catch (OperationCanceledException) { status.Text = L10n.T("Update.Cancelled"); }
+            catch (OperationCanceledException)
+            {
+                if (_preparedUpdate is { } canceled) { ReleaseUpdateService.Discard(canceled); _preparedUpdate = null; }
+                if (!_updateStop.IsCancellationRequested) _vm.ReportWarning(L10n.T("Update.Cancelled"));
+            }
             catch (Exception error) { status.Text = L10n.T("Update.DownloadFailed"); _vm.ReportError(status.Text, error); }
             finally { _downloadingUpdate = false; }
         }, true);
@@ -102,6 +114,6 @@ public sealed partial class MainWindow
         link.Content = Ui.RawText(ReleaseUpdateService.Repository, 12); link.Classes.Add("quiet"); link.HorizontalContentAlignment = HorizontalAlignment.Left;
         ToolTip.SetTip(link, ReleaseUpdateService.Repository);
         var repository = new Grid { ColumnDefinitions = new("24,*"), ColumnSpacing = 8 }; repository.Children.Add(github); Grid.SetColumn(link, 1); repository.Children.Add(link);
-        return Ui.Card(L10n.T("Update.About"), Ui.Row(L10n.T("Update.Version"), VersionNumber, Ui.AsyncButton(L10n.T("Update.Check"), () => CheckUpdatesAsync())), Ui.Row(L10n.T("Update.Repository"), "GitHub", repository, "Auto,*"));
+        return Ui.Card(L10n.T("Update.About"), Ui.Row(L10n.T("Update.Version"), VersionNumber, Ui.AsyncButton(L10n.T("Update.Check"), () => CheckUpdatesAsync())), Ui.Row(L10n.T("Update.Repository"), "", repository, "Auto,*"));
     }
 }

@@ -15,6 +15,7 @@ public static class PluginMessages
     {
         "Library.UnknownArtist" => "Unknown artist", "Library.UnknownAlbum" => "Unknown album",
         "Plugins.PluginPackagesMustUseTheImppExtension" => "Plugin packages must use the .impp extension.",
+        "Plugins.NoPlatformPackage" => "No plugin package is available for the current platform.",
         "Plugins.PluginConfigurationNestingIsTooDeep" => "Plugin configuration nesting is too deep.", _ => key
     };
 }

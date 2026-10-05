@@ -14,9 +14,15 @@ public sealed partial class PluginManager
         RequireWritable();
         PluginPathPolicy.RejectLinkedAncestors(_storage.PluginsFolder);
         var manifest = Inspect(package);
+        var rid = PluginPlatformPolicy.CurrentRid;
+        PluginPlatformPolicy.RequireSupported(manifest, rid);
         var stage = Path.Combine(_storage.PluginsFolder, ".stage-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(stage);
-        try { ZipFile.ExtractToDirectory(package, stage); return (manifest, stage); }
+        try
+        {
+            PluginPlatformPolicy.ExtractCurrent(package, manifest, stage);
+            return (manifest, stage);
+        }
         catch { RemoveInstallStage(stage); throw; }
     }
 
@@ -29,7 +35,44 @@ public sealed partial class PluginManager
         var previous = Installed.SingleOrDefault(p => p.Id == manifest.Id);
         if (previous is null)
         {
-            if (Directory.Exists(target)) throw new InvalidOperationException(L10n.T("Plugins.UnregisteredDirectory"));
+            if (Directory.Exists(target))
+            {
+                // 未删除文件的卸载可重新接入；仍拒绝降级和身份替换，恢复有效配置而非新建插件身份。
+                var keptPath = Path.Combine(target, "manifest.json"); PluginPathPolicy.RejectLinkedAncestors(keptPath);
+                if (!File.Exists(keptPath) || new FileInfo(keptPath).Length > 256 * 1024) throw new InvalidDataException(L10n.T("Plugins.UnregisteredDirectory"));
+                var kept = JsonSerializer.Deserialize<PluginManifest>(File.ReadAllText(keptPath), AppStorage.Json) ?? throw new InvalidDataException(L10n.T("Plugins.UnregisteredDirectory"));
+                kept.Validate();
+                if (PluginUpdatePolicy.Evaluate(kept, manifest) == PluginInstallKind.Downgrade) throw new InvalidDataException(L10n.T("Plugins.CannotDowngrade"));
+                var schema = ReadStagedSchema(stage);
+                var values = PluginConfigSchema.Resolve(schema, kept.Configuration); PluginConfigSchema.Validate(schema, values);
+                using var config = JsonDocument.Parse(kept.Configuration);
+                var persisted = Scrub(config.RootElement).AsObject(); PluginConfigSchema.RemoveSensitiveFields(schema, persisted);
+                manifest.Configuration = persisted.ToJsonString();
+                if (manifest.Type is "ui" or "lyrics")
+                {
+                    var node = JsonNode.Parse(File.ReadAllText(Path.Combine(stage, manifest.PageEntry)))!;
+                    using var resolved = new MemoryStream(Encoding.UTF8.GetBytes(PluginConfigSchema.Substitute(node, values).ToJsonString()));
+                    PluginPageContract.Read(resolved, manifest.Permissions);
+                }
+                if (manifest.OriginRepository.Length == 0) manifest.OriginRepository = kept.OriginRepository;
+                manifest.Enabled = false;
+                manifest.AudioTagWriteConsent = kept.AudioTagWriteConsent && kept.Permissions.ToHashSet(StringComparer.Ordinal).SetEquals(manifest.Permissions);
+                var reconnectRollback = Path.Combine(_storage.PluginsFolder, ".rollback-" + Guid.NewGuid().ToString("N"));
+                Directory.Move(target, reconnectRollback);
+                var connected = false;
+                try
+                {
+                    Directory.Move(stage, target); Installed.Add(manifest); Save(); connected = true;
+                }
+                catch
+                {
+                    Installed.Remove(manifest); if (Directory.Exists(target)) Directory.Delete(target, true);
+                    Directory.Move(reconnectRollback, target); throw;
+                }
+                finally { if (connected) { try { Directory.Delete(reconnectRollback, true); } catch (IOException error) { AppLog.Warning("Plugins", "重新接入成功，但旧包临时文件清理失败", error); } } }
+                OperationCompleted?.Invoke(this, CommandResults.Completed("plugins.install", new JsonObject { ["id"] = manifest.Id, ["version"] = manifest.Version, ["reconnected"] = true }));
+                return manifest;
+            }
             Directory.Move(stage, target);
             try { Installed.Add(manifest); Save(); }
             catch { Installed.Remove(manifest); Directory.Delete(target, true); throw; }

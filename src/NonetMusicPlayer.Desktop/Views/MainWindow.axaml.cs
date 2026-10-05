@@ -114,8 +114,8 @@ public sealed partial class MainWindow : Window
         AppBackgroundImage.Source = AppBackgroundService.GetImage(s.BackgroundImagePath);
         AppBackgroundImage.Opacity = Math.Clamp(s.BackgroundImageOpacity, 0, 1);
         AppBackgroundImage.Stretch = Enum.TryParse<Stretch>(s.BackgroundImageStretch, out var stretch) ? stretch : Stretch.UniformToFill;
-        MyMusicNavigation.IsVisible = s.MyMusicExpanded; MyMusicChevron.Text = s.MyMusicExpanded ? "⌃" : "⌄";
-        PluginNavigation.IsVisible = s.PluginsExpanded; PluginsChevron.Text = s.PluginsExpanded ? "⌃" : "⌄";
+        MyMusicNavigation.IsVisible = s.MyMusicExpanded; MyMusicChevron.Kind = s.MyMusicExpanded ? IconKind.ChevronUp : IconKind.ChevronDown;
+        PluginNavigation.IsVisible = s.PluginsExpanded; PluginsChevron.Kind = s.PluginsExpanded ? IconKind.ChevronUp : IconKind.ChevronDown;
         PlaylistNavigation.IsVisible = s.PlaylistsExpanded;
         PlaylistsChevron.Kind = s.PlaylistsExpanded ? IconKind.ChevronUp : IconKind.ChevronDown;
         ToolTip.SetTip(PlaylistsCollapseButton, L10n.T(s.PlaylistsExpanded ? "Common.Collapse" : "Common.Expand"));

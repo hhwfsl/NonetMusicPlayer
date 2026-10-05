@@ -51,6 +51,10 @@ public static class UpdateInstaller
             }
             // 另一个实例若在旧实例退出后启动，Windows 文件锁会阻止替换并触发回滚。
             Apply(plan, Path.Combine(stage, "rollback"));
+            // 只删除已验证更新暂存中的下载包；回滚副本/结果记录另有诊断用途。
+            var downloaded = Path.Combine(stage, "download.zip");
+            DataDirectoryService.RejectLinkedAncestors(downloaded);
+            if (File.Exists(downloaded)) File.Delete(downloaded);
             StartApplication(plan); File.WriteAllText(Path.Combine(stage, "result.txt"), "success"); return 0;
         }
         catch (Exception error)

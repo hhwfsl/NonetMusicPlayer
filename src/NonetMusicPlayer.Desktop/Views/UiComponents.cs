@@ -54,7 +54,7 @@ internal static class Ui
     public static Grid Row(string label, string description, Control editor, string wideColumns = "*,240")
     {
         var grid = new ResponsiveSettingsRow { WideColumns = wideColumns, ColumnDefinitions = new ColumnDefinitions(wideColumns), Margin = new Thickness(0, 6), Tag = label + " " + description };
-        var labels = Stack(Text(label), Text(description, 12, true)); labels.Spacing = 5; labels.Margin = new Thickness(0, 0, 25, 0); grid.Children.Add(labels);
+        var labels = string.IsNullOrWhiteSpace(description) ? Stack(Text(label)) : Stack(Text(label), Text(description, 12, true)); labels.Spacing = 5; labels.Margin = new Thickness(0, 0, 25, 0); grid.Children.Add(labels);
         editor.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center; Avalonia.Automation.AutomationProperties.SetName(editor, L10n.T(label)); ToolTip.SetTip(editor, L10n.T(description)); Grid.SetColumn(editor, 1); grid.Children.Add(editor); return grid;
     }
     public static ComboBox Choice(IEnumerable<string> values, string selected, Action<string> changed)
@@ -107,6 +107,15 @@ public sealed class PlayerDialog : Window
     }
     public static Task<bool> Confirm(Window owner, string title, string description, string accept = "Common.Confirm")
         => new PlayerDialog(title, description, null, w => w.Close(true), accept) { MaxHeight = Math.Clamp(owner.Bounds.Height - 28, 300, 650), Width = Math.Clamp(owner.Bounds.Width - 40, 350, 560) }.ShowDialog<bool>(owner);
+    /// <summary>Release 内容可复制但不可编辑，明确关闭自动全文提示。</summary>
+    public static Task<bool> ConfirmRelease(Window owner, string title, string version, string notes)
+    {
+        var content = new TextBox { Name = "PluginReleaseNotes", Text = string.IsNullOrWhiteSpace(notes) ? L10n.T("Update.NoNotes") : notes,
+            IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 160, MaxHeight = 300, Background = Brushes.Transparent, BorderThickness = new(0) };
+        FullTextToolTips.SetEnabled(content, false); ToolTip.SetTip(content, null);
+        return new PlayerDialog(title, version, content, w => w.Close(true), L10n.T("Update.Download"))
+            { DataContext = owner.DataContext, Width = Math.Clamp(owner.Bounds.Width - 40, 350, 640), MaxHeight = Math.Clamp(owner.Bounds.Height - 28, 300, 650) }.ShowDialog<bool>(owner);
+    }
     public static Task<bool?> Uninstall(Window owner, string title)
     {
         var delete = false; var toggle = Ui.Toggle(false, value => delete = value);
@@ -115,7 +124,7 @@ public sealed class PlayerDialog : Window
         var label = Ui.Text(L10n.T("Plugins.DeleteFiles")); label.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center;
         toggle.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center; toggle.Name = "PluginDeleteFilesToggle";
         row.Children.Add(label); Grid.SetColumn(toggle, 1); row.Children.Add(toggle);
-        return new PlayerDialog(title, L10n.T("Plugins.UninstallChoice"), row, w => w.Close((bool?)delete), L10n.T("Common.Uninstall")) { Width = Math.Clamp(owner.Bounds.Width - 40, 350, 560) }.ShowDialog<bool?>(owner);
+        return new PlayerDialog(title, L10n.T("Plugins.UninstallChoice"), Ui.Stack(row, Ui.Text(L10n.T("Plugins.DeleteFilesIrreversible"), 12, true)), w => w.Close((bool?)delete), L10n.T("Common.Uninstall")) { Width = Math.Clamp(owner.Bounds.Width - 40, 350, 560) }.ShowDialog<bool?>(owner);
     }
     public static Task<string?> Choose(Window owner, string title, string description, IReadOnlyList<string> values)
     {

@@ -1,12 +1,12 @@
 # NonetMusicPlayer 插件开发文档
 
-适用于 Nonet 桌面版及 CLI 0.4.0-beta.4，插件 SDK 3.2.0、清单 Contract v1、页面 Schema v1。本文只描述已实现的桌面及 CLI 接口。
+适用于 Nonet 桌面版及 CLI 0.4.0-beta.5，插件 SDK 3.3.0、清单 Contract v1、页面 Schema v1。本文只描述已实现的桌面及 CLI 接口。
 
 ## 兼容与更新约定
 
 宿主发行版本与 Contract 版本独立。已经支持的 Contract v1、页面 Schema v1、旧字段默认值及 RPC 方法继续支持，不因播放器版本提高要求旧插件重新打包。新增功能优先新增可选能力；将来若引入新的协议版本，必须同时保留旧版本适配和冻结旧包回归。安全修复仍可拒绝本来就越权或不合法的包，不能以版本升级为由移除正常旧插件。
 
-更新现有插件保持 `id`，只递增数字 `version`（如 1.0.0 → 1.0.1）。Nonet 桌面版 0.4.0-beta.3 起，在插件中心导入同 ID 新包并确认即原地更新，不先卸载：保留配置；权限集合不变时保留启用状态及既有音频写入授权，权限变化时停用并撤销该授权，需用户重新启用/确认。更新先验证旧配置对新规范及页面的兼容性，停止旧实例再替换；失败恢复旧文件和配置，成功删除临时旧包，不保留两份已安装插件。相同/更低版本及改变类型或 Contract 的同 ID 包拒绝覆盖。CLI 当前的插件安装仍需先卸载旧版。
+更新现有插件保持 `id`，只递增数字 `version`（如 1.0.0 → 1.0.1）。Nonet 桌面版 0.4.0-beta.3 起，在插件中心导入同 ID 新包并确认即原地更新，不先卸载：保留配置；权限集合不变时保留启用状态及既有音频写入授权，权限变化时停用并撤销该授权，需用户重新启用/确认。更新先验证旧配置对新规范及页面的兼容性，停止旧实例再替换；失败恢复旧文件和配置，成功删除临时旧包，不保留两份已安装插件。已注册插件的相同/更低版本及改变类型或 Contract 的同 ID 包拒绝覆盖。已解除注册但保留原目录的同版本包可重新接入并恢复非敏感配置，仍禁止降级。CLI 同样支持同 ID 高版本更新与原目录重新接入。
 
 歌词搜索部件在 0.4.0-beta.3 起支持直接编辑预览，编辑区没有 tooltip。关联（含音频嵌入）与 UTF-8 下载统一使用点击操作时编辑区的文本；自动导入匹配和歌词菜单匹配仍遵循插件配置。清单、RPC 和 SDK 无变化，旧的歌词插件也可使用改进后的部件。
 
@@ -58,9 +58,9 @@ dotnet run --project <主项目>/src/NonetMusicPlayer.Desktop -c Release
 
 新插件在源码的 `manifest.json` 声明 `repositoryOwner`（GitHub 账户）和 `repositoryName`（与仓库名完全相同，推荐 `nonet_plugin_<短名>`）。仓库尚未创建也提前确定此名称；`id` 是稳定唯一身份，不由文件夹、文件名或仓库名推导；`version` 是包内数字版本，如 1.2.0。仓库附件命名可变化，不影响身份和版本判断。
 
-本地安装按两个属性请求 `https://api.github.com/repos/<owner>/<repositoryName>/releases/latest`；远程安装由宿主保存实际导入的仓库坐标，后续更新优先使用该来源。来源属于安装状态，插件包无法预设。稳定更新应发布正式 Release（非 draft/prerelease），附带一个跨平台 .impp，或带当前 RID 的平台包。没有仓库、Release 或 .impp 附件时不修改已安装插件。
+本地安装按两个属性请求 `https://api.github.com/repos/<owner>/<repositoryName>/releases/latest`；远程安装由宿主保存实际导入的仓库坐标，后续更新优先使用该来源。来源属于安装状态，插件包无法预设。稳定更新应发布正式 Release（非 draft/prerelease），标签使用与源代码清单 version 一致的数字版本（如 v1.0.3），附件按平台分别发布，禁止将多个平台运行时混装为新包。没有仓库、Release 或 .impp 附件时不修改已安装插件。
 
-插件卡片“检查更新”读取 Release、下载候选包，以包内 ID/版本判断，不把 Release tag 当作插件版本。相同版本提示已安装，低版本禁止覆盖；高版本需用户确认，沿用同 ID 原子替换与权限检查。拖入或文件导入遵循同一规则；本地新包不会丢失原远程来源。没有仓库属性的旧 v1 包继续正常使用与本地更新，只是不能自动检查仓库；新打包器要求新开发插件声明仓库属性。不要将安装状态、配置、启用状态或写音频授权写入源码清单。
+启动时后台读取轻量 Release 元数据，不下载插件；数字 tag 仅用于发现更新，在插件标题旁显示 New。点击 New 或卡片检查更新，显示只读且无 tooltip 的更新日志弹层，确认后关闭弹层并在右上角显示可取消进度。下载后仍以包内 ID/版本判断，不把 Release tag 或文件名当作插件身份。相同版本提示已安装，低版本禁止覆盖；高版本需用户确认，沿用同 ID 原子替换与权限检查。拖入或文件导入遵循同一规则；本地新包不会丢失原远程来源。没有仓库属性的旧 v1 包继续正常使用与本地更新，只是不能自动检查仓库；新打包器要求新开发插件声明仓库属性。不要将安装状态、配置、启用状态或写音频授权写入源码清单。
 
 ## 2. 清单
 
@@ -276,7 +276,7 @@ params 字段均为字符串，configuration 也是 JSON 字符串。
 
 完整配置在当前会话传给 provider。持久化时递归剔除字段名中的 token/password/secret/authorization/cookie/credential/api-key，以及规范标记 sensitive 或 password 控件的字段；这些值重启后需重新输入。不要将凭据藏在普通字段或 URL 查询中。
 
-禁用音源停止其进程并使其歌曲不可用。卸载前先禁用，并询问是否删除插件文件：默认保留在 `Plugins/Retained/<id>-<唯一标识>`，选择删除则只删除已验证的插件目录；两种方式都会移除装载索引和配置，不删除音乐源文件。声明式页销毁会停止游戏 / 统计计时器，桌宠停用 / 卸载 / 退出会关闭窗口、动画和消息订阅。扩展原生组件前必须定义数量、体积、计时频率和销毁边界。
+禁用音源停止其进程并使其歌曲不可用。卸载前先禁用，并询问是否删除插件文件：默认仅解除装载注册，文件留在 `Plugins/<id>` 原位置，非敏感配置与实际仓库来源保留在原清单，同 ID 同版本重新导入即可恢复接入；选择删除则直接删除已验证的原插件目录，不可撤销，不生成 Retained，也不删除音乐源文件。声明式页销毁会停止游戏 / 统计计时器，桌宠停用 / 卸载 / 退出会关闭窗口、动画和消息订阅。扩展原生组件前必须定义数量、体积、计时频率和销毁边界。
 
 ### 可选音源生命周期回调
 
@@ -328,13 +328,13 @@ dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release --
 
 齿轮打开带滚动区域和固定底部操作的应用内弹层。没有配置规范或规范为空时仅显示“无配置”和关闭，不提供通用 JSON/字段结构编辑器。表单结构只能由开发者随插件提供的 Schema 改变。文本输入回车或失焦更新草稿，布尔 / 枚举更新草稿；保存时整体验证，关闭取消。保存成功后已启用页面 / 桌宠立即重建，音源旧进程关闭，在下一次请求中传入新配置；当前播放音源修改前先停止该音源播放。不重新启动应用。
 
-声明式 page.json 可以使用 `${config.key}`。整值占位保留 JSON 数字 / 布尔类型；嵌入文本占位仅作字面替换，不执行表达式。替换后仍执行原有页面、颜色、动作权限和体积校验。非法替换不覆盖原配置。示例：`"tickMilliseconds": "${config.interval}"`。本仓库贪吃蛇和桌宠示例提供可实际影响页面的配置规范。
+声明式 page.json 可以使用 `${config.key}`。整值占位保留 JSON 数字 / 布尔类型；嵌入文本占位仅作字面替换，不执行表达式。替换后仍执行原有页面、颜色、动作权限和体积校验。非法替换不覆盖原配置。示例：`"tickMilliseconds": "${config.interval}"`。小游戏和桌宠页面可用同样的配置规范动态调整受支持的参数。
 
 ## 11. GitHub Release 分发
 
 支持公开 HTTPS 链接：`https://github.com/作者/仓库/releases/tag/标签`、`.../releases/latest`、`.../releases/download/标签/插件.impp`。不接受仓库首页、源码 archive、任意外部下载地址、私有仓库凭据或 URL 查询认证。
 
-主机通过 GitHub Release API 列举 .impp 附件，提示选择平台文件。下载最多 128 MiB，限制跳转为 GitHub 及其附件域名，检查声明长度；若 Release 提供 SHA-256 digest 则校验。临时包在受管 Plugins/.downloads 中，完成、取消或失败后删除。下载完成仍需确认清单和权限，安装后默认禁用。传输校验不是作者身份认证或沙箱。
+主机通过 GitHub Release API 读取更新日志、版本标签及 .impp 附件，精确匹配当前系统/进程 RID，不退回其他平台。下载最多 128 MiB，限制跳转为 GitHub 及其附件域名，检查声明长度；若 Release 提供 SHA-256 digest 则校验。临时包在受管 Plugins/.downloads 中，完成、取消或失败后删除。下载完成仍需确认清单和权限，安装后默认禁用。传输校验不是作者身份认证或沙箱。
 
 获取和下载进度由主窗口内可取消的提示框显示；没有 HTTP Content-Length 时使用 Release 附件的 size，均未知时显示等待动画。下载和校验成功后，先移除进度框，再显示约 4 秒后自动关闭的完成提醒。插件开发者无需实现下载提示界面。
 
@@ -398,3 +398,21 @@ UI 插件的 manifest 可声明 `menuContributions`（最多 8 项）。当前�
 菜单可以声明 `{ "location":"lyrics.more", "label":"用LDDC匹配歌词", "action":"match-lyrics" }`。仅歌词插件支持该动作，为当前曲目立即执行 `lyrics.auto` 并遵循配置关联，不导航离开歌词页；失败不改已有歌词。`open-page` 仍可打开手动搜索工具。
 
 歌词搜索的实现应在独立插件项目中维护，使用 Hello World 模板、SDK DTO 和共用打包器；源码、专用测试及发行包不放入播放器仓库。参考第三方实现时，须保留原许可证、上游版权和对应源码，不因歌词文本清理删除软件许可。
+
+## 15. 独立平台包（SDK 3.3）
+
+源码清单可保留各 RID 的 entryPoints；通过共享打包器分别生成发行包，进程插件必须指定 --rid。输出清单只包含该 RID 入口并新增可选的 platform 属性。清单与页面 Contract 仍为 1，旧包省略此属性仍兼容。
+
+```powershell
+dotnet run --project <宿主>/tools/NonetMusicPlayer.PluginPackager -c Release -- pack --source ./plugin --output ./dist/author.my-plugin-1.0.0-win-x64.impp --rid win-x64 --include bin/win-x64/worker.exe
+dotnet run --project <宿主>/tools/NonetMusicPlayer.PluginPackager -c Release -- pack --source ./plugin --output ./dist/author.my-plugin-1.0.0-osx-x64.impp --rid osx-x64 --include bin/osx-x64/worker
+dotnet run --project <宿主>/tools/NonetMusicPlayer.PluginPackager -c Release -- pack --source ./plugin --output ./dist/author.my-plugin-1.0.0-linux-x64.impp --rid linux-x64 --include bin/linux-x64/worker
+```
+
+发行命名为 <id>-<version>-<rid>.impp；同一 Release tag 为 v<version>，三个附件的稳定 ID、数字版本和权限保持一致。此名称只用于平台附件选择；身份和版本仍来自包内源码清单。未来 ARM 包须使用实际构建的 RID，不得把 x64 包改名为 arm64。
+
+构建阶段仅显式加入所需运行文件；原生依赖放在相应 RID 子目录（如 bin/win-x64），共享配置、页面、许可保留在根目录。声明式 UI/主题包也可由 --rid 生成三个独立附件。未指定 RID 的旧平台无关包仍可安装。
+
+宿主安装前检查 platform / entryPoints，安装错误平台的包不会停止或覆盖旧实例。旧多平台包不强制重打包：提取本机入口与共享资源，剔除已知其他 RID 目录/入口。升级到本版也会清理已安装旧包中的明确异平台文件，不删除配置或共享许可。
+
+更新高版本包保持原 ID，不先卸载；下载取消、校验失败或版本/身份不符不改变旧插件。首次远程导入仍需审查作者、权限，原地更新若增加权限会再次确认并停用新实例。后台检查没有仓库或没有当前平台附件时不显示 New。

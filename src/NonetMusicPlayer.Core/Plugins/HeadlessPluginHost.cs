@@ -22,11 +22,55 @@ public sealed class HeadlessPluginHost : IDisposable
     public PluginManifest Find(string id) => Installed.FirstOrDefault(p => p.Id == id) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PluginNotFound"));
     public PluginManifest Install(string package)
     {
-        var plugin = PluginPackageInspector.Inspect(package); var target = DirectoryFor(plugin);
-        if (Installed.Any(p => p.Id == plugin.Id) || Directory.Exists(target)) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PluginAlreadyInstalled"));
+        var plugin = PluginPackageInspector.Inspect(package); PluginPlatformPolicy.RequireSupported(plugin, PluginPlatformPolicy.CurrentRid);
+        var target = DirectoryFor(plugin); var previous = Installed.FirstOrDefault(p => p.Id == plugin.Id);
+        PluginManifest? disconnected = null;
+        if (previous is null && Directory.Exists(target))
+        {
+            var file = Path.Combine(target, "manifest.json"); PluginPathPolicy.RejectLinkedAncestors(file);
+            if (new FileInfo(file).Length > 256 * 1024) throw new InvalidDataException("Plugin manifest too large.");
+            disconnected = JsonSerializer.Deserialize<PluginManifest>(File.ReadAllText(file), CoreJson.Options) ?? throw new InvalidDataException("Invalid plugin manifest.");
+            disconnected.Validate();
+        }
+        var prior = previous ?? disconnected;
+        if (prior is not null)
+        {
+            var kind = PluginUpdatePolicy.Evaluate(prior, plugin);
+            if (kind == PluginInstallKind.Downgrade || previous is not null && kind != PluginInstallKind.Upgrade) throw new InvalidOperationException(PluginMessages.Get("Plugins.UpdateVersionNotNewer"));
+        }
         var stage = Path.Combine(_root, ".stage-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(stage);
-        try { ZipFile.ExtractToDirectory(package, stage); Directory.Move(stage, target); Installed.Add(plugin); Save(); return plugin; }
-        catch { Installed.Remove(plugin); if (Directory.Exists(target)) DeleteOwnedDirectory(target); throw; }
+        var rollback = Path.Combine(_root, ".rollback-" + Guid.NewGuid().ToString("N"));
+        var index = previous is null ? -1 : Installed.IndexOf(previous); var oldEnabled = previous?.Enabled == true; var moved = false; var newMoved = false;
+        try
+        {
+            PluginPlatformPolicy.ExtractCurrent(package, plugin, stage);
+            if (prior is not null)
+            {
+                var schemaFile = new[] { PluginConfigSchema.FileName, "plugin_config_schema" }.Select(n => Path.Combine(stage, n)).FirstOrDefault(File.Exists);
+                JsonObject schema = new();
+                if (schemaFile is not null) { using var input = File.OpenRead(schemaFile); schema = PluginConfigSchema.Read(input); }
+                var values = PluginConfigSchema.Resolve(schema, prior.Configuration); PluginConfigSchema.Validate(schema, values);
+                var persisted = JsonNode.Parse(prior.Configuration)!.AsObject(); Scrub(persisted); PluginConfigSchema.RemoveSensitiveFields(schema, persisted); plugin.Configuration = persisted.ToJsonString();
+                plugin.OriginRepository = prior.OriginRepository;
+                plugin.Enabled = oldEnabled && prior.Permissions.ToHashSet(StringComparer.Ordinal).SetEquals(plugin.Permissions);
+                if (previous is not null) SetEnabled(previous, false);
+                PluginPathPolicy.AfterProcessExit(() => Directory.Move(target, rollback)); moved = true;
+            }
+            Directory.Move(stage, target); newMoved = true;
+            if (index < 0) Installed.Add(plugin); else Installed[index] = plugin;
+            Save();
+            if (moved) { try { DeleteOwnedDirectory(rollback); } catch (IOException error) { Diagnostics.AppLog.Warning("Plugins", "Old package cleanup failed", error); } }
+            return plugin;
+        }
+        catch
+        {
+            if (index < 0) Installed.Remove(plugin); else { Installed[index] = previous!; previous!.Enabled = oldEnabled; }
+            if (newMoved && Directory.Exists(target)) DeleteOwnedDirectory(target);
+            if (moved) Directory.Move(rollback, target);
+            // 停用会提前持久化索引；失败回滚时也恢复磁盘状态，避免下次启动丢失原启用状态。
+            try { Save(); } catch (Exception error) { Diagnostics.AppLog.Warning("Plugins", "Plugin rollback index restore failed", error); }
+            throw;
+        }
         finally { if (Directory.Exists(stage)) DeleteOwnedDirectory(stage); }
     }
     public void SetEnabled(PluginManifest plugin, bool enabled)
@@ -43,7 +87,7 @@ public sealed class HeadlessPluginHost : IDisposable
         if (plugin.LifecycleMethods.Contains("lifecycle.uninstall"))
             try { using var cleanup = new ProviderClient(directory, plugin); cleanup.NotifyLifecycle(plugin, "lifecycle.uninstall"); }
             catch (Exception error) { Diagnostics.AppLog.Warning("Plugins", "Plugin uninstall callback failed", error); }
-        if (Directory.Exists(directory)) { if (deleteFiles) PluginPathPolicy.AfterProcessExit(() => DeleteOwnedDirectory(directory)); else { var retained = Path.Combine(Path.GetDirectoryName(directory)!, "Retained", plugin.Id + "-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(Path.GetDirectoryName(retained)!); PluginPathPolicy.AfterProcessExit(() => Directory.Move(directory, retained)); } }
+        if (Directory.Exists(directory)) { if (deleteFiles) PluginPathPolicy.AfterProcessExit(() => DeleteOwnedDirectory(directory)); else AtomicFile.Write(Path.Combine(directory, "manifest.json"), JsonSerializer.Serialize(plugin, CoreJson.Options), false); }
         Installed.Remove(plugin); _sessionConfiguration.Remove(plugin.Id); Save();
     }
     public JsonObject Schema(PluginManifest plugin)
@@ -94,7 +138,7 @@ public sealed class HeadlessPluginHost : IDisposable
         var client = new ProviderClient(DirectoryFor(plugin), plugin);
         try
         {
-            var response = await client.CallAsync("initialize", new() { ["contractVersion"] = "1", ["hostVersion"] = "0.3.0", ["configuration"] = _sessionConfiguration.GetValueOrDefault(plugin.Id, plugin.Configuration) }, cancellationToken);
+            var response = await client.CallAsync("initialize", new() { ["contractVersion"] = "1", ["hostVersion"] = typeof(HeadlessPluginHost).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).OfType<System.Reflection.AssemblyInformationalVersionAttribute>().First().InformationalVersion.Split('+')[0], ["configuration"] = _sessionConfiguration.GetValueOrDefault(plugin.Id, plugin.Configuration) }, cancellationToken);
             if (!response.TryGetProperty("contractVersion", out var version) || version.GetInt32() != 1) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.HandshakeFailed"));
             _clients.Add(plugin.Id, client); return client;
         }
