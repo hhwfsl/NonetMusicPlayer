@@ -96,6 +96,8 @@ The top four cards retain overall totals. A shared calendar selection controls d
 
 ## Plugins
 
+The update button sits between configuration and uninstall. GitHub imports check their original repository; local imports use developer-declared repository metadata. Importing or dropping a newer package with the same ID asks for confirmation and retains configuration. Equal versions need no update, older versions cannot overwrite newer ones. Legacy plugins without repository metadata remain usable and can be updated by importing a newer local package.
+
 Select or drag an .impp file into Plugin Center, review the author, type and permissions, then enable its switch. Only .impp packages are accepted. GitHub Release Import accepts public release-tag, latest or .impp asset URLs; choose a platform asset if several exist. It downloads assets up to 128 MiB, not repository source code. Cards show basic metadata; the trash button disables before uninstalling. New installations are disabled by default. Enabled page plugins appear in the sidebar Plugins section.
 
 Download progress appears in a toast at the top right of the main window, not in a separate window. The close icon cancels the download. Known sizes show a percentage; unknown sizes show a busy indicator. After download and verification, the progress toast disappears and a separate completion toast closes automatically after about four seconds. Download completion does not install or enable the plugin: review its information and permissions first.
