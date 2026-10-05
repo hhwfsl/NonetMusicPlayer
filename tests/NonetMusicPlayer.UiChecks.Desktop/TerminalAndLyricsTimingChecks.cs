@@ -18,9 +18,7 @@ internal static class TerminalAndLyricsTimingChecks
     internal static void Run(MainWindow owner, MainViewModel vm, string output)
     {
         var selected = vm.State.Tracks.First(); var mode = vm.Settings.PlayMode;
-        var package = Path.Combine(output, "timing-fixture.impp");
-        using (var zip = ZipFile.Open(package, ZipArchiveMode.Create))
-            foreach (var name in new[] { "manifest.json", "page.json" }) zip.CreateEntryFromFile(Path.Combine("samples/NonetMusicPlayer.LyricsTimingPlugin/package", name), name);
+        var package = PluginTestFixtures.Timing(output);
         var plugin = vm.Plugins.Install(package); vm.Plugins.SetEnabled(plugin, true); vm.ApplySettings();
         Wait(owner, vm.PlayTrackAsync(selected, [selected])); vm.Navigate("lyrics"); Pump(owner);
         owner.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "LyricsMore").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump(owner);

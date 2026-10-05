@@ -146,7 +146,7 @@ public sealed partial class MainWindow
                     case "plugins.list": data = new JsonArray(vm.Plugins.Installed.Select(p => (JsonNode)new JsonObject { ["id"] = p.Id, ["name"] = p.Name, ["version"] = p.Version, ["type"] = p.Type, ["enabled"] = p.Enabled }).ToArray()); break;
                     case "plugins.install":
                         if (Uri.TryCreate(Arg(0), UriKind.Absolute, out var url) && url.Scheme == "https") await window.ImportRemotePluginAsync(Arg(0), cancellationToken);
-                        else vm.Plugins.Install(Arg(0)); window.RefreshPluginNavigation(); break;
+                        else await vm.Plugins.InstallAsync(Arg(0)); vm.ApplySettings(); window.RefreshPluginNavigation(); window.ShowPage(); break;
                     case "plugins.enable": vm.Plugins.SetEnabled(Plugin(), true); vm.ApplySettings(); break;
                     case "plugins.disable": vm.DisablePlugin(Plugin()); break;
                     case "plugins.uninstall": if (command.Arguments.Count > 1 && Arg(1) is not ("keep-files" or "delete-files")) throw new InvalidDataException("keep-files | delete-files"); vm.DisablePlugin(Plugin()); vm.Plugins.Uninstall(Plugin(), command.Arguments.Count > 1 && Arg(1) == "delete-files"); window.RefreshPluginNavigation(); break;
@@ -208,6 +208,6 @@ public sealed partial class MainWindow
         }
         notification.Downloading(selected.Name);
         using var package = await downloader.DownloadAsync(selected, _vm!.Storage.PluginsFolder, notification, cancellation.Token);
-        _vm.Plugins.Install(package.Path); notification.Complete(selected.Name);
+        await _vm.Plugins.InstallAsync(package.Path); notification.Complete(selected.Name);
     }
 }

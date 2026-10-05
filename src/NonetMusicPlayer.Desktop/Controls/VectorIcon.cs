@@ -6,7 +6,7 @@ namespace NonetMusicPlayer.Desktop.Controls;
 
 public enum IconKind
 {
-    Music, Library, Heart, Playlist, Folder, Search, Plus, Queue,
+    Music, Library, Heart, Playlist, Folder, Search, Plus, Queue, Refresh,
     Previous, Next, Play, Pause, Volume, Mute, RepeatAll, RepeatOne, Shuffle, More, Lyrics,
     Settings, Plugins, Help, Info, History, Artist, Album, FileAdd, Edit, Trash, SelectAll, Close, Minimize, Maximize, Statistics, Game, Lock, Unlock, Calendar, DesktopLyricsShow, DesktopLyricsHide, MoveUp, MoveDown, Home, Terminal, Back, GitHub, BackToTop, ChevronUp, ChevronDown
 }
@@ -61,6 +61,7 @@ public sealed class VectorIcon : Control
             [IconKind.Help] = Geometry.Parse("M22 12A10 10 0 1 1 2 12A10 10 0 1 1 22 12 M8 8C8 4 16 4 16 8C16 11 12 11 12 14 M12 18V18.1"),
             [IconKind.Info] = Geometry.Parse("M22 12A10 10 0 1 1 2 12A10 10 0 1 1 22 12 M12 7V7.1 M12 11V17"),
             [IconKind.History] = Geometry.Parse("M3 8A9 9 0 1 1 3 16 M3 3V8H8 M12 6V12L16 15"),
+            [IconKind.Refresh] = Geometry.Parse("M20 8A8 8 0 0 0 5 6L3 9 M3 4V9H8 M4 16A8 8 0 0 0 19 18L21 15 M16 15H21V20"),
             [IconKind.Artist] = Geometry.Parse("M16 7A4 4 0 1 1 8 7A4 4 0 1 1 16 7 M4 21V19C4 12 20 12 20 19V21"),
             [IconKind.Album] = Geometry.Parse("M22 12A10 10 0 1 1 2 12A10 10 0 1 1 22 12 M15 12A3 3 0 1 1 9 12A3 3 0 1 1 15 12 M6 6L8 8 M18 18L16 16"),
             [IconKind.FileAdd] = Geometry.Parse("M4 2H14L20 8V13 M14 2V8H20 M4 2V22H12 M18 14V22 M14 18H22"),

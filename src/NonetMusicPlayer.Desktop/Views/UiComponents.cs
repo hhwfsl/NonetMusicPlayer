@@ -110,7 +110,12 @@ public sealed class PlayerDialog : Window
     public static Task<bool?> Uninstall(Window owner, string title)
     {
         var delete = false; var toggle = Ui.Toggle(false, value => delete = value);
-        return new PlayerDialog(title, L10n.T("Plugins.UninstallChoice"), Ui.Row(L10n.T("Plugins.DeleteFiles"), "", toggle), w => w.Close((bool?)delete), L10n.T("Common.Uninstall")) { Width = Math.Clamp(owner.Bounds.Width - 40, 350, 560) }.ShowDialog<bool?>(owner);
+        // 独立横向行避免通用设置行在窄窗口中把开关折到下一行。
+        var row = new Grid { Name = "PluginDeleteFilesRow", ColumnDefinitions = new("*,Auto"), ColumnSpacing = 16 };
+        var label = Ui.Text(L10n.T("Plugins.DeleteFiles")); label.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center;
+        toggle.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center; toggle.Name = "PluginDeleteFilesToggle";
+        row.Children.Add(label); Grid.SetColumn(toggle, 1); row.Children.Add(toggle);
+        return new PlayerDialog(title, L10n.T("Plugins.UninstallChoice"), row, w => w.Close((bool?)delete), L10n.T("Common.Uninstall")) { Width = Math.Clamp(owner.Bounds.Width - 40, 350, 560) }.ShowDialog<bool?>(owner);
     }
     public static Task<string?> Choose(Window owner, string title, string description, IReadOnlyList<string> values)
     {

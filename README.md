@@ -2,7 +2,7 @@
 
 本项目由 AI 完成，尚未经过人工代码 review。测试仅在 Windows 环境进行；macOS 和 Linux 只生成了交叉构建产物，未进行对应系统的实机测试。当前为预发布版本，使用或继续开发前请自行审查代码并备份数据。
 
-软件名称：**Nonet**。当前桌面版与 CLI 版本：**0.4.0-beta.1**。公开仓库仅包含桌面端、独立 CLI、共享核心、插件 SDK 和插件开发模板，不包含移动端源码或构建产物。
+软件名称：**Nonet**。当前桌面版与 CLI 源码版本：**0.4.0-beta.4**。公开仓库仅包含桌面端、独立 CLI、共享核心、插件 SDK、主项目打包器和必要测试；插件模板暂不提交，不包含移动端源码或构建产物。
 
 ## 技术栈
 
@@ -15,7 +15,7 @@
 | 媒体标签 | TagLibSharp 2.3.0 |
 | 桌面持久化 | SQLite，Microsoft.Data.Sqlite 10.0.12 |
 | CLI 与共用 JSON | System.Text.Json，持久化模型使用 Source Generation |
-| 插件开发 SDK | NonetMusicPlayer.PluginSdk 3.0.0，Contract / 页面 Schema v1 |
+| 插件开发 SDK | NonetMusicPlayer.PluginSdk 3.2.0，Contract / 页面 Schema v1 |
 
 CLI 不引用 Avalonia，通过系统终端运行。插件 SDK 无图形、音频或外部 NuGet 依赖。实际依赖以各项目的 `.csproj` 为准；第三方许可见 [docs/licenses](docs/licenses)。
 
@@ -88,14 +88,15 @@ src/NonetMusicPlayerCli/                独立终端 / TUI 宿主
 src/NonetMusicPlayer.Core/              播放、命令、插件、歌词等共享逻辑
 src/NonetMusicPlayer.PluginSdk/         独立插件验证及打包 SDK
 tests/                                Core、桌面、插件、更新回归夹具
-samples/                              开发测试插件，不打入软件发行包
-plugin-template/NonetMusicPlayerPlugin/ 可独立复制的 Hello World 插件工程
-scripts/                              发布、校验、SDK 同步脚本
+tools/NonetMusicPlayer.PluginPackager/  主项目维护的插件打包与验证入口
+scripts/                              发布、校验和插件依赖检查脚本
 docs/                                 开发文档、使用手册、第三方许可
 assets/icons/                         图标源文件及跨平台表示
 ```
 
-本地开发也可以将插件模板单独放在播放器的同级目录 `../NonetMusicPlayerPlugin`；同步及打包脚本优先使用同级工程，否则使用仓库内模板。独立复制模板后，无需播放器源码即可构建插件。
+插件模板保存在独立目录 `../NonetMusicPlayerPlugin`，本次不提交 GitHub。插件源码与播放器分开，但开发通过 `ProjectReference` 引用本仓库 `src/NonetMusicPlayer.PluginSdk`，打包使用 `tools/NonetMusicPlayer.PluginPackager`，调试运行本仓库桌面宿主。没有播放器源码不能构建新模板；不再复制 SDK。
+
+具体插件是独立项目，不放在播放器源码仓库内；本地统一放在 `../MyNonetMusicPlayerPlugin/<插件项目>/`，由各项目自己的脚本生成包。主解决方案、默认测试及公开源码导出不依赖这些目录，`samples/` 不参与 Git 跟踪或 GitHub 提交。
 
 ## 验证
 
@@ -103,12 +104,12 @@ assets/icons/                         图标源文件及跨平台表示
 dotnet run --project tests/NonetMusicPlayer.CoreChecks -c Release -- artifacts/core-checks
 dotnet run --project tests/NonetMusicPlayer.UiChecks.Desktop -c Release -- artifacts/ui-checks --desktop-revision-only
 dotnet run --project tests/NonetMusicPlayer.UiChecks.Desktop -c Release -- artifacts/nonet-checks --nonet-release-only
-pwsh -File scripts/sync-plugin-foundation.ps1
-dotnet run --project plugin-template/NonetMusicPlayerPlugin/tests/NonetMusicPlayerPlugin.Checks -c Release -- plugin-template/NonetMusicPlayerPlugin
+dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/plugin-checks
+dotnet run --project tools/NonetMusicPlayer.PluginPackager -c Release -- help
 ```
 
 UI 夹具使用 Avalonia.Headless 与隔离测试数据，不等同于跨平台实际交互、音频设备及安装验证。系统相关测试须在对应平台继续执行。
 
 本版执行范围与平台限制见 [RELEASE_VALIDATION.md](docs/RELEASE_VALIDATION.md)。
 
-构建、变更和接口资料：[CHANGELOG](CHANGELOG.md)、[CLI 构建与使用](src/NonetMusicPlayerCli/README.md)、[插件入门](plugin-template/NonetMusicPlayerPlugin/docs/GETTING_STARTED.md)、[插件 Contract](docs/PLUGIN_DEVELOPMENT.md)、[存储](docs/STORAGE.md)、[本地化](docs/LOCALIZATION.md)。
+构建、变更和接口资料：[CHANGELOG](CHANGELOG.md)、[CLI 构建与使用](src/NonetMusicPlayerCli/README.md)、[插件开发与依赖](docs/PLUGIN_DEVELOPMENT.md)、[插件 Contract](docs/PLUGIN_DEVELOPMENT.md)、[存储](docs/STORAGE.md)、[本地化](docs/LOCALIZATION.md)。

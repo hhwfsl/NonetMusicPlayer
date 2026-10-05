@@ -4,7 +4,7 @@
 
 ## 使用方法
 
-1. 在设置中打开配置文件，使用自己的编辑器修改；设置不展示 JSON 内容。也可导入 `samples/layouts/default.layout.json` / `compact.layout.json`。
+1. 在设置中打开配置文件，使用自己的编辑器修改；设置不展示 JSON 内容。也可导入 `docs/layouts/default.layout.json` / `compact.layout.json`。
 2. 保存修改后先校验文件，再重新加载。可以导出一份已应用配置作为个人模板；导入也会校验实际尺寸后应用。
 3. 活动文件位于数据目录下的 `Layouts/active.layout.json`。不会自动监视文件，避免未写完的文件被即时应用。
 4. 恢复默认会应用内置布局；恢复备份会使用 `active.layout.json.bak`。首次有效修改后才有备份。

@@ -1,6 +1,6 @@
 # NonetMusicPlayer.PluginSdk
 
-SDK 3.0.0，清单 Contract v1 / 页面 Schema v1。仅依赖 .NET 10 BCL，无播放器、UI、音频和 NuGet 包依赖。源码采用 GPL-3.0-only。
+SDK 3.2.0，清单 Contract v1 / 页面 Schema v1。该 SDK 由 Nonet 主项目维护，只依赖 .NET 10 BCL，无桌面 UI、音频和外部 NuGet 包依赖。源码采用 GPL-3.0-only。
 
 `PluginManifest`、`PluginPageContract`、`PluginConfigSchema`、`PluginPathPolicy`、`PluginPackageInspector` 是宿主与开发工具使用的同一套校验。为兼容既有调用，公开类型命名空间仍是 `NonetMusicPlayer.Core.Plugins`，实际程序集已独立为 `NonetMusicPlayer.PluginSdk`。
 
@@ -16,6 +16,10 @@ var manifest = PluginPackageInspector.Inspect(path);
 
 `PluginMessages.Translate` 是可选的资源查询委托，播放器注入其本地化目录；独立工具使用英文后备提示。运行时网络、进程、页面创建及生命周期调度由宿主完成，SDK 只定义和验证 Contract，不执行插件。
 
-基础工程携带本目录的源码快照。维护者修改 Contract 时必须同步 SDK_VERSION.json 的校验摘要，并在基础工程和目标播放器中验证生成包。
+独立模板通过 ProjectReference 依赖主项目本目录，不复制 SDK 或维护摘要快照。打包使用主项目 tools/NonetMusicPlayer.PluginPackager；开发时先取得主项目源码，并在真实宿主中验证插件。模板本次不提交 GitHub。
+
+SDK 3.1 新增 `lyrics` 独立进程插件、`lyrics-search` 页面部件与 `lyrics.more / match-lyrics` 菜单动作。歌词进程只接收歌曲元数据，不接收源音频路径。`audio-tags` 是宿主写标签能力声明，不是进程沙箱；安装包无法预先授予 `AudioTagWriteConsent`。详见插件参考文档。
+
+宿主发行版升级不改变已经支持的 Contract v1 / Schema v1，不要求旧插件重新打包。SDK 3.2 新增可选仓库元数据及共用 PluginUpdatePolicy；旧包缺失字段仍兼容。新插件源码清单声明 repositoryOwner / repositoryName，来源由宿主记录；更新保持 id、递增 version，完整规则见开发参考文档。
 
 打包器自动保留根目录的 LICENSE / LICENSE.txt / COPYING / NOTICE / THIRD_PARTY_NOTICES.txt。声明式 UI 只允许这些固定名称、256 KiB 以内的 UTF-8 文本；不会运行它们，脚本及其他可执行资源依然拒绝。

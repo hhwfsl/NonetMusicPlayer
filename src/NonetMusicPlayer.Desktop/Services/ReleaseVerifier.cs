@@ -3,6 +3,46 @@ namespace NonetMusicPlayer.Desktop.Services;
 /// <summary>显式检查实际精简发行包，不创建界面，也不输出凭据。</summary>
 internal static class ReleaseVerifier
 {
+    /// <summary>验证实际精简包中的歌词 RPC、配置授权及标签写入，只操作隔离目录生成的测试音频。</summary>
+    public static int RunLyrics(string package, string output)
+    {
+        try
+        {
+            var root = Path.GetFullPath(output); Directory.CreateDirectory(root);
+            var storage = new AppStorage(Path.Combine(root, "data")); AppLog.Initialize(storage.Root);
+            using var manager = new Plugins.PluginManager(storage);
+            var plugin = manager.Install(Path.GetFullPath(package)); manager.SetEnabled(plugin, true);
+            if (manager.LoadPage(plugin).Widgets is not [{ Type: "lyrics-search" }]) throw new InvalidDataException("Lyrics page contract failed.");
+            var search = manager.SearchLyricsAsync(plugin, new("光の道標", "鹿乃")).GetAwaiter().GetResult();
+            var candidate = search.Candidates.First(c => c.Source == "kugou");
+            var result = manager.MatchLyricsAsync(plugin, new(candidate.Title, candidate.Artist, candidate.Album, candidate.DurationSeconds)).GetAwaiter().GetResult();
+            if (result.Text.Length == 0 || result.WordTimed || result.Text.Contains("TME享有本翻译作品的著作权") || result.Text.Contains("[tool:LDDC"))
+                throw new InvalidDataException("Lyrics default format / cleanup failed.");
+            // 构造可读取标签的 MP3 帧，不使用或覆盖用户提供的音频文件。
+            var frames = new byte[417 * 10];
+            for (var i = 0; i < 10; i++) { frames[i * 417] = 0xff; frames[i * 417 + 1] = 0xfb; frames[i * 417 + 2] = 0x90; frames[i * 417 + 3] = 0x64; }
+            var file = Path.Combine(root, "fixture.mp3"); File.WriteAllBytes(file, frames);
+            var track = new Models.TrackItem("release-lyrics", candidate.Title, candidate.Artist, candidate.Album, file, ".mp3", frames.Length);
+            var lyrics = new LyricsService(storage.DefaultLyricsFolder);
+            manager.ApplyLyricsAsync(plugin, track, result, lyrics, false).GetAwaiter().GetResult();
+            if (lyrics.Read(track.Id) != result.Text || !File.ReadAllBytes(file).SequenceEqual(frames)) throw new InvalidDataException("Lyrics association changed source audio.");
+            var config = manager.ConfigurationValues(plugin); config["embedLyrics"] = true; var rejected = false;
+            try { manager.Configure(plugin, config.ToJsonString()); } catch (InvalidOperationException) { rejected = true; }
+            if (!rejected || plugin.AudioTagWriteConsent) throw new InvalidDataException("Audio write confirmation bypassed.");
+            manager.Configure(plugin, config.ToJsonString(), true);
+            manager.ApplyLyricsAsync(plugin, track, result, lyrics, true).GetAwaiter().GetResult();
+            if (lyrics.ExistingPath(track.Id) is not null || lyrics.ReadForTrack(track.Id, file) != result.Text
+                || !File.ReadAllBytes(Directory.GetFiles(Path.Combine(storage.BackupFolder, "AudioTags")).Single()).SequenceEqual(frames))
+                throw new InvalidDataException("Embedded lyrics / original backup failed.");
+            config["embedLyrics"] = false; manager.Configure(plugin, config.ToJsonString());
+            if (plugin.AudioTagWriteConsent) throw new InvalidDataException("Audio write grant was not revoked.");
+            manager.SetEnabled(plugin, false); manager.Uninstall(plugin);
+            AppStorage.AtomicWrite(Path.Combine(root, "result.txt"), "PASS\nLyricsRpc=True\nDefaultLine=True\nCleanup=True\nAssociation=True\nWriteConsent=True\nEmbeddedLyrics=True\nOriginalBackup=True\nLifecycle=True\n");
+            return 0;
+        }
+        catch (Exception e) { Directory.CreateDirectory(output); AppStorage.AtomicWrite(Path.Combine(Path.GetFullPath(output), "result.txt"), "FAIL\n" + AppLog.Redact(e.GetType().Name + ": " + e.Message)); return 1; }
+        finally { AppLog.Flush(); AppLog.Shutdown(); }
+    }
     public static int RunProvider(string package, string fixtureFolder, string output)
     {
         try

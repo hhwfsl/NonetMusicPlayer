@@ -71,7 +71,7 @@ internal static class LayoutChecks
         CheckLegacyMigration(output, service);
         foreach (var sample in new[] { "default.layout.json", "compact.layout.json" })
         {
-            var sampleDocument = service.Read(File.ReadAllText(Path.Combine("samples", "layouts", sample)));
+            var sampleDocument = service.Read(File.ReadAllText(Path.Combine("docs", "layouts", sample)));
             Require(sampleDocument.SchemaVersion == 2 && Items(sampleDocument.Player).Count() == 12, "Version 2 sample " + sample);
         }
         Console.WriteLine("Layout checks passed: 12 controls, strict parsing, schema 1 migration, normalization, atomic apply and recovery.");

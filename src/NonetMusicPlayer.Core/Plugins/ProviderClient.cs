@@ -13,6 +13,7 @@ public sealed class ProviderClient : IDisposable
     private long _sequence;
     private bool _disposed;
     public bool CatalogInitialized { get; private set; }
+    public bool IsDisposed => _disposed;
     public ProviderClient(string root, PluginManifest manifest)
     {
         var rid = System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier;
@@ -29,7 +30,7 @@ public sealed class ProviderClient : IDisposable
     public async Task<JsonElement> CallAsync(string method, Dictionary<string, string>? parameters = null, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken); timeout.CancelAfter(TimeSpan.FromSeconds(20));
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken); timeout.CancelAfter(TimeSpan.FromSeconds(method.StartsWith("lyrics.", StringComparison.Ordinal) ? 50 : 20));
         await _rpcGate.WaitAsync(timeout.Token);
         try
         {

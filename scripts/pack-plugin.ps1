@@ -10,12 +10,8 @@ $outputPath = [IO.Path]::GetFullPath($Output)
 if ([IO.Path]::GetExtension($outputPath) -ne ".impp") { throw "Plugin package output must use the .impp extension." }
 if (-not (Test-Path -LiteralPath (Join-Path $sourcePath "manifest.json"))) { throw "manifest.json must be at the package root." }
 if (Test-Path -LiteralPath $outputPath) { throw "Output exists; choose another path to avoid overwriting a plugin package." }
-$foundationPath = [IO.Path]::GetFullPath($Foundation)
-if (-not (Test-Path -LiteralPath $foundationPath)) { $foundationPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'plugin-template/NonetMusicPlayerPlugin' }
-$packager = Join-Path $foundationPath 'tools/NonetMusicPlayerPlugin.Packager/NonetMusicPlayerPlugin.Packager.csproj'
-if (-not (Test-Path -LiteralPath $packager)) { throw '需要同级 NonetMusicPlayerPlugin 基础工程，或通过 -Foundation 指定它的位置。' }
-# 所有开发插件复用基础工程的打包器；避免原始 ZIP 路径绕过共享验证及最小文件选择。
-& (Join-Path $PSScriptRoot 'sync-plugin-foundation.ps1') -Foundation $foundationPath
+$packager = Join-Path (Split-Path -Parent $PSScriptRoot) 'tools/NonetMusicPlayer.PluginPackager/NonetMusicPlayer.PluginPackager.csproj'
+# Foundation 参数保留兼容旧脚本，但验证和打包只由当前宿主工程提供。
 $env:NUGET_PACKAGES = Join-Path (Split-Path -Parent $PSScriptRoot) '.packages'
 $arguments = @('run', '--project', $packager, '-c', 'Release', '--', 'pack', '--source', $sourcePath, '--output', $outputPath)
 foreach ($file in $Include) { $arguments += @('--include', $file) }

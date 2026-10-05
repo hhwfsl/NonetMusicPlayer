@@ -21,11 +21,21 @@ public sealed class PluginReleaseDownloader : IDisposable
     public PluginReleaseDownloader(HttpMessageHandler? handler = null)
     {
         _http = new HttpClient(handler ?? new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(120) };
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("NonetMusicPlayer/0.2.0");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("NonetMusicPlayer-PluginUpdater/1.0");
+    }
+    /// <summary>仅从受限 Release URL 读取来源，不接受文件名中声明的仓库。</summary>
+    public static PluginRepository RepositoryFromRelease(string link)
+    {
+        if (!Uri.TryCreate(link.Trim(), UriKind.Absolute, out var uri) || uri.Scheme != "https" || uri.Host != "github.com"
+            || uri.UserInfo.Length != 0 || uri.Query.Length != 0 || uri.Fragment.Length != 0) throw new InvalidDataException("请输入公开 GitHub Release 的 HTTPS 链接。");
+        var parts = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 4 || parts[2] != "releases") throw new InvalidDataException("链接需要指向 GitHub Release。");
+        PluginRepository.Validate(parts[0], parts[1]); return new(parts[0], parts[1]);
     }
     public async Task<IReadOnlyList<PluginReleaseAsset>> ResolveAsync(string link, CancellationToken cancellationToken = default)
     {
-        if (!Uri.TryCreate(link.Trim(), UriKind.Absolute, out var uri) || uri.Scheme != "https" || uri.Host != "github.com" || uri.UserInfo.Length != 0 || uri.Query.Length != 0 || uri.Fragment.Length != 0) throw new InvalidDataException("请输入公开 GitHub Release 的 HTTPS 链接。");
+        RepositoryFromRelease(link);
+        var uri = new Uri(link.Trim());
         var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (segments.Length < 4 || segments[2] != "releases" || segments.Take(2).Any(s => !System.Text.RegularExpressions.Regex.IsMatch(s, "^[A-Za-z0-9_.-]{1,100}$"))) throw new InvalidDataException("链接需要指向 GitHub Release，而不是仓库首页或源码归档。");
         if (segments.Length >= 6 && segments[3] == "download")
@@ -82,7 +92,7 @@ public sealed class PluginReleaseDownloader : IDisposable
             else ValidateDownloadUri(uri);
             var response = await _http.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
             if ((int)response.StatusCode is >= 300 and < 400 && response.Headers.Location is { } target) { uri = target.IsAbsoluteUri ? target : new Uri(uri, target); response.Dispose(); continue; }
-            if (!response.IsSuccessStatusCode) { var status = response.StatusCode; response.Dispose(); throw new HttpRequestException(status is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests ? "GitHub 访问受限，请稍后重试或使用文件导入。" : "无法下载插件，HTTP " + (int)status); }
+            if (!response.IsSuccessStatusCode) { var status = response.StatusCode; response.Dispose(); throw new HttpRequestException(status is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests ? "GitHub 访问受限，请稍后重试或使用文件导入。" : "无法下载插件，HTTP " + (int)status, null, status); }
             return response;
         }
         throw new InvalidDataException("插件下载重定向次数过多。");

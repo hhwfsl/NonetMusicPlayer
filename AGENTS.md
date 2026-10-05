@@ -1,12 +1,17 @@
 # 项目维护要求
 
 - 使用单一 `NonetMusicPlayer` 工程目录开发、构建和发布；本地测试版本放在 `publish/desktop` 与 `publish/cli`。不再维护两个主工程目录。
-- GitHub 暂仅提交桌面、CLI、共享核心、SDK、必要测试和插件模板；移动端仅本地保留。禁止上传使用数据、凭据、缓存、旧开发历史和本地归档。
+- GitHub 暂仅提交桌面、CLI、共享核心、主项目 SDK/打包器与必要测试；移动端仅本地保留。本次不提交插件模板或任何具体插件。禁止上传使用数据、凭据、缓存、旧开发历史和本地归档。
 - 正式发布前检查暂存区文件范围并扫描敏感内容；纯净 ZIP 从全新暂存构建，作为 Release 资产上传，不提交进源码 Git。更新测试版时保留数据及旧包备份。
 - 保留用户已有修改，尤其是未提交的 XAML 布局；新增或改写的代码使用中文说明性注释。
-- 插件生态的开发基础工程为 `../NonetMusicPlayerPlugin`，公开仓库内的副本为 `plugin-template/NonetMusicPlayerPlugin`。新插件必须以该工程的 `plugin/` 模板与打包器为基础；大型测试插件可以放在播放器的 samples 中，但基础工程本身不能附带 samples。
-- Contract、原生部件、配置或生命周期发生变化时，同步 `src/NonetMusicPlayer.PluginSdk`、插件参考文档及基础工程的 vendored SDK；执行 `scripts/sync-plugin-foundation.ps1 -Update`，再执行其检查模式和基础工程测试。
+- 插件模板单独保存在 `../NonetMusicPlayerPlugin`；开发插件通过 ProjectReference 依赖主项目的 `src/NonetMusicPlayer.PluginSdk`，打包使用主项目 `tools/NonetMusicPlayer.PluginPackager`，调试运行真实宿主。不在模板复制 SDK 或另一套打包代码。用户指定插件仅放在 `../MyNonetMusicPlayerPlugin`，一个文件夹一个插件；发行包单独放在各插件的 dist，不生成源码 ZIP，不放入主项目 samples。
+- `samples/` 不进入 Git 跟踪、GitHub 源码导出或提交。主工程与默认测试必须不依赖私有插件目录；通用 Contract 测试使用独立生成的最小夹具，实际插件集成测试归入对应插件项目。
+- 若旧的本地未发布提交包含 samples，不直接推送这些提交；使用已检查的纯净源码快照提交，保留旧本地提交作为开发记录，不擅自改写已发布的 Git 历史。
+- 仅开发插件时不额外发布配套客户端；插件所需的宿主版本及兼容限制必须在插件文档中明确说明。
+- 验证插件兼容性时核对用户实际运行的发布文件版本，不能以源码或独立测试宿主的通过代替正式目录验证。需要升级宿主时说明最低版本并取得更新授权，保留数据与旧包，在原发布目录验证。
+- Contract、原生部件、配置或生命周期发生变化时，更新主项目 SDK 和插件参考文档；检查模板直接引用主项目，再运行基础工程测试。scripts/sync-plugin-foundation.ps1 仅检查引用和同步文档，不复制 SDK。
 - SDK 是无音频、无图形、无外部 NuGet 依赖的共享验证源；播放器与基础工程必须使用相同验证器。不得复制出另一套逐渐分叉的包验证规则。
-- 基础工程必须可在没有播放器源码的机器上独立构建，README 和新手教程给出从修改插件到生成并导入 `.impp` 的完整步骤。
+- 宿主版本升级不得淘汰已经支持的插件 Contract、页面 Schema 或 RPC。扩展默认采用新增可选能力，保留旧字段默认值和兼容适配，并执行冻结旧包的回归；不得按应用版本强制旧插件重打包。既有插件更新保持 id，仅递增 version，保留配置，不创建另一插件身份。
+- 基础工程与插件源码独立存放，但构建必须依赖播放器源码；README 和新手教程给出克隆宿主、指定 NonetPlayerRoot、修改插件、打包、在宿主调试的完整步骤。新插件清单声明稳定 id、数字 version、repositoryOwner 和与 GitHub 一致的 repositoryName；旧包缺少仓库字段仍兼容。
 - 跨工作区更新基础工程需要遵守当前文件写入权限；Git 仅本地管理，未经用户要求不创建远程仓库、不上传、不推送。
 - 本地构建使用 `NUGET_PACKAGES=<本工程>/.packages` 和 NuGet.Config，不手工设置缺少结尾分隔符的 NuGetPackageRoot。

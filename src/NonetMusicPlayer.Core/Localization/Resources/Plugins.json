@@ -1,4 +1,16 @@
 {
+  "Plugins.CheckUpdate": { "zh-CN": "检查插件更新", "en-US": "Check plugin updates", "ja-JP": "プラグインの更新を確認" },
+  "Plugins.AlreadyCurrent": { "zh-CN": "已安装此版本，无需更新。", "en-US": "This version is already installed.", "ja-JP": "このバージョンはインストール済みです。" },
+  "Plugins.CannotDowngrade": { "zh-CN": "不能用旧版本覆盖已安装的新版插件。", "en-US": "An older version cannot replace the installed plugin.", "ja-JP": "旧バージョンでインストール済みのプラグインを置き換えることはできません。" },
+  "Plugins.RepositoryUnavailable": { "zh-CN": "仓库或发行版本尚不存在，暂时无法检查更新。可使用本地新版插件包更新。", "en-US": "The repository or release is unavailable. You can import a newer local package.", "ja-JP": "リポジトリまたはリリースがありません。新しいローカルパッケージで更新できます。" },
+  "Plugins.RepositoryNotDeclared": { "zh-CN": "此旧插件未声明更新仓库，请从插件作者获取新版包后导入。", "en-US": "This legacy plugin has no update repository. Import a newer package from its author.", "ja-JP": "この旧プラグインには更新リポジトリがありません。作者から新しいパッケージを入手してください。" },
+  "Plugins.UpdateTitle": {"zh-CN":"更新 {0}","en-US":"Update {0}","ja-JP":"{0} を更新"},
+  "Plugins.TrustAndUpdate": {"zh-CN":"信任并更新","en-US":"Trust and update","ja-JP":"信頼して更新"},
+  "Plugins.PluginUpdated": {"zh-CN":"插件已更新，原配置已保留","en-US":"Plugin updated; configuration preserved","ja-JP":"プラグインを更新しました。設定は保持されています"},
+  "Plugins.UpdateDetails": {"zh-CN":"版本：{0} → {1}\n权限：{2}\n\n{3}\n\n将更新同一插件，保留原配置。权限不变时保持启用状态；权限变化时停用并撤销音频写入授权。更新成功后旧插件文件不保留。仅更新可信来源的插件。","en-US":"Version: {0} → {1}\nPermissions: {2}\n\n{3}\n\nUpdates the same plugin and preserves its configuration. Unchanged permissions retain enabled state; changed permissions disable it and revoke audio-write consent. Old files are removed after success. Update only trusted plugins.","ja-JP":"バージョン：{0} → {1}\n権限：{2}\n\n{3}\n\n同じプラグインを更新し、設定を保持します。権限が同じなら有効状態を維持し、変更時は無効化して音声書き込み許可を取り消します。成功後は旧ファイルを削除します。信頼できるプラグインのみ更新してください。"},
+  "Plugins.UpdateIdentityMismatch": {"zh-CN":"同 ID 更新不能改变插件类型或 Contract 版本，原插件未更改。","en-US":"An update cannot change the plugin type or Contract for the same ID; the installed plugin is unchanged.","ja-JP":"同じ ID の更新では種類や Contract を変更できません。既存プラグインは変更されません。"},
+  "Plugins.UpdateVersionNotNewer": {"zh-CN":"插件更新包的版本必须高于已安装版本，原插件未更改。","en-US":"The update must have a higher version than the installed plugin; the installed plugin is unchanged.","ja-JP":"更新には既存プラグインより新しいバージョンが必要です。既存プラグインは変更されません。"},
+  "Plugins.UnregisteredDirectory": {"zh-CN":"插件目录与安装记录不一致，请先检查插件文件，未覆盖已有文件。","en-US":"The plugin directory and installation record disagree. Check the plugin files; existing files were not overwritten.","ja-JP":"プラグインのディレクトリと記録が一致しません。ファイルを確認してください。既存ファイルは上書きされません。"},
   "Plugins.InstallPlugin": {
     "zh-CN": "安装插件",
     "en-US": "Install Plugin",

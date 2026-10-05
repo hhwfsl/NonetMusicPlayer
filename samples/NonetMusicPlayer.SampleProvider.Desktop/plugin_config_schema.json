@@ -1,6 +1,0 @@
-{
-  "catalogUrl": { "description": "曲库接口地址", "type": "string", "default": "", "hint": "返回 Contract 曲目列表的 HTTPS 地址。" },
-  "streamUrlTemplate": { "description": "音频地址模板", "type": "string", "default": "", "hint": "使用 {id} 表示歌曲标识。" },
-  "authorization": { "description": "Authorization", "type": "string", "default": "", "ui:widget": "password", "hint": "仅在本次会话保留，重启后需要重新填写。" },
-  "fixtureFolder": { "description": "本地测试音频目录", "type": "string", "default": "", "hint": "留空使用远程接口；测试时可指定本地目录。" }
-}

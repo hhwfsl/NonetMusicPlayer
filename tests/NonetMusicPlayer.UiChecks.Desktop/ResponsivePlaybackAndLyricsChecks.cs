@@ -95,7 +95,7 @@ internal static class ResponsivePlaybackAndLyricsChecks
                 Require(image.Bounds.Height >= window.Bounds.Height - 2 && image.Bounds.Width >= window.Bounds.Width - 2 && ((ISolidColorBrush)Application.Current!.Resources["SurfaceBrush"]!).Color.A < 255, "Whole-app background is visible through navigation/title/player panels");
                 Capture(window, output, "beta6-whole-background");
             }
-            var pluginPath = Path.GetFullPath("artifacts/plugins/snake-game-test.impp");
+            var pluginPath = PluginTestFixtures.Snake(output);
             if (File.Exists(pluginPath))
             {
                 var plugin = vm.Plugins.Install(pluginPath); vm.Navigate("plugins"); Pump(window);

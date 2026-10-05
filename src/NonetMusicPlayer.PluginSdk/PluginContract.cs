@@ -10,6 +10,11 @@ public sealed class PluginManifest
     public string Type { get; set; } = "provider";
     public string Description { get; set; } = "";
     public string Author { get; set; } = "";
+    /// <summary>开发者在源码清单中声明的 GitHub 账户及仓库名；旧包允许省略。</summary>
+    public string RepositoryOwner { get; set; } = "";
+    public string RepositoryName { get; set; } = "";
+    /// <summary>仅宿主记录实际远程导入来源，安装包不能预授予或伪造此来源。</summary>
+    public string OriginRepository { get; set; } = "";
     public List<string> Permissions { get; set; } = [];
     public Dictionary<string, string> EntryPoints { get; set; } = [];
     public Dictionary<string, string> Tokens { get; set; } = [];
@@ -20,17 +25,32 @@ public sealed class PluginManifest
     public bool Enabled { get; set; }
     public string Configuration { get; set; } = "{}";
     public List<string> LifecycleMethods { get; set; } = [];
+    /// <summary>仅由宿主在用户确认修改源文件后保存；安装包中的该值始终被忽略。</summary>
+    public bool AudioTagWriteConsent { get; set; }
     public void Validate()
     {
         Permissions ??= []; EntryPoints ??= []; Tokens ??= []; Widgets ??= []; MenuContributions ??= []; Configuration ??= "{}";
         LifecycleMethods ??= [];
-        if (LifecycleMethods.Count > 3 || LifecycleMethods.Any(m => m is not ("lifecycle.disable" or "lifecycle.uninstall" or "lifecycle.shutdown")) || LifecycleMethods.Count > 0 && Type != "provider") throw new InvalidDataException("只有音源插件可声明受支持的进程生命周期方法。");
+        RepositoryOwner ??= ""; RepositoryName ??= ""; OriginRepository ??= "";
+        if (RepositoryOwner.Length != 0 || RepositoryName.Length != 0) PluginRepository.Validate(RepositoryOwner, RepositoryName);
+        if (OriginRepository.Length != 0) PluginRepository.Parse(OriginRepository);
+        if (LifecycleMethods.Count > 3 || LifecycleMethods.Any(m => m is not ("lifecycle.disable" or "lifecycle.uninstall" or "lifecycle.shutdown")) || LifecycleMethods.Count > 0 && Type is not ("provider" or "lyrics")) throw new InvalidDataException("只有进程插件可声明受支持的进程生命周期方法。");
         if (!System.Text.RegularExpressions.Regex.IsMatch(Id ?? "", "^[a-z][a-z0-9.-]{2,80}$") || string.IsNullOrWhiteSpace(Name) || Name.Length > 100)
             throw new InvalidDataException("插件标识或名称不合法。");
         if ((Description?.Length ?? 0) > 2000 || (Author?.Length ?? 0) > 100 || Permissions.Count > 16 || Permissions.Any(p => string.IsNullOrWhiteSpace(p) || p.Length > 32)) throw new InvalidDataException("插件描述或权限清单过长。");
-        if (ContractVersion != 1 || Type is not ("provider" or "theme" or "widget" or "ui")) throw new InvalidDataException("不支持此插件类型或 Contract 版本。");
+        if (ContractVersion != 1 || Type is not ("provider" or "theme" or "widget" or "ui" or "lyrics")) throw new InvalidDataException("不支持此插件类型或 Contract 版本。");
         if (!System.Version.TryParse(Version, out _)) throw new InvalidDataException("插件版本需要形如 1.0.0。");
         if (Type == "provider" && (!Permissions.Contains("network") || !Permissions.Contains("process"))) throw new InvalidDataException("音源插件必须声明 network 与 process 权限。");
+        if (Type == "lyrics" && (!Permissions.Contains("network") || !Permissions.Contains("process") || !Permissions.Contains("lyrics-search")
+            || Permissions.Any(p => p is not ("network" or "process" or "lyrics-search" or "navigation" or "audio-tags")) || EntryPoints.Count == 0 || Tokens.Count != 0 || Widgets.Count != 0))
+            throw new InvalidDataException("歌词插件需声明 network、process、lyrics-search；仅可附加 navigation 与 audio-tags 权限。");
+        if (Type == "lyrics")
+        {
+            NavigationLabel = string.IsNullOrWhiteSpace(NavigationLabel) ? Name : NavigationLabel.Trim();
+            if (NavigationLabel.Length > 60 || NavigationLabel.Any(char.IsControl)) throw new InvalidDataException("插件侧栏标签不合法。");
+            PluginPathPolicy.ValidateRelativePath(PageEntry);
+            if (!PageEntry.EndsWith(".json", StringComparison.OrdinalIgnoreCase) || PageEntry == "manifest.json") throw new InvalidDataException("歌词插件需提供独立的 JSON 页面。");
+        }
         if (Type == "ui")
         {
             if (Permissions.Any(p => p is not ("player-control" or "navigation" or "statistics" or "desktop-widget" or "lyrics-editor")) || EntryPoints.Count != 0 || Tokens.Count != 0 || Widgets.Count != 0)
@@ -42,10 +62,10 @@ public sealed class PluginManifest
             if (!PageEntry.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("UI 插件页面入口必须是包内 JSON 文件。");
             if (PageEntry.Equals("manifest.json", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("UI 页面与清单必须分别声明。");
         }
-        if (MenuContributions.Count > 8 || MenuContributions.Count > 0 && (Type != "ui" || !Permissions.Contains("navigation")))
+        if (MenuContributions.Count > 8 || MenuContributions.Count > 0 && (Type is not ("ui" or "lyrics") || !Permissions.Contains("navigation")))
             throw new InvalidDataException("菜单贡献仅允许具有 navigation 权限的 UI 插件，每个插件最多 8 项。");
         foreach (var contribution in MenuContributions)
-            if (contribution is null || contribution.Location != "lyrics.more" || contribution.Action != "open-page"
+            if (contribution is null || contribution.Location != "lyrics.more" || contribution.Action != "open-page" && !(Type == "lyrics" && contribution.Action == "match-lyrics")
                 || string.IsNullOrWhiteSpace(contribution.Label) || contribution.Label.Length > 60 || contribution.Label.Any(char.IsControl))
                 throw new InvalidDataException("菜单贡献需要指定 lyrics.more、open-page 与合法标签。");
         foreach (var path in EntryPoints.Values) PluginPathPolicy.ValidateRelativePath(path);

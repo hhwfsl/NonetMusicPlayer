@@ -103,7 +103,8 @@ public sealed class NativeAudioPlayer : IAudioPlayer
             EnsureEngine(); ReleasePlayer();
             try
             {
-                _stream = Uri.TryCreate(source, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https" ? new LoopbackRangeStream(uri) : File.OpenRead(source);
+                // 保留原文件句柄播放，同时允许宿主原子替换标签副本；音频样本不会被中途改写。
+                _stream = Uri.TryCreate(source, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https" ? new LoopbackRangeStream(uri) : new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
                 // 请求格式只是采样类型提示；采样率和声道数仍来自音源，必须检查实际输出。
                 var sourceGeneration = _sourceGeneration;
                 var decoded = new DecodedDataProvider(_engine!, _stream, e => DecodeFailed(sourceGeneration, e));

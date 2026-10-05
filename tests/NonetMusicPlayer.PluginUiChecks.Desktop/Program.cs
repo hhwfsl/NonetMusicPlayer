@@ -6,9 +6,11 @@ internal static class Program
         try
         {
             var output = args.FirstOrDefault() ?? "artifacts/plugin-ui-checks";
+            if (args.Contains("--update-layout")) { PluginUpdateLayoutChecks.Run(output); return 0; }
+            if (args.Contains("--compatibility")) { PluginCompatibilityChecks.Run(output); return 0; }
             if (args.Contains("--root-review")) { RootReviewChecks.Run(output); return 0; }
             if (args.Contains("--plugin-migration")) { PluginMigrationChecks.Run(output); return 0; }
-            PluginUiChecks.Run(output); HostPluginChecks.Run(output); PluginHostCapabilityChecks.Run(output); return 0;
+            PluginUiChecks.Run(output); HostPluginChecks.Run(output); PluginHostCapabilityChecks.Run(output); PluginCompatibilityChecks.Run(output); PluginUpdateLayoutChecks.Run(output); return 0;
         }
         catch (Exception error) { Console.Error.WriteLine(error); return 1; }
     }

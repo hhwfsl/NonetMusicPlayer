@@ -22,7 +22,7 @@ public static class PluginPackageInspector
         var manifestEntry = zip.GetEntry("manifest.json") ?? throw new InvalidDataException("包根目录缺少 manifest.json。");
         if (manifestEntry.Length > 100_000) throw new InvalidDataException("插件清单过大。");
         using var stream = manifestEntry.Open(); var manifest = JsonSerializer.Deserialize(stream, PluginJsonContext.Default.PluginManifest) ?? throw new InvalidDataException("插件清单为空。");
-        manifest.Validate(); manifest.Enabled = false; manifest.Configuration = "{}";
+        manifest.Validate(); manifest.Enabled = false; manifest.Configuration = "{}"; manifest.AudioTagWriteConsent = false; manifest.OriginRepository = "";
         var schemaEntry = zip.GetEntry(PluginConfigSchema.FileName) ?? zip.GetEntry("plugin_config_schema");
         if (zip.GetEntry(PluginConfigSchema.FileName) is not null && zip.GetEntry("plugin_config_schema") is not null) throw new InvalidDataException("插件只能包含一份配置规范。");
         System.Text.Json.Nodes.JsonObject? configSchema = null;
@@ -35,12 +35,12 @@ public static class PluginPackageInspector
             using var reader = new StreamReader(notice.Open(), new System.Text.UTF8Encoding(false, true), detectEncodingFromByteOrderMarks: false);
             if (reader.ReadToEnd().Contains('\0')) throw new InvalidDataException("插件许可文件必须是文本。");
         }
-        if (manifest.Type == "ui")
+        if (manifest.Type is "ui" or "lyrics")
         {
             var page = zip.GetEntry(manifest.PageEntry) ?? throw new InvalidDataException("UI 页面入口未包含在安装包中。");
-            if (zip.Entries.Where(e => !e.FullName.EndsWith('/')).Any(e => e.FullName != "manifest.json" && e.FullName != manifest.PageEntry && e != schemaEntry && !IsLicenseFile(e.FullName)))
+            if (manifest.Type == "ui" && zip.Entries.Where(e => !e.FullName.EndsWith('/')).Any(e => e.FullName != "manifest.json" && e.FullName != manifest.PageEntry && e != schemaEntry && !IsLicenseFile(e.FullName)))
                 throw new InvalidDataException("声明式 UI 插件只允许清单、JSON 页面及配置规范，不允许夹带脚本或程序。");
-            if (zip.Entries.Where(e => e.FullName.EndsWith('/')).Any(e => !manifest.PageEntry.StartsWith(e.FullName, StringComparison.Ordinal)))
+            if (manifest.Type == "ui" && zip.Entries.Where(e => e.FullName.EndsWith('/')).Any(e => !manifest.PageEntry.StartsWith(e.FullName, StringComparison.Ordinal)))
                 throw new InvalidDataException("UI 插件不允许未使用的目录。");
             using var pageStream = page.Open();
             if (schemaEntry is null) PluginPageContract.Read(pageStream, manifest.Permissions);

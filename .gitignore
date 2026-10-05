@@ -12,7 +12,8 @@ artifacts/
 .packages/
 .packages-feed/
 NuGet.Offline.Config
-samples/NonetMusicPlayer.LyricsTimingPlugin/dist/
+/samples/
+/plugin-template/
 **/.gradle/
 **/build/
 **/local.properties

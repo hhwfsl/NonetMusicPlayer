@@ -37,7 +37,7 @@ internal static class PluginHostCapabilityChecks
         vm.State.Tracks.AddRange([a, b]); vm.ApplyFilter();
         // 音乐汇总仅展示歌单内歌曲；桌宠播放同样从真实歌单来源开始。
         var fixturePlaylist = vm.CreatePlaylist("桌宠播放夹具"); vm.AddToPlaylist(fixturePlaylist, [a, b]); vm.Navigate("playlist:" + fixturePlaylist.Id);
-        var manifest = vm.Plugins.Install(Path.GetFullPath("artifacts/plugins/pet-controls-current.impp"));
+        var manifest = vm.Plugins.Install(PluginTestFixtures.Pet(root));
         Check(!manifest.Enabled, "New .impp is disabled by default"); Reject(() => vm.Plugins.LoadPage(manifest), "Disabled pages cannot load");
         var window = new MainWindow { DataContext = vm }; window.Show(); Render(window); vm.Plugins.AttachHost(window, vm);
         vm.Plugins.SetEnabled(manifest, true); vm.ApplySettings(); Render(window);
@@ -67,7 +67,7 @@ internal static class PluginHostCapabilityChecks
         Check(second.IsDisposed && vm.Plugins.ActivePetWindows.Count == 0, "Uninstall closes active pet");
         var legacy = vm.Plugins.Install(Package(root, "legacy-widget", """{"id":"author.legacy-notes","name":"Notes","version":"1.0.0","contractVersion":1,"type":"widget","widgets":[{"title":"Note","text":"Content"}]}""", null));
         vm.Plugins.SetEnabled(legacy, true); Check(vm.Plugins.LoadPage(legacy).Widgets.Single().Text == "Content", "Legacy widget becomes a real page, not plugin-center decoration");
-        var sourceManifest = File.ReadAllText("samples/MusicPet.Ui/manifest.json"); var sourcePage = File.ReadAllText("samples/MusicPet.Ui/page.json");
+        var sourceManifest = PluginTestFixtures.PetManifest; var sourcePage = PluginTestFixtures.PetPage;
         Reject(() => PluginManager.Inspect(Package(root, "missing-permission", sourceManifest.Replace("\"player-control\", ", "", StringComparison.Ordinal), sourcePage)), "Player actions require explicit permission");
         Reject(() => PluginManager.Inspect(Package(root, "automatic-next", sourceManifest, sourcePage.Replace("\"kind\": \"show-message\", \"value\": \"正在播放：{title} · {artist}\"", "\"kind\": \"next\"", StringComparison.Ordinal))), "Automatic playback loops are rejected");
         Reject(() => PluginManager.Inspect(Package(root, "fast-flow", sourceManifest, sourcePage.Replace("120", "1", StringComparison.Ordinal))), "Message timers are bounded to 60 seconds or slower");
@@ -81,7 +81,7 @@ internal static class PluginHostCapabilityChecks
         var storage = new AppStorage(Path.Combine(root, "restart-data"));
         using (var installer = new PluginManager(storage))
         {
-            var installed = installer.Install(Path.GetFullPath("artifacts/plugins/pet-controls-current.impp")); installer.SetEnabled(installed, true);
+            var installed = installer.Install(PluginTestFixtures.Pet(root)); installer.SetEnabled(installed, true);
             Check(installer.ActivePetWindows.Count == 0, "A plugin without a host allocates no pet window");
         }
         using var audio = new FakeAudio(); using var restartedVm = new MainViewModel(new MusicLibraryScanner(storage), audio); restartedVm.Settings.ConfirmClose = false;

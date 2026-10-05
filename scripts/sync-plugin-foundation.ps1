@@ -2,41 +2,12 @@ param([string]$Foundation = (Join-Path (Split-Path -Parent $PSScriptRoot) '../No
 $ErrorActionPreference = 'Stop'
 $taskPlayer = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $taskFoundation = [IO.Path]::GetFullPath($Foundation)
-if (-not (Test-Path -LiteralPath $taskFoundation) -and (Test-Path -LiteralPath (Join-Path $taskPlayer 'plugin-template/NonetMusicPlayerPlugin'))) { $taskFoundation = Join-Path $taskPlayer 'plugin-template/NonetMusicPlayerPlugin' }
-if ($taskFoundation -eq $taskPlayer -or -not (Test-Path -LiteralPath (Join-Path $taskFoundation 'NonetMusicPlayerPlugin.slnx'))) { throw '目标必须是独立的插件基础工程。' }
-$taskSource = Join-Path $taskPlayer 'src/NonetMusicPlayer.PluginSdk'
-$taskTarget = Join-Path $taskFoundation 'sdk/NonetMusicPlayer.PluginSdk'
-if (-not $taskTarget.StartsWith($taskFoundation.TrimEnd('\','/') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'SDK 目标越界。' }
-$taskFiles = Get-ChildItem -LiteralPath $taskSource -File | Where-Object { $_.Extension -in @('.cs','.csproj','.md') } | Sort-Object Name
-$taskVersion = ([xml](Get-Content -LiteralPath (Join-Path $taskSource 'NonetMusicPlayer.PluginSdk.csproj') -Raw)).Project.PropertyGroup.Version
-$taskHostVersion = ([xml](Get-Content -LiteralPath (Join-Path $taskPlayer 'src/NonetMusicPlayer.Desktop/NonetMusicPlayer.Desktop.csproj') -Raw)).Project.PropertyGroup.Version
-$taskDigests = [ordered]@{}
-function Get-TaskTextDigest([string]$Path) {
-    # Git 的平台换行转换不代表 SDK 变更；统一 UTF-8 / LF 后再比较源码摘要。
-    $taskContent = [IO.File]::ReadAllText($Path).Replace("`r`n", "`n")
-    $taskSha = [Security.Cryptography.SHA256]::Create()
-    try { return [BitConverter]::ToString($taskSha.ComputeHash([Text.Encoding]::UTF8.GetBytes($taskContent))).Replace('-', '').ToLowerInvariant() }
-    finally { $taskSha.Dispose() }
-}
-if($Update) { [IO.Directory]::CreateDirectory($taskTarget) | Out-Null }
-foreach ($taskFile in $taskFiles) {
-    $taskDestination = Join-Path $taskTarget $taskFile.Name
-    $taskDigest = Get-TaskTextDigest $taskFile.FullName
-    $taskDigests[$taskFile.Name] = $taskDigest
-    if($Update) { Copy-Item -LiteralPath $taskFile.FullName -Destination $taskDestination -Force }
-    if(-not (Test-Path -LiteralPath $taskDestination) -or (Get-TaskTextDigest $taskDestination) -ne $taskDigest) { throw "SDK 不同步：$($taskFile.Name)。使用 -Update 更新开发工程。" }
-}
+if (-not (Test-Path -LiteralPath (Join-Path $taskFoundation 'NonetMusicPlayerPlugin.slnx'))) { throw '目标必须是独立的插件模板工程。' }
+$taskProps = Get-Content -Raw -LiteralPath (Join-Path $taskFoundation 'Directory.Build.props')
+if ($taskProps -notmatch 'NonetPlayerRoot' -or $taskProps -notmatch 'src/NonetMusicPlayer.PluginSdk' -or (Test-Path -LiteralPath (Join-Path $taskFoundation 'sdk'))) { throw '模板必须直接引用主项目 SDK，不能保留 vendored SDK。' }
+# 仅同步接口文档，SDK 和打包器始终从当前主项目引用，不再维护代码快照。
 $taskDocument = Join-Path $taskPlayer 'docs/PLUGIN_DEVELOPMENT.md'
 $taskReference = Join-Path $taskFoundation 'docs/PLUGIN_DEVELOPMENT.md'
-if($Update) { Copy-Item -LiteralPath $taskDocument -Destination $taskReference -Force }
-if(-not (Test-Path -LiteralPath $taskReference) -or (Get-TaskTextDigest $taskDocument) -ne (Get-TaskTextDigest $taskReference)) { throw '插件参考文档不同步。' }
-$taskMetadata = Join-Path $taskFoundation 'sdk/SDK_VERSION.json'
-if($Update) {
-    # 生成的同步清单不包含绝对路径或账户信息，独立克隆后仍可构建。
-    $taskJson = [ordered]@{sdkVersion=$taskVersion; playerVersion=$taskHostVersion; contractVersion=1; pageSchemaVersion=1; hashEncoding='utf8-lf'; files=$taskDigests} | ConvertTo-Json -Depth 4
-    [IO.File]::WriteAllText($taskMetadata, $taskJson + [Environment]::NewLine, [Text.UTF8Encoding]::new($false))
-}
-$taskRecorded = Get-Content -LiteralPath $taskMetadata -Raw | ConvertFrom-Json
-if($taskRecorded.sdkVersion -ne $taskVersion -or $taskRecorded.playerVersion -ne $taskHostVersion -or $taskRecorded.hashEncoding -ne 'utf8-lf') { throw 'SDK 版本元数据不同步。' }
-foreach($taskFile in $taskFiles) { if($taskRecorded.files.($taskFile.Name) -ne $taskDigests[$taskFile.Name]) { throw "SDK 摘要不同步：$($taskFile.Name)" } }
-Write-Host "PASS 插件基础工程同步：SDK $taskVersion / Player $taskHostVersion"
+if ($Update) { Copy-Item -LiteralPath $taskDocument -Destination $taskReference -Force }
+if ([IO.File]::ReadAllText($taskDocument).Replace("`r`n", "`n") -ne [IO.File]::ReadAllText($taskReference).Replace("`r`n", "`n")) { throw '插件参考文档不同步，请使用 -Update。' }
+Write-Host 'PASS 模板直接依赖宿主 SDK；插件接口文档一致。'

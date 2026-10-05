@@ -13,34 +13,43 @@ public sealed class PluginsView : UserControl, IDisposable
 {
     private readonly CancellationTokenSource _downloadCancellation = new();
     private bool _disposed;
+    private bool _remoteBusy;
     public PluginsView(MainWindow owner, MainViewModel vm)
     {
-        async Task Install(string path)
+        async Task Install(string path, string? origin = null, PluginManifest? updating = null)
         {
             if (_disposed) return;
             try
             {
                     var manifest = await Task.Run(() => PluginManager.Inspect(path));
+                    if (updating is not null && updating.Id != manifest.Id) throw new InvalidDataException(L10n.T("Plugins.UpdateIdentityMismatch"));
+                    var previous = vm.Plugins.Installed.FirstOrDefault(p => p.Id == manifest.Id);
+                    var kind = PluginUpdatePolicy.Evaluate(previous, manifest);
+                    if (kind is PluginInstallKind.SameVersion or PluginInstallKind.Downgrade)
+                    {
+                        vm.ReportWarning(L10n.T(kind == PluginInstallKind.SameVersion ? "Plugins.AlreadyCurrent" : "Plugins.CannotDowngrade")); return;
+                    }
                     var details = L10n.Format("Plugins.AuthorTypeVersionPermissionsInstalledPluginsAreDisabledBy", manifest.Author, TypeName(manifest.Type), manifest.Version, manifest.Permissions.Count == 0 ? L10n.T("Common.None") : string.Join(" / ", manifest.Permissions.Select(PermissionName)), manifest.Description);
-                    if (_disposed || !await PlayerDialog.Confirm(owner, L10n.Format("Common.Install", manifest.Name), details, L10n.T("Common.TrustAndInstall"))) return;
+                    if (previous is not null) details = L10n.Format("Plugins.UpdateDetails", previous.Version, manifest.Version, string.Join(" / ", manifest.Permissions.Select(PermissionName)), manifest.Description);
+                    if (_disposed || !await PlayerDialog.Confirm(owner, previous is null ? L10n.Format("Common.Install", manifest.Name) : L10n.Format("Plugins.UpdateTitle", manifest.Name), details, L10n.T(previous is null ? "Common.TrustAndInstall" : "Plugins.TrustAndUpdate"))) return;
                     if (vm.IsBusy) throw new InvalidOperationException(L10n.T("Plugins.WaitForTheCurrentOperationBeforeInstallingAPlugin"));
                     vm.IsBusy = true;
-                    try { await Task.Run(() => vm.Plugins.Install(path)); }
+                    try { await vm.Plugins.InstallAsync(path, origin); }
                     finally { vm.IsBusy = false; }
-                    vm.StatusText = L10n.T("Plugins.PluginInstalled"); owner.ShowPage();
+                    vm.ApplySettings(); owner.RefreshPluginNavigation();
+                    vm.StatusText = L10n.T(previous is null ? "Plugins.PluginInstalled" : "Plugins.PluginUpdated"); owner.ShowPage();
             }
             catch (Exception e) { vm.ReportError(L10n.T("Plugins.PluginInstallationFailed"), e); }
         }
-        var install = Ui.AsyncButton(L10n.T("Plugins.InstallPlugin"), async () => { var files = await owner.OpenFilesAsync(L10n.T("Plugins.ChoosePluginPackage"), ["*.impp"], false); if (files.Length > 0) await Install(files[0]); }, true);
-        install.HorizontalAlignment = HorizontalAlignment.Left;
-        var remote = Ui.AsyncButton(L10n.T("Plugins.ImportFromGitHubRelease"), async () =>
+        async Task DownloadRelease(string link, PluginManifest? updating = null)
         {
-            var link = await PlayerDialog.Prompt(owner, L10n.T("Plugins.ImportFromGitHubRelease"), L10n.T("Plugins.EnterTheHTTPSURLOfAPublicReleaseLatest"), acceptText: L10n.T("Common.Import")); if (string.IsNullOrWhiteSpace(link)) return;
-            if (_disposed) return;
+            if (_disposed || _remoteBusy) return;
+            _remoteBusy = true;
             using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_downloadCancellation.Token);
             using var notification = owner.ShowPluginDownload(cancellation.Cancel);
             try
             {
+                var repository = PluginReleaseDownloader.RepositoryFromRelease(link);
                 using var downloader = new PluginReleaseDownloader();
                 var assets = await downloader.ResolveAsync(link, cancellation.Token); var selected = assets[0];
                 if (assets.Count > 1)
@@ -51,10 +60,19 @@ public sealed class PluginsView : UserControl, IDisposable
                 cancellation.Token.ThrowIfCancellationRequested(); notification.Downloading(selected.Name);
                 using var package = await downloader.DownloadAsync(selected, vm.Storage.PluginsFolder, notification, cancellation.Token);
                 notification.Complete(selected.Name);
-                await Install(package.Path);
+                await Install(package.Path, repository.Coordinate, updating);
             }
             catch (OperationCanceledException) { if (!_disposed) vm.ReportWarning(L10n.T("Plugins.PluginDownloadCanceledOrTimedOut")); }
+            catch (HttpRequestException error) when (error.StatusCode == System.Net.HttpStatusCode.NotFound) { if (!_disposed) vm.ReportWarning(L10n.T("Plugins.RepositoryUnavailable")); }
             catch (Exception error) { vm.ReportError(L10n.T("Plugins.PluginDownloadFailed"), error); }
+            finally { _remoteBusy = false; }
+        }
+        var install = Ui.AsyncButton(L10n.T("Plugins.InstallPlugin"), async () => { var files = await owner.OpenFilesAsync(L10n.T("Plugins.ChoosePluginPackage"), ["*.impp"], false); if (files.Length > 0) await Install(files[0]); }, true);
+        install.HorizontalAlignment = HorizontalAlignment.Left;
+        var remote = Ui.AsyncButton(L10n.T("Plugins.ImportFromGitHubRelease"), async () =>
+        {
+            var link = await PlayerDialog.Prompt(owner, L10n.T("Plugins.ImportFromGitHubRelease"), L10n.T("Plugins.EnterTheHTTPSURLOfAPublicReleaseLatest"), acceptText: L10n.T("Common.Import"));
+            if (!string.IsNullOrWhiteSpace(link)) await DownloadRelease(link);
         });
         var toolbar = new WrapPanel { Orientation = Orientation.Horizontal }; install.Margin = new(0, 0, 10, 6); remote.Margin = new(0, 0, 0, 6); toolbar.Children.Add(install); toolbar.Children.Add(remote);
         var panel = Ui.Stack(toolbar);
@@ -80,9 +98,18 @@ public sealed class PluginsView : UserControl, IDisposable
             if (!string.IsNullOrWhiteSpace(plugin.Description)) info.Children.Add(Ui.RawText(plugin.Description, 12, true));
             if (plugin.Permissions.Count > 0) info.Children.Add(Ui.RawText(L10n.T("Plugins.Permissions") + ": " + string.Join(" / ", plugin.Permissions.Select(PermissionName)), 11, true));
             info.Margin = new Thickness(0, 0, 16, 0);
-            var actions = new Grid { ColumnDefinitions = new("Auto,Auto,Auto,Auto"), ColumnSpacing = 6, VerticalAlignment = VerticalAlignment.Center }; actions.Children.Add(enabled);
+            var actions = new Grid { ColumnDefinitions = new("Auto,Auto,Auto,Auto,Auto"), ColumnSpacing = 6, VerticalAlignment = VerticalAlignment.Center }; actions.Children.Add(enabled);
             var configureButton = Ui.AsyncButton("", async () => await owner.OpenPluginConfigurationAsync(plugin)); configureButton.Name = "PluginConfigure";
             configureButton.Content = Icon(IconKind.Settings); ToolTip.SetTip(configureButton, L10n.T("Plugins.PluginConfiguration")); Avalonia.Automation.AutomationProperties.SetName(configureButton, plugin.Name + " · " + L10n.T("Plugins.PluginConfiguration")); Grid.SetColumn(configureButton, 1); configureButton.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(configureButton);
+            var update = Ui.AsyncButton("", async () =>
+            {
+                if (string.IsNullOrEmpty(plugin.OriginRepository) && string.IsNullOrEmpty(plugin.RepositoryName)) { vm.ReportWarning(L10n.T("Plugins.RepositoryNotDeclared")); return; }
+                try { await DownloadRelease(PluginRepository.ForUpdate(plugin).LatestReleaseUrl, plugin); }
+                catch (Exception error) { vm.ReportError(L10n.T("Plugins.PluginDownloadFailed"), error); }
+            });
+            update.Name = "PluginUpdate"; update.Content = Icon(IconKind.Refresh); update.VerticalAlignment = VerticalAlignment.Center;
+            ToolTip.SetTip(update, L10n.T("Plugins.CheckUpdate")); Avalonia.Automation.AutomationProperties.SetName(update, plugin.Name + " · " + L10n.T("Plugins.CheckUpdate"));
+            Grid.SetColumn(update, 2); actions.Children.Add(update);
             if (plugin.Type == "provider")
             {
                 var more = Ui.Button("", () => { }); more.Name = "PluginMore";
@@ -95,7 +122,7 @@ public sealed class PluginsView : UserControl, IDisposable
                 };
                 var refresh = new MenuItem { Header = L10n.T("Common.LoadCatalog"), Icon = Icon(IconKind.Library) };
                 refresh.Click += async (_, _) => await vm.RefreshProviderAsync(plugin);
-                menu.ItemsSource = new[] { configure, refresh }; more.Click += (_, _) => owner.OpenMenu(more, menu); Grid.SetColumn(more, 2); more.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(more);
+                menu.ItemsSource = new[] { configure, refresh }; more.Click += (_, _) => owner.OpenMenu(more, menu); Grid.SetColumn(more, 3); more.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(more);
             }
             var uninstall = Ui.AsyncButton("", async () =>
             {
@@ -105,7 +132,7 @@ public sealed class PluginsView : UserControl, IDisposable
             });
             uninstall.Name = "PluginUninstall"; uninstall.Content = Icon(IconKind.Trash);
             ToolTip.SetTip(uninstall, L10n.T("Common.Uninstall")); Avalonia.Automation.AutomationProperties.SetName(uninstall, plugin.Name + " · " + L10n.T("Common.Uninstall"));
-            Grid.SetColumn(uninstall, 3); uninstall.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(uninstall);
+            Grid.SetColumn(uninstall, 4); uninstall.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(uninstall);
             var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") }; grid.Children.Add(info); Grid.SetColumn(actions, 1); grid.Children.Add(actions);
             panel.Children.Add(new Border { Child = grid, Padding = new Thickness(20), CornerRadius = new CornerRadius(12), BorderBrush = Ui.Brush("DividerBrush"), BorderThickness = new Thickness(1), Background = Ui.Brush("SurfaceBrush") });
         }
@@ -113,6 +140,6 @@ public sealed class PluginsView : UserControl, IDisposable
     }
     public void Dispose() { if (_disposed) return; _disposed = true; _downloadCancellation.Cancel(); _downloadCancellation.Dispose(); }
     private static VectorIcon Icon(IconKind kind) => new() { Kind = kind, Width = 18, Height = 18, Brush = Ui.Brush("TextPrimaryBrush") };
-    private static string TypeName(string type) => L10n.T(type switch { "provider" => L10n.T("Common.Provider"), "theme" => L10n.T("Settings.Theme"), "widget" => L10n.T("Common.Cards"), _ => L10n.T("Common.Page") });
+    private static string TypeName(string type) => L10n.T(type switch { "provider" => L10n.T("Common.Provider"), "theme" => L10n.T("Settings.Theme"), "widget" => L10n.T("Common.Cards"), "lyrics" => L10n.T("LyricsSearch.PluginType"), _ => L10n.T("Common.Page") });
     private static string PermissionName(string name) => L10n.T(name switch { "player-control" => L10n.T("Playback.PlaybackControl"), "navigation" => L10n.T("Common.NavigationAndSearch"), "statistics" => L10n.T("Statistics.ListeningStatistics"), "desktop-widget" => L10n.T("Common.DesktopWidget"), "network" => L10n.T("Common.Network"), "process" => L10n.T("Common.NativeProcess"), "filesystem" => L10n.T("Common.FileSystem"), _ => name });
 }

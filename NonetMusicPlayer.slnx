@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="tools/NonetMusicPlayer.PluginPackager/NonetMusicPlayer.PluginPackager.csproj" />
   <Project Path="src/NonetMusicPlayer.PluginSdk/NonetMusicPlayer.PluginSdk.csproj" />
   <Project Path="src/NonetMusicPlayer.Core/NonetMusicPlayer.Core.csproj" />
   <Project Path="src/NonetMusicPlayerCli/NonetMusicPlayerCli.csproj" />
@@ -6,5 +7,4 @@
   <Project Path="src/NonetMusicPlayer.Desktop/NonetMusicPlayer.Desktop.csproj" />
   <Project Path="tests/NonetMusicPlayer.UiChecks.Desktop/NonetMusicPlayer.UiChecks.Desktop.csproj" />
   <Project Path="tests/NonetMusicPlayer.PluginUiChecks.Desktop/NonetMusicPlayer.PluginUiChecks.Desktop.csproj" />
-  <Project Path="samples/NonetMusicPlayer.SampleProvider.Desktop/NonetMusicPlayer.SampleProvider.Desktop.csproj" />
 </Solution>

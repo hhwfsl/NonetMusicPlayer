@@ -15,10 +15,10 @@ public sealed partial class MainWindow
     private void BuildPluginNavigation()
     {
         PluginNavigation.Children.Clear(); if (_vm is null) return;
-        foreach (var plugin in _vm.Plugins.Installed.Where(p => p.Enabled && p.Type is "ui" or "widget"))
+        foreach (var plugin in _vm.Plugins.Installed.Where(p => p.Enabled && p.Type is "ui" or "widget" or "lyrics"))
         {
             var label = Ui.RawText(plugin.NavigationLabel); label.TextWrapping = TextWrapping.NoWrap; label.TextTrimming = TextTrimming.CharacterEllipsis;
-            var content = new Grid { ColumnDefinitions = new("30,*") }; content.Children.Add(new VectorIcon { Kind = plugin.Permissions.Contains("lyrics-editor") ? IconKind.Lyrics : IconKind.Game, Width = 20, Height = 20 }); Grid.SetColumn(label, 1); content.Children.Add(label);
+            var content = new Grid { ColumnDefinitions = new("30,*") }; content.Children.Add(new VectorIcon { Kind = plugin.Permissions.Contains("lyrics-editor") || plugin.Type == "lyrics" ? IconKind.Lyrics : IconKind.Game, Width = 20, Height = 20 }); Grid.SetColumn(label, 1); content.Children.Add(label);
             var button = new Button { Content = content, Tag = "plugin:" + plugin.Id, Padding = new(10, 0), Height = 44 }; button.Classes.Add("nav");
             ToolTip.SetTip(button, plugin.NavigationLabel); button.Click += (_, _) => _vm.Navigate("plugin:" + plugin.Id, plugin.NavigationLabel); PluginNavigation.Children.Add(button);
         }
@@ -26,7 +26,7 @@ public sealed partial class MainWindow
     }
     private Control PluginPage(string page)
     {
-        var plugin = _vm?.Plugins.Installed.FirstOrDefault(p => p.Enabled && p.Type is "ui" or "widget" && "plugin:" + p.Id == page);
+        var plugin = _vm?.Plugins.Installed.FirstOrDefault(p => p.Enabled && p.Type is "ui" or "widget" or "lyrics" && "plugin:" + p.Id == page);
         if (plugin is null) return Ui.Card(L10n.T("Plugins.PluginIsDisabled"), Ui.Text(L10n.T("Plugins.EnableThisPluginInThePluginManagerFirst"), 13, true));
         try { return new PluginPageView(_vm!.Plugins, plugin, includeTitle: false); }
         catch (Exception e) { _vm!.ReportError(L10n.T("Plugins.UnableToOpenPluginPage"), e); return Ui.Card(L10n.T("Common.PageFailedToLoad"), Ui.Text(L10n.T("Plugins.DataIsUnchangedCheckThePluginSPageConfiguration"), 13, true)); }

@@ -1,6 +1,14 @@
 # NonetMusicPlayer 插件开发文档
 
-适用于 Nonet 桌面版及 CLI 0.4.0-beta.1，插件 SDK 3.0.0、清单 Contract v1、页面 Schema v1。本文只描述已实现的桌面及 CLI 接口。
+适用于 Nonet 桌面版及 CLI 0.4.0-beta.4，插件 SDK 3.2.0、清单 Contract v1、页面 Schema v1。本文只描述已实现的桌面及 CLI 接口。
+
+## 兼容与更新约定
+
+宿主发行版本与 Contract 版本独立。已经支持的 Contract v1、页面 Schema v1、旧字段默认值及 RPC 方法继续支持，不因播放器版本提高要求旧插件重新打包。新增功能优先新增可选能力；将来若引入新的协议版本，必须同时保留旧版本适配和冻结旧包回归。安全修复仍可拒绝本来就越权或不合法的包，不能以版本升级为由移除正常旧插件。
+
+更新现有插件保持 `id`，只递增数字 `version`（如 1.0.0 → 1.0.1）。Nonet 桌面版 0.4.0-beta.3 起，在插件中心导入同 ID 新包并确认即原地更新，不先卸载：保留配置；权限集合不变时保留启用状态及既有音频写入授权，权限变化时停用并撤销该授权，需用户重新启用/确认。更新先验证旧配置对新规范及页面的兼容性，停止旧实例再替换；失败恢复旧文件和配置，成功删除临时旧包，不保留两份已安装插件。相同/更低版本及改变类型或 Contract 的同 ID 包拒绝覆盖。CLI 当前的插件安装仍需先卸载旧版。
+
+歌词搜索部件在 0.4.0-beta.3 起支持直接编辑预览，编辑区没有 tooltip。关联（含音频嵌入）与 UTF-8 下载统一使用点击操作时编辑区的文本；自动导入匹配和歌词菜单匹配仍遵循插件配置。清单、RPC 和 SDK 无变化，旧的歌词插件也可使用改进后的部件。
 
 SDK 3.0.0 的程序集和 C# 命名空间由 LittleMusicPlayer.PluginSdk 改为 NonetMusicPlayer.PluginSdk，源码插件工具需更新引用后重新构建。声明式 `.impp` 的 Contract 和数据格式不变，原有 v1 插件包无需改后缀或重新打包。
 
@@ -12,24 +20,47 @@ SDK 3.0.0 的程序集和 C# 命名空间由 LittleMusicPlayer.PluginSdk 改为 
 
 插件包使用 **.impp**（Nonet Plugin），内容为 ZIP。仅接受 .impp 后缀，其他后缀在读取包内容前拒绝。根目录必须有 manifest.json；最多 1000 个条目、解压后 256 MB。重复 / 大小写冲突路径、绝对路径、盘符、穿越、符号链接会拒绝。
 
-独立工程 `NonetMusicPlayerPlugin` 包含最小 Hello World 插件、与宿主共用源码的 SDK、.NET 10 打包及验证工具、新手教程、本地 Git、README 和 Changelog。没有 samples，不要求存在播放器源码或安装外部 NuGet 包。在基础工程根目录：
+插件模板 `NonetMusicPlayerPlugin` 与播放器仓库分开；开发依赖播放器源码中的 API，而不是模板内复制的 SDK。此组织方式借鉴 [AstrBot 开发指南](https://docs.astrbot.app/dev/star/plugin-new.html)：分别取得主项目和插件源码，在真实宿主中调试。Nonet 是 C#/.NET 项目，不加载 Python，也不改变已发布的 JSON Contract。
 
-```powershell
-dotnet build NonetMusicPlayerPlugin.slnx -c Release
-dotnet run --project tools/NonetMusicPlayerPlugin.Packager -c Release -- pack
-dotnet run --project tools/NonetMusicPlayerPlugin.Packager -c Release -- validate publish/developer.hello-world.impp
+推荐目录（插件不会被主解决方案自动编译或发布）：
+
+```text
+NonetMusicPlayer/
+  src/NonetMusicPlayer.PluginSdk/       API/DTO/验证器唯一来源
+  tools/NonetMusicPlayer.PluginPackager/ 打包器唯一来源
+NonetMusicPlayerPlugin/                 独立 Hello World 模板
+MyNonetMusicPlayerPlugin/
+  my-plugin/
+    Directory.Build.props              NonetPlayerRoot / ProjectReference
+    plugin/manifest.json                身份、仓库、版本、能力
+    src/                               可选 C# 进程入口
+    tests/                             专用宿主集成测试
+    dist/                              只放最终 .impp
 ```
 
-在播放器源码工程内（脚本调用同级基础工程的打包器，并先检查 SDK 同步；可通过 `-Foundation` 指定其他基础工程路径）：
+先克隆并构建主项目，再复制独立模板，或在已有插件的 props 中指定：
 
-```powershell
-./scripts/build-ui-test-plugin.ps1
-./scripts/build-pet-test-plugin.ps1
-./scripts/build-sample-plugin.ps1 -Runtime win-x64
-./scripts/pack-plugin.ps1 -Source samples/SeaGlass.Theme -Output artifacts/plugins/seaglass.impp
+```xml
+<NonetPlayerRoot Condition="'$(NonetPlayerRoot)' == ''">../NonetMusicPlayer</NonetPlayerRoot>
 ```
 
-打包器默认保护已有输出，显式 --force 才替换；新包必须先通过与播放器相同的完整验证，失败时旧输出不变。只分发所需清单、页面、配置或运行时入口，不加入工程、bin/obj、源音乐或凭据。音源依赖通过重复 --include <相对文件> 显式加入。SDK_VERSION.json 记录快照版本和 SHA-256；维护者修改接口时同步基础工程，并验证生成包能实际导入和启用。
+C# 插件工程通过 `ProjectReference Include="$(NonetPlayerRoot)/src/NonetMusicPlayer.PluginSdk/NonetMusicPlayer.PluginSdk.csproj"` 使用宿主的 `PluginManifest`、`RpcRequest`、歌词 DTO 等 API。不同目录结构用 `-p:NonetPlayerRoot=<主项目绝对路径>` 覆盖。SDK 无 UI/音频依赖，所以进程插件不必引用整套 Avalonia；依赖主项目源码不代表把主应用打包到插件里。
+
+```text
+dotnet run --project <主项目>/tools/NonetMusicPlayer.PluginPackager -c Release -- pack --source ./plugin --output ./dist/author.my-plugin.impp
+dotnet run --project <主项目>/tools/NonetMusicPlayer.PluginPackager -c Release -- validate ./dist/author.my-plugin.impp
+dotnet run --project <主项目>/src/NonetMusicPlayer.Desktop -c Release
+```
+
+在真实宿主的插件中心导入、启用、配置并检查生命周期；更新保持 ID、递增版本、重新导入。打包器保护旧输出，显式 `--force` 才替换自己构建的包；参数 `--include` 指定进程运行时文件。只分发必需的清单、页面、配置、许可及可执行入口，不分发播放器、SDK、测试、源码 ZIP 或个人数据。声明式 UI 插件只读取 JSON 部件，不能执行任意 C#/XAML；需要独立 C# 代码的音源/歌词插件使用受信任进程及 JSON-RPC，而不是绕过权限。
+
+### 仓库与更新
+
+新插件在源码的 `manifest.json` 声明 `repositoryOwner`（GitHub 账户）和 `repositoryName`（与仓库名完全相同，推荐 `nonet_plugin_<短名>`）。仓库尚未创建也提前确定此名称；`id` 是稳定唯一身份，不由文件夹、文件名或仓库名推导；`version` 是包内数字版本，如 1.2.0。仓库附件命名可变化，不影响身份和版本判断。
+
+本地安装按两个属性请求 `https://api.github.com/repos/<owner>/<repositoryName>/releases/latest`；远程安装由宿主保存实际导入的仓库坐标，后续更新优先使用该来源。来源属于安装状态，插件包无法预设。稳定更新应发布正式 Release（非 draft/prerelease），附带一个跨平台 .impp，或带当前 RID 的平台包。没有仓库、Release 或 .impp 附件时不修改已安装插件。
+
+插件卡片“检查更新”读取 Release、下载候选包，以包内 ID/版本判断，不把 Release tag 当作插件版本。相同版本提示已安装，低版本禁止覆盖；高版本需用户确认，沿用同 ID 原子替换与权限检查。拖入或文件导入遵循同一规则；本地新包不会丢失原远程来源。没有仓库属性的旧 v1 包继续正常使用与本地更新，只是不能自动检查仓库；新打包器要求新开发插件声明仓库属性。不要将安装状态、配置、启用状态或写音频授权写入源码清单。
 
 ## 2. 清单
 
@@ -39,6 +70,8 @@ dotnet run --project tools/NonetMusicPlayerPlugin.Packager -c Release -- validat
   "name": "音乐猫",
   "navigationLabel": "音乐猫",
   "author": "作者",
+  "repositoryOwner": "YourGitHubAccount",
+  "repositoryName": "nonet_plugin_music_pet",
   "version": "1.0.0",
   "contractVersion": 1,
   "type": "ui",
@@ -223,7 +256,7 @@ params 字段均为字符串，configuration 也是 JSON 字符串。
 
 ## 7. 示例服务器配置
 
-samples/NonetMusicPlayer.SampleProvider.Desktop 是 .NET 10 控制台独立进程，可以改为 Rust、Go、Python 等语言，只需遵守协议。
+音源适配器是独立进程，可以使用 .NET 10、Rust、Go 等语言，只需遵守协议。它应在自己的项目中维护，不属于播放器解决方案。
 
 ```json
 {
@@ -337,4 +370,31 @@ UI 插件的 manifest 可声明 `menuContributions`（最多 8 项）。当前�
 
 保存必须完成所有行；写入受管歌词文件夹，覆盖现有关联前由用户确认，原始输入文件不修改。取消、页面卸载、禁用或卸载插件释放租约并暂停，不保存未完成内容，恢复原队列/模式。插件只能调用主机已提供的部件和动作；新增贡献位置或业务部件需通过后续 Contract 扩展，不能任意接管软件流程。
 
-可复制示例项目：`samples/NonetMusicPlayer.LyricsTimingPlugin`，含 README、Changelog、清单、页面和最小打包脚本。导入包输出在其 `dist/sample.lyrics-timing.impp`，不自动安装至用户数据。
+开发时间标注插件时，复制基础工程的 Hello World 清单和页面，声明上述权限、菜单贡献与 `lyrics-timing` 部件，再用共用打包器生成独立项目 `dist` 内的包。播放器仓库不分发具体工具插件，不自动安装至用户数据。
+
+## 14. 歌词来源插件（SDK 3.1 / 桌面 0.4.0-beta.2）
+
+`type: "lyrics"` 为受信任的独立进程扩展，不是声明式 UI 插件。必须声明 `network`、`process`、`lyrics-search` 权限；可选 `navigation`（贡献歌词菜单）和 `audio-tags`（请求宿主写入标签）。原生进程可拥有操作系统级能力，并非安全沙箱，只安装可信插件。CLI 当前不启用此需要桌面交互与音频源文件确认的类型。
+
+从基础工程的 `plugin` 模板创建清单与配置，加入各运行平台的可执行 `entryPoints`，页面使用一个 `lyrics-search` 原生部件。共用主项目的打包器；进程运行时文件通过 `--include` 显式加入。可声明 `lifecycle.disable`、`lifecycle.uninstall`、`lifecycle.shutdown`，通知最多等两秒再释放进程。
+
+标准输入输出采用音源插件同款单行 JSON-RPC 2.0；所有 params 值仍为字符串，内部对象用 JSON 字符串传入。协议 DTO 为 SDK 的 `LyricsQuery`、`LyricsCandidate`、`LyricsSearchResult`、`LyricsFetchResult`，宿主用 `LyricsPluginJson` 的源生成元数据序列化。仅传入标题、艺术家、专辑、时长，不向进程提供源音频路径。包根目录的 UTF-8 许可文本仍限 256 KiB，跨平台运行时通知也须遵守该限制。
+
+| 方法 | params | result |
+| --- | --- | --- |
+| `initialize` | contractVersion、hostVersion、configuration | `{ "contractVersion": 1 }` |
+| `lyrics.search` | `query`：序列化 LyricsQuery | `{ "candidates": [...], "warnings": [...] }` |
+| `lyrics.fetch` | `candidate`：候选 JSON；`format`：line / word | `{ "text": "...", "format": "lrc", "source": "kugou", "wordTimed": true, "warning": "" }` |
+| `lyrics.auto` | `query`：序列化 LyricsQuery | 同上；没有可靠匹配时 text 为空，不能把错误或无关文本当歌词 |
+
+歌词最大 2 MB，非空结果必须有可解析的时间行。逐字输出采用 Enhanced LRC `<mm:ss.mmm>` 或播放器支持的方括号内联时间戳；无逐字数据时只能回退真实逐行时间，不能伪造时间。请求总限时 50 秒，失败进程在下一次调用可重建；来源失败应当独立隔离。
+
+标准配置约定（所有字段也需开发者声明到 `plugin_config_schema.json`）：`autoFetch` 为导入缺失歌词的开关（默认 true），`embedLyrics` 默认 false。插件可自行增加来源优先级和格式配置。宿主在导入提交后异步调用，检查外部/内嵌歌词是否存在，结果回来后再次确认歌曲仍有效且用户尚未手动关联。
+
+`embedLyrics` 从关闭变开启时必须在宿主配置表单确认；无确认的终端配置调用拒绝该修改。授权不由包内容提供，安装器清除包内的 `audioTagWriteConsent`；关闭嵌入或卸载会撤销。宿主写标签前重新验证授权，停止插件或迁移数据会取消待提交写入。
+
+嵌入仅支持经 TagLib 校验可读回歌词的 MP3、FLAC、M4A/M4B、OGG/OPUS、APE、WMA。先完整备份源文件到数据备份目录 AudioTags，再在音频旁路副本写标签，读回一致才原子替换；文件只读、被独占或发生变化时不覆盖。不另外创建歌词文件，旧的受管歌词副本可删除以使用内嵌歌词；用户原始外部歌词从不删除。用户主动点击下载文件仍可另存一份歌词，不属于自动关联策略。
+
+菜单可以声明 `{ "location":"lyrics.more", "label":"用LDDC匹配歌词", "action":"match-lyrics" }`。仅歌词插件支持该动作，为当前曲目立即执行 `lyrics.auto` 并遵循配置关联，不导航离开歌词页；失败不改已有歌词。`open-page` 仍可打开手动搜索工具。
+
+歌词搜索的实现应在独立插件项目中维护，使用 Hello World 模板、SDK DTO 和共用打包器；源码、专用测试及发行包不放入播放器仓库。参考第三方实现时，须保留原许可证、上游版权和对应源码，不因歌词文本清理删除软件许可。

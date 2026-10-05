@@ -21,7 +21,7 @@ internal static class HostPluginChecks
         using var audio = new FakeAudio();
         using var vm = new MainViewModel(new MusicLibraryScanner(new AppStorage(folder)), audio);
         vm.Settings.ConfirmClose = false;
-        var package = Path.GetFullPath("artifacts/plugins/snake-game-test.impp");
+        var package = PluginTestFixtures.Snake(output);
         var manifest = vm.Plugins.Install(package);
         var window = new MainWindow { DataContext = vm }; window.Show(); Render(window);
         var navigation = window.FindControl<StackPanel>("PluginNavigation")!;

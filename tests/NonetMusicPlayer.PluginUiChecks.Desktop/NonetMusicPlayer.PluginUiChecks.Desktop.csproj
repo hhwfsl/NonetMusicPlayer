@@ -4,5 +4,6 @@
     <ProjectReference Include="../../src/NonetMusicPlayer.Desktop/NonetMusicPlayer.Desktop.csproj" />
     <PackageReference Include="Avalonia.Headless" Version="12.1.1" />
     <Compile Include="../NonetMusicPlayer.UiChecks.Desktop/PluginUiChecks.cs" Link="PluginUiChecks.cs" />
+    <Compile Include="../NonetMusicPlayer.UiChecks.Desktop/PluginTestFixtures.cs" Link="PluginTestFixtures.cs" />
   </ItemGroup>
 </Project>

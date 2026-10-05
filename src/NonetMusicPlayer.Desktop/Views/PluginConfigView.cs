@@ -31,7 +31,7 @@ public sealed class PluginConfigView : UserControl
         var header = Ui.Stack(heading, Ui.RawText(plugin.Name + " · " + plugin.Version, 14, true)); header.Margin = new(26, 22, 26, 16);
         // 表单结构只由插件开发者的 Schema 定义，用户只能填写值，不能增删或改名配置字段。
         var form = _schema.Count == 0 ? NoConfiguration() : Fields(_schema, _values, 0); form.Margin = new(26, 0, 26, 0);
-        var save = Ui.Button(L10n.T("Common.SaveAndClose"), Save, true); save.Name = "SavePluginConfiguration";
+        var save = Ui.AsyncButton(L10n.T("Common.SaveAndClose"), SaveAsync, true); save.Name = "SavePluginConfiguration";
         save.IsVisible = _schema.Count > 0;
         var dismiss = Ui.Button(L10n.T("Common.Close"), () => _close(false)); dismiss.Name = "ClosePluginConfiguration"; ToolTip.SetTip(dismiss, L10n.T(_schema.Count == 0 ? "Common.Close" : "Common.DiscardTheseChanges"));
         var actions = Ui.Actions(save, dismiss); actions.HorizontalAlignment = HorizontalAlignment.Right; actions.Margin = new(26, 16, 26, 22);
@@ -47,6 +47,16 @@ public sealed class PluginConfigView : UserControl
         PluginConfigSchema.Validate(_schema, _values);
         if (_vm.CurrentTrack?.ProviderId == _plugin.Id) _vm.StopPlaybackCommand.Execute(null);
         _vm.Plugins.Configure(_plugin, _values.ToJsonString()); _vm.StatusText = L10n.T("Plugins.PluginConfigurationSaved"); _close(true);
+    }
+    /// <summary>危险配置的确认由宿主展示，插件不能自行省略或伪造确认。</summary>
+    private async Task SaveAsync()
+    {
+        _owner.FocusManager?.Focus(null);
+        PluginConfigSchema.Validate(_schema, _values);
+        var json = _values.ToJsonString();
+        if (!_vm.Plugins.NeedsAudioTagConfirmation(_plugin, json)) { Save(); return; }
+        if (!await PlayerDialog.Confirm(_owner, L10n.T("LyricsSearch.Embed"), L10n.T("LyricsSearch.EmbedWarning"), L10n.T("Common.Confirm"))) return;
+        _vm.Plugins.Configure(_plugin, json, confirmAudioTagWrite: true); _close(true);
     }
     private StackPanel Fields(JsonObject fields, JsonObject values, int depth)
     {

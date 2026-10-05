@@ -226,7 +226,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
             if (_scanner.Warnings.Count > 0) ReportWarning(L10n.Format("Plugins.ImportedSongsFilesCouldNotBeReadCheckTheir", tracks.Count, _scanner.Warnings.Count));
             ViewChanged?.Invoke(this, EventArgs.Empty);
             if (autoplay && tracks.FirstOrDefault() is { } first) await PlayTrackAsync(first, tracks);
-            CompleteOperation("playlist.add"); return tracks;
+            CompleteOperation("playlist.add"); _ = CompleteImportedLyricsAsync(tracks); return tracks;
         }
         catch (OperationCanceledException) { StatusText = L10n.T("Common.ImportCancelledYourLibraryIsUnchanged"); return []; }
         catch (Exception e) { ReportError(L10n.T("Common.ImportFailed"), e); return []; }
@@ -534,7 +534,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     private static string FormatTime(double seconds) => TimeSpan.FromSeconds(double.IsFinite(seconds) ? Math.Max(0, seconds) : 0).ToString(seconds >= 3600 ? @"h\:mm\:ss" : @"m\:ss");
     public void Dispose()
     {
-        if (_disposed) return; _lyricsPlaybackLease?.Dispose(); UpdateListeningStatistics(); _disposed = true; Interlocked.Increment(ref _playRequest); _scanCancellation?.Cancel(); _timer.Stop(); Save();
+        if (_disposed) return; _lyricsPlaybackLease?.Dispose(); UpdateListeningStatistics(); _disposed = true; _lyricsSearchLifetime.Cancel(); Interlocked.Increment(ref _playRequest); _scanCancellation?.Cancel(); _timer.Stop(); Save();
         _audio.PlaybackStopped -= PlaybackEnded; _audio.PlaybackFailed -= PlaybackFailed;
         _audio.OutputDeviceChanged -= OutputChanged; _audio.OutputDevicesChanged -= DevicesChanged;
         try { _audio.Dispose(); Plugins.Dispose(); } catch (Exception error) { AppLog.Error("Shutdown", "关闭播放资源失败", error); }

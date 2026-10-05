@@ -262,7 +262,7 @@ internal static class ApplicationIntegrationChecks
         largeSlider["player"]!["items"]![0]!["height"] = 512;
         try { window.ApplyLayoutConfiguration(largeSlider.ToJsonString()); } catch (InvalidDataException) { rejected = true; }
         Require(rejected && File.ReadAllText(window.LayoutConfiguration.Path) == custom, "Progress hit area cannot hide necessary playback buttons");
-        var compact = File.ReadAllText(Path.GetFullPath("samples/layouts/compact.layout.json"));
+        var compact = File.ReadAllText(Path.GetFullPath("docs/layouts/compact.layout.json"));
         vm.Settings.PlayerHeight = 124; vm.ApplySettings(); Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
         window.ApplyLayoutConfiguration(compact); Capture(window, output, "player-compact-config");
         Require(progress.TranslatePoint(default, surface)!.Value.Y < play.TranslatePoint(default, surface)!.Value.Y && progress.Bounds.Width >= surface.Bounds.Width - 2, "Progress remains full-width at the player edge even with compact handwritten layout");
