@@ -25,3 +25,5 @@ SDK 3.1 新增 `lyrics` 独立进程插件、`lyrics-search` 页面部件与 `ly
 打包器自动保留根目录的 LICENSE / LICENSE.txt / COPYING / NOTICE / THIRD_PARTY_NOTICES.txt。声明式 UI 只允许这些固定名称、256 KiB 以内的 UTF-8 文本；不会运行它们，脚本及其他可执行资源依然拒绝。
 
 SDK 3.3 新增可选 `platform` 清单字段与 `PluginPlatformPolicy`。打包器使用 `--rid win-x64 / osx-x64 / linux-x64` 分别生成本机平台包；安装与更新只保留当前平台和共享资源。SDK 保留原四参数 `PluginPackageBuilder.Pack` API，新增含 `rid` 的五参数重载；旧多平台包和旧 Contract v1 继续兼容。
+
+独立进程入口可使用 Native AOT 发布，宿主仍通过相同 JSON-RPC 调用，不增加 Contract、SDK 版本或新的运行时权限。协议序列化采用显式源生成类型，构建和链接在目标系统进行；仅打包本机必要原生文件和许可。SDK 不承诺所有验证/开发工具方法均适用于 AOT，入口只引用所需 DTO/API，并处理裁剪分析警告。详细构建、兼容和验证要求见插件开发文档第 16 节。

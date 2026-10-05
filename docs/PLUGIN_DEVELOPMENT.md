@@ -416,3 +416,13 @@ dotnet run --project <宿主>/tools/NonetMusicPlayer.PluginPackager -c Release -
 宿主安装前检查 platform / entryPoints，安装错误平台的包不会停止或覆盖旧实例。旧多平台包不强制重打包：提取本机入口与共享资源，剔除已知其他 RID 目录/入口。升级到本版也会清理已安装旧包中的明确异平台文件，不删除配置或共享许可。
 
 更新高版本包保持原 ID，不先卸载；下载取消、校验失败或版本/身份不符不改变旧插件。首次远程导入仍需审查作者、权限，原地更新若增加权限会再次确认并停用新实例。后台检查没有仓库或没有当前平台附件时不显示 New。
+
+## 16. Native AOT 进程插件
+
+Native AOT 是进程入口的发布方式，不是新的插件类型或 Contract。宿主仍直接启动 entryPoints 的本机可执行文件，使用原有 UTF-8 单行 JSON-RPC；不要将原生入口作为 DLL 加载到主进程。旧 JIT、自包含进程包继续兼容，插件更新仍保持 id、递增数字 version，并保留原配置及权限规则。
+
+适合网络协议适配、歌词解析等依赖较少的进程。在 C# 入口工程中开启 PublishAot，并使用明确的 JsonSerializerContext / JsonTypeInfo 重载序列化协议类型；只设置 JsonSerializerOptions 并不足以消除 AOT 分析器警告。匿名响应、object 参数与动态类型发现应改为已注册 DTO 或显式 JSON 节点。关闭反射式 JSON 后测试初始化、正常结果、失败响应和所有声明的生命周期回调，不能通过压制裁剪警告掩盖问题。
+
+构建需要目标系统的原生工具链：Windows 的 Visual Studio C++ 桌面开发工作负载、Linux 的 clang/链接器/zlib 开发库、macOS 的 Xcode 命令行工具。Native AOT 不支持普通的跨操作系统编译，Windows/Linux/macOS 包应在各自环境构建；没有构建成功的平台不提供伪装或改名的包。详见 [Native AOT](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/) 和 [跨平台编译限制](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/cross-compile)。
+
+只将原生入口、所需原生依赖及许可加入对应 RID 的 impp；PDB、dbg、dSYM 等调试符号留在开发资产目录。运行时和第三方许可仍须保留。最终包必须用实际宿主版本验证；原生化不等于沙箱，也不免除音频写入授权和生命周期释放要求。Native AOT 仍包含托管堆、GC 和必要运行时，资源收益需用相同任务实测，不能仅凭可执行文件大小判断内存占用。
