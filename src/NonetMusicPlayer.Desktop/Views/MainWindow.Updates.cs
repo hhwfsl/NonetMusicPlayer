@@ -114,6 +114,6 @@ public sealed partial class MainWindow
         link.Content = Ui.RawText(ReleaseUpdateService.Repository, 12); link.Classes.Add("quiet"); link.HorizontalContentAlignment = HorizontalAlignment.Left;
         ToolTip.SetTip(link, ReleaseUpdateService.Repository);
         var repository = new Grid { ColumnDefinitions = new("24,*"), ColumnSpacing = 8 }; repository.Children.Add(github); Grid.SetColumn(link, 1); repository.Children.Add(link);
-        return Ui.Card(L10n.T("Update.About"), Ui.Row(L10n.T("Update.Version"), VersionNumber, Ui.AsyncButton(L10n.T("Update.Check"), () => CheckUpdatesAsync())), Ui.Row(L10n.T("Update.Repository"), "", repository, "Auto,*"));
+        return Ui.Card(L10n.T("Update.About"), Ui.Row(L10n.T("Update.Version"), VersionNumber, Ui.AsyncButton(L10n.T("Update.Check"), () => CheckUpdatesAsync())), Ui.Row(L10n.T("Update.Repository"), "GitHub", repository, "Auto,*"));
     }
 }

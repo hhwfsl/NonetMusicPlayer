@@ -2,7 +2,7 @@
 
 本项目由 AI 完成，尚未经过人工代码 review。测试仅在 Windows 环境进行；macOS 和 Linux 只生成了交叉构建产物，未进行对应系统的实机测试。当前为预发布版本，使用或继续开发前请自行审查代码并备份数据。
 
-软件名称：**Nonet**。当前桌面版与 CLI 源码版本：**0.4.0-beta.5**。公开仓库仅包含桌面端、独立 CLI、共享核心、插件 SDK、主项目打包器和必要测试；插件模板暂不提交，不包含移动端源码或构建产物。
+软件名称：**Nonet**。当前桌面版与 CLI 源码版本：**0.4.0-beta.6**。公开仓库仅包含桌面端、独立 CLI、共享核心、插件 SDK、主项目打包器和必要测试；插件模板暂不提交，不包含移动端源码或构建产物。
 
 ## 技术栈
 
@@ -15,7 +15,7 @@
 | 媒体标签 | TagLibSharp 2.3.0 |
 | 桌面持久化 | SQLite，Microsoft.Data.Sqlite 10.0.12 |
 | CLI 与共用 JSON | System.Text.Json，持久化模型使用 Source Generation |
-| 插件开发 SDK | NonetMusicPlayer.PluginSdk 3.3.0，Contract / 页面 Schema v1 |
+| 插件开发 SDK | NonetMusicPlayer.PluginSdk 3.4.0，Contract / 页面 Schema v1 |
 
 CLI 不引用 Avalonia，通过系统终端运行。插件 SDK 无图形、音频或外部 NuGet 依赖。实际依赖以各项目的 `.csproj` 为准；第三方许可见 [docs/licenses](docs/licenses)。
 
@@ -69,9 +69,9 @@ pwsh -File scripts/publish-cli.ps1 -CleanOnly
 桌面更新资产的文件名固定为：
 
 ```text
-NonetMusicPlayer.Desktop-0.4.0-beta.1-win-x64.zip
-NonetMusicPlayer.Desktop-0.4.0-beta.1-osx-x64.zip
-NonetMusicPlayer.Desktop-0.4.0-beta.1-linux-x64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.6-win-x64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.6-osx-x64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.6-linux-x64.zip
 ```
 
 macOS ZIP 从 `Contents/` 开始组织，解压到 `Nonet.app/` 内；Linux/macOS 的 ZIP 保存可执行权限。未进行代码签名或 macOS 公证。更新清单与校验规则见 [UPDATES.md](docs/UPDATES.md)。

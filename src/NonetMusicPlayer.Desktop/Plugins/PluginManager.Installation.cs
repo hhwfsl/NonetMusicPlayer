@@ -48,7 +48,7 @@ public sealed partial class PluginManager
                 using var config = JsonDocument.Parse(kept.Configuration);
                 var persisted = Scrub(config.RootElement).AsObject(); PluginConfigSchema.RemoveSensitiveFields(schema, persisted);
                 manifest.Configuration = persisted.ToJsonString();
-                if (manifest.Type is "ui" or "lyrics")
+                if (manifest.Type is "ui" or "lyrics" or "agent")
                 {
                     var node = JsonNode.Parse(File.ReadAllText(Path.Combine(stage, manifest.PageEntry)))!;
                     using var resolved = new MemoryStream(Encoding.UTF8.GetBytes(PluginConfigSchema.Substitute(node, values).ToJsonString()));
@@ -89,7 +89,7 @@ public sealed partial class PluginManager
             var values = PluginConfigSchema.Resolve(schema, effective);
             PluginConfigSchema.Validate(schema, values);
             // 先用旧配置验证新页面，不能先覆盖文件，再发现用户设置已不兼容。
-            if (manifest.Type is "ui" or "lyrics")
+            if (manifest.Type is "ui" or "lyrics" or "agent")
             {
                 var node = JsonNode.Parse(File.ReadAllText(Path.Combine(stage, manifest.PageEntry)))!;
                 using var resolved = new MemoryStream(Encoding.UTF8.GetBytes(PluginConfigSchema.Substitute(node, values).ToJsonString()));

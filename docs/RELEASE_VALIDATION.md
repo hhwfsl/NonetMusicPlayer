@@ -1,3 +1,23 @@
+# Nonet 0.4.0-beta.6 Agent 与主题色验证
+
+日期：2026-10-06。桌面交互在 Windows / Avalonia Headless 验证；macOS/Linux 桌面只构建发行包，不代表对应系统实际交互通过。
+
+- 歌词页原文/译文高亮在 Light、Dark 下等于 Accent 原始 RGB，底色不变；关于仓库显示 GitHub。
+- Agent 页面实际宿主命令更新 VM，并进入桌面终端结果流；禁用后不能执行动作；禁止安装新插件。
+- 工具白名单、选项结束符、防伪确认、JSON 参数与现有 ID 校验；路径/凭据结果剔除、源生成 DTO、有界消息。
+- 冻结旧 Contract v1 主题/卡片/音源/UI 包、同 ID 更新、失败回滚、配置保存与权限变更回归通过。
+- 共享命令 / TUI、旧平台包裁剪、仓库来源与数字版本规则通过；模板直接引用 SDK 及文档同步通过。
+- 私人 Agent 的代码及生成包不在主项目；模拟接口验收与原生包验收在其独立项目执行，不用真实模型或用户 API Key。
+- 三个平台 ZIP 通过逐文件 SHA-256、清单及 POSIX 可执行权限校验；原 Windows 361 个 Data/引导文件校验一致，旧程序可从 artifacts 恢复。
+- 真实发行 ZIP 启动、发布目录更新助手重启、安装器隔离安装/卸载通过；安装器不包含 Data，卸载保留测试数据。不操作用户源音频。
+
+复现：
+
+    dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/agent-checks --agent
+    dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/compatibility --compatibility
+    dotnet run --project tests/NonetMusicPlayer.CoreChecks -c Release -- artifacts/core-checks
+    pwsh -File scripts/verify-clean-desktop.ps1 -Version 0.4.0-beta.6
+
 # Nonet 0.4.0-beta.5 更新与平台插件验证
 
 日期：2026-10-05。仅 Windows 环境执行；macOS/Linux 跨平台编译不代表实机交互通过。

@@ -16,7 +16,8 @@ $taskPackage = Join-Path $taskRepository 'publish/desktop/windows'
 if (-not (Test-Path -LiteralPath (Join-Path $taskPackage 'Nonet.exe'))) { throw 'Publish the Windows application before building its installer.' }
 $taskOutput = Join-Path $taskRepository 'publish/desktop/windows_installer'
 New-Item -ItemType Directory -Path $taskOutput -Force | Out-Null
-& $CompilerPath "/DAppVersion=$Version" "/DRepositoryRoot=$taskRepository" "/DPackageDirectory=$taskPackage" (Join-Path $PSScriptRoot 'windows-installer/NonetMusicPlayer.iss')
+$taskFileVersion = ([xml](Get-Content -Raw -LiteralPath (Join-Path $taskRepository 'src/NonetMusicPlayer.Desktop/NonetMusicPlayer.Desktop.csproj'))).Project.PropertyGroup.FileVersion
+& $CompilerPath "/DAppVersion=$Version" "/DAppFileVersion=$taskFileVersion" "/DRepositoryRoot=$taskRepository" "/DPackageDirectory=$taskPackage" (Join-Path $PSScriptRoot 'windows-installer/NonetMusicPlayer.iss')
 if ($LASTEXITCODE -ne 0) { throw 'Windows installer build failed.' }
 $taskCurrentName = "NonetMusicPlayer-$Version-windows-x64-setup.exe"
 $taskArchive = [IO.Path]::GetFullPath((Join-Path $taskRepository ('artifacts/releases/installers/' + (Get-Date -Format 'yyyyMMdd-HHmmss'))))

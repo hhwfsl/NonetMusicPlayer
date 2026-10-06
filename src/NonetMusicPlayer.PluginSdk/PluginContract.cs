@@ -37,17 +37,21 @@ public sealed class PluginManifest
         if (Platform.Length > 0 && !PluginPlatformPolicy.IsRid(Platform)) throw new InvalidDataException("Invalid plugin platform.");
         if (RepositoryOwner.Length != 0 || RepositoryName.Length != 0) PluginRepository.Validate(RepositoryOwner, RepositoryName);
         if (OriginRepository.Length != 0) PluginRepository.Parse(OriginRepository);
-        if (LifecycleMethods.Count > 3 || LifecycleMethods.Any(m => m is not ("lifecycle.disable" or "lifecycle.uninstall" or "lifecycle.shutdown")) || LifecycleMethods.Count > 0 && Type is not ("provider" or "lyrics")) throw new InvalidDataException("只有进程插件可声明受支持的进程生命周期方法。");
+        if (LifecycleMethods.Count > 3 || LifecycleMethods.Any(m => m is not ("lifecycle.disable" or "lifecycle.uninstall" or "lifecycle.shutdown")) || LifecycleMethods.Count > 0 && Type is not ("provider" or "lyrics" or "agent")) throw new InvalidDataException("只有进程插件可声明受支持的进程生命周期方法。");
         if (!System.Text.RegularExpressions.Regex.IsMatch(Id ?? "", "^[a-z][a-z0-9.-]{2,80}$") || string.IsNullOrWhiteSpace(Name) || Name.Length > 100)
             throw new InvalidDataException("插件标识或名称不合法。");
         if ((Description?.Length ?? 0) > 2000 || (Author?.Length ?? 0) > 100 || Permissions.Count > 16 || Permissions.Any(p => string.IsNullOrWhiteSpace(p) || p.Length > 32)) throw new InvalidDataException("插件描述或权限清单过长。");
-        if (ContractVersion != 1 || Type is not ("provider" or "theme" or "widget" or "ui" or "lyrics")) throw new InvalidDataException("不支持此插件类型或 Contract 版本。");
+        if (ContractVersion != 1 || Type is not ("provider" or "theme" or "widget" or "ui" or "lyrics" or "agent")) throw new InvalidDataException("不支持此插件类型或 Contract 版本。");
         if (!System.Version.TryParse(Version, out _)) throw new InvalidDataException("插件版本需要形如 1.0.0。");
         if (Type == "provider" && (!Permissions.Contains("network") || !Permissions.Contains("process"))) throw new InvalidDataException("音源插件必须声明 network 与 process 权限。");
         if (Type == "lyrics" && (!Permissions.Contains("network") || !Permissions.Contains("process") || !Permissions.Contains("lyrics-search")
             || Permissions.Any(p => p is not ("network" or "process" or "lyrics-search" or "navigation" or "audio-tags")) || EntryPoints.Count == 0 || Tokens.Count != 0 || Widgets.Count != 0))
             throw new InvalidDataException("歌词插件需声明 network、process、lyrics-search；仅可附加 navigation 与 audio-tags 权限。");
-        if (Type == "lyrics")
+        // Agent 为可选进程能力，保持原有 v1 清单及旧类型的校验行为。
+        if (Type == "agent" && (!Permissions.Contains("network") || !Permissions.Contains("process") || !Permissions.Contains("agent-control")
+            || Permissions.Any(p => p is not ("network" or "process" or "agent-control" or "navigation")) || EntryPoints.Count == 0 || Tokens.Count != 0 || Widgets.Count != 0))
+            throw new InvalidDataException("Agent 插件需声明 network、process、agent-control，只允许附加 navigation。");
+        if (Type is "lyrics" or "agent")
         {
             NavigationLabel = string.IsNullOrWhiteSpace(NavigationLabel) ? Name : NavigationLabel.Trim();
             if (NavigationLabel.Length > 60 || NavigationLabel.Any(char.IsControl)) throw new InvalidDataException("插件侧栏标签不合法。");

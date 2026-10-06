@@ -76,7 +76,7 @@ public sealed class HeadlessPluginHost : IDisposable
     public void SetEnabled(PluginManifest plugin, bool enabled)
     {
         plugin.Validate(); DirectoryFor(plugin);
-        if (enabled && plugin.Type is "ui" or "widget" or "theme" or "lyrics") throw new PlatformNotSupportedException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PluginUiUnsupported"));
+        if (enabled && plugin.Type is "ui" or "widget" or "theme" or "lyrics" or "agent") throw new PlatformNotSupportedException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PluginUiUnsupported"));
         if (!enabled && _clients.Remove(plugin.Id, out var client)) { client.NotifyLifecycle(plugin, "lifecycle.disable"); client.Dispose(); }
         var previous = plugin.Enabled; plugin.Enabled = enabled;
         try { Save(); } catch { plugin.Enabled = previous; throw; }

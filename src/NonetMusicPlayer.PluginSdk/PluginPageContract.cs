@@ -45,6 +45,11 @@ public static class PluginPageContract
             else if (type == "text") Fields(item, "type", "title", "text");
             else if (type == "actions") { Fields(item, "type", "title", "text", "actions"); actions = Actions(item, granted); }
             else if (type == "listening-summary") { Fields(item, "type", "title", "text"); Require(granted, "statistics"); }
+            else if (type == "agent-chat")
+            {
+                Fields(item, "type", "title", "text"); Require(granted, "agent-control");
+                if (++editors > 1) throw new InvalidDataException("每个插件页面最多一个交互工具。");
+            }
             else if (type == "lyrics-search")
             {
                 Fields(item, "type", "title", "text"); Require(granted, "lyrics-search");

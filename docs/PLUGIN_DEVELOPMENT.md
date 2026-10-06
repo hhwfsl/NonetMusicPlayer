@@ -1,6 +1,6 @@
 # NonetMusicPlayer 插件开发文档
 
-适用于 Nonet 桌面版及 CLI 0.4.0-beta.5，插件 SDK 3.3.0、清单 Contract v1、页面 Schema v1。本文只描述已实现的桌面及 CLI 接口。
+适用于 Nonet 桌面版及 CLI 0.4.0-beta.6，插件 SDK 3.4.0、清单 Contract v1、页面 Schema v1。本文只描述已实现的桌面及 CLI 接口。
 
 ## 兼容与更新约定
 
@@ -426,3 +426,19 @@ Native AOT 是进程入口的发布方式，不是新的插件类型或 Contract
 构建需要目标系统的原生工具链：Windows 的 Visual Studio C++ 桌面开发工作负载、Linux 的 clang/链接器/zlib 开发库、macOS 的 Xcode 命令行工具。Native AOT 不支持普通的跨操作系统编译，Windows/Linux/macOS 包应在各自环境构建；没有构建成功的平台不提供伪装或改名的包。详见 [Native AOT](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/) 和 [跨平台编译限制](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/cross-compile)。
 
 只将原生入口、所需原生依赖及许可加入对应 RID 的 impp；PDB、dbg、dSYM 等调试符号留在开发资产目录。运行时和第三方许可仍须保留。最终包必须用实际宿主版本验证；原生化不等于沙箱，也不免除音频写入授权和生命周期释放要求。Native AOT 仍包含托管堆、GC 和必要运行时，资源收益需用相同任务实测，不能仅凭可执行文件大小判断内存占用。
+
+## 15. 可选 Agent 能力（SDK 3.4）
+
+桌面宿主 0.4.0-beta.6 新增 type=agent，稳定 Contract 和页面 Schema 仍为 v1。已有插件类型/字段/RPC 保持兼容；只有使用本可选能力的新插件需要新宿主。CLI 拒绝启用需要图形聊天页的 Agent，不改变旧音源插件行为。
+
+清单需 network、process、agent-control，可附加 navigation；提供 pageEntry 和按 RID 的 entryPoints。页面 widgets 中声明 agent-chat，宿主绘制聊天框。生命周期沿用 lifecycle.disable/uninstall/shutdown，最多两秒。进程不是系统沙箱，只安装可信插件。
+
+initialize 返回 contractVersion=1。agent.step 的 params.turn 是源生成 AgentTurn JSON 字符串，包含 messages 和 tools；结果是 AgentReply，含 text 和 calls。每个 AgentToolCall 为 id、operation 和字符串数组 arguments。DTO 与校验位于 AgentPluginContract.cs，开发进程应直接引用主项目 SDK，禁止复制协议。
+
+模型执行不进入进程。进程只提出调用，宿主 AgentCommandPolicy 检查白名单、参数、引用 ID，再经共享命令路由执行。删除、移除、设置修改、插件启停和窗口关闭须用户确认；模型参数不能传入确认选项。任意文件操作、插件安装/配置、系统 Shell、数据恢复等不提供。拒绝的操作在本轮不重复确认；停用/卸载/离页后取消请求并禁止后续动作。
+
+首次发送前显示配置接口及发送确认。查询结果剔除路径、目录、凭据字段，最多 100 项；回复有界，不持久化聊天。apiKey 用 sensitive/password 配置字段，持久化剔除，仅当前会话可用。默认允许 HTTPS 或本机 HTTP，不跟随重定向，不关闭证书校验。
+
+每回合最多八轮，每回复最多四个工具；消息总长度和响应长度由 SDK/宿主/进程分别限制。模型误判或用户取消不会撤销已完成业务动作。插件应明确说明元数据发送范围、模型费用、平台运行时方式与最低宿主能力，不把提示词当作权限边界。
+
+Native AOT 使用源生成 AgentPluginJson。应在目标系统构建 AOT；无原生构建环境时可以单独发布明确标记的 self-contained 包，不能称其为 AOT。平台包继续使用一个 RID 一个 impp。

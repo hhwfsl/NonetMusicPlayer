@@ -24,6 +24,11 @@ public sealed class PluginPageView : UserControl, IDisposable, IPluginKeyboardSc
         foreach (var widget in page.Widgets)
         {
             if (widget.Type == "text") panel.Children.Add(Ui.Card(widget.Title, Ui.Text(widget.Text, 13, true)));
+            else if (widget.Type == "agent-chat")
+            {
+                var chat = new AgentChatControl(manager, manifest); _resources.Add(chat);
+                panel.Children.Add(Ui.Card(widget.Title, chat));
+            }
             else if (widget.Type == "lyrics-search")
             {
                 var search = new LyricsSearchControl(manager, manifest); _resources.Add(search);

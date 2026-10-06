@@ -35,7 +35,7 @@ public static class PluginPackageInspector
             using var reader = new StreamReader(notice.Open(), new System.Text.UTF8Encoding(false, true), detectEncodingFromByteOrderMarks: false);
             if (reader.ReadToEnd().Contains('\0')) throw new InvalidDataException("插件许可文件必须是文本。");
         }
-        if (manifest.Type is "ui" or "lyrics")
+        if (manifest.Type is "ui" or "lyrics" or "agent")
         {
             var page = zip.GetEntry(manifest.PageEntry) ?? throw new InvalidDataException("UI 页面入口未包含在安装包中。");
             if (manifest.Type == "ui" && zip.Entries.Where(e => !e.FullName.EndsWith('/')).Any(e => e.FullName != "manifest.json" && e.FullName != manifest.PageEntry && e != schemaEntry && !IsLicenseFile(e.FullName)))

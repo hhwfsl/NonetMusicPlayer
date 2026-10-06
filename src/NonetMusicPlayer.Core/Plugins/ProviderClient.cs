@@ -30,7 +30,7 @@ public sealed class ProviderClient : IDisposable
     public async Task<JsonElement> CallAsync(string method, Dictionary<string, string>? parameters = null, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken); timeout.CancelAfter(TimeSpan.FromSeconds(method.StartsWith("lyrics.", StringComparison.Ordinal) ? 50 : 20));
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken); timeout.CancelAfter(TimeSpan.FromSeconds(method.StartsWith("agent.", StringComparison.Ordinal) ? 150 : method.StartsWith("lyrics.", StringComparison.Ordinal) ? 50 : 20));
         await _rpcGate.WaitAsync(timeout.Token);
         try
         {

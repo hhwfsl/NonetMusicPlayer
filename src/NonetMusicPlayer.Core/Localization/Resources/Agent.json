@@ -1,0 +1,87 @@
+{
+  "Agent.InputHint": {
+    "zh-CN": "输入消息，Enter 发送，Shift+Enter 换行",
+    "en-US": "Type a message. Enter to send; Shift+Enter for a new line.",
+    "ja-JP": "入力。Enter で送信、Shift+Enter で改行。"
+  },
+  "Agent.Privacy": {
+    "zh-CN": "消息及所查询的音乐元数据会发送到配置的模型接口；对话不写入磁盘。",
+    "en-US": "Messages and queried music metadata are sent to your configured model endpoint. Chats are not saved to disk.",
+    "ja-JP": "メッセージと照会した音楽情報は設定したモデルに送信されます。会話は保存しません。"
+  },
+  "Agent.Send": {
+    "zh-CN": "发送",
+    "en-US": "Send",
+    "ja-JP": "送信"
+  },
+  "Agent.Clear": {
+    "zh-CN": "清空对话",
+    "en-US": "Clear chat",
+    "ja-JP": "会話をクリア"
+  },
+  "Agent.ConfigureFirst": {
+    "zh-CN": "请先在插件配置中填写接口地址和模型名称。",
+    "en-US": "Set the base URL and model in plugin configuration first.",
+    "ja-JP": "先にプラグイン設定で URL とモデルを指定してください。"
+  },
+  "Agent.You": {
+    "zh-CN": "你",
+    "en-US": "You",
+    "ja-JP": "あなた"
+  },
+  "Agent.Thinking": {
+    "zh-CN": "正在请求模型…",
+    "en-US": "Waiting for model…",
+    "ja-JP": "モデルに問い合わせ中…"
+  },
+  "Agent.Limit": {
+    "zh-CN": "已达到本轮工具调用上限，请继续输入。",
+    "en-US": "Tool-round limit reached. Send another message to continue.",
+    "ja-JP": "ツール呼び出し上限に達しました。続けるには再度入力してください。"
+  },
+  "Agent.Cancelled": {
+    "zh-CN": "已取消；已完成的操作不会自动撤销。",
+    "en-US": "Cancelled. Completed actions are not undone.",
+    "ja-JP": "キャンセルしました。完了した操作は元に戻りません。"
+  },
+  "Agent.Failed": {
+    "zh-CN": "模型请求失败，请检查接口、模型、API Key 或网络连接。",
+    "en-US": "Model request failed. Check the endpoint, model, API key and connection.",
+    "ja-JP": "モデルへの要求が失敗しました。URL・モデル・API キー・接続を確認してください。"
+  },
+  "Agent.Confirm": {
+    "zh-CN": "确认 Agent 操作",
+    "en-US": "Confirm agent action",
+    "ja-JP": "Agent の操作を確認"
+  },
+  "Agent.Tool": {
+    "zh-CN": "操作",
+    "en-US": "Action",
+    "ja-JP": "操作"
+  },
+  "Agent.Done": {
+    "zh-CN": "已完成",
+    "en-US": "Completed",
+    "ja-JP": "完了"
+  },
+  "Agent.ToolFailed": {
+    "zh-CN": "未完成",
+    "en-US": "Not completed",
+    "ja-JP": "未完了"
+  },
+  "Agent.ToolRejected": {
+    "zh-CN": "已拒绝越界或无效的操作。",
+    "en-US": "Rejected an invalid or out-of-scope action.",
+    "ja-JP": "範囲外または無効な操作を拒否しました。"
+  },
+  "Agent.NetworkConfirm": {
+    "zh-CN": "确认发送到模型接口",
+    "en-US": "Confirm sending to model endpoint",
+    "ja-JP": "モデルへの送信を確認"
+  },
+  "Agent.PluginType": {
+    "zh-CN": "智能助理",
+    "en-US": "Agent",
+    "ja-JP": "Agent"
+  }
+}

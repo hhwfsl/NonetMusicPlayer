@@ -86,7 +86,7 @@ public sealed class LyricsView : UserControl, IDisposable
                 return selected.Template().OfType<ContentPresenter>();
             }) { Setters = { new Setter(BackgroundProperty, Brushes.Transparent), new Setter(Border.BorderBrushProperty, Brushes.Transparent), new Setter(Border.BorderThicknessProperty, new Thickness(0)) } });
         _list.Styles.Add(new Style(selector => selector.OfType<ListBoxItem>().Class(":selected").Descendant().OfType<TextBlock>().Class("lyric-original"))
-        { Setters = { new Setter(TextBlock.ForegroundProperty, Ui.Brush("AccentTextBrush")), new Setter(TextBlock.FontWeightProperty, FontWeight.SemiBold) } });
+        { Setters = { new Setter(TextBlock.ForegroundProperty, Ui.Brush("AccentBrush")), new Setter(TextBlock.FontWeightProperty, FontWeight.SemiBold) } });
         _smoothScroll.Tick += (_, _) => AnimateScroll();
         _wordFrames.Tick += (_, _) => RefreshWordColors(); _wordFrames.Start();
         _list.AddHandler(PointerWheelChangedEvent, (_, e) => { if (e.Delta.Y != 0) MovePreview(e.Delta.Y > 0 ? -1 : 1); e.Handled = true; }, RoutingStrategies.Tunnel, true);
@@ -126,14 +126,14 @@ public sealed class LyricsView : UserControl, IDisposable
         foreach (var text in _list.GetVisualDescendants().OfType<KaraokeLine>())
             if (text.Tag is ValueTuple<LyricLine, bool> tag)
             {
-                text.TextColor = (Ui.Brush("AccentTextBrush") as ISolidColorBrush)?.Color ?? Colors.White;
+                text.TextColor = (Ui.Brush("AccentBrush") as ISolidColorBrush)?.Color ?? Colors.White;
                 text.PendingColor = (Ui.Brush(tag.Item2 ? "TextMutedBrush" : "TextPrimaryBrush") as ISolidColorBrush)?.Color;
             }
         MeasureLines(true); ResizeLayout(); RefreshWordColors();
     }
     private Control LyricContent(LyricLine? line)
     {
-        var original = new KaraokeLine { Tag = (line, false), TextSize = 23, TextColor = (Ui.Brush("AccentTextBrush") as ISolidColorBrush)?.Color ?? Colors.White, PendingColor = (Ui.Brush("TextPrimaryBrush") as ISolidColorBrush)?.Color };
+        var original = new KaraokeLine { Tag = (line, false), TextSize = 23, TextColor = (Ui.Brush("AccentBrush") as ISolidColorBrush)?.Color ?? Colors.White, PendingColor = (Ui.Brush("TextPrimaryBrush") as ISolidColorBrush)?.Color };
         original.UpdateTimed(line?.Text ?? "", line?.Words ?? [], _vm.PlaybackPosition, false);
         original.Classes.Add("lyric-original");
         var translation = new KaraokeLine { Tag = (line, true), TextSize = 17, TextColor = original.TextColor, PendingColor = (Ui.Brush("TextMutedBrush") as ISolidColorBrush)?.Color };

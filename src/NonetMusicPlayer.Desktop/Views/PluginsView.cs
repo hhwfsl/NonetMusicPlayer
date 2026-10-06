@@ -154,6 +154,6 @@ public sealed class PluginsView : UserControl, IDisposable
     private void UpdatesChanged(object? sender, EventArgs e) { foreach (var (id, badge) in _badges) badge.IsVisible = _owner.PluginUpdate(id) is not null; }
     public void Dispose() { _owner.PluginUpdatesChanged -= UpdatesChanged; if (_disposed) return; _disposed = true; _downloadCancellation.Cancel(); _downloadCancellation.Dispose(); }
     private static VectorIcon Icon(IconKind kind) => new() { Kind = kind, Width = 18, Height = 18, Brush = Ui.Brush("TextPrimaryBrush") };
-    private static string TypeName(string type) => L10n.T(type switch { "provider" => L10n.T("Common.Provider"), "theme" => L10n.T("Settings.Theme"), "widget" => L10n.T("Common.Cards"), "lyrics" => L10n.T("LyricsSearch.PluginType"), _ => L10n.T("Common.Page") });
+    private static string TypeName(string type) => L10n.T(type switch { "provider" => L10n.T("Common.Provider"), "theme" => L10n.T("Settings.Theme"), "widget" => L10n.T("Common.Cards"), "lyrics" => L10n.T("LyricsSearch.PluginType"), "agent" => L10n.T("Agent.PluginType"), _ => L10n.T("Common.Page") });
     private static string PermissionName(string name) => L10n.T(name switch { "player-control" => L10n.T("Playback.PlaybackControl"), "navigation" => L10n.T("Common.NavigationAndSearch"), "statistics" => L10n.T("Statistics.ListeningStatistics"), "desktop-widget" => L10n.T("Common.DesktopWidget"), "network" => L10n.T("Common.Network"), "process" => L10n.T("Common.NativeProcess"), "filesystem" => L10n.T("Common.FileSystem"), _ => name });
 }
