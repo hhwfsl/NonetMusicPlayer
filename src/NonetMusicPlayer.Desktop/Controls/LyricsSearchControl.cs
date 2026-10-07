@@ -17,7 +17,11 @@ public sealed class LyricsSearchControl : UserControl, IDisposable
     private readonly PluginManager _manager;
     private readonly PluginManifest _plugin;
     private readonly CancellationTokenSource _lifetime = new();
-    private readonly ComboBox _songs, _format;
+    private readonly ComboBox _songs, _format, _source;
+    private readonly Button _previousPage, _nextPage;
+    private readonly TextBlock _pageLabel;
+    private int _page = 1;
+    private bool _hasMore;
     private readonly TextBox _query, _preview;
     private readonly TextBlock _status;
     private readonly ListBox _results;
@@ -34,6 +38,10 @@ public sealed class LyricsSearchControl : UserControl, IDisposable
         _songs.ItemTemplate = new FuncDataTemplate<TrackItem>((track, _) => Ui.RawText(track is null ? "" : track.Title + " — " + track.Artist, 14));
         _query = new TextBox { Name = "LyricsSearchQuery", PlaceholderText = L10n.T("LyricsSearch.SongName"), MaxLength = 500, MinHeight = 40 };
         _format = new ComboBox { ItemsSource = new[] { L10n.T("LyricsSearch.Line"), L10n.T("LyricsSearch.Word") }, SelectedIndex = manager.ConfigurationValues(plugin)["lyricsFormat"]?.GetValue<string>() == "word" ? 1 : 0, MinHeight = 40, HorizontalAlignment = HorizontalAlignment.Stretch };
+        _source = new ComboBox { ItemsSource = new[] { "kugou", "netease", "qq" }, SelectedItem = manager.ConfigurationValues(plugin)["preferredSource"]?.GetValue<string>() ?? "kugou", MinHeight = 40 };
+        _previousPage = Action("LyricsSearch.PreviousPage", () => SearchPageAsync(Math.Max(1, _page - 1)));
+        _nextPage = Action("LyricsSearch.NextPage", () => SearchPageAsync(_page + 1));
+        _pageLabel = Ui.RawText("1", 13);
         _status = Ui.RawText(L10n.T("LyricsSearch.Instructions"), 13, true); _status.TextWrapping = TextWrapping.Wrap;
         _preview = new TextBox { Name = "LyricsSearchPreview", IsVisible = false, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 240, FontSize = 14, MaxLength = 2_000_000 };
         // 歌词编辑区不复制全文到悬浮提示；局部值覆盖应用的自动 tooltip 样式。
@@ -50,8 +58,8 @@ public sealed class LyricsSearchControl : UserControl, IDisposable
         _search = Action("Common.Search", SearchAsync); _load = Action("LyricsSearch.Preview", LoadAsync);
         _associate = Action(manager.EmbedsLyrics(plugin) ? "LyricsSearch.Embed" : "LyricsSearch.Associate", AssociateAsync);
         _download = Action("LyricsSearch.Download", DownloadAsync);
-        var searchRow = new Grid { ColumnDefinitions = new("*,160,Auto"), ColumnSpacing = 8 }; searchRow.Children.Add(_query); Grid.SetColumn(_format, 1); searchRow.Children.Add(_format); Grid.SetColumn(_search, 2); searchRow.Children.Add(_search);
-        Content = Ui.Stack(Ui.Text("LyricsSearch.ChooseSong", 13, true), _songs, searchRow, _status, _results, Ui.Actions(_load, _associate, _download), _preview);
+        var searchRow = new Grid { ColumnDefinitions = new("*,120,150,Auto"), ColumnSpacing = 8 }; searchRow.Children.Add(_query); Grid.SetColumn(_source, 1); searchRow.Children.Add(_source); Grid.SetColumn(_format, 2); searchRow.Children.Add(_format); Grid.SetColumn(_search, 3); searchRow.Children.Add(_search);
+        Content = Ui.Stack(Ui.Text("LyricsSearch.ChooseSong", 13, true), _songs, searchRow, _status, _results, Ui.Actions(_previousPage, _pageLabel, _nextPage), Ui.Actions(_load, _associate, _download), _preview);
         AttachedToVisualTree += (_, _) =>
         {
             var tracks = Vm.State.Tracks.Where(t => t.ProviderId is null).ToList(); if (Vm.CurrentTrack is { ProviderId: null } current && tracks.All(t => t.Id != current.Id)) tracks.Insert(0, current);
@@ -70,12 +78,15 @@ public sealed class LyricsSearchControl : UserControl, IDisposable
             finally { _busy = false; if (!_disposed) Refresh(); }
         }; return button;
     }
-    private async Task SearchAsync()
+    private Task SearchAsync() => SearchPageAsync(1);
+    private async Task SearchPageAsync(int page)
     {
         var title = _query.Text?.Trim() ?? ""; if (title.Length == 0) return;
         _lyrics = null; _preview.Text = ""; _status.Text = L10n.T("LyricsSearch.Searching");
         var query = _track is not null && title == _track.Title ? MainViewModel.LyricsQueryFor(_track) : new LyricsQuery(title);
+        query = query with { Manual = true, Keyword = title, Page = page, Source = _source.SelectedItem as string ?? "kugou" };
         var result = await _manager.SearchLyricsAsync(_plugin, query, _lifetime.Token); if (_disposed) return;
+        _page = page; _hasMore = result.HasMore; _pageLabel.Text = page.ToString(L10n.Culture);
         _results.ItemsSource = result.Candidates; _results.IsVisible = result.Candidates.Count > 0; _preview.IsVisible = false; _status.Text = result.Candidates.Count == 0 ? L10n.T("LyricsSearch.NoMatch") : L10n.Format("LyricsSearch.Results", result.Candidates.Count);
         if (result.Warnings.Count > 0) _status.Text += " · " + L10n.T("LyricsSearch.PartialSources") + " " + string.Join(", ", result.Warnings.Select(w => w.Split(':')[0]));
     }
@@ -116,7 +127,8 @@ public sealed class LyricsSearchControl : UserControl, IDisposable
         _search.IsEnabled = !_busy; _load.IsEnabled = !_busy && _results.SelectedItem is LyricsCandidate;
         var hasText = _lyrics is not null && !string.IsNullOrWhiteSpace(_preview.Text);
         _associate.IsEnabled = !_busy && hasText && _track is not null; _download.IsEnabled = !_busy && hasText;
-        _songs.IsEnabled = _format.IsEnabled = _query.IsEnabled = !_busy;
+        _songs.IsEnabled = _format.IsEnabled = _source.IsEnabled = _query.IsEnabled = !_busy;
+        _previousPage.IsEnabled = !_busy && _page > 1; _nextPage.IsEnabled = !_busy && _hasMore && _page < 100;
         // 文件选择和确认期间禁止改动文本，保证写入的是点击按钮时的同一份编辑内容。
         _preview.IsReadOnly = _busy;
     }

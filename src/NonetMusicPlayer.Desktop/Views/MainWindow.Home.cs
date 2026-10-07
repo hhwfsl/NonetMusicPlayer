@@ -25,6 +25,7 @@ public sealed partial class MainWindow
         if (tracks.Length == 0) panel.Children.Add(Ui.Card("Home.EmptyTitle", Ui.Text("Home.EmptyHint", 13, true)));
         panel.Children.Add(HomeGroups("Library.Albums", "album", albums));
         panel.Children.Add(HomeGroups("Library.Artists", "artist", artists));
+        panel.Children.Add(ExtensionHomeCards());
         return Ui.Scroll(panel);
     }
 

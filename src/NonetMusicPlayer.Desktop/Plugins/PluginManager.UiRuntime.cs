@@ -13,7 +13,7 @@ public sealed partial class PluginManager
     public void AttachHost(Window host, MainViewModel vm)
     {
         if (_uiHost == host && _uiVm == vm) return;
-        DisposeUiRuntime(); _uiHost = host; _uiVm = vm; host.Closed += HostClosed; host.Opened += HostOpened;
+        DisposeUiRuntime(); _uiHost = host; _uiVm = vm; AttachExtensionEvents(); host.Closed += HostClosed; host.Opened += HostOpened;
         if (!host.IsVisible) return;
         foreach (var plugin in Installed.Where(p => p.Enabled && p.Type == "ui")) RefreshUiRuntime(plugin);
     }
@@ -54,6 +54,7 @@ public sealed partial class PluginManager
     }
     private void DisposeUiRuntime()
     {
+        DetachExtensionEvents();
         if (_uiHost is not null) { _uiHost.Closed -= HostClosed; _uiHost.Opened -= HostOpened; }
         _uiHost = null; _uiVm = null;
         foreach (var pet in _pets.Values.ToArray()) pet.Close(); _pets.Clear();

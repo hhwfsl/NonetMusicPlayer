@@ -146,6 +146,7 @@ public sealed partial class MainWindow
                 : L10n.T("Playlists.RemoveOnlyFromThisPlaylistLibraryAndMusicFiles"), L10n.T("Common.Remove"))) _vm.RemoveTracks(tracks);
         }, IconKind.Trash));
         }
+        AddExtensionMenu(menu, "song.more", new System.Text.Json.Nodes.JsonObject { ["trackIds"] = new System.Text.Json.Nodes.JsonArray(tracks.Select(t => (System.Text.Json.Nodes.JsonNode?)System.Text.Json.Nodes.JsonValue.Create(t.Id)).ToArray()) });
         OpenMenu(anchor, menu);
     }
     private void LocatePlayingTrack(object? sender, EventArgs e)

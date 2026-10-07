@@ -1,6 +1,12 @@
-# NonetMusicPlayer 插件开发文档
+# 通用扩展层 v2 / SDK 4.0
 
-适用于 Nonet 桌面版及 CLI 0.4.0-beta.6，插件 SDK 3.4.0、清单 Contract v1、页面 Schema v1。本文只描述已实现的桌面及 CLI 接口。
+新版插件优先使用通用扩展，而不是请求宿主新增某个业务部件。最低宿主为 Nonet 0.4.0-beta.8。原 Contract v1 / 页面 Schema 1 / 旧 RPC 保留；LDDC 等旧插件通过原能力适配层运行，不按宿主发行版本淘汰插件。
+
+详见 [通用扩展开发](EXTENSIONS.md)。本文件下方保留 v1 接口参考，用于维护已有插件。插件是普通用户权限的软件，不是安全沙箱；JSON UI 白名单仅约束宿主 API，无法限制可执行插件自行访问 OS。
+
+## 旧版接口参考
+
+适用于 Nonet 桌面版及 CLI 0.4.0-beta.7，插件 SDK 3.5.0、清单 Contract v1、页面 Schema v1。本文只描述已实现的桌面及 CLI 接口。
 
 ## 兼容与更新约定
 
@@ -274,7 +280,7 @@ params 字段均为字符串，configuration 也是 JSON 字符串。
 
 独立进程 provider 是本机程序，权限声明 **不是操作系统沙箱**，没有签名认证；仅安装可信作者。声明式 UI 通过不提供代码 / 外部资源执行降低风险，也不保证抵御拥有本机写权限的其他软件。
 
-完整配置在当前会话传给 provider。持久化时递归剔除字段名中的 token/password/secret/authorization/cookie/credential/api-key，以及规范标记 sensitive 或 password 控件的字段；这些值重启后需重新输入。不要将凭据藏在普通字段或 URL 查询中。
+完整配置在当前会话传给 provider。持久化时递归剔除字段名中的 token/password/secret/authorization/cookie/credential/api-key，以及规范标记 sensitive 或 password 控件的字段；非 Agent 插件的这些值重启后需重新输入。Agent 桌面插件完整配置采用账户加密 JSON 持久保存，详见第 15 节。不要将凭据藏在普通字段或 URL 查询中。
 
 禁用音源停止其进程并使其歌曲不可用。卸载前先禁用，并询问是否删除插件文件：默认仅解除装载注册，文件留在 `Plugins/<id>` 原位置，非敏感配置与实际仓库来源保留在原清单，同 ID 同版本重新导入即可恢复接入；选择删除则直接删除已验证的原插件目录，不可撤销，不生成 Retained，也不删除音乐源文件。声明式页销毁会停止游戏 / 统计计时器，桌宠停用 / 卸载 / 退出会关闭窗口、动画和消息订阅。扩展原生组件前必须定义数量、体积、计时频率和销毁边界。
 
@@ -323,7 +329,7 @@ dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release --
 - description 为标签，hint 为辅助说明；enum 可以是原始值数组或 value / label 对象数组。
 - default 为默认值，required、min / max、max_length 用于校验。建议显式提供合法默认值；缺省使用对应类型的空值。
 - object.items 是开发者定义的子字段描述，用户不能增删或改名字段；空 items 显示“无配置”。list.items 描述单个元素，省略时新增元素为字符串；用户可按开发者声明的列表类型填写列表值。
-- ui:widget=password 隐藏输入内容；sensitive=true 和密码字段仅在会话保留，不进入插件索引。勿将真实密钥放入默认值、页面或发布包。
+- ui:widget=password 隐藏输入内容；sensitive=true 和密码字段不进入插件索引；非 Agent 插件仅会话保留，Agent 使用加密配置存储。勿将真实密钥放入默认值、页面或发布包。
 - 规范 / 配置上限 256 KiB、描述字段最多 200、嵌套最多 8 层、列表和对象最多 200 项。字段名为 ASCII 字母 / 下划线开头，可含数字、点和短横线，最长 100 字符。
 
 齿轮打开带滚动区域和固定底部操作的应用内弹层。没有配置规范或规范为空时仅显示“无配置”和关闭，不提供通用 JSON/字段结构编辑器。表单结构只能由开发者随插件提供的 Schema 改变。文本输入回车或失焦更新草稿，布尔 / 枚举更新草稿；保存时整体验证，关闭取消。保存成功后已启用页面 / 桌宠立即重建，音源旧进程关闭，在下一次请求中传入新配置；当前播放音源修改前先停止该音源播放。不重新启动应用。
@@ -433,12 +439,26 @@ Native AOT 是进程入口的发布方式，不是新的插件类型或 Contract
 
 清单需 network、process、agent-control，可附加 navigation；提供 pageEntry 和按 RID 的 entryPoints。页面 widgets 中声明 agent-chat，宿主绘制聊天框。生命周期沿用 lifecycle.disable/uninstall/shutdown，最多两秒。进程不是系统沙箱，只安装可信插件。
 
-initialize 返回 contractVersion=1。agent.step 的 params.turn 是源生成 AgentTurn JSON 字符串，包含 messages 和 tools；结果是 AgentReply，含 text 和 calls。每个 AgentToolCall 为 id、operation 和字符串数组 arguments。DTO 与校验位于 AgentPluginContract.cs，开发进程应直接引用主项目 SDK，禁止复制协议。
+initialize 返回 contractVersion=1。agent.step 的 params.turn 是源生成 AgentTurn JSON 字符串，包含 messages 和 tools；结果是 AgentReply，含 text 和 calls。SDK 3.5 新增可选 reasoning、inputTokens、outputTokens 和 finishReason；旧响应不需要这些字段。AgentMessage 可携带可选 reasoning 用于兼容思考模型的工具往返。每个 AgentToolCall 为 id、operation 和字符串数组 arguments。DTO 与校验位于 AgentPluginContract.cs，开发进程应直接引用主项目 SDK，禁止复制协议。
 
 模型执行不进入进程。进程只提出调用，宿主 AgentCommandPolicy 检查白名单、参数、引用 ID，再经共享命令路由执行。删除、移除、设置修改、插件启停和窗口关闭须用户确认；模型参数不能传入确认选项。任意文件操作、插件安装/配置、系统 Shell、数据恢复等不提供。拒绝的操作在本轮不重复确认；停用/卸载/离页后取消请求并禁止后续动作。
 
-首次发送前显示配置接口及发送确认。查询结果剔除路径、目录、凭据字段，最多 100 项；回复有界，不持久化聊天。apiKey 用 sensitive/password 配置字段，持久化剔除，仅当前会话可用。默认允许 HTTPS 或本机 HTTP，不跟随重定向，不关闭证书校验。
+首次发送前显示配置接口及发送确认。查询结果剔除路径、目录、凭据字段，最多 100 项；回复有界，不持久化聊天。apiKey 用 sensitive/password 配置字段，不进入明文插件索引；SDK 3.5 宿主将 Agent 完整配置写入 Plugins/Configurations/<id>.json，公开参数在 values，加密完整配置在 protectedConfiguration。Windows 使用当前账户 DPAPI；Linux/macOS 使用 AES-GCM 和仅该用户可读的 .key。跨账户/平台迁移需重新输入密钥；Unix 密钥与配置同时泄露时不能保证保密。插件升级、断开连接及重启保留配置；勾选删除插件文件时删除该配置。默认允许 HTTPS 或本机 HTTP，不跟随重定向，不关闭证书校验。
 
 每回合最多八轮，每回复最多四个工具；消息总长度和响应长度由 SDK/宿主/进程分别限制。模型误判或用户取消不会撤销已完成业务动作。插件应明确说明元数据发送范围、模型费用、平台运行时方式与最低宿主能力，不把提示词当作权限边界。
 
 Native AOT 使用源生成 AgentPluginJson。应在目标系统构建 AOT；无原生构建环境时可以单独发布明确标记的 self-contained 包，不能称其为 AOT。平台包继续使用一个 RID 一个 impp。
+
+### 15.1 模型发现与配置控件（SDK 3.5，可选）
+
+使用新控件的插件需要 Nonet 0.4.0-beta.7 或更新版；旧插件及仅使用 SDK 3.4 Agent 基本能力的包仍可安装，不按应用版本淘汰。
+
+- 配置 enum 选项可声明 defaults 对象。选择该项将更新 Schema 已声明的字段；不能声明未知配置键、脚本或表达式。改变提供商应清空旧密钥，避免跨站鉴权。
+- ui:group 给字段分组，ui:collapsed=true 使所属组默认收起。无此元数据的旧 Schema 表单布局保持不变。
+- string 字段 ui:widget=agent-model 提供手工模型 ID、获取模型、列表选择和取消。仅 agent 插件支持；获取前宿主展示草稿接口和鉴权发送确认，不发送聊天。
+- text 字段 ui:widget=json-object 在应用时要求内容为 JSON 对象，仍只是配置数据。
+- agent.models 无参数，返回 {"models":["model-id", "..."]}。宿主使用当前表单草稿启动短生命周期进程并 initialize，完成或取消后销毁，不覆盖持久配置。最多 1000 个 ID，每个 200 字符。
+- agent.step 不再施加固定 150 秒 RPC 期限，由插件设置请求超时；用户取消、停用、卸载、离页仍终止进程。客户端配置 0 应表示无主动超时/省略 Token 上限，不保证服务端无限容量。
+- 聊天视图使用只读可复制消息卡片、可展开工具结果/思考信息、固定输入区。聊天不保存磁盘；额外请求参数不得改变宿主的权限白名单。
+
+兼容性验证应覆盖冻结旧包、无可选字段的旧 AgentReply、Schema 无分组/预设时的原控件、初始化/取消/退出、新 manager 的配置恢复，以及日志/安装索引不含明文凭据。

@@ -4,7 +4,7 @@ using NonetMusicPlayer.Core.Plugins;
 namespace NonetMusicPlayer.Core.Commands;
 
 /// <summary>Agent 的不可绕过白名单；不暴露文件操作、配置凭据、外部程序或插件安装。</summary>
-public static class AgentCommandPolicy
+public static class PluginCommandPolicy
 {
     private static readonly HashSet<string> Operations = new(StringComparer.Ordinal)
     {
@@ -24,6 +24,18 @@ public static class AgentCommandPolicy
         "backgroundImageOpacity", "titleBarOpacity", "navigationOpacity", "contentOpacity", "playerOpacity",
         "uiOpacity", "controlCornerRadius", "desktopLyricsFontSize", "closeToTray"
     };
+    public static string RequiredPermission(string operation) => operation.StartsWith("player.") || operation.StartsWith("queue.") || operation.StartsWith("desktop-lyrics.") ? "player-control" : operation == "navigate" ? "navigation" : operation.StartsWith("window.") ? "window-control" : operation.StartsWith("plugins.") ? "plugins-control" : operation.StartsWith("settings.") ? "settings-write" : RequiresConfirmation(operation) || operation.StartsWith("playlist.") && operation != "playlist.list" || operation.StartsWith("favorite.") ? "library-write" : "music-read";
+    public static string CatalogFor(IReadOnlyCollection<string> permissions)
+    {
+        var catalog = JsonNode.Parse(Catalog())!.AsObject(); var commands = catalog["commands"]!.AsArray();
+        for (var i = commands.Count - 1; i >= 0; i--) if (!permissions.Contains(RequiredPermission(commands[i]!["operation"]!.GetValue<string>()))) commands.RemoveAt(i);
+        return catalog.ToJsonString();
+    }
+    public static string ValidateFor(AgentToolCall call, IReadOnlyCollection<string> permissions)
+    {
+        if (!permissions.Contains(RequiredPermission(call.Operation))) throw new InvalidDataException("Plugin permission denied.");
+        return ValidateAndEncode(call);
+    }
     public static string Catalog()
     {
         var definitions = new JsonArray();
@@ -76,4 +88,14 @@ public static class AgentCommandPolicy
         if (value is JsonValue item && item.TryGetValue<string>(out var text)) return JsonValue.Create(text.Length > 1000 ? text[..1000] : text);
         return value?.DeepClone();
     }
+}
+
+    
+/// <summary>保留旧 Agent API 的入口，由公共权限策略统一验证。</summary>
+public static class AgentCommandPolicy
+{
+    public static string Catalog() => PluginCommandPolicy.Catalog();
+    public static bool RequiresConfirmation(string operation) => PluginCommandPolicy.RequiresConfirmation(operation);
+    public static string ValidateAndEncode(AgentToolCall call) => PluginCommandPolicy.ValidateAndEncode(call);
+    public static JsonNode? Sanitize(JsonNode? value, int depth = 0) => PluginCommandPolicy.Sanitize(value, depth);
 }

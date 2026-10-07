@@ -18,6 +18,15 @@ public sealed class PluginPageView : UserControl, IDisposable, IPluginKeyboardSc
     {
         var page = manager.LoadPage(manifest);
         _manager = manager; _pluginId = manifest.Id;
+        if (page.Widgets.Count == 1 && page.Widgets[0].Type == "agent-chat")
+        {
+            // 聊天页让会话区域占剩余空间，输入区固定在页内底部；不套第二层滚动容器。
+            var chat = new AgentChatControl(manager, manifest); _resources.Add(chat);
+            var layout = new Grid { RowDefinitions = new("Auto,*"), Margin = new(0, 0, 18, 0), MaxWidth = 1200 };
+            if (includeTitle) layout.Children.Add(Ui.RawText(page.Title, 26));
+            Grid.SetRow(chat, 1); chat.Margin = new(0, 16, 0, 0); layout.Children.Add(chat); Content = layout;
+            _manager.UiPluginUnavailable += PluginUnavailable; return;
+        }
         var panel = Ui.Stack(); panel.Margin = new(0, 0, 18, 0);
         if (includeTitle) panel.Children.Add(Ui.RawText(page.Title, 26));
         if (page.Description.Length > 0) panel.Children.Add(Ui.RawText(page.Description, 13, true));

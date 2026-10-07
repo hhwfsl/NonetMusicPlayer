@@ -6,6 +6,8 @@ internal static class Program
         try
         {
             var output = args.FirstOrDefault() ?? "artifacts/plugin-ui-checks";
+            if (Array.IndexOf(args, "--inspect-extension") is var packageIndex && packageIndex >= 0) { ExtensionChecks.RenderPackage(args[packageIndex + 1], output); return 0; }
+            if (args.Contains("--extensions")) { ExtensionChecks.Run(output); return 0; }
             if (args.Contains("--agent")) { AgentHostChecks.Run(output); return 0; }
             if (args.Contains("--update-layout")) { PluginUpdateLayoutChecks.Run(output); return 0; }
             if (args.Contains("--compatibility")) { PluginCompatibilityChecks.Run(output); return 0; }

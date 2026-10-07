@@ -83,5 +83,65 @@
     "zh-CN": "智能助理",
     "en-US": "Agent",
     "ja-JP": "Agent"
+  },
+  "Agent.Welcome": {
+    "zh-CN": "Nonet Agent\n\n可以询问音乐、搜索歌曲或控制播放。涉及修改和删除的操作仍需确认。",
+    "en-US": "Nonet Agent\n\nAsk about music, find tracks or control playback. Changes and deletion still require approval.",
+    "ja-JP": "Nonet Agent\n\n音楽の相談、曲検索、再生操作ができます。変更や削除には確認が必要です。"
+  },
+  "Agent.RestoreInput": {
+    "zh-CN": "恢复上条输入",
+    "en-US": "Restore last input",
+    "ja-JP": "前の入力を復元"
+  },
+  "Agent.Reasoning": {
+    "zh-CN": "思考过程",
+    "en-US": "Reasoning",
+    "ja-JP": "思考過程"
+  },
+  "Agent.Copy": {
+    "zh-CN": "复制",
+    "en-US": "Copy",
+    "ja-JP": "コピー"
+  },
+  "Agent.ContextReset": {
+    "zh-CN": "对话达到上下文容量，已开始新的上下文；已完成的操作不会撤销。",
+    "en-US": "Conversation capacity reached. Starting fresh context; completed actions are not undone.",
+    "ja-JP": "会話の上限に達したため新しい文脈を開始します。完了した操作は元に戻りません。"
+  },
+  "Agent.Usage": {
+    "zh-CN": "输入 {0} · 输出 {1} Token",
+    "en-US": "Input {0} · Output {1} tokens",
+    "ja-JP": "入力 {0} · 出力 {1} トークン"
+  },
+  "Agent.OutputLimited": {
+    "zh-CN": "回复达到服务端或配置的输出上限",
+    "en-US": "Reply reached a server or configured output limit",
+    "ja-JP": "応答がサーバーまたは設定の出力上限に達しました"
+  },
+  "Agent.FetchModels": {
+    "zh-CN": "获取模型",
+    "en-US": "Fetch models",
+    "ja-JP": "モデルを取得"
+  },
+  "Agent.FetchingModels": {
+    "zh-CN": "正在获取模型…",
+    "en-US": "Fetching models…",
+    "ja-JP": "モデルを取得中…"
+  },
+  "Agent.ModelsFound": {
+    "zh-CN": "找到 {0} 个模型；可选择或手动填写模型 ID。",
+    "en-US": "Found {0} models. Select one or enter an ID manually.",
+    "ja-JP": "{0} 個のモデル。選択または ID を手入力できます。"
+  },
+  "Agent.ModelsFailed": {
+    "zh-CN": "获取模型失败；检查接口、API Key 或手动填写模型 ID。",
+    "en-US": "Model discovery failed. Check the endpoint/key or enter an ID manually.",
+    "ja-JP": "モデル取得に失敗。接続・キーを確認するか ID を手入力してください。"
+  },
+  "Agent.ModelsPrivacy": {
+    "zh-CN": "获取模型会向此接口发送鉴权并查询模型列表，不发送聊天内容。",
+    "en-US": "Discovery sends authentication to this endpoint to query its models, without chat content.",
+    "ja-JP": "この接続先に認証を送信してモデルを照会します。会話は送信しません。"
   }
 }

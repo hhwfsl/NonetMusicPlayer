@@ -7,4 +7,5 @@
   <Project Path="src/NonetMusicPlayer.Desktop/NonetMusicPlayer.Desktop.csproj" />
   <Project Path="tests/NonetMusicPlayer.UiChecks.Desktop/NonetMusicPlayer.UiChecks.Desktop.csproj" />
   <Project Path="tests/NonetMusicPlayer.PluginUiChecks.Desktop/NonetMusicPlayer.PluginUiChecks.Desktop.csproj" />
+  <Project Path="tests/NonetMusicPlayer.ExtensionFixture/NonetMusicPlayer.ExtensionFixture.csproj" />
 </Solution>

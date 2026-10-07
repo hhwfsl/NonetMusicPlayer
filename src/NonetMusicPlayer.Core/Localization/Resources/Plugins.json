@@ -1,4 +1,7 @@
 {
+  "Extensions.ManagedWarning": { "zh-CN": "此插件将在 Nonet 主进程执行，具有普通用户权限，可能读取本机数据，且不是安全沙箱。仅启用可信插件。是否允许？", "en-US": "This plugin runs inside Nonet with normal user permissions. It is not a sandbox and may read local data. Enable only trusted plugins. Allow?", "ja-JP": "このプラグインは Nonet 内で通常のユーザー権限で動作します。サンドボックスではなくローカルデータを読める場合があります。信頼できるもののみ許可してください。" },
+  "Extensions.UploadTitle": { "zh-CN": "向插件提供所选文件", "en-US": "Share selected files with the plugin", "ja-JP": "選択したファイルをプラグインに渡す" },
+  "Extensions.UploadConfirm": { "zh-CN": "接收插件：{0}\n插件可能向网络接口发送这些文件，可能产生费用。源文件不会更改或删除。只向可信插件提供文件。\n\n{1}", "en-US": "Receiving plugin: {0}\nThe plugin may send these files to a network endpoint, possibly incurring charges. Original files are not changed or deleted. Share only with trusted plugins.\n\n{1}", "ja-JP": "受信プラグイン：{0}\nネットワークに送られ料金が発生する場合があります。元のファイルは変更・削除されません。信頼できるプラグインのみ許可してください。\n\n{1}" },
   "Plugins.CheckUpdate": { "zh-CN": "检查插件更新", "en-US": "Check plugin updates", "ja-JP": "プラグインの更新を確認" },
   "Plugins.AlreadyCurrent": { "zh-CN": "已安装此版本，无需更新。", "en-US": "This version is already installed.", "ja-JP": "このバージョンはインストール済みです。" },
   "Plugins.CannotDowngrade": { "zh-CN": "不能用旧版本覆盖已安装的新版插件。", "en-US": "An older version cannot replace the installed plugin.", "ja-JP": "旧バージョンでインストール済みのプラグインを置き換えることはできません。" },

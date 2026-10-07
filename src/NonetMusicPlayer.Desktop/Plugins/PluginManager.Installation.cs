@@ -48,11 +48,11 @@ public sealed partial class PluginManager
                 using var config = JsonDocument.Parse(kept.Configuration);
                 var persisted = Scrub(config.RootElement).AsObject(); PluginConfigSchema.RemoveSensitiveFields(schema, persisted);
                 manifest.Configuration = persisted.ToJsonString();
-                if (manifest.Type is "ui" or "lyrics" or "agent")
+                if (manifest.Type is "ui" or "lyrics" or "agent" or "extension")
                 {
                     var node = JsonNode.Parse(File.ReadAllText(Path.Combine(stage, manifest.PageEntry)))!;
                     using var resolved = new MemoryStream(Encoding.UTF8.GetBytes(PluginConfigSchema.Substitute(node, values).ToJsonString()));
-                    PluginPageContract.Read(resolved, manifest.Permissions);
+                    if (manifest.Type == "extension") ExtensionContract.ReadPage(resolved); else PluginPageContract.Read(resolved, manifest.Permissions);
                 }
                 if (manifest.OriginRepository.Length == 0) manifest.OriginRepository = kept.OriginRepository;
                 manifest.Enabled = false;
@@ -89,11 +89,11 @@ public sealed partial class PluginManager
             var values = PluginConfigSchema.Resolve(schema, effective);
             PluginConfigSchema.Validate(schema, values);
             // 先用旧配置验证新页面，不能先覆盖文件，再发现用户设置已不兼容。
-            if (manifest.Type is "ui" or "lyrics" or "agent")
+            if (manifest.Type is "ui" or "lyrics" or "agent" or "extension")
             {
                 var node = JsonNode.Parse(File.ReadAllText(Path.Combine(stage, manifest.PageEntry)))!;
                 using var resolved = new MemoryStream(Encoding.UTF8.GetBytes(PluginConfigSchema.Substitute(node, values).ToJsonString()));
-                PluginPageContract.Read(resolved, manifest.Permissions);
+                if (manifest.Type == "extension") ExtensionContract.ReadPage(resolved); else PluginPageContract.Read(resolved, manifest.Permissions);
             }
             using var configuration = JsonDocument.Parse(effective);
             var persisted = Scrub(configuration.RootElement).AsObject();
@@ -110,6 +110,7 @@ public sealed partial class PluginManager
             try
             {
                 // 在覆盖可执行文件前调用可选停用回调，并等待旧进程实际退出。
+                StopExtension(previous.Id);
                 previous.Enabled = false; PublishLifecycle(previous, "disabled");
                 if (_clients.Remove(previous.Id, out var client)) { client.NotifyLifecycle(previous, "lifecycle.disable"); client.Dispose(); }
                 NotifyUiUnavailable(previous.Id);

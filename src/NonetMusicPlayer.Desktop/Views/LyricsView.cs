@@ -176,7 +176,9 @@ public sealed class LyricsView : UserControl, IDisposable
         reset.Click += (_, _) => { _vm.Settings.LyricOffset = 0; _vm.ApplySettings(); ResumeFollow(); };
         var reveal = new MenuItem { Header = L10n.T("Lyrics.ShowLyricFileInFolder"), Icon = new VectorIcon { Kind = IconKind.Folder, Width = 18, Height = 18 }, IsEnabled = _vm.CurrentTrack is { } track && _vm.Lyrics.ExistingPath(track.Id) is not null };
         reveal.Click += (_, _) => { try { if (_vm.CurrentTrack is { } current && _vm.Lyrics.ExistingPath(current.Id) is { } path) SongInfoDialog.RevealFile(path); } catch (Exception error) { _vm.ReportError(L10n.T("Lyrics.UnableToLocateTheLyricFile"), error); } };
-        var items = new List<object> { import, reveal, new Separator(), Shift(L10n.T("Lyrics.LyricsSecondsEarlier"), .5), Shift(L10n.T("Lyrics.LyricsSecondsLater"), -.5), reset };
+        var unlink = new MenuItem { Header = L10n.T("Lyrics.Unlink"), Icon = new VectorIcon { Kind = IconKind.Close, Width = 18, Height = 18 }, IsEnabled = _vm.CurrentTrack is not null };
+        unlink.Click += (_, _) => { _vm.CancelLyricsAssociation(); UpdateTrack(); };
+        var items = new List<object> { import, reveal, unlink, new Separator(), Shift(L10n.T("Lyrics.LyricsSecondsEarlier"), .5), Shift(L10n.T("Lyrics.LyricsSecondsLater"), -.5), reset };
         foreach (var plugin in _vm.Plugins.Installed.Where(p => p.Enabled && p.Type is "ui" or "lyrics"))
             foreach (var contribution in plugin.MenuContributions.Where(c => c.Location == "lyrics.more"))
             {
@@ -184,6 +186,7 @@ public sealed class LyricsView : UserControl, IDisposable
                 item.Click += async (_, _) => { if (contribution.Action == "match-lyrics") await _vm.MatchCurrentLyricsAsync(plugin); else _vm.Navigate("plugin:" + plugin.Id); }; items.Add(item);
             }
         _menu = new ContextMenu { ItemsSource = items };
+        _owner.AddExtensionMenu(_menu, "lyrics.more", new System.Text.Json.Nodes.JsonObject { ["trackId"] = _vm.CurrentTrack?.Id });
         _owner.OpenMenu(_more, _menu);
     }
     private void LyricsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)

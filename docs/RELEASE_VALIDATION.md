@@ -1,3 +1,23 @@
+# Nonet 0.4.0-beta.8 通用扩展验证
+
+日期：2026-10-07。Windows 实际发行程序与 Avalonia Headless 验证；macOS/Linux 桌面仅构建发行包，不能替代实机验证。
+
+- 完整主解决方案构建通过，0 警告、0 错误；旧 Contract v1 和首次冻结的 Contract v2 进程/托管程序集回归通过。
+- 通用控件树、状态绑定、插件动作、事件、导航保留会话、权限过滤、托管启用确认和取消歌词关联持久化通过。
+- 通用输入控件使用实际键盘事件验证 Enter 执行动作、Shift+Enter 换行；可选实际进程包在 1280×800 和 900×650 检查页面与有界输入区。
+- 原 Windows 发布目录的精简程序验证冻结 v2 进程/托管插件、真实 AOT 插件入口、配置加密恢复、歌词 RPC、关联、嵌入确认、备份和生命周期。不使用用户源文件或真实模型凭据。
+- 原 Windows 388 个 Data/引导文件在原地升级和隔离验收后 SHA-256 一致，旧程序在 artifacts 中可恢复。
+- 三个桌面 ZIP 从全新暂存构建，不含便携数据、插件或配置；逐文件 SHA-256、许可、版本及 POSIX 执行权限通过。Windows 安装器只枚举必要程序文件。
+- 独立插件模板直接引用宿主 SDK/打包器，通用 Hello World、配置、最小包、覆盖保护及三平台打包通过；模板和私人插件不进入公开源码或 Release。
+
+复现：
+
+    dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/extensions --extensions
+    dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/compatibility --compatibility
+    pwsh -File scripts/verify-clean-desktop.ps1 -Directory artifacts/releases/update-packages/0.4.0-beta.8 -Version 0.4.0-beta.8
+
+冻结回归保留 artifacts/frozen-extension-v2 首次构建的字节，不以重新编译替代旧包。该基线不提供实时 DSP/解码器 ABI；托管和进程模式均不应被描述为操作系统安全沙箱。
+
 # Nonet 0.4.0-beta.6 Agent 与主题色验证
 
 日期：2026-10-06。桌面交互在 Windows / Avalonia Headless 验证；macOS/Linux 桌面只构建发行包，不代表对应系统实际交互通过。

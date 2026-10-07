@@ -20,6 +20,10 @@ internal static class AgentPolicyChecks
             && AgentCommandPolicy.RequiresConfirmation("playlist.delete") && !AgentCommandPolicy.RequiresConfirmation("player.pause"), "Host owns confirmation policy");
         var clean = AgentCommandPolicy.Sanitize(JsonNode.Parse("""{"filePath":"D:/private/song.flac","apiKey":"TEST-NOT-SECRET","nested":{"title":"音楽","lyricsPath":"x"}}"""))!;
         Check(clean["filePath"] is null && clean["apiKey"] is null && clean["nested"]!["lyricsPath"] is null && clean["nested"]!["title"]!.GetValue<string>() == "音楽", "Metadata sanitizes paths and secrets");
+        Check(typeof(AgentReply).GetConstructor([typeof(string), typeof(AgentToolCall[])]) is not null
+            && typeof(AgentMessage).GetConstructor([typeof(string), typeof(string), typeof(AgentToolCall[]), typeof(string)]) is not null, "SDK 3.4 constructor signatures remain");
+        var legacyReply = JsonSerializer.Deserialize("""{"text":"legacy","calls":[]}""", AgentPluginJson.Default.AgentReply)!;
+        Check(legacyReply.Text == "legacy" && legacyReply.Reasoning is null, "Old Agent reply remains valid");
         var turn = new AgentTurn([new("user", "你好")], AgentCommandPolicy.Catalog());
         AgentPluginContract.Validate(turn);
         Check(JsonSerializer.Deserialize(JsonSerializer.Serialize(turn, AgentPluginJson.Default.AgentTurn), AgentPluginJson.Default.AgentTurn)!.Messages[0].Text == "你好", "Source-generated RPC roundtrip");

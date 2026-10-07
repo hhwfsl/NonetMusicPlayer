@@ -18,7 +18,7 @@ public sealed partial class PluginManager
     public async Task<LyricsSearchResult> SearchLyricsAsync(PluginManifest plugin, LyricsQuery query, CancellationToken token = default)
     {
         var result = (await LyricsCallAsync(plugin, "lyrics.search", new() { ["query"] = JsonSerializer.Serialize(query, LyricsPluginJson.Options) }, token)).Deserialize<LyricsSearchResult>(LyricsPluginJson.Options);
-        if (result?.Candidates is null || result.Warnings is null || result.Candidates.Count > 100 || result.Warnings.Count > 20
+        if (result?.Candidates is null || result.Warnings is null || result.Candidates.Count > 150 || result.Warnings.Count > 20
             || result.Candidates.Any(c => c is null || string.IsNullOrWhiteSpace(c.Title) || c.Title.Length > 500 || c.Artist is null || c.Artist.Length > 500 || c.Album is null || c.Album.Length > 500 || c.Id is null || c.Id.Length is 0 or > 150 || c.Token is null || c.Token.Length > 200 || c.Source is null || c.Source.Length > 50 || !double.IsFinite(c.DurationSeconds) || c.DurationSeconds is < 0 or > 86400 || !double.IsFinite(c.Score)))
             throw new InvalidDataException("Invalid lyrics candidates");
         return result;
@@ -56,6 +56,7 @@ public sealed partial class PluginManager
             track.FileSize = new FileInfo(track.FilePath).Length;
         }
         else { token.ThrowIfCancellationRequested(); if (!plugin.Enabled) throw new OperationCanceledException(); lyrics.Save(track.Id, result.Text); track.LyricsSourcePath = lyrics.PathFor(track.Id); }
+        track.LyricsDisabled = false;
         AppLog.Info("LyricsPlugin", embed ? "Lyrics embedded; source backup retained" : "Fetched lyrics associated");
     }
 }

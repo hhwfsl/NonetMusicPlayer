@@ -17,8 +17,9 @@ public sealed partial class MainViewModel
             {
                 foreach (var track in tracks)
                 {
-                    token.ThrowIfCancellationRequested(); if (_disposed || !State.Tracks.Contains(track)) continue;
+                    token.ThrowIfCancellationRequested(); if (_disposed || track.LyricsDisabled || !State.Tracks.Contains(track)) continue;
                     if (await Task.Run(() => !string.IsNullOrWhiteSpace(Lyrics.ReadForTrack(track.Id, track.FilePath)), token)) continue;
+                    Plugins.BroadcastExtensionEvent("library.lyrics-missing", new() { ["trackId"] = track.Id, ["title"] = track.Title, ["artist"] = track.Artist, ["album"] = track.Album, ["durationSeconds"] = track.DurationSeconds });
                     foreach (var plugin in Plugins.AutomaticLyricsPlugins)
                     {
                         try
@@ -26,7 +27,7 @@ public sealed partial class MainViewModel
                             var result = await Plugins.MatchLyricsAsync(plugin, LyricsQueryFor(track), token);
                             if (result.Text.Length == 0) { if (result.Warning == "sources-unavailable") ReportWarning(L10n.T("LyricsSearch.SourcesUnavailable")); continue; }
                             // 请求期间可能手动导入歌词、删除歌曲或关闭插件；再次检查，避免过期结果覆盖用户操作。
-                            if (_disposed || !plugin.Enabled || !State.Tracks.Contains(track) || !string.IsNullOrWhiteSpace(Lyrics.ReadForTrack(track.Id, track.FilePath))) break;
+                            if (_disposed || track.LyricsDisabled || !plugin.Enabled || !State.Tracks.Contains(track) || !string.IsNullOrWhiteSpace(Lyrics.ReadForTrack(track.Id, track.FilePath))) break;
                             await Plugins.ApplyLyricsAsync(plugin, track, result, Lyrics, Plugins.EmbedsLyrics(plugin), token);
                             if (_disposed) return; if (CurrentTrack?.Id == track.Id) ReloadLyrics(); Save(); break;
                         }
@@ -39,6 +40,12 @@ public sealed partial class MainViewModel
         }
         catch (OperationCanceledException) { /* 退出或停止插件时不弹错误。 */ }
         catch (Exception error) { if (!_disposed) ReportError(L10n.T("LyricsSearch.Failed"), error); }
+    }
+    /// <summary>只修改软件内的关联状态，原音频和原歌词文件始终保持不变。</summary>
+    public void CancelLyricsAssociation()
+    {
+        if (CurrentTrack is not { } track) return;
+        track.LyricsDisabled = true; ReloadLyrics(); Save(); CompleteOperation("lyrics.unlink");
     }
     public async Task MatchCurrentLyricsAsync(PluginManifest plugin)
     {

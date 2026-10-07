@@ -62,7 +62,7 @@ public sealed partial class MainWindow : Window
         L10n.LanguageChanged += LanguageChanged;
         PropertyChanged += (_, e) => { if (e.Property == ActualThemeVariantProperty && !_applyingAppearance) ApplyAppearance(); };
         Closing += ConfirmClosing;
-        Closed += (_, _) => { L10n.LanguageChanged -= LanguageChanged; _cachedSettings?.Dispose(); _desktopLyrics?.Dispose(); _taskbar?.Dispose(); _notificationTimer.Stop(); _locateTimer.Stop(); DisposePage(); if (_vm is not null) { DetachPlayerCommands(); _vm.Plugins.DetachHost(this); _vm.ViewChanged -= ViewChanged; _vm.NavigationRequested -= ResetSongPagePosition; _vm.SettingsChanged -= SettingsChanged; _vm.LocatePlayingTrack -= LocatePlayingTrack; _vm.UserNotification -= UserNotification; _vm.Save(); } };
+        Closed += (_, _) => { foreach (var overlay in _extensionOverlays.Values.ToArray()) overlay.Close(); _extensionOverlays.Clear(); L10n.LanguageChanged -= LanguageChanged; _cachedSettings?.Dispose(); _desktopLyrics?.Dispose(); _taskbar?.Dispose(); _notificationTimer.Stop(); _locateTimer.Stop(); DisposePage(); if (_vm is not null) { DetachPlayerCommands(); _vm.Plugins.DetachHost(this); _vm.ViewChanged -= ViewChanged; _vm.NavigationRequested -= ResetSongPagePosition; _vm.SettingsChanged -= SettingsChanged; _vm.LocatePlayingTrack -= LocatePlayingTrack; _vm.UserNotification -= UserNotification; _vm.Save(); } };
     }
     private void AttachViewModel()
     {
@@ -108,7 +108,7 @@ public sealed partial class MainWindow : Window
         Opacity = s.UiOpacity;
         foreach (var widget in Workspace.Children.OfType<LayoutWidget>()) widget.Label = L10n.T(widget.Key switch { "Navigation" => L10n.T("Common.Navigation"), "Content" => L10n.T("Common.Content"), _ => L10n.T("Playback.Player") });
         var palette = new Dictionary<string, string>();
-        foreach (var plugin in _vm.Plugins.Installed.Where(p => p.Enabled && p.Type == "theme"))
+        foreach (var plugin in _vm.Plugins.Installed.Where(p => p.Enabled && (p.Type == "theme" || p.Type == "extension" && p.Permissions.Contains("ui-extend"))))
             foreach (var token in plugin.Tokens) palette[token.Key] = token.Value;
         ThemeService.Apply(s, palette);
         AppBackgroundImage.Source = AppBackgroundService.GetImage(s.BackgroundImagePath);
@@ -182,7 +182,7 @@ public sealed partial class MainWindow : Window
         _displayedPage = _vm.Page;
         _activeMenu?.Close();
         if (_selectionPage != _vm.Page) { _selectionPage = _vm.Page; SetBatchMode(false); }
-        DisposePage(); BuildPlaylists(); BuildPluginNavigation();
+        DisposePage(); BuildPlaylists(); BuildPluginNavigation(); BuildExtensionSlots();
         var alternate = _vm.Page is "library" or "terminal" or "settings" or "plugins" or "albums" or "artists" or "statistics" || _vm.Page.StartsWith("plugin:", StringComparison.Ordinal);
         var lyrics = _vm.Page == "lyrics"; FullLyricsHost.IsVisible = lyrics; ContentSurface.IsVisible = !lyrics; PageContentGrid.IsVisible = !lyrics; SidebarPanel.IsVisible = !lyrics;
         LibraryPage.IsVisible = !alternate; AlternatePage.IsVisible = alternate;
@@ -190,12 +190,15 @@ public sealed partial class MainWindow : Window
         UserManualButton.IsVisible = _vm.Page == "settings";
         PageBackToTop.IsVisible = _vm.Page is "library" or "plugins" or "statistics";
         BuildPlaylistHeader(); UpdateSelectionToolbar();
+        if (_vm.Page.StartsWith("plugin:") && _vm.Plugins.Installed.FirstOrDefault(p => "plugin:" + p.Id == _vm.Page && p.Type == "extension") is { } extension)
+            PageHeading.IsVisible = !_vm.Plugins.LoadExtensionPage(extension).OwnsHeader;
+        else PageHeading.IsVisible = true;
         AlternatePage.Content = _vm.Page switch
         {
-            "library" => MusicHome(), "terminal" => new TerminalView(this), "settings" => SettingsPage(), "plugins" => new PluginsView(this, _vm),
+            "library" => ExtensionReplacement("page.music") ?? MusicHome(), "terminal" => new TerminalView(this), "settings" => SettingsPage(), "plugins" => new PluginsView(this, _vm),
             "albums" => Groups(false), "artists" => Groups(true), "statistics" => new StatisticsView(_vm), _ => _vm.Page.StartsWith("plugin:") ? PluginPage(_vm.Page) : null
         };
-        if (lyrics) FullLyricsHost.Content = new LyricsView(this, _vm);
+        if (lyrics) FullLyricsHost.Content = ExtensionReplacement("page.lyrics") ?? new LyricsView(this, _vm);
         foreach (var nav in Workspace.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("nav")))
         { nav.Classes.Set("selected", nav.Tag?.ToString() == _vm.Page); }
         Dispatcher.UIThread.Post(Responsive, Avalonia.Threading.DispatcherPriority.Loaded);

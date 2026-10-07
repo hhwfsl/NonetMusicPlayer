@@ -61,6 +61,10 @@
                                 Foreground="{DynamicResource TextMutedBrush}"
                                 Text="{Binding VersionText}" />
                         </StackPanel>
+                        <Button x:Name="TitleExtensionsButton" Grid.Column="1" HorizontalAlignment="Right" Margin="0,0,102,0" Classes="quiet" IsVisible="False" ToolTip.Tip="{ui:Loc Key='Common.More'}">
+                            <ui:VectorIcon Kind="Plugins" Width="18" Height="18" />
+                            <Button.Flyout><MenuFlyout /></Button.Flyout>
+                        </Button>
                         <StackPanel
                             x:Name="TitleButtons"
                             Grid.Column="2"
@@ -798,7 +802,7 @@
                                             Grid.Row="1"
                                             Grid.Column="2"
                                             HorizontalAlignment="Right"
-                                            ColumnDefinitions="112,45,45,45,45,45">
+                                            ColumnDefinitions="112,45,45,45,45,45,Auto">
                                             <StackPanel
                                                 x:Name="PlayerTime"
                                                 MinWidth="80"
@@ -904,6 +908,10 @@
                                                 Click="DesktopLyrics_Click"
                                                 ToolTip.Tip="{ui:Loc Key='Lyrics.ShowHideDesktopLyrics'}">
                                                 <ui:VectorIcon Kind="Lyrics" />
+                                            </Button>
+                                            <Button x:Name="PlayerExtensionsButton" Grid.Column="6" Classes="player-tool" IsVisible="False" ToolTip.Tip="{ui:Loc Key='Common.More'}">
+                                                <ui:VectorIcon Kind="Plugins" />
+                                                <Button.Flyout><MenuFlyout /></Button.Flyout>
                                             </Button>
                                         </Grid>
                                     </Grid>

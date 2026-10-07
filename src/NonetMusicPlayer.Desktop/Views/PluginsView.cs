@@ -85,8 +85,13 @@ public sealed class PluginsView : UserControl, IDisposable
         if (vm.Plugins.Installed.Count == 0) panel.Children.Add(Ui.Text(L10n.T("Plugins.NoPluginsInstalled"), 14, true));
         foreach (var plugin in vm.Plugins.Installed)
         {
-            var enabled = Ui.Toggle(plugin.Enabled, value =>
+            var enabled = Ui.Toggle(plugin.Enabled, async value =>
             {
+                if (value && plugin.Type == "extension" && plugin.Runtime == "managed" && !plugin.ManagedExecutionConsent)
+                {
+                    if (!await PlayerDialog.Confirm(owner, plugin.Name, L10n.T("Extensions.ManagedWarning"), L10n.T("Common.Confirm"))) { owner.ShowPage(); return; }
+                    plugin.ManagedExecutionConsent = true;
+                }
                 if (value) { vm.Plugins.SetEnabled(plugin, true); vm.ApplyFilter(); vm.ApplySettings(); vm.StatusText = L10n.T("Plugins.PluginEnabled"); }
                 else vm.DisablePlugin(plugin);
                 owner.RefreshPluginNavigation();

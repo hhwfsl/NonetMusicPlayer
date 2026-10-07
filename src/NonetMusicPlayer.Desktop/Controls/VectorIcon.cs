@@ -6,7 +6,7 @@ namespace NonetMusicPlayer.Desktop.Controls;
 
 public enum IconKind
 {
-    Music, Library, Heart, Playlist, Folder, Search, Plus, Queue, Refresh,
+    Agent, Music, Library, Heart, Playlist, Folder, Search, Plus, Queue, Refresh,
     Previous, Next, Play, Pause, Volume, Mute, RepeatAll, RepeatOne, Shuffle, More, Lyrics,
     Settings, Plugins, Help, Info, History, Artist, Album, FileAdd, Edit, Trash, SelectAll, Close, Minimize, Maximize, Statistics, Game, Lock, Unlock, Calendar, DesktopLyricsShow, DesktopLyricsHide, MoveUp, MoveDown, Home, Terminal, Back, GitHub, BackToTop, ChevronUp, ChevronDown
 }
@@ -24,6 +24,7 @@ public sealed class VectorIcon : Control
     private static readonly IReadOnlyDictionary<IconKind, Geometry> Geometries =
         new Dictionary<IconKind, Geometry>
         {
+            [IconKind.Agent] = Geometry.Parse("M6 7H18L21 10V19H3V10Z M12 3V7 M10 3H14 M7 12H9 M15 12H17 M8 16H16 M1 11V16 M23 11V16"),
             [IconKind.Music] = Geometry.Parse("M9 18V5L20 3V16 M9 8L20 6 M9 18C9 20 7 21 5 21C3 21 2 20 2 18.5C2 17 4 16 6 16C8 16 9 16.5 9 18 M20 16C20 18 18 19 16 19C14 19 13 18 13 16.5C13 15 15 14 17 14C19 14 20 14.5 20 16"),
             [IconKind.Library] = Geometry.Parse("M3 4H7V20H3Z M10 4H14V20H10Z M17 5L20 4L23 19L20 20Z"),
             [IconKind.Heart] = Geometry.Parse("M12 20L4 12C-2 5 7 0 12 7C17 0 26 5 20 12Z"),

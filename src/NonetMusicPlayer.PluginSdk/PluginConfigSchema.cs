@@ -14,7 +14,21 @@ public static class PluginConfigSchema
         using var bounded = new MemoryStream(); var buffer = new byte[8192]; int read;
         while ((read = input.Read(buffer)) > 0) { if (bounded.Length + read > MaximumBytes) throw new InvalidDataException("插件配置规范过大（最大 256 KB）。"); bounded.Write(buffer, 0, read); }
         var schema = JsonNode.Parse(bounded.ToArray(), documentOptions: new JsonDocumentOptions { MaxDepth = 24 }) as JsonObject ?? throw new InvalidDataException("插件配置规范必须是 JSON 对象。");
-        var count = 0; ValidateFields(schema, 0, ref count); return schema;
+        var count = 0; ValidateFields(schema, 0, ref count);
+        // 预设只是对已声明字段的赋值，提前验证以免选择选项时抛出未处理异常。
+        foreach (var field in schema.Select(p => p.Value).OfType<JsonObject>())
+            if (field["enum"] is JsonArray options)
+                foreach (var option in options.OfType<JsonObject>())
+                    if (option["defaults"] is { } node)
+                    {
+                        if (node is not JsonObject defaults) throw new InvalidDataException("Preset defaults must be an object.");
+                        foreach (var (key, value) in defaults)
+                        {
+                            if (schema[key] is not JsonObject target) throw new InvalidDataException("Unknown preset field.");
+                            ValidateValue(target, value, key, 0);
+                        }
+                    }
+        return schema;
     }
     private static void ValidateFields(JsonObject fields, int depth, ref int count)
     {
@@ -22,6 +36,10 @@ public static class PluginConfigSchema
         foreach (var (key, value) in fields)
         {
             if (++count > 200 || !Regex.IsMatch(key, "^[A-Za-z_][A-Za-z0-9_.-]{0,99}$") || value is not JsonObject field) throw new InvalidDataException("插件配置字段过多或字段名不合法。");
+            if (field["ui:group"] is { } group && (group is not JsonValue || !group.AsValue().TryGetValue<string>(out var groupName) || groupName.Length > 100))
+                throw new InvalidDataException("Invalid configuration group.");
+            if (field["ui:collapsed"] is { } collapsed && (collapsed is not JsonValue || !collapsed.AsValue().TryGetValue<bool>(out _)))
+                throw new InvalidDataException("Invalid collapsed state.");
             var type = Type(field);
             if (type is not ("string" or "text" or "bool" or "int" or "float" or "number" or "list" or "object")) throw new InvalidDataException("不支持此插件配置字段类型。");
             foreach (var property in new[] { "description", "hint" }) if (field[property] is { } node && (node is not JsonValue || node.GetValue<string>().Length > 6000)) throw new InvalidDataException("插件配置说明过长。");

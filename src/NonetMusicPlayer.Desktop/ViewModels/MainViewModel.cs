@@ -210,6 +210,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
                     }
                     track.IsFavorite = replaced.IsFavorite || favorite || playlist?.IsSystem == true;
                     track.LyricsSourcePath = replaced.LyricsSourcePath ?? track.LyricsSourcePath;
+                    track.LyricsDisabled = replaced.LyricsDisabled;
                     replaced.PropertyChanged -= TrackChanged; _observedTracks.Remove(replaced);
                     if (CurrentTrack?.Id == track.Id) CurrentTrack = track; replaced.ReleaseArtwork(); State.Tracks[old] = track;
                 }
@@ -345,10 +346,10 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     public void ReloadLyrics()
     {
         LyricLines.Clear(); if (CurrentTrack is null) return;
-        try { foreach (var line in LyricsService.Parse(Lyrics.ReadForTrack(CurrentTrack.Id, CurrentTrack.FilePath))) LyricLines.Add(line); }
+        try { foreach (var line in LyricsService.Parse(CurrentTrack.LyricsDisabled ? "" : Lyrics.ReadForTrack(CurrentTrack.Id, CurrentTrack.FilePath))) LyricLines.Add(line); }
         catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException) { ReportError(L10n.T("Lyrics.UnableToReadLyricsCheckTheLyricsFolderPermissions"), e); }
     }
-    public void ImportLyrics(string path) { if (CurrentTrack is null) throw new InvalidOperationException(L10n.T("Playback.SelectOrPlayASongFirst")); Lyrics.Import(CurrentTrack.Id, path); CurrentTrack.LyricsSourcePath = Path.GetFullPath(path); ReloadLyrics(); Save(); StatusText = L10n.T("Lyrics.LyricsImportedIntoTheLyricsFolder"); CompleteOperation("lyrics.import"); }
+    public void ImportLyrics(string path) { if (CurrentTrack is null) throw new InvalidOperationException(L10n.T("Playback.SelectOrPlayASongFirst")); Lyrics.Import(CurrentTrack.Id, path); CurrentTrack.LyricsSourcePath = Path.GetFullPath(path); CurrentTrack.LyricsDisabled = false; ReloadLyrics(); Save(); StatusText = L10n.T("Lyrics.LyricsImportedIntoTheLyricsFolder"); CompleteOperation("lyrics.import"); }
     public void Seek(double seconds)
     {
         if (_loadingAudio || _disposed || CurrentTrack is null) return;

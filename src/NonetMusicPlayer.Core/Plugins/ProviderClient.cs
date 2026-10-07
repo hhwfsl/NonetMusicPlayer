@@ -27,10 +27,13 @@ public sealed class ProviderClient : IDisposable
         if (!_process.Start()) throw new IOException(Localization.LocalizationCatalog.Get("Plugins.ProcessStartFailed"));
         _process.BeginErrorReadLine();
     }
-    public async Task<JsonElement> CallAsync(string method, Dictionary<string, string>? parameters = null, CancellationToken cancellationToken = default)
+    public async Task<JsonElement> CallAsync(string method, Dictionary<string, string>? parameters = null, CancellationToken cancellationToken = default, TimeSpan? requestTimeout = null)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken); timeout.CancelAfter(TimeSpan.FromSeconds(method.StartsWith("agent.", StringComparison.Ordinal) ? 150 : method.StartsWith("lyrics.", StringComparison.Ordinal) ? 50 : 20));
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        // 零时限仅由宿主显式传入；取消、停用和响应大小限制仍然有效。
+        var limit = requestTimeout ?? TimeSpan.FromSeconds(method.StartsWith("agent.", StringComparison.Ordinal) ? 150 : method.StartsWith("lyrics.", StringComparison.Ordinal) ? 50 : 20);
+        if (limit > TimeSpan.Zero) timeout.CancelAfter(limit);
         await _rpcGate.WaitAsync(timeout.Token);
         try
         {

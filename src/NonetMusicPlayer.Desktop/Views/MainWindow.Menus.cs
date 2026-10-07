@@ -42,6 +42,7 @@ public sealed partial class MainWindow
             menu.Items.Add(new Separator());
             menu.Items.Add(Menu(L10n.T("Playlists.DeletePlaylist"), () => DeleteAsync(playlist), IconKind.Trash));
         }
+        AddExtensionMenu(menu, "playlist.more", new System.Text.Json.Nodes.JsonObject { ["playlistId"] = playlist.Id });
         OpenMenu(anchor, menu);
     }
 }

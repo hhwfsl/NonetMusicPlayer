@@ -65,6 +65,9 @@ public sealed partial class PluginManager : IDisposable
         RequireInstalled(manifest);
         manifest.Validate();
         if (enabled && manifest.Type is "ui" or "lyrics" or "agent") ReadUiPage(manifest);
+        if (enabled && manifest.Runtime == "managed" && !manifest.ManagedExecutionConsent) throw new InvalidOperationException(L10n.T("Extensions.ManagedWarning"));
+        if (enabled && manifest.Type == "extension") LoadExtensionPage(manifest);
+        if (!enabled) StopExtension(manifest.Id);
         if (!enabled && _clients.Remove(manifest.Id, out var client)) { client.NotifyLifecycle(manifest, "lifecycle.disable"); client.Dispose(); }
         var previous = manifest.Enabled; manifest.Enabled = enabled;
         try { Save(); }
@@ -75,14 +78,14 @@ public sealed partial class PluginManager : IDisposable
             catch (Exception rollbackError) { AppLog.Warning("Plugins", "插件状态回滚未完全保存", rollbackError); }
             throw;
         }
-        finally { if (!manifest.Enabled && manifest.Type is "ui" or "widget" or "lyrics" or "agent") NotifyUiUnavailable(manifest.Id); RefreshUiRuntime(manifest); }
+        finally { if (!manifest.Enabled && manifest.Type is "ui" or "widget" or "lyrics" or "agent" or "extension") NotifyUiUnavailable(manifest.Id); RefreshUiRuntime(manifest); }
         OperationCompleted?.Invoke(this, CommandResults.Completed(enabled ? "plugins.enable" : "plugins.disable"));
         PublishLifecycle(manifest, enabled ? "enabled" : "disabled");
     }
     public PluginPageDefinition LoadPage(PluginManifest manifest)
     {
         RequireInstalled(manifest);
-        if (manifest.Type is not ("ui" or "widget" or "lyrics" or "agent") || !manifest.Enabled) throw new InvalidOperationException(L10n.T("Plugins.EnableThisPagePluginFirst"));
+        if (manifest.Type is not ("ui" or "widget" or "lyrics" or "agent" or "extension") || !manifest.Enabled) throw new InvalidOperationException(L10n.T("Plugins.EnableThisPagePluginFirst"));
         if (manifest.Type == "widget") return new(manifest.Name, "", manifest.Widgets.Select(w => new PluginPageWidget("text", w.Title, w.Text, null)).ToArray());
         return ReadUiPage(manifest);
     }
@@ -133,12 +136,13 @@ public sealed partial class PluginManager : IDisposable
         if (manifest.Type == "lyrics") manifest.AudioTagWriteConsent = manifest.Permissions.Contains("audio-tags") && EmbeddingRequested(json) && (manifest.AudioTagWriteConsent || confirmAudioTagWrite);
         var previous = manifest.Configuration; var priorSession = _sessionConfiguration.GetValueOrDefault(manifest.Id);
         _sessionConfiguration[manifest.Id] = json;
-        // 敏感配置仅保留在本次会话中；递归检查嵌套字段，不能只检查顶层名称。
+        // 安装索引只写脱敏值；Agent 的完整配置另存为账户加密 JSON。
         var persisted = Scrub(document.RootElement).AsObject(); PluginConfigSchema.RemoveSensitiveFields(schema, persisted); manifest.Configuration = persisted.ToJsonString();
-        try { if (manifest.Enabled && manifest.Type is "ui" or "lyrics" or "agent") ReadUiPage(manifest); Save(); }
-        catch { manifest.Configuration = previous; manifest.AudioTagWriteConsent = priorTagConsent; if (priorSession is null) _sessionConfiguration.Remove(manifest.Id); else _sessionConfiguration[manifest.Id] = priorSession; throw; }
+        try { if (manifest.Enabled && manifest.Type is "ui" or "lyrics" or "agent") ReadUiPage(manifest); Save(); if (manifest.Type is "agent" or "extension") PluginConfigurationStore.Write(_storage.PluginsFolder, manifest, json, manifest.Configuration); }
+        catch { manifest.Configuration = previous; manifest.AudioTagWriteConsent = priorTagConsent; if (priorSession is null) _sessionConfiguration.Remove(manifest.Id); else _sessionConfiguration[manifest.Id] = priorSession; Save(); throw; }
+        StopExtension(manifest.Id);
         if (_clients.Remove(manifest.Id, out var client)) client.Dispose();
-        if (manifest.Type is "ui" or "lyrics" or "agent") { NotifyUiUnavailable(manifest.Id); if (_pets.Remove(manifest.Id, out var pet)) pet.Close(); RefreshUiRuntime(manifest); }
+        if (manifest.Type is "ui" or "lyrics" or "agent" or "extension") { NotifyUiUnavailable(manifest.Id); if (_pets.Remove(manifest.Id, out var pet)) pet.Close(); RefreshUiRuntime(manifest); }
         OperationCompleted?.Invoke(this, CommandResults.Completed("plugins.config"));
     }
     private static System.Text.Json.Nodes.JsonNode Scrub(JsonElement value)
@@ -155,6 +159,7 @@ public sealed partial class PluginManager : IDisposable
     }
     public void Uninstall(PluginManifest manifest, bool deleteFiles = false)
     {
+        StopExtension(manifest.Id, "lifecycle.uninstall");
         SetEnabled(manifest, false); _sessionConfiguration.Remove(manifest.Id);
         var directory = Path.Combine(_storage.PluginsFolder, manifest.Id);
         // 先验证插件 ID 再解析所属目录，不接受调用方传入的任意目录。
@@ -166,7 +171,7 @@ public sealed partial class PluginManager : IDisposable
         PublishLifecycle(manifest, "uninstalling"); DataDirectoryService.RejectLinkedAncestors(directory);
         if (Directory.Exists(directory))
         {
-            if (deleteFiles) Core.Plugins.PluginPathPolicy.AfterProcessExit(() => Directory.Delete(directory, true));
+            if (deleteFiles) Core.Plugins.PluginPathPolicy.AfterProcessExit(() => { Directory.Delete(directory, true); PluginConfigurationStore.Delete(_storage.PluginsFolder, manifest); var owned = Path.Combine(_storage.PluginsFolder, "Storage", manifest.Id); PluginPathPolicy.RejectLinkedAncestors(owned); if (Directory.Exists(owned)) Directory.Delete(owned, true); });
             else
             {
                 // 断开注册但不移动文件；将非敏感配置/来源保存在原清单，便于同 ID 重新接入。
@@ -177,7 +182,7 @@ public sealed partial class PluginManager : IDisposable
     }
     private async Task<ProviderClient> GetClientAsync(PluginManifest manifest, CancellationToken cancellationToken = default)
     {
-        if (manifest.Type is not ("provider" or "lyrics" or "agent")) throw new InvalidOperationException("这个插件不是进程插件。");
+        if (manifest.Type is not ("provider" or "lyrics" or "agent" or "extension")) throw new InvalidOperationException("这个插件不是进程插件。");
         if (!manifest.Enabled) throw new InvalidOperationException("请先启用音源插件。");
         if (_clients.TryGetValue(manifest.Id, out var current) && !current.IsDisposed) return current;
         _clients.Remove(manifest.Id);
@@ -186,8 +191,8 @@ public sealed partial class PluginManager : IDisposable
         {
             // 应用版本仅用于报告；握手能力由稳定的 Contract 判断，不能按发行版本淘汰旧插件。
             var hostVersion = System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(typeof(PluginManager).Assembly)?.InformationalVersion.Split('+')[0] ?? "0.4.0";
-            var result = await client.CallAsync("initialize", new() { ["contractVersion"] = "1", ["hostVersion"] = hostVersion, ["configuration"] = ConfigurationValues(manifest).ToJsonString() }, cancellationToken);
-            if (!result.TryGetProperty("contractVersion", out var version) || version.GetInt32() != 1) throw new InvalidDataException("插件 Contract 握手失败。");
+            var result = await client.CallAsync("initialize", new() { ["contractVersion"] = manifest.ContractVersion.ToString(), ["storageDirectory"] = ExtensionStorage(manifest), ["hostVersion"] = hostVersion, ["configuration"] = ConfigurationValues(manifest).ToJsonString() }, cancellationToken);
+            if (!result.TryGetProperty("contractVersion", out var version) || version.GetInt32() != manifest.ContractVersion) throw new InvalidDataException("插件 Contract 握手失败。");
             cancellationToken.ThrowIfCancellationRequested(); if (!manifest.Enabled || !Installed.Contains(manifest)) throw new OperationCanceledException();
             _clients.Add(manifest.Id, client); return client;
         }
@@ -237,7 +242,7 @@ public sealed partial class PluginManager : IDisposable
     {
         DisposeUiRuntime();
         foreach (var pair in _clients) { if (Installed.FirstOrDefault(p => p.Id == pair.Key) is { } manifest) pair.Value.NotifyLifecycle(manifest, "lifecycle.shutdown"); pair.Value.Dispose(); } _clients.Clear();
-        foreach (var manifest in Installed.Where(p => p.Type is "ui" or "widget" or "lyrics" or "agent")) NotifyUiUnavailable(manifest.Id);
+        foreach (var manifest in Installed.Where(p => p.Type is "ui" or "widget" or "lyrics" or "agent" or "extension")) NotifyUiUnavailable(manifest.Id);
         foreach (var manifest in Installed.Where(p => p.Enabled)) PublishLifecycle(manifest, "shutdown");
     }
     private void PublishLifecycle(PluginManifest manifest, string stage)

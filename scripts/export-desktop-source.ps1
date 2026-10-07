@@ -29,7 +29,7 @@ foreach ($taskScript in @('publish-desktop.ps1','publish-cli.ps1','package-deskt
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $taskScript) -Destination (Join-Path $taskDestination 'scripts')
 }
 [IO.Directory]::CreateDirectory((Join-Path $taskDestination 'docs')) | Out-Null
-foreach ($taskDocument in @('CLI.md','COMMANDS.md','LOCALIZATION.md','PLUGIN_DEVELOPMENT.md','RELEASE_VALIDATION.md','STORAGE.md','UI_LAYOUT.md','UPDATES.md','USER_MANUAL.md','UserManual.zh-CN.md','UserManual.en-US.md','UserManual.ja-JP.md','WINDOWS_INSTALLER.md')) {
+foreach ($taskDocument in @('CLI.md','COMMANDS.md','LOCALIZATION.md','EXTENSIONS.md','PLUGIN_DEVELOPMENT.md','RELEASE_VALIDATION.md','STORAGE.md','UI_LAYOUT.md','UPDATES.md','USER_MANUAL.md','UserManual.zh-CN.md','UserManual.en-US.md','UserManual.ja-JP.md','WINDOWS_INSTALLER.md')) {
     Copy-Item -LiteralPath (Join-Path $taskSource ('docs/' + $taskDocument)) -Destination (Join-Path $taskDestination 'docs')
 }
 Copy-TaskTree (Join-Path $taskSource 'docs/licenses') (Join-Path $taskDestination 'docs/licenses')

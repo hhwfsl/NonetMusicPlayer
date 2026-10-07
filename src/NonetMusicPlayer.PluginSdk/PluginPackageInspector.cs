@@ -22,7 +22,7 @@ public static class PluginPackageInspector
         var manifestEntry = zip.GetEntry("manifest.json") ?? throw new InvalidDataException("包根目录缺少 manifest.json。");
         if (manifestEntry.Length > 100_000) throw new InvalidDataException("插件清单过大。");
         using var stream = manifestEntry.Open(); var manifest = JsonSerializer.Deserialize(stream, PluginJsonContext.Default.PluginManifest) ?? throw new InvalidDataException("插件清单为空。");
-        manifest.Validate(); manifest.Enabled = false; manifest.Configuration = "{}"; manifest.AudioTagWriteConsent = false; manifest.OriginRepository = "";
+        manifest.Validate(); manifest.Enabled = false; manifest.Configuration = "{}"; manifest.AudioTagWriteConsent = false; manifest.ManagedExecutionConsent = false; manifest.OriginRepository = "";
         var schemaEntry = zip.GetEntry(PluginConfigSchema.FileName) ?? zip.GetEntry("plugin_config_schema");
         if (zip.GetEntry(PluginConfigSchema.FileName) is not null && zip.GetEntry("plugin_config_schema") is not null) throw new InvalidDataException("插件只能包含一份配置规范。");
         System.Text.Json.Nodes.JsonObject? configSchema = null;
@@ -34,6 +34,11 @@ public static class PluginPackageInspector
             if (notice.Length > 256 * 1024) throw new InvalidDataException("插件许可文件过大。");
             using var reader = new StreamReader(notice.Open(), new System.Text.UTF8Encoding(false, true), detectEncodingFromByteOrderMarks: false);
             if (reader.ReadToEnd().Contains('\0')) throw new InvalidDataException("插件许可文件必须是文本。");
+        }
+        if (manifest.Type == "extension")
+        {
+            using var page = (zip.GetEntry(manifest.PageEntry) ?? throw new InvalidDataException("Missing extension page.")).Open();
+            ExtensionContract.ReadPage(page);
         }
         if (manifest.Type is "ui" or "lyrics" or "agent")
         {

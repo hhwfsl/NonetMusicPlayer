@@ -1,7 +1,7 @@
 namespace NonetMusicPlayer.Desktop.Services;
 
 /// <summary>显式检查实际精简发行包，不创建界面，也不输出凭据。</summary>
-internal static class ReleaseVerifier
+internal static partial class ReleaseVerifier
 {
     /// <summary>验证实际精简包中的歌词 RPC、配置授权及标签写入，只操作隔离目录生成的测试音频。</summary>
     public static int RunLyrics(string package, string output)

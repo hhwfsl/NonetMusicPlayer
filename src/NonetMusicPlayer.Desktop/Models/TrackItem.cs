@@ -20,6 +20,8 @@ public sealed partial class TrackItem : ObservableObject
     public double DurationSeconds { get; set; }
     public string? CoverPath { get; set; }
     public string? LyricsSourcePath { get; set; }
+    /// <summary>用户主动取消关联后同时屏蔽外部和内嵌歌词，重新手动关联时清除。</summary>
+    public bool LyricsDisabled { get; set; }
     public string? ProviderId { get; set; }
     public string? ProviderTrackId { get; set; }
     private bool _isFavorite;

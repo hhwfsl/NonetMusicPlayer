@@ -1,4 +1,7 @@
 {
+  "LyricsSearch.PreviousPage": { "zh-CN": "上一页", "en-US": "Previous page", "ja-JP": "前のページ" },
+  "LyricsSearch.NextPage": { "zh-CN": "下一页", "en-US": "Next page", "ja-JP": "次のページ" },
+  "Lyrics.Unlink": { "zh-CN": "取消歌词关联", "en-US": "Unlink lyrics", "ja-JP": "歌詞の関連付けを解除" },
   "Lyrics.PlayPreviewedLine": {
     "zh-CN": "播放当前预览歌词",
     "en-US": "Play previewed line",

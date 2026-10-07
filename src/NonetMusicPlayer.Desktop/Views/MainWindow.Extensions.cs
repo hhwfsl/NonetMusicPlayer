@@ -15,10 +15,10 @@ public sealed partial class MainWindow
     private void BuildPluginNavigation()
     {
         PluginNavigation.Children.Clear(); if (_vm is null) return;
-        foreach (var plugin in _vm.Plugins.Installed.Where(p => p.Enabled && p.Type is "ui" or "widget" or "lyrics" or "agent"))
+        foreach (var plugin in _vm.Plugins.Installed.Where(p => p.Enabled && p.Type is "ui" or "widget" or "lyrics" or "agent" or "extension"))
         {
             var label = Ui.RawText(plugin.NavigationLabel); label.TextWrapping = TextWrapping.NoWrap; label.TextTrimming = TextTrimming.CharacterEllipsis;
-            var content = new Grid { ColumnDefinitions = new("30,*") }; content.Children.Add(new VectorIcon { Kind = plugin.Permissions.Contains("lyrics-editor") || plugin.Type == "lyrics" ? IconKind.Lyrics : plugin.Type == "agent" ? IconKind.Plugins : IconKind.Game, Width = 20, Height = 20 }); Grid.SetColumn(label, 1); content.Children.Add(label);
+            var content = new Grid { ColumnDefinitions = new("30,*") }; content.Children.Add(new VectorIcon { Kind = Enum.TryParse<IconKind>(plugin.NavigationIcon, out var declaredIcon) ? declaredIcon : plugin.Permissions.Contains("lyrics-editor") || plugin.Type == "lyrics" ? IconKind.Lyrics : plugin.Type == "agent" ? IconKind.Plugins : IconKind.Game, Width = 20, Height = 20 }); Grid.SetColumn(label, 1); content.Children.Add(label);
             var button = new Button { Content = content, Tag = "plugin:" + plugin.Id, Padding = new(10, 0), Height = 44 }; button.Classes.Add("nav");
             ToolTip.SetTip(button, plugin.NavigationLabel); button.Click += (_, _) => _vm.Navigate("plugin:" + plugin.Id, plugin.NavigationLabel); PluginNavigation.Children.Add(button);
         }
@@ -26,9 +26,9 @@ public sealed partial class MainWindow
     }
     private Control PluginPage(string page)
     {
-        var plugin = _vm?.Plugins.Installed.FirstOrDefault(p => p.Enabled && p.Type is "ui" or "widget" or "lyrics" or "agent" && "plugin:" + p.Id == page);
+        var plugin = _vm?.Plugins.Installed.FirstOrDefault(p => p.Enabled && p.Type is "ui" or "widget" or "lyrics" or "agent" or "extension" && "plugin:" + p.Id == page);
         if (plugin is null) return Ui.Card(L10n.T("Plugins.PluginIsDisabled"), Ui.Text(L10n.T("Plugins.EnableThisPluginInThePluginManagerFirst"), 13, true));
-        try { return new PluginPageView(_vm!.Plugins, plugin, includeTitle: false); }
+        try { return plugin.Type == "extension" ? new ExtensionPageView(_vm!.Plugins, plugin) : new PluginPageView(_vm!.Plugins, plugin, includeTitle: false); }
         catch (Exception e) { _vm!.ReportError(L10n.T("Plugins.UnableToOpenPluginPage"), e); return Ui.Card(L10n.T("Common.PageFailedToLoad"), Ui.Text(L10n.T("Plugins.DataIsUnchangedCheckThePluginSPageConfiguration"), 13, true)); }
     }
     private sealed record MusicGroup(string Name, TrackItem[] Tracks) { public int Count => Tracks.Length; }

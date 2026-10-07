@@ -19,6 +19,8 @@ internal static class Program
             if (args.Length == 2 && args[0] == "--apply-update") return UpdateInstaller.RunHelper(args[1]);
             if (args.Length == 3 && args[0] == "--verify-release") return Services.ReleaseVerifier.Run(args[1], args[2]);
             if (args.Length == 4 && args[0] == "--verify-provider") return Services.ReleaseVerifier.RunProvider(args[1], args[2], args[3]);
+            if (args.Length == 3 && args[0] == "--verify-extension-plugin") return Services.ReleaseVerifier.RunExtension(args[1], args[2]);
+            if (args.Length == 3 && args[0] == "--verify-agent-plugin") return Services.ReleaseVerifier.RunAgent(args[1], args[2]);
             if (args.Length == 3 && args[0] == "--verify-lyrics-plugin") return Services.ReleaseVerifier.RunLyrics(args[1], args[2]);
             using var instance = new SingleInstanceService();
             if (!instance.IsPrimary)
