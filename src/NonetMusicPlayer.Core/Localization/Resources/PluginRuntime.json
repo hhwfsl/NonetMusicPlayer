@@ -88,5 +88,10 @@
     "zh-CN": "扩展音效处理失败或超时，已停用该音效并保留原音频播放。",
     "en-US": "An extension audio effect failed or exceeded its time budget. The effect was bypassed and original audio preserved.",
     "ja-JP": "拡張音声エフェクトでエラーまたは時間超過が発生しました。エフェクトを無効にして元の音声を保持しました。"
+  },
+  "Extensions.InteractionRequest": {
+    "zh-CN": "插件请求交互：",
+    "en-US": "Plugin interaction request: ",
+    "ja-JP": "プラグインの操作要求："
   }
 }

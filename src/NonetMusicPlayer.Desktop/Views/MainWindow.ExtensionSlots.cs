@@ -53,17 +53,22 @@ public sealed partial class MainWindow
         Fill(PlayerExtensionActions, "player.actions"); Fill(TitleExtensionActions, "titlebar.actions");
         PlayerExtensionsButton.IsVisible = PlayerExtensionActions.Items.Count > 0;
         TitleExtensionsButton.IsVisible = TitleExtensionActions.Items.Count > 0;
-        var overlays = _vm.Plugins.Contributions("overlay").Where(c => c.Contribution.View is not null).ToArray();
+        var overlays = _vm.Plugins.Contributions("overlay").Where(c => c.Contribution.View is not null || c.Contribution.Native).ToArray();
         var active = overlays.Select(c => c.Plugin.Id).ToHashSet();
         foreach (var id in _extensionOverlays.Keys.Where(id => !active.Contains(id)).ToArray())
         { _extensionOverlays[id].Close(); _extensionOverlays.Remove(id); }
         foreach (var (plugin, contribution) in overlays)
         {
             if (_extensionOverlays.ContainsKey(plugin.Id)) continue;
-            var content = new ExtensionPageView(_vm.Plugins, plugin, contribution.View);
-            var window = new Window { Title = contribution.Label, Width = 340, Height = 260, MinWidth = 200, MinHeight = 160,
-                Content = content, Topmost = true, DataContext = _vm };
-            _extensionOverlays.Add(plugin.Id, window); window.Closed += (_, _) => { content.Dispose(); _extensionOverlays.Remove(plugin.Id); };
+            var content = ContributionView(plugin, contribution);
+            var options = contribution.Overlay ?? new ExtensionOverlayOptions();
+            var window = new Window { Title = contribution.Label, Width = options.Width, Height = options.Height, MinWidth = 80, MinHeight = 80,
+                WindowDecorations = options.Transparent ? Avalonia.Controls.WindowDecorations.None : Avalonia.Controls.WindowDecorations.Full,
+                Background = options.Transparent ? Avalonia.Media.Brushes.Transparent : Ui.Brush("SurfaceBrush"),
+                TransparencyLevelHint = options.Transparent ? [WindowTransparencyLevel.Transparent] : [],
+                ShowInTaskbar = options.ShowInTaskbar, ShowActivated = false,
+                Content = content, Topmost = options.Topmost, DataContext = _vm };
+            _extensionOverlays.Add(plugin.Id, window); window.Closed += (_, _) => { if (content is IDisposable disposable) disposable.Dispose(); _extensionOverlays.Remove(plugin.Id); };
             // 普通独立窗口可以移动和调整大小；停用时立即关闭，非 OS 沙箱。
             window.Show();
         }

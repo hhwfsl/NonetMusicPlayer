@@ -20,9 +20,10 @@ public sealed partial class ExtensionSession
             {
                 commands.Add(new JsonObject { ["operation"] = "extension.package", ["usage"] = "one JSON string: {id:custom.name,name,version,layout:optional layout JSON string,page:{schemaVersion:2,root:{...}},contributions:[...]}. Generates and installs a data-only plugin; never executable code.", ["confirmation"] = true });
                 commands.Add(new JsonObject { ["operation"] = "extension.source", ["usage"] = "one JSON string: {id,files:{relativePath:UTF8 text}}. Creates a NEW C# source folder, never builds/runs code.", ["confirmation"] = true });
-                commands.Add(new JsonObject { ["operation"] = "extension.template", ["usage"] = "optional allowlisted relative file; get fixed template docs/source (README.md, docs/AGENT_GUIDE.md, plugin/PluginDefinition.cs, plugin/manifest.json, plugin/page.json, Directory.Build.props, build.ps1)", ["confirmation"] = false });
+                commands.Add(new JsonObject { ["operation"] = "extension.template", ["usage"] = "optional allowlisted relative file; get fixed template docs/source (README.md, docs/AGENT_GUIDE.md, plugin/PluginDefinition.cs, plugin/manifest.json, plugin/page.json, Directory.Build.props, build.ps1, host/UNIVERSAL_EXTENSIONS.md, host/EXTENSIONS.md)", ["confirmation"] = false });
             }
         }
+        catalog["commands"]!.AsArray().Add(new JsonObject { ["operation"] = "extension.service", ["usage"] = "one JSON string: {service,arguments:{...}}. Use host to discover capabilities, services, slots and hooks. All calls enforce manifest permissions; interactive files/config/dialogs require host confirmation. No paths, shell, arbitrary reads, secret configuration or approval escalation." });
         return catalog;
     }
     private async Task<bool> ConfirmExtensionAsync(string operation, bool required, string description)

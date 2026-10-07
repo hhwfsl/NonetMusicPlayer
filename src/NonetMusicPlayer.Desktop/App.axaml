@@ -432,5 +432,20 @@
             <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
             <Setter Property="MinHeight" Value="32" />
         </Style>
+        <!-- 通用强调动作样式，用于插件的主要操作，颜色随应用主题变化。 -->
+        <Style Selector="Button.extension-accent">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
+            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.extension-accent icons|VectorIcon">
+            <Setter Property="Brush" Value="{DynamicResource AccentForegroundBrush}" />
+        </Style>
+        <Style Selector="Button.extension-accent:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+        </Style>
     </Application.Styles>
 </Application>

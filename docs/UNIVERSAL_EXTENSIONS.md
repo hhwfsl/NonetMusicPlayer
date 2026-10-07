@@ -1,4 +1,4 @@
-# 通用扩展接口参考（SDK 4.4）
+# 通用扩展接口参考（SDK 4.5）
 
 ## 设计边界
 
@@ -190,3 +190,19 @@ dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release --
 ```
 
 独立 CLI 不加载桌面原生 UI 或桌面钩子；其共享播放引擎和命令仍无图形依赖。跨平台原生 UI/音效必须分别实机验证。
+
+## SDK 4.5：复合输入、图片与独立浮层
+
+新增可选能力：`ui.assets.v1`、`ui.composer.v1`、`config.approval.v1`、`interaction.v1`、`ui.overlay.v1`、`ui.large-text.v1`。旧插件无需重编译；程序集版本仍为 4.0.0.0。
+
+清单 `navigationImage` 指向包内 PNG/JPEG/WebP/BMP（10 MB 上限）；页面 `image.asset` 和导航图片由打包器自动收集，禁止外部路径及缺失资源。控件新增可选 `selectedBind`、`cornerRadius`、`maxHeight`、`borderless`；横向 repeat 自动换行，适用于附件卡；accent 变体使用主题色圆形主要动作。默认值保持旧布局。
+
+`config` 服务的 `approval.read` 返回本插件审批模式；`approval.set` 只允许直接用户点击的上下文，保存完整配置、不重启会话。提升模式必须由宿主确认，不能通过异步 interaction 设置审批。普通 `config {}` 仍打开配置页。
+
+异步任务可调用 `interaction {service, arguments}`，service 仅限 files、files.pick、config（只打开）、dialogs.prompt、dialogs.confirm。宿主首先确认插件的交互请求，再执行自身选择器和权限检查；模型布尔字段不能制造用户手势。文件接收/安装信任确认不受自动审批模式省略。
+
+原生 overlay 贡献可设置 `overlay:{width,height,transparent,topmost,showInTaskbar}`。宿主创建独立窗口，不跟随主窗口最小化；native 控件由已授权的 INonetNativeViewExtension 提供。关闭、停用、卸载和退出释放视图。透明行为依赖目标系统合成器。
+
+可选 `ExtensionFrame.LargeTextState` 将状态上限从 2 MB 提高到 30 MB，传输硬上限为 32 MB；只有确需完整长文的页面使用。避免把附件 Base64、PCM 或全库封面塞入状态，流式更新复用正文控件，不重建行。
+
+Agent 可调用全部有权限的公开服务，并根据目录生成 native / hook / PCM 插件源码；这不等于把进程工具转换成原生音效回调，也不授予执行生成代码、任意文件读取、秘密配置或安全内核绕过能力。

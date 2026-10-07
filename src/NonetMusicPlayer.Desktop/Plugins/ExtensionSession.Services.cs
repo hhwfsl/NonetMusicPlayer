@@ -58,7 +58,8 @@ public sealed partial class ExtensionSession
             case "host":
                 return new() { ["success"] = true, ["contractVersion"] = 2,
                     ["capabilities"] = Strings(ExtensionContract.Capabilities), ["slots"] = Strings(ExtensionContract.Slots),
-                    ["hooks"] = Strings(UniversalExtensionContract.Hooks), ["services"] = Strings(["commands", "catalog", "config", "files.pick", "lyrics", "dialogs.confirm", "dialogs.notify", "dialogs.prompt", "ui", "development", .. UniversalExtensionContract.Services]),
+                    ["hooks"] = Strings(UniversalExtensionContract.Hooks),
+                    ["pluginServices"] = new JsonArray(_manager.Installed.Where(p => p.Enabled && p.Id != Manifest.Id).SelectMany(p => p.ProvidedServices.Select(n => (JsonNode?)JsonValue.Create("plugin:" + p.Id + "/" + n))).ToArray()), ["services"] = Strings(["commands", "catalog", "config", "interaction", "files.pick", "lyrics", "dialogs.confirm", "dialogs.notify", "dialogs.prompt", "ui", "development", .. UniversalExtensionContract.Services]),
                     ["commands"] = ExtensionCatalog(), ["pluginId"] = Manifest.Id,
                     ["state"] = Manifest.Permissions.Contains("music-read") ? HostState() : new JsonObject { ["page"] = _manager.ExtensionViewModel.Page } };
             case "query":

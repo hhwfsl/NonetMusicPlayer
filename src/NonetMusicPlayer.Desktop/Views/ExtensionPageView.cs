@@ -86,7 +86,7 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
                 foreach (var child in node.Children) stack.Children.Add(Build(child, item, bindings));
                 control = stack; break;
             case "border":
-                var border = new Border { CornerRadius = new(12), Padding = Thickness.Parse(node.Padding) };
+                var border = new Border { CornerRadius = new(node.CornerRadius), Padding = Thickness.Parse(node.Padding) };
                 if (node.Background.Length > 0) border.Background = Ui.Brush(node.Background);
                 if (node.Children.Count > 0) border.Child = Build(node.Children[0], item, bindings);
                 control = border; break;
@@ -103,7 +103,9 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
                 });
                 control = scroll; break;
             case "repeat":
-                var repeat = new StackPanel { Spacing = node.Spacing };
+                var repeat = new WrapPanel { Orientation = node.Horizontal ? Orientation.Horizontal : Orientation.Vertical };
+                // 横向重复用于附件卡片，纵向使用旧列表布局。
+                Panel repeated = node.Horizontal ? repeat : new StackPanel { Spacing = node.Spacing };
                 var childBindings = new List<Action<JsonObject>>(); var signature = "";
                 var retainedRows = new List<JsonObject>();
                 bindings.Add(state =>
@@ -126,20 +128,25 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
                         }
                         else
                         {
-                            _activeContextMenu?.Close(); _activeContextMenu = null; repeat.Children.Clear(); childBindings.Clear(); retainedRows.Clear();
+                            _activeContextMenu?.Close(); _activeContextMenu = null; repeated.Children.Clear(); childBindings.Clear(); retainedRows.Clear();
                             foreach (var row in rows)
-                                if (node.Template is not null) { var retained = row?.DeepClone(); if (retained is JsonObject obj) retainedRows.Add(obj); repeat.Children.Add(Build(node.Template, retained, childBindings)); }
+                                if (node.Template is not null) { var retained = row?.DeepClone(); if (retained is JsonObject obj) retainedRows.Add(obj); repeated.Children.Add(Build(node.Template, retained, childBindings)); }
                         }
                     }
                     foreach (var update in childBindings.ToArray()) update(state);
-                }); control = repeat; break;
+                }); control = repeated; break;
             case "image":
                 var image = new Image { Stretch = Stretch.Uniform };
                 if (node.Asset.Length > 0)
                 {
                     var path = Path.Combine(_manager.ExtensionDirectory(_session.Manifest), node.Asset); PluginPathPolicy.RejectLinkedAncestors(path);
                     if (new FileInfo(path).Length > 10_000_000) throw new InvalidDataException("Extension image is too large.");
-                    var bitmap = new Avalonia.Media.Imaging.Bitmap(path); _assets.Add(bitmap); image.Source = bitmap;
+                    using var source = File.OpenRead(path);
+                    // 按显示尺寸解码，头像不必常驻完整原图；原始资源不改写。
+                    var bitmap = node.Width > 0 ? Avalonia.Media.Imaging.Bitmap.DecodeToWidth(source, (int)Math.Clamp(node.Width * 3, 64, 1536))
+                        : node.Height > 0 ? Avalonia.Media.Imaging.Bitmap.DecodeToHeight(source, (int)Math.Clamp(node.Height * 3, 64, 1536))
+                        : Avalonia.Media.Imaging.Bitmap.DecodeToWidth(source, 1024);
+                    _assets.Add(bitmap); image.Source = bitmap;
                 }
                 control = image; break;
             case "slider":
@@ -206,9 +213,10 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
                 bindings.Add(state =>
                 {
                     var data = Value(node.Bind, state, item) as JsonArray; var signature = data?.ToJsonString() ?? "[]";
-                    if (signature == selectSignature) return;
+                    if (signature == selectSignature && node.SelectedBind.Length == 0) return;
                     selectSignature = signature; selectUpdating = true; select.ItemsSource = data?.Select(String).ToArray();
-                    if (_inputs.TryGetValue(node.Input, out var selected)) select.SelectedItem = String(selected);
+                    if (node.SelectedBind.Length > 0) select.SelectedItem = String(Value(node.SelectedBind, state, item));
+                    else if (_inputs.TryGetValue(node.Input, out var selected)) select.SelectedItem = String(selected);
                     else select.SelectedIndex = 0;
                     _inputs[node.Input] = JsonValue.Create(select.SelectedItem as string); selectUpdating = false;
                 });
@@ -234,6 +242,10 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
         }
         if (node.Variant.Length > 0) control.Classes.Add("extension-" + node.Variant);
         if (node.SelectedIf.Length > 0) bindings.Add(state => control.Classes.Set("selected", Value(node.SelectedIf, state, item)?.GetValue<bool>() == true));
+        if (node.Borderless && control is TextBox bare) { bare.BorderThickness = new(0); bare.Background = Brushes.Transparent; }
+        if (node.MaxHeight > 0) control.MaxHeight = node.MaxHeight;
+        FullTextToolTips.SetEnabled(control, false);
+        if (node.Type == "input") ToolTip.SetTip(control, null);
         control.Name = node.Id.Length > 0 ? node.Id : null;
         control.Margin = Thickness.Parse(node.Margin);
         control.HorizontalAlignment = node.Align switch { "left" => HorizontalAlignment.Left, "right" => HorizontalAlignment.Right, "center" => HorizontalAlignment.Center, _ => HorizontalAlignment.Stretch };

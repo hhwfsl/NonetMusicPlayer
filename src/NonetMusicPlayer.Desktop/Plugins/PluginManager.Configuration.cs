@@ -15,6 +15,22 @@ public sealed partial class PluginManager
         return mode != "ask" && mode != manifest.ApprovalMode;
     }
 
+    /// <summary>仅宿主确认后的内联控件使用，不重启会话，保留完整加密配置。</summary>
+    internal void SetApprovalMode(PluginManifest plugin, string mode)
+    {
+        RequireWritable(); RequireInstalled(plugin);
+        if (!plugin.SupportsApprovalModes || !PluginApprovalPolicy.IsMode(mode)) throw new InvalidDataException("Invalid approval mode.");
+        var values = ConfigurationValues(plugin); values["approvalMode"] = mode; PluginConfigSchema.Validate(ReadConfigurationSchema(plugin), values);
+        var previous = plugin.ApprovalMode; var priorPublic = plugin.Configuration; var priorFull = EffectiveConfiguration(plugin); var json = values.ToJsonString();
+        var publicValues = JsonNode.Parse(plugin.Configuration)!.AsObject(); publicValues["approvalMode"] = mode;
+        try { PluginConfigurationStore.Write(_storage.PluginsFolder, plugin, json, publicValues.ToJsonString()); plugin.ApprovalMode = mode; plugin.Configuration = publicValues.ToJsonString(); _sessionConfiguration[plugin.Id] = json; Save(); }
+        catch
+        {
+            plugin.ApprovalMode = previous; plugin.Configuration = priorPublic; _sessionConfiguration[plugin.Id] = priorFull;
+            try { PluginConfigurationStore.Write(_storage.PluginsFolder, plugin, priorFull, priorPublic); } catch { AppLog.Warning("Extensions", "Approval persistence rollback failed."); }
+            throw;
+        }
+    }
     public JsonObject ReadConfigurationSchema(PluginManifest plugin)
     {
         RequireInstalled(plugin);

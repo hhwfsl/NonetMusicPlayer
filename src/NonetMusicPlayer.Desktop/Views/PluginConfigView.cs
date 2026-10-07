@@ -72,7 +72,9 @@ public sealed class PluginConfigView : UserControl
                 var subset = new JsonObject();
                 foreach (var item in group) { var clone = item.Value!.DeepClone().AsObject(); clone.Remove("ui:group"); subset[item.Key] = clone; }
                 var section = Fields(subset, values, depth);
-                panel.Children.Add(group.Any(item => item.Value?["ui:collapsed"]?.GetValue<bool>() == true) ? new Expander { Header = group.Key, Content = section } : Ui.Stack(Ui.RawText(group.Key, 18), section));
+                section.Margin = new(0, 8, 0, 0);
+                var grouped = Ui.Stack(Ui.RawText(group.Key, 18), section); grouped.Margin = new(0, panel.Children.Count == 0 ? 0 : 24, 0, 0);
+                panel.Children.Add(group.Any(item => item.Value?["ui:collapsed"]?.GetValue<bool>() == true) ? new Expander { Header = group.Key, Content = section } : grouped);
             }
             return panel;
         }

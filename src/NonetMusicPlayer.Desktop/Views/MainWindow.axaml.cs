@@ -63,7 +63,7 @@ public sealed partial class MainWindow : Window
         L10n.LanguageChanged += LanguageChanged;
         PropertyChanged += (_, e) => { if (e.Property == ActualThemeVariantProperty && !_applyingAppearance) ApplyAppearance(); };
         Closing += ConfirmClosing;
-        Closed += (_, _) => { foreach (var overlay in _extensionOverlays.Values.ToArray()) overlay.Close(); _extensionOverlays.Clear(); L10n.LanguageChanged -= LanguageChanged; _cachedSettings?.Dispose(); _desktopLyrics?.Dispose(); _taskbar?.Dispose(); _notificationTimer.Stop(); _locateTimer.Stop(); DisposePage(); if (_vm is not null) { DetachPlayerCommands(); _vm.Plugins.DetachHost(this); _vm.ViewChanged -= ViewChanged; _vm.NavigationRequested -= ResetSongPagePosition; _vm.SettingsChanged -= SettingsChanged; _vm.LocatePlayingTrack -= LocatePlayingTrack; _vm.UserNotification -= UserNotification; _vm.Save(); } };
+        Closed += (_, _) => { foreach (var bitmap in _pluginNavigationAssets) bitmap.Dispose(); _pluginNavigationAssets.Clear(); foreach (var overlay in _extensionOverlays.Values.ToArray()) overlay.Close(); _extensionOverlays.Clear(); L10n.LanguageChanged -= LanguageChanged; _cachedSettings?.Dispose(); _desktopLyrics?.Dispose(); _taskbar?.Dispose(); _notificationTimer.Stop(); _locateTimer.Stop(); DisposePage(); if (_vm is not null) { DetachPlayerCommands(); _vm.Plugins.DetachHost(this); _vm.ViewChanged -= ViewChanged; _vm.NavigationRequested -= ResetSongPagePosition; _vm.SettingsChanged -= SettingsChanged; _vm.LocatePlayingTrack -= LocatePlayingTrack; _vm.UserNotification -= UserNotification; _vm.Save(); } };
     }
     private void AttachViewModel()
     {

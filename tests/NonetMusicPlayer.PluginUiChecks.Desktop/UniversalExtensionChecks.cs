@@ -106,6 +106,7 @@ public sealed class UniversalFixture : INonetExtension, INonetWorkflowExtension,
             _frame.Requests.Clear(); _frame.State["serviceResult"] = new JsonObject { ["format"] = "lrc", ["text"] = "[00:00.000]matched", ["source"] = "fixture" }; return SyncAsync(cancellationToken);
         }
         var service = invocation.Action == "store" ? "storage" : invocation.Action;
+        if (invocation.Values.Count > 0) { _frame.Requests = [new(Guid.NewGuid().ToString("N"), service, (JsonObject)invocation.Values.DeepClone())]; return SyncAsync(cancellationToken); }
         var args = invocation.Action == "query" ? new JsonObject { ["operation"] = "music.list", ["offset"] = 100, ["limit"] = 5 } : invocation.Action == "store" ? new JsonObject { ["operation"] = "put", ["key"] = "persisted", ["value"] = 1 } : invocation.Action == "lyrics" ? new JsonObject { ["operation"] = "parse", ["trackId"] = "fixture-0", ["text"] = "[00:00.000]<00:00.000>first <00:00.300>second" } : new JsonObject();
         _frame.Requests = [new(Guid.NewGuid().ToString("N"), service, args)]; return SyncAsync(cancellationToken);
     }

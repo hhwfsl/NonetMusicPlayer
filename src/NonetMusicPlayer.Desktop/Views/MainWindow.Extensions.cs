@@ -12,13 +12,27 @@ namespace NonetMusicPlayer.Desktop.Views;
 
 public sealed partial class MainWindow
 {
+    private readonly List<Avalonia.Media.Imaging.Bitmap> _pluginNavigationAssets = [];
     private void BuildPluginNavigation()
     {
+        foreach (var bitmap in _pluginNavigationAssets) bitmap.Dispose(); _pluginNavigationAssets.Clear();
         PluginNavigation.Children.Clear(); if (_vm is null) return;
         foreach (var plugin in _vm.Plugins.Installed.Where(p => p.Enabled && p.Type is "ui" or "widget" or "lyrics" or "agent" or "extension"))
         {
             var label = Ui.RawText(plugin.NavigationLabel); label.TextWrapping = TextWrapping.NoWrap; label.TextTrimming = TextTrimming.CharacterEllipsis;
-            var content = new Grid { ColumnDefinitions = new("30,*") }; content.Children.Add(new VectorIcon { Kind = Enum.TryParse<IconKind>(plugin.NavigationIcon, out var declaredIcon) ? declaredIcon : plugin.Permissions.Contains("lyrics-editor") || plugin.Type == "lyrics" ? IconKind.Lyrics : plugin.Type == "agent" ? IconKind.Plugins : IconKind.Game, Width = 20, Height = 20 }); Grid.SetColumn(label, 1); content.Children.Add(label);
+            var content = new Grid { ColumnDefinitions = new("30,*") }; content.Children.Add(new VectorIcon { Kind = Enum.TryParse<IconKind>(plugin.NavigationIcon, out var declaredIcon) ? declaredIcon : plugin.Permissions.Contains("lyrics-editor") || plugin.Type == "lyrics" ? IconKind.Lyrics : plugin.Type == "agent" ? IconKind.Plugins : IconKind.Game, Width = 20, Height = 20 }); if (plugin.NavigationImage.Length > 0)
+            {
+                try
+                {
+                    var path = Path.Combine(_vm.Plugins.ExtensionDirectory(plugin), plugin.NavigationImage); PluginPathPolicy.RejectLinkedAncestors(path);
+                    if (new FileInfo(path).Length > 10_000_000) throw new InvalidDataException("Icon too large.");
+                    using var source = File.OpenRead(path);
+                    var bitmap = Avalonia.Media.Imaging.Bitmap.DecodeToWidth(source, 96); _pluginNavigationAssets.Add(bitmap);
+                    content.Children.Clear(); content.Children.Add(new Image { Source = bitmap, Width = 22, Height = 22, Stretch = Stretch.Uniform });
+                }
+                catch (Exception error) { AppLog.Warning("Extensions", "Unable to read plugin icon.", error); }
+            }
+            Grid.SetColumn(label, 1); content.Children.Add(label);
             var button = new Button { Content = content, Tag = "plugin:" + plugin.Id, Padding = new(10, 0), Height = 44 }; button.Classes.Add("nav");
             ToolTip.SetTip(button, plugin.NavigationLabel); button.Click += (_, _) => _vm.Navigate("plugin:" + plugin.Id, plugin.NavigationLabel); PluginNavigation.Children.Add(button);
         }

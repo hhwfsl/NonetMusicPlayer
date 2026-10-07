@@ -158,6 +158,7 @@ public sealed partial class ExtensionSession : IDisposable
     private async Task<JsonObject> LegacyServiceAsync(ExtensionHostRequest request)
     {
         var args = request.Arguments;
+        if (request.Service == "interaction") return await InteractionAsync(args);
         if (request.Service == "ui") return await UiServiceAsync(args);
         if (request.Service == "development") return await DevelopmentServiceAsync(args);
         if (request.Service == "dialogs.prompt")
@@ -196,6 +197,7 @@ public sealed partial class ExtensionSession : IDisposable
                 return new() { ["success"] = true, ["text"] = track.LyricsDisabled ? "" : vm.Lyrics.ReadForTrack(track.Id, track.FilePath), ["disabled"] = track.LyricsDisabled };
             }
             if (!Manifest.Permissions.Contains("lyrics-write") || track.LyricsDisabled && !_gesture) throw new InvalidDataException("Lyrics write permission required; unlinked lyrics cannot be automatically replaced.");
+            if (Manifest.SupportsApprovalModes && !await ConfirmExtensionAsync("lyrics." + operation, true, operation + " · " + track.Title)) return new() { ["success"] = false, ["reason"] = "User declined; do not retry." };
             if (operation == "unlink") track.LyricsDisabled = true;
             else if (operation == "associate")
             {
@@ -209,6 +211,7 @@ public sealed partial class ExtensionSession : IDisposable
         if (request.Service == "catalog") return ExtensionCatalog();
         if (request.Service == "config")
         {
+            if (args["operation"]?.GetValue<string>() is "approval.read" or "approval.set") return await ApprovalAsync(args);
             if (!_gesture) throw new InvalidDataException("Configuration requires a user gesture.");
             await Owner.OpenPluginConfigurationAsync(Manifest); return new() { ["success"] = true };
         }

@@ -1,3 +1,28 @@
+# Nonet 0.4.0-beta.13 发布验证
+
+日期：2026-10-08。Windows 环境实际执行；macOS/Linux 为交叉构建及包校验，不代表实机通过。
+
+- 主工程构建通过，0 警告 / 0 错误；独立最小测试夹具不依赖私人插件或相邻模板。
+- 新增图片资源打包、复合输入、绑定选择、独立透明原生浮层、最小化独立显示及停用清理回归通过。
+- 内联审批不销毁会话，公开 / 保护配置同时保存；后台不能提升权限，宿主确认仍有效。
+- 冻结旧 Contract v1 与原始 v2 进程 / 托管包、同 ID 升级、配置重载、流程、PCM、查询、界面恢复及权限回归通过。
+- Core / 命令 / CLI TUI、歌词、统计与 SQLite、进度预览、持久页面、离线更新模拟回归通过。
+- 原 Windows 发布目录的精简 Nonet.exe 验证 44.1 kHz 单声道时钟、自然结束、封面、源生成序列化、插件配置及冻结 v2 ABI，通过模拟接口验证实际进程扩展、模型目录及凭据重启恢复。
+- 三个纯净桌面 ZIP 从全新暂存构建，版本、文件 SHA-256、许可及 POSIX 执行权限通过；Windows / Linux 各 12 个程序文件，macOS 15 个。
+- Windows 安装器隔离安装的程序文件与纯净 ZIP 哈希一致，卸载保留非程序测试数据。
+- 原 Windows 目录原地升级，396 个 Data / 引导文件的聚合 SHA-256 未改变；旧程序仅本地备份。
+- 本地模板直接依赖 SDK 4.5，基础包与文档一致性检查通过；私人插件和模板不包含在公开源码或 Release。
+
+复现：
+```powershell
+dotnet build NonetMusicPlayer.slnx -c Release
+dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/composer --composer
+dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/universal --universal
+dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/extensions --extensions
+dotnet run --project tests/NonetMusicPlayer.CoreChecks -c Release
+pwsh -File scripts/verify-clean-desktop.ps1 -Version 0.4.0-beta.13
+```
+
 # Nonet 0.4.0-beta.12 发布验证
 
 日期：2026-10-07。仅 Windows 实际执行；macOS/Linux 为交叉构建，不代表实机通过。

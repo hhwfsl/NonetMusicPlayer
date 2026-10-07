@@ -8,7 +8,7 @@ namespace NonetMusicPlayer.Core.Plugins;
 public static class ExtensionContract
 {
     public const int Version = 2;
-    public static readonly string[] Capabilities = ["ui.tree.v2", "lyrics.v1", "dialogs.v1", "state.v1", "actions.v1", "events.v1", "commands.v1", "services.v1", "files.pick.v1", "ui.layout-bind.v1", "ui.context-menu.v1", "ui.controls.v1", "dialogs.prompt.v1", "approvals.v1", "ui.workspace.v1", "runtime.declarative.v1", "development.v1", .. UniversalExtensionContract.Capabilities];
+    public static readonly string[] Capabilities = ["ui.tree.v2", "lyrics.v1", "dialogs.v1", "state.v1", "actions.v1", "events.v1", "commands.v1", "services.v1", "files.pick.v1", "ui.layout-bind.v1", "ui.context-menu.v1", "ui.controls.v1", "dialogs.prompt.v1", "approvals.v1", "ui.workspace.v1", "runtime.declarative.v1", "development.v1", "ui.assets.v1", "ui.composer.v1", "config.approval.v1", "interaction.v1", "ui.overlay.v1", "ui.large-text.v1", .. UniversalExtensionContract.Capabilities];
     public static readonly string[] Slots = ["lyrics.more", "song.more", "playlist.more", "player.actions", "titlebar.actions", "home.cards", "overlay", "page.music", "page.lyrics", "page.songs", "page.history", "page.albums", "page.artists", "page.playlist", "page.statistics", .. UniversalExtensionContract.Slots];
     public static readonly string[] Permissions = ["process", "network", "navigation", "player-control", "music-read", "library-write",
         "settings-write", "window-control", "plugins-control", "lyrics-write", "user-files", "in-process", "ui-extend", "plugin-services", "plugin-development", "workflow", "native-ui", "audio-tags", "audio-processing"];
@@ -26,7 +26,7 @@ public static class ExtensionContract
             if (node.Type is not ("grid" or "stack" or "border" or "scroll" or "text" or "selectable-text" or "input" or "button" or "toggle" or "repeat" or "select" or "slider" or "image" or "checkbox" or "icon"))
                 throw new InvalidDataException("Unknown UI primitive: " + node.Type);
             if (node.Text.Length > 24000 || node.Action.Length > 100 || node.Bind.Length > 200 || node.Input.Length > 100
-                || !double.IsFinite(node.FontSize) || node.FontSize is < 0 or > 96 || node.Width is < 0 or > 4000 || node.Height is < 0 or > 4000)
+                || !double.IsFinite(node.FontSize) || node.FontSize is < 0 or > 96 || !double.IsFinite(node.CornerRadius) || node.CornerRadius is < 0 or > 100 || !double.IsFinite(node.MaxHeight) || node.MaxHeight is < 0 or > 4000 || node.Width is < 0 or > 4000 || node.Height is < 0 or > 4000)
                 throw new InvalidDataException("Invalid UI property.");
             if (node.Row is < 0 or > 31 || node.Column is < 0 or > 31 || !double.IsFinite(node.Spacing) || node.Spacing is < 0 or > 64
                 || !double.IsFinite(node.Minimum) || !double.IsFinite(node.Maximum) || node.Minimum > node.Maximum || node.Tooltip.Length > 2000)
@@ -46,7 +46,7 @@ public static class ExtensionContract
                     throw new InvalidDataException("Invalid layout spacing.");
             }
             if (node.Asset.Length > 0) PluginPathPolicy.ValidateRelativePath(node.Asset);
-            if (node.ColumnsBind.Length > 200 || node.ContextActions.Count > 16 || node.SelectedIf.Length > 200 || node.Variant is not ("" or "ghost" or "pill" or "row")) throw new InvalidDataException("Invalid optional UI capability.");
+            if (node.SelectedBind.Length > 200 || node.ColumnsBind.Length > 200 || node.ContextActions.Count > 16 || node.SelectedIf.Length > 200 || node.Variant is not ("" or "ghost" or "pill" or "row" or "accent")) throw new InvalidDataException("Invalid optional UI capability.");
             foreach (var action in node.ContextActions)
             {
                 if (action.Type != "button" || action.Action.Length == 0 || action.Text.Length is 0 or > 200 || action.ContextActions.Count != 0 || action.Children.Count != 0)
@@ -68,9 +68,9 @@ public static class ExtensionContract
     public static void ValidateFrame(ExtensionFrame frame)
     {
         // 状态是数据而不是代码，控制 UI 的输入仍受控件树上限约束。
-        if (frame.State.ToJsonString().Length > 2_000_000 || frame.Requests.Count > 16) throw new InvalidDataException("Extension state is too large.");
+        if (frame.State.ToJsonString().Length > (frame.LargeTextState ? 30_000_000 : 2_000_000) || frame.Requests.Count > 16) throw new InvalidDataException("Extension state is too large.");
         foreach (var request in frame.Requests)
-            if (request.Id.Length is 0 or > 100 || !UniversalExtensionContract.IsService(request.Service) && request.Service is not ("commands" or "catalog" or "config" or "files.pick" or "lyrics" or "dialogs.confirm" or "dialogs.notify" or "dialogs.prompt" or "ui" or "development") && !request.Service.StartsWith("plugin:", StringComparison.Ordinal)
+            if (request.Id.Length is 0 or > 100 || !UniversalExtensionContract.IsService(request.Service) && request.Service is not ("commands" or "catalog" or "config" or "interaction" or "files.pick" or "lyrics" or "dialogs.confirm" or "dialogs.notify" or "dialogs.prompt" or "ui" or "development") && !request.Service.StartsWith("plugin:", StringComparison.Ordinal)
                 || request.Arguments.ToJsonString().Length > (request.Service is "ui" or "development" or "lyrics" ? 128000 : 32000)) throw new InvalidDataException("Invalid service request.");
     }
 }
@@ -102,6 +102,11 @@ public sealed class ExtensionNode
     /// <summary>可选的原生控件样式及选中状态，不接受插件提供的任意样式代码。</summary>
     public string Variant { get; set; } = "";
     public string SelectedIf { get; set; } = "";
+    /// <summary>可选绑定选项、圆角与高度限制，缺省值保持旧页面布局。</summary>
+    public string SelectedBind { get; set; } = "";
+    public double CornerRadius { get; set; } = 12;
+    public double MaxHeight { get; set; }
+    public bool Borderless { get; set; }
     public bool OpenMenuOnClick { get; set; }
     public string Background { get; set; } = "";
     public string Icon { get; set; } = "";
@@ -129,9 +134,14 @@ public sealed record ExtensionContribution(string Slot, string Label, string Act
     public ExtensionNode? View { get; init; }
     /// <summary>可信托管插件可选原生视图；旧贡献省略时仍使用控件树。</summary>
     public bool Native { get; init; }
+    public ExtensionOverlayOptions? Overlay { get; init; }
 }
+/// <summary>独立浮层的可选窗口表现；不授予主窗口或 OS 内部访问。</summary>
+public sealed record ExtensionOverlayOptions(double Width = 340, double Height = 260, bool Transparent = false, bool Topmost = true, bool ShowInTaskbar = true);
 public sealed class ExtensionFrame
 {
+    /// <summary>可选长文本状态，最多 30 MB；旧扩展仍使用原 2 MB 上限。</summary>
+    public bool LargeTextState { get; set; }
     public long Revision { get; set; }
     public bool Busy { get; set; }
     public JsonObject State { get; set; } = new();

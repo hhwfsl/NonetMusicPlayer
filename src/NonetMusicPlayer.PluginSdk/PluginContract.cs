@@ -24,6 +24,8 @@ public sealed class PluginManifest
     public string NavigationLabel { get; set; } = "";
     public string PageEntry { get; set; } = "";
     public string NavigationIcon { get; set; } = "";
+    /// <summary>包内导航图片，省略时保留矢量图标；不能指定外部路径。</summary>
+    public string NavigationImage { get; set; } = "";
     public List<PluginMenuContribution> MenuContributions { get; set; } = [];
     /// <summary>新版扩展的运行形态、协商能力、事件订阅和插槽；旧清单默认不使用。</summary>
     public string Runtime { get; set; } = "process";
@@ -48,7 +50,10 @@ public sealed class PluginManifest
     {
         Author = string.IsNullOrWhiteSpace(Author) ? "Author" : Author.Trim();
         Hooks ??= []; ProvidedServices ??= []; RequiredCapabilities ??= []; Events ??= []; Contributions ??= []; Permissions ??= []; EntryPoints ??= []; Tokens ??= []; Widgets ??= []; MenuContributions ??= []; Configuration ??= "{}";
-        LifecycleMethods ??= [];
+        LifecycleMethods ??= []; NavigationImage ??= "";
+        if (NavigationImage.Length > 0) PluginPathPolicy.ValidateRelativePath(NavigationImage);
+        foreach (var overlay in Contributions.Where(c => c.Overlay is not null).Select(c => c.Overlay!))
+            if (!double.IsFinite(overlay.Width) || !double.IsFinite(overlay.Height) || overlay.Width is < 80 or > 2000 || overlay.Height is < 80 or > 2000) throw new InvalidDataException("Invalid overlay size.");
         RepositoryOwner ??= ""; RepositoryName ??= ""; OriginRepository ??= ""; Platform ??= "";
         if (Platform.Length > 0 && !PluginPlatformPolicy.IsRid(Platform)) throw new InvalidDataException("Invalid plugin platform.");
         if (RepositoryOwner.Length != 0 || RepositoryName.Length != 0) PluginRepository.Validate(RepositoryOwner, RepositoryName);

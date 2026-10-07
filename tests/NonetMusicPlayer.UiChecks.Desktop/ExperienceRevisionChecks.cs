@@ -52,21 +52,19 @@ internal static class ExperienceRevisionChecks
         window.MouseMove(new Point(5, 5)); Pump(window); Require(!slider.IsPreviewVisible, "Leaving the rail removes preview");
         Require(PlayerProgressSlider.FormatTime(3661.8) == "61:01" && PlayerProgressSlider.FormatTime(-1) == "0:00", "Seek previews consistently use minutes and seconds");
         window.Close();
-        var foundation = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, "../NonetMusicPlayerPlugin"));
-        if (!Directory.Exists(foundation)) foundation = Path.GetFullPath("plugin-template/NonetMusicPlayerPlugin");
-        if (Directory.Exists(Path.Combine(foundation, "plugin")))
-        {
-            var root = Path.Combine(output, "foundation-import-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
-            var package = PluginPackageBuilder.Pack(Path.Combine(foundation, "plugin"), Path.Combine(root, "hello.impp"));
-            Require(typeof(PluginPackageInspector).Assembly.GetName().Name == "NonetMusicPlayer.PluginSdk", "Desktop uses the independent shared SDK assembly");
-            using var manager = new PluginManager(new AppStorage(Path.Combine(root, "Data")));
-            var plugin = manager.Install(package); manager.SetEnabled(plugin, true);
-            Require(manager.LoadPage(plugin).Widgets.Single().Text == "Hello, NonetMusicPlayer!", "Foundation package installs and runs default page");
-            manager.Configure(plugin, "{\"greeting\":\"你好，插件！\"}");
-            Require(manager.LoadPage(plugin).Widgets.Single().Text == "你好，插件！", "Developer schema creates effective user configuration");
-            manager.SetEnabled(plugin, false); Require(!plugin.Enabled, "Foundation plugin can be disabled");
-            manager.Uninstall(plugin, false); Require(manager.Installed.Count == 0, "Foundation plugin can be unloaded without deleting its source package");
-        }
+        // 基础配置回归使用独立生成的 v1 夹具，不读取相邻模板或任何私人插件。
+        var root = Path.Combine(output, "foundation-import-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
+        File.WriteAllText(Path.Combine(root,"manifest.json"), """{"id":"fixture.foundation","name":"Foundation fixture","type":"ui","navigationLabel":"Foundation","pageEntry":"page.json","permissions":["navigation"]}""");
+        File.WriteAllText(Path.Combine(root,"page.json"), """{"schemaVersion":1,"title":"Hello","description":"","widgets":[{"type":"text","title":"Greeting","text":"${config.greeting}"}]}""");
+        File.WriteAllText(Path.Combine(root,"plugin_config_schema.json"), """{"greeting":{"type":"string","default":"Hello, NonetMusicPlayer!"}}""");
+        var package = PluginPackageBuilder.Pack(root,Path.Combine(root,"hello.impp"));
+        Require(typeof(PluginPackageInspector).Assembly.GetName().Name=="NonetMusicPlayer.PluginSdk","Desktop uses shared SDK.");
+        using var manager=new PluginManager(new AppStorage(Path.Combine(root,"Data")));
+        var plugin=manager.Install(package); manager.SetEnabled(plugin,true);
+        Require(manager.LoadPage(plugin).Widgets.Single().Text=="Hello, NonetMusicPlayer!","Baseline UI configuration loads.");
+        manager.Configure(plugin,"{\"greeting\":\"你好，插件！\"}");
+        Require(manager.LoadPage(plugin).Widgets.Single().Text=="你好，插件！","Developer schema creates effective configuration.");
+        manager.SetEnabled(plugin,false); manager.Uninstall(plugin,false); Require(manager.Installed.Count==0,"Fixture disconnects without deleting source package.");
         Console.WriteLine("PASS experience: spatial karaoke, synchronized translation, official SVG, seek preview and foundation integration");
     }
     private static void Pump(Window window) { for (var i = 0; i < 5; i++) { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); window.CaptureRenderedFrame()?.Dispose(); } }

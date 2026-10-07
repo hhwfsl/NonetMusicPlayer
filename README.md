@@ -17,7 +17,7 @@
 | 媒体标签 | TagLibSharp 2.3.0 |
 | 桌面持久化 | SQLite，Microsoft.Data.Sqlite 10.0.12 |
 | CLI 与共用 JSON | System.Text.Json，持久化模型使用 Source Generation |
-| 插件开发 SDK | NonetMusicPlayer.PluginSdk 4.4.0，Contract v1/v2、页面 Schema v1/v2 |
+| 插件开发 SDK | NonetMusicPlayer.PluginSdk 4.5.0，Contract v1/v2、页面 Schema v1/v2 |
 
 CLI 不引用 Avalonia，通过系统终端运行。插件 SDK 无图形、音频或外部 NuGet 依赖。实际依赖以各项目的 `.csproj` 为准；第三方许可见 [docs/licenses](docs/licenses)。
 
@@ -116,4 +116,4 @@ UI 夹具使用 Avalonia.Headless 与隔离测试数据，不等同于跨平台�
 
 构建、变更和接口资料：[CHANGELOG](CHANGELOG.md)、[CLI 构建与使用](src/NonetMusicPlayerCli/README.md)、[插件开发与依赖](docs/PLUGIN_DEVELOPMENT.md)、[插件 Contract](docs/PLUGIN_DEVELOPMENT.md)、[存储](docs/STORAGE.md)、[本地化](docs/LOCALIZATION.md)。
 
-插件开发使用主项目的 SDK 4.4.0（程序集兼容基线为 4.0.0.0），并直接引用源码；通用扩展接口见 [EXTENSIONS](docs/EXTENSIONS.md) 与 [非核心扩展参考](docs/UNIVERSAL_EXTENSIONS.md)，旧插件兼容策略见 [PLUGIN_DEVELOPMENT](docs/PLUGIN_DEVELOPMENT.md)。
+插件开发使用主项目的 SDK 4.5.0（程序集兼容基线为 4.0.0.0），并直接引用源码；通用扩展接口见 [EXTENSIONS](docs/EXTENSIONS.md) 与 [非核心扩展参考](docs/UNIVERSAL_EXTENSIONS.md)，旧插件兼容策略见 [PLUGIN_DEVELOPMENT](docs/PLUGIN_DEVELOPMENT.md)。

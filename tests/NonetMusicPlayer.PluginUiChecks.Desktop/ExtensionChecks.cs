@@ -112,7 +112,9 @@ internal static class ExtensionChecks
         expandingContent.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
         Check(expandingContent.ContextMenu!.IsOpen, "Left click opens the optional menu without invoking the button action");
         expandingContent.ContextMenu.Close(); Pump();
-        var itemButton = dynamicView.GetVisualDescendants().OfType<Button>().Single(b => b.Content is TextBlock { Text: "Item" });
+        var candidates = dynamicView.GetVisualDescendants().OfType<Button>().ToArray();
+        if (!candidates.Any(b => b.Content is TextBlock { Text: "Item" })) throw new InvalidOperationException("Item missing. State=" + dynamicSession.Frame.State + " Buttons=" + string.Join("|", candidates.Select(b => b.Content?.GetType().Name + ":" + (b.Content as TextBlock)?.Text)));
+        var itemButton = candidates.Single(b => b.Content is TextBlock { Text: "Item" });
         var menuAction = itemButton.ContextMenu!.Items.OfType<MenuItem>().Single();
         menuAction.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
         var contextDeadline = DateTime.UtcNow.AddSeconds(5);

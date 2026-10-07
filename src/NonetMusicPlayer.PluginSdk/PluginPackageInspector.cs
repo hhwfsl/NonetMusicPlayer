@@ -35,9 +35,24 @@ public static class PluginPackageInspector
             using var reader = new StreamReader(notice.Open(), new System.Text.UTF8Encoding(false, true), detectEncodingFromByteOrderMarks: false);
             if (reader.ReadToEnd().Contains('\0')) throw new InvalidDataException("插件许可文件必须是文本。");
         }
+        var declaredAssets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        void Asset(string path)
+        {
+            if (path.Length == 0) return; PluginPathPolicy.ValidateRelativePath(path);
+            var asset = zip.GetEntry(path) ?? throw new InvalidDataException("Missing declared image.");
+            if (asset.Length > 10_000_000 || Path.GetExtension(path).ToLowerInvariant() is not (".png" or ".jpg" or ".jpeg" or ".webp" or ".bmp")) throw new InvalidDataException("Invalid plugin image.");
+            declaredAssets.Add(path);
+        }
+        Asset(manifest.NavigationImage);
         if (manifest.Type == "extension")
         {
-            if (manifest.Runtime == "declarative" && zip.Entries.Any(e => e.FullName != "manifest.json" && e.FullName != manifest.PageEntry && e != schemaEntry && !IsLicenseFile(e.FullName)))
+            using (var source = (zip.GetEntry(manifest.PageEntry) ?? throw new InvalidDataException("Missing extension page.")).Open())
+            {
+                void Collect(ExtensionNode node) { Asset(node.Asset); foreach (var child in node.Children) Collect(child); if (node.Template is not null) Collect(node.Template); }
+                Collect(ExtensionContract.ReadPage(source).Root);
+                foreach (var contribution in manifest.Contributions) if (contribution.View is not null) Collect(contribution.View);
+            }
+            if (manifest.Runtime == "declarative" && zip.Entries.Any(e => e.FullName != "manifest.json" && e.FullName != manifest.PageEntry && e != schemaEntry && !IsLicenseFile(e.FullName) && !declaredAssets.Contains(e.FullName)))
                 throw new InvalidDataException("Declarative packages cannot contain executable files or unused assets.");
             using var page = (zip.GetEntry(manifest.PageEntry) ?? throw new InvalidDataException("Missing extension page.")).Open();
             ExtensionContract.ReadPage(page);

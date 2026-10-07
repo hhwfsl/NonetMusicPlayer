@@ -45,7 +45,7 @@ public sealed class ProviderClient : IDisposable
             {
                 if (await _process.StandardOutput.ReadAsync(single.AsMemory(), timeout.Token) == 0) throw new IOException(Localization.LocalizationCatalog.Get("Plugins.ProcessExited"));
                 if (single[0] == '\n') break;
-                line.Append(single[0]); if (line.Length > 8_000_000) throw new InvalidDataException(Localization.LocalizationCatalog.Get("Plugins.ResponseTooLarge"));
+                line.Append(single[0]); if (line.Length > 32_000_000) throw new InvalidDataException(Localization.LocalizationCatalog.Get("Plugins.ResponseTooLarge"));
             }
             using var document = JsonDocument.Parse(line.ToString()); var response = document.RootElement;
             if (!response.TryGetProperty("jsonrpc", out var version) || version.GetString() != "2.0" || response.GetProperty("id").GetInt64() != id) throw new InvalidDataException(Localization.LocalizationCatalog.Get("Plugins.InvalidRpc"));
