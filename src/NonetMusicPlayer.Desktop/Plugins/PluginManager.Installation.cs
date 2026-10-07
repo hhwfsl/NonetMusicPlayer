@@ -101,7 +101,8 @@ public sealed partial class PluginManager
             manifest.Configuration = persisted.ToJsonString();
             var samePermissions = previous.Permissions.ToHashSet(StringComparer.Ordinal).SetEquals(manifest.Permissions);
             var wasEnabled = previous.Enabled;
-            manifest.Enabled = wasEnabled && samePermissions;
+            // 更新代码包不会继承未经确认的托管执行授权；配置和同 ID 存储仍保留。
+            manifest.Enabled = wasEnabled && samePermissions && (manifest.Runtime != "managed" || manifest.ManagedExecutionConsent);
             manifest.AudioTagWriteConsent = samePermissions && previous.AudioTagWriteConsent && manifest.Permissions.Contains("audio-tags");
             var priorSession = _sessionConfiguration.GetValueOrDefault(manifest.Id);
             var index = Installed.IndexOf(previous);
@@ -133,7 +134,7 @@ public sealed partial class PluginManager
             }
             // 临时旧包只服务事务回滚；成功后删除，不长期保留旧插件文件。
             try { PluginPathPolicy.AfterProcessExit(() => Directory.Delete(rollback, true)); }
-            catch (IOException error) { AppLog.Warning("Plugins", "更新已完成，但临时旧包清理失败", error); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { AppLog.Warning("Plugins", "更新已完成，但临时旧包清理失败", error); }
             RefreshUiRuntime(manifest);
             PublishLifecycle(manifest, manifest.Enabled ? "enabled" : "disabled");
         }

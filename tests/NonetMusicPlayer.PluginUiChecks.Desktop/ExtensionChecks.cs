@@ -86,6 +86,47 @@ internal static class ExtensionChecks
             vm.Plugins.SetEnabled(installed, false); Pump();
             Check(!installed.Enabled, "Disable releases session and page.");
         }
+        var managedBaseline = vm.Plugins.Installed.Single(p => p.Id == "baseline.managed");
+        vm.Plugins.SetEnabled(managedBaseline, true);
+        var managedUpdate = Path.Combine(root, "managed-update.impp");
+        using (var original = ZipFile.OpenRead(Path.Combine(root, "baseline.managed.impp")))
+        using (var updatedZip = ZipFile.Open(managedUpdate, ZipArchiveMode.Create))
+        {
+            foreach (var entry in original.Entries)
+            {
+                if (entry.FullName == "manifest.json")
+                {
+                    using var reader = new StreamReader(entry.Open()); var document = JsonNode.Parse(reader.ReadToEnd())!.AsObject();
+                    document["version"] = "2.0.0"; Write(updatedZip, "manifest.json", document.ToJsonString());
+                }
+                else { using var input = entry.Open(); using var outputFile = updatedZip.CreateEntry(entry.FullName).Open(); input.CopyTo(outputFile); }
+            }
+        }
+        var managedReplacement = vm.Plugins.Install(managedUpdate);
+        Check(!managedReplacement.Enabled && !managedReplacement.ManagedExecutionConsent, "Managed update needs new host consent, even with unchanged permissions.");
+        // 以已启用的旧 Agent 包验证单向迁移，不能因为旧类型不同而把更新认作另一插件。
+        var oldPackage = Path.Combine(root, "migration-v1.impp");
+        using (var zip = ZipFile.Open(oldPackage, ZipArchiveMode.Create))
+        {
+            Write(zip, "manifest.json", """{"id":"migration.agent","name":"Migration","version":"1.0.0","type":"agent","permissions":["network","process","navigation","agent-control"],"pageEntry":"page.json","entryPoints":{"win-x64":"worker.exe"}}""");
+            Write(zip, "page.json", """{"schemaVersion":1,"title":"Migration","widgets":[{"type":"agent-chat"}]}""");
+            Write(zip, "plugin_config_schema.json", """{"caption":{"type":"string","default":"default"}}""");
+            Write(zip, "worker.exe", "Not executed by the old fixture.");
+        }
+        var oldPlugin = vm.Plugins.Install(oldPackage); vm.Plugins.Configure(oldPlugin, """{"caption":"配置保留"}"""); vm.Plugins.SetEnabled(oldPlugin, true);
+        var newPackage = Path.Combine(root, "migration-v2.impp");
+        using (var zip = ZipFile.Open(newPackage, ZipArchiveMode.Create))
+        {
+            Write(zip, "manifest.json", """{"id":"migration.agent","name":"Migration","version":"2.0.0","contractVersion":2,"type":"extension","permissions":["process","navigation"],"pageEntry":"page.json","entryPoints":{"win-x64":"bin/NonetMusicPlayer.ExtensionFixture.exe"}}""");
+            Write(zip, "page.json", Page); Write(zip, "plugin_config_schema.json", """{"caption":{"type":"string","default":"default"}}""");
+            foreach (var file in Directory.GetFiles(frozen)) zip.CreateEntryFromFile(file, "bin/" + Path.GetFileName(file));
+        }
+        var migrated = vm.Plugins.Install(newPackage);
+        Check(migrated.ContractVersion == 2 && migrated.Type == "extension" && !migrated.Enabled
+            && vm.Plugins.Installed.Count(p => p.Id == migrated.Id) == 1
+            && vm.Plugins.ConfigurationValues(migrated)["caption"]!.GetValue<string>() == "配置保留", "V1 to V2 preserves identity/configuration and rechecks changed permissions.");
+        var reverseRejected = false; try { PluginUpdatePolicy.Evaluate(migrated, oldPlugin); } catch (InvalidDataException) { reverseRejected = true; }
+        Check(reverseRejected, "V2 cannot migrate back to V1.");
         Check(!PluginCommandPolicy.CatalogFor(["music-read"]).Contains("player.pause"), "Catalog filters ungranted controls.");
         var rejected = false; try { PluginCommandPolicy.ValidateFor(new("x", "player.pause", []), ["music-read"]); } catch (InvalidDataException) { rejected = true; }
         Check(rejected, "Command permission gate is enforced.");

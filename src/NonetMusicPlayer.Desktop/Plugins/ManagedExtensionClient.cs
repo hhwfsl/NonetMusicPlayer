@@ -11,7 +11,9 @@ internal sealed class ManagedExtensionClient : IAsyncDisposable
     public ManagedExtensionClient(string path, string className)
     {
         _context = new(path);
-        Instance = Activator.CreateInstance(_context.LoadFromAssemblyPath(Path.GetFullPath(path)).GetType(className, true)!) as INonetExtension
+        // 使用流加载而不是文件映射，Windows 更新时不锁住插件原 DLL。
+        using var stream = File.OpenRead(path);
+        Instance = Activator.CreateInstance(_context.LoadFromStream(stream).GetType(className, true)!) as INonetExtension
             ?? throw new InvalidDataException("Extension class must implement INonetExtension.");
     }
     public async ValueTask DisposeAsync() { try { await Instance.DisposeAsync(); } finally { _context.Unload(); } }
@@ -21,7 +23,9 @@ internal sealed class ManagedExtensionClient : IAsyncDisposable
         protected override Assembly? Load(AssemblyName name)
         {
             if (name.Name == typeof(INonetExtension).Assembly.GetName().Name) return typeof(INonetExtension).Assembly;
-            var resolved = _resolver.ResolveAssemblyToPath(name); return resolved is null ? null : LoadFromAssemblyPath(resolved);
+            var resolved = _resolver.ResolveAssemblyToPath(name);
+            if (resolved is null) return null;
+            using var stream = File.OpenRead(resolved); return LoadFromStream(stream);
         }
         protected override nint LoadUnmanagedDll(string name)
         {

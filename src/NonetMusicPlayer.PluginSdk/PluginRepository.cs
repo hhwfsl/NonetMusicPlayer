@@ -34,7 +34,10 @@ public static class PluginUpdatePolicy
     {
         candidate.Validate();
         if (installed is null) return PluginInstallKind.New;
-        if (installed.Id != candidate.Id || installed.Type != candidate.Type || installed.ContractVersion != candidate.ContractVersion)
+        // 仅允许旧类型单向迁移至通用 v2；禁止跨 ID、同版迁移、反向降级和任意类型替换。
+        var migration = installed.ContractVersion == 1 && candidate.ContractVersion == 2 && candidate.Type == "extension"
+            && CompareVersions(candidate.Version, installed.Version) > 0;
+        if (installed.Id != candidate.Id || (!migration && (installed.Type != candidate.Type || installed.ContractVersion != candidate.ContractVersion)))
             throw new InvalidDataException(PluginMessages.Get("Plugins.UpdateIdentityMismatch"));
         var comparison = CompareVersions(candidate.Version, installed.Version);
         return comparison == 0 ? PluginInstallKind.SameVersion : comparison > 0 ? PluginInstallKind.Upgrade : PluginInstallKind.Downgrade;
