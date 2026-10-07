@@ -55,9 +55,12 @@ public sealed class PluginConfigView : UserControl
         _owner.FocusManager?.Focus(null);
         PluginConfigSchema.Validate(_schema, _values);
         var json = _values.ToJsonString();
-        if (!_vm.Plugins.NeedsAudioTagConfirmation(_plugin, json)) { Save(); return; }
-        if (!await PlayerDialog.Confirm(_owner, L10n.T("LyricsSearch.Embed"), L10n.T("LyricsSearch.EmbedWarning"), L10n.T("Common.Confirm"))) return;
-        _vm.Plugins.Configure(_plugin, json, confirmAudioTagWrite: true); _close(true);
+        var tagConsent = _vm.Plugins.NeedsAudioTagConfirmation(_plugin, json);
+        var approvalConsent = _vm.Plugins.NeedsApprovalModeConfirmation(_plugin, json);
+        if (tagConsent && !await PlayerDialog.Confirm(_owner, L10n.T("LyricsSearch.Embed"), L10n.T("LyricsSearch.EmbedWarning"), L10n.T("Common.Confirm"))) return;
+        if (approvalConsent && !await PlayerDialog.Confirm(_owner, L10n.T("Extensions.ApprovalTitle"),
+            L10n.T(_values["approvalMode"]?.GetValue<string>() == "full" ? "Extensions.ApprovalFullWarning" : "Extensions.ApprovalAssistWarning"), L10n.T("Common.Confirm"))) return;
+        _vm.Plugins.Configure(_plugin, json, confirmAudioTagWrite: tagConsent, confirmApprovalMode: approvalConsent); _close(true);
     }
     private StackPanel Fields(JsonObject fields, JsonObject values, int depth)
     {

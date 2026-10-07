@@ -183,7 +183,10 @@ public sealed partial class MainWindow : Window
         _activeMenu?.Close();
         if (_selectionPage != _vm.Page) { _selectionPage = _vm.Page; SetBatchMode(false); }
         DisposePage(); BuildPlaylists(); BuildPluginNavigation(); BuildExtensionSlots();
-        var alternate = _vm.Page is "library" or "terminal" or "settings" or "plugins" or "albums" or "artists" or "statistics" || _vm.Page.StartsWith("plugin:", StringComparison.Ordinal);
+        var slot = _vm.Page switch { "library" => "page.music", "songs" => "page.songs", "history" => "page.history",
+            "albums" => "page.albums", "artists" => "page.artists", "statistics" => "page.statistics", _ => _vm.Page.StartsWith("playlist:") ? "page.playlist" : "" };
+        var replacement = slot.Length > 0 ? ExtensionReplacement(slot) : null;
+        var alternate = replacement is not null || _vm.Page is "library" or "terminal" or "settings" or "plugins" or "albums" or "artists" or "statistics" || _vm.Page.StartsWith("plugin:", StringComparison.Ordinal);
         var lyrics = _vm.Page == "lyrics"; FullLyricsHost.IsVisible = lyrics; ContentSurface.IsVisible = !lyrics; PageContentGrid.IsVisible = !lyrics; SidebarPanel.IsVisible = !lyrics;
         LibraryPage.IsVisible = !alternate; AlternatePage.IsVisible = alternate;
         LibraryActions.IsVisible = !alternate; SearchContainer.IsVisible = !alternate; TrackCountLabel.IsVisible = !alternate;
@@ -193,11 +196,11 @@ public sealed partial class MainWindow : Window
         if (_vm.Page.StartsWith("plugin:") && _vm.Plugins.Installed.FirstOrDefault(p => "plugin:" + p.Id == _vm.Page && p.Type == "extension") is { } extension)
             PageHeading.IsVisible = !_vm.Plugins.LoadExtensionPage(extension).OwnsHeader;
         else PageHeading.IsVisible = true;
-        AlternatePage.Content = _vm.Page switch
+        AlternatePage.Content = replacement ?? (_vm.Page switch
         {
-            "library" => ExtensionReplacement("page.music") ?? MusicHome(), "terminal" => new TerminalView(this), "settings" => SettingsPage(), "plugins" => new PluginsView(this, _vm),
+            "library" => MusicHome(), "terminal" => new TerminalView(this), "settings" => SettingsPage(), "plugins" => new PluginsView(this, _vm),
             "albums" => Groups(false), "artists" => Groups(true), "statistics" => new StatisticsView(_vm), _ => _vm.Page.StartsWith("plugin:") ? PluginPage(_vm.Page) : null
-        };
+        });
         if (lyrics) FullLyricsHost.Content = ExtensionReplacement("page.lyrics") ?? new LyricsView(this, _vm);
         foreach (var nav in Workspace.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("nav")))
         { nav.Classes.Set("selected", nav.Tag?.ToString() == _vm.Page); }

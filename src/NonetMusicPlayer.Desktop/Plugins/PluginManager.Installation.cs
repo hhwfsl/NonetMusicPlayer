@@ -100,6 +100,7 @@ public sealed partial class PluginManager
             PluginConfigSchema.RemoveSensitiveFields(schema, persisted);
             manifest.Configuration = persisted.ToJsonString();
             var samePermissions = previous.Permissions.ToHashSet(StringComparer.Ordinal).SetEquals(manifest.Permissions);
+            manifest.ApprovalMode = samePermissions && manifest.SupportsApprovalModes && previous.SupportsApprovalModes ? previous.ApprovalMode : "ask";
             var wasEnabled = previous.Enabled;
             // 更新代码包不会继承未经确认的托管执行授权；配置和同 ID 存储仍保留。
             manifest.Enabled = wasEnabled && samePermissions && (manifest.Runtime != "managed" || manifest.ManagedExecutionConsent);

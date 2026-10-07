@@ -7,7 +7,7 @@ using NonetMusicPlayer.Desktop.Views;
 namespace NonetMusicPlayer.Desktop.Plugins;
 
 /// <summary>通用进程扩展会话。页面只订阅状态，导航离开不销毁后台任务。</summary>
-public sealed class ExtensionSession : IDisposable
+public sealed partial class ExtensionSession : IDisposable
 {
     private readonly PluginManager _manager;
     public PluginManifest Manifest { get; }
@@ -15,6 +15,7 @@ public sealed class ExtensionSession : IDisposable
     private readonly SemaphoreSlim _gate = new(1);
     private ProviderClient? _process;
     private ManagedExtensionClient? _managed;
+    private INonetExtension? _declarative;
     private bool _initialized, _polling, _disposed, _gesture;
     private readonly HashSet<string> _handled = [];
     private static readonly AsyncLocal<string[]?> ServiceStack = new();
@@ -30,7 +31,13 @@ public sealed class ExtensionSession : IDisposable
         try
         {
             if (_initialized) return;
-            if (Manifest.Runtime == "managed")
+            if (Manifest.Runtime == "declarative")
+            {
+                _declarative = new DeclarativeExtension(_manager.LoadExtensionPage(Manifest));
+                Frame = await _declarative.InitializeAsync(new(2, _manager.ConfigurationValues(Manifest).ToJsonString(), _manager.ExtensionStorage(Manifest), ExtensionContract.Capabilities), _lifetime.Token);
+                _initialized = true;
+            }
+            else if (Manifest.Runtime == "managed")
             {
                 if (!Manifest.ManagedExecutionConsent) throw new InvalidDataException("Explicit managed consent required.");
                 var path = Path.Combine(_manager.ExtensionDirectory(Manifest), Manifest.EntryPoints[PluginPlatformPolicy.CurrentRid]);
@@ -80,13 +87,14 @@ public sealed class ExtensionSession : IDisposable
     }
     private async Task<ExtensionFrame> CallAsync(string method, Dictionary<string, string>? args = null)
         {
-        if (_managed is null) return (await _process!.CallAsync(method, args, _lifetime.Token)).Deserialize(ExtensionJson.Default.ExtensionFrame) ?? throw new InvalidDataException("Empty frame.");
+        var instance = _declarative ?? _managed?.Instance;
+        if (instance is null) return (await _process!.CallAsync(method, args, _lifetime.Token)).Deserialize(ExtensionJson.Default.ExtensionFrame) ?? throw new InvalidDataException("Empty frame.");
         return await Task.Run(async () => method switch
         {
-            "extension.invoke" => await _managed.Instance.InvokeAsync(JsonSerializer.Deserialize(args!["invocation"], ExtensionJson.Default.ExtensionInvocation)!, _lifetime.Token),
-            "extension.event" => await _managed.Instance.EventAsync(JsonSerializer.Deserialize(args!["event"], ExtensionJson.Default.ExtensionEvent)!, _lifetime.Token),
-            "extension.complete" => await _managed.Instance.CompleteAsync(args!["id"], JsonNode.Parse(args["result"])!.AsObject(), _lifetime.Token),
-            _ => await _managed.Instance.SyncAsync(_lifetime.Token)
+            "extension.invoke" => await instance.InvokeAsync(JsonSerializer.Deserialize(args!["invocation"], ExtensionJson.Default.ExtensionInvocation)!, _lifetime.Token),
+            "extension.event" => await instance.EventAsync(JsonSerializer.Deserialize(args!["event"], ExtensionJson.Default.ExtensionEvent)!, _lifetime.Token),
+            "extension.complete" => await instance.CompleteAsync(args!["id"], JsonNode.Parse(args["result"])!.AsObject(), _lifetime.Token),
+            _ => await instance.SyncAsync(_lifetime.Token)
         }, _lifetime.Token);
     }
     private async Task PublishAsync(ExtensionFrame frame)
@@ -124,6 +132,8 @@ public sealed class ExtensionSession : IDisposable
     private async Task<JsonObject> ServiceAsync(ExtensionHostRequest request)
     {
         var args = request.Arguments;
+        if (request.Service == "ui") return await UiServiceAsync(args);
+        if (request.Service == "development") return await DevelopmentServiceAsync(args);
         if (request.Service == "dialogs.prompt")
         {
             if (!_gesture) throw new InvalidDataException("An input dialog requires a user gesture.");
@@ -162,7 +172,7 @@ public sealed class ExtensionSession : IDisposable
             else throw new InvalidDataException("Unknown lyrics operation.");
             if (vm.CurrentTrack?.Id == track.Id) vm.ReloadLyrics(); vm.Save(); return new() { ["success"] = true };
         }
-        if (request.Service == "catalog") return JsonNode.Parse(PluginCommandPolicy.CatalogFor(Manifest.Permissions))!.AsObject();
+        if (request.Service == "catalog") return ExtensionCatalog();
         if (request.Service == "config")
         {
             if (!_gesture) throw new InvalidDataException("Configuration requires a user gesture.");
@@ -215,7 +225,7 @@ public sealed class ExtensionSession : IDisposable
                 foreach (var id in arguments.Skip(1).Take(operation == "playlist.move" ? 1 : int.MaxValue))
                     if (!tracks.Contains(id)) throw new InvalidDataException("Track ID required.");
             var encoded = PluginCommandPolicy.ValidateFor(new(request.Id, operation, arguments), Manifest.Permissions);
-            if (PluginCommandPolicy.RequiresConfirmation(operation) && !await PlayerDialog.Confirm(Owner, L10n.T("Agent.Confirm"), encoded, L10n.T("Common.Confirm")))
+            if (PluginApprovalPolicy.RequiresConfirmation(Manifest.ApprovalMode, operation, PluginCommandPolicy.RequiresConfirmation(operation)) && !await PlayerDialog.Confirm(Owner, L10n.T("Agent.Confirm"), encoded, L10n.T("Common.Confirm")))
                 return new() { ["success"] = false, ["reason"] = "User declined. Do not retry." };
             _lifetime.Token.ThrowIfCancellationRequested();
             var result = await Owner.Commands.ExecuteAsync(encoded, _ => Task.FromResult(true), _lifetime.Token);
@@ -230,5 +240,6 @@ public sealed class ExtensionSession : IDisposable
         if (_disposed) return; _disposed = true; _lifetime.Cancel();
         if (_process is not null) { _process.NotifyLifecycle(Manifest, reason); _process.Dispose(); }
         if (_managed is not null) _ = DisposeManagedAsync(reason);
+        if (_declarative is not null) _ = _declarative.DisposeAsync();
     }
 }

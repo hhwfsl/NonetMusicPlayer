@@ -1,9 +1,87 @@
 {
-  "Plugins.RuntimeEntryMissing": { "zh-CN": "该插件没有 {0} 的入口文件。", "en-US": "The plugin has no entry point for {0}.", "ja-JP": "このプラグインには {0} 用の実行ファイルがありません。" },
-  "Plugins.EntryMissing": { "zh-CN": "插件入口文件不存在。", "en-US": "The plugin entry point does not exist.", "ja-JP": "プラグインの実行ファイルが見つかりません。" },
-  "Plugins.ProcessStartFailed": { "zh-CN": "无法启动插件进程。", "en-US": "The plugin process could not start.", "ja-JP": "プラグインのプロセスを起動できません。" },
-  "Plugins.ProcessExited": { "zh-CN": "插件进程已退出。", "en-US": "The plugin process has exited.", "ja-JP": "プラグインのプロセスが終了しました。" },
-  "Plugins.ResponseTooLarge": { "zh-CN": "插件响应超过 8 MB 限制。", "en-US": "The plugin response exceeds the 8 MB limit.", "ja-JP": "プラグインの応答が 8 MB の上限を超えています。" },
-  "Plugins.InvalidRpc": { "zh-CN": "插件响应不符合 JSON-RPC 2.0。", "en-US": "The plugin response is not valid JSON-RPC 2.0.", "ja-JP": "プラグインの応答が JSON-RPC 2.0 に準拠していません。" },
-  "Plugins.ProviderFailed": { "zh-CN": "插件报告错误，请检查插件配置及服务器连接。", "en-US": "The plugin reported an error. Check its configuration and server connection.", "ja-JP": "プラグインでエラーが発生しました。設定とサーバー接続を確認してください。" }
+  "Plugins.RuntimeEntryMissing": {
+    "zh-CN": "该插件没有 {0} 的入口文件。",
+    "en-US": "The plugin has no entry point for {0}.",
+    "ja-JP": "このプラグインには {0} 用の実行ファイルがありません。"
+  },
+  "Plugins.EntryMissing": {
+    "zh-CN": "插件入口文件不存在。",
+    "en-US": "The plugin entry point does not exist.",
+    "ja-JP": "プラグインの実行ファイルが見つかりません。"
+  },
+  "Plugins.ProcessStartFailed": {
+    "zh-CN": "无法启动插件进程。",
+    "en-US": "The plugin process could not start.",
+    "ja-JP": "プラグインのプロセスを起動できません。"
+  },
+  "Plugins.ProcessExited": {
+    "zh-CN": "插件进程已退出。",
+    "en-US": "The plugin process has exited.",
+    "ja-JP": "プラグインのプロセスが終了しました。"
+  },
+  "Plugins.ResponseTooLarge": {
+    "zh-CN": "插件响应超过 8 MB 限制。",
+    "en-US": "The plugin response exceeds the 8 MB limit.",
+    "ja-JP": "プラグインの応答が 8 MB の上限を超えています。"
+  },
+  "Plugins.InvalidRpc": {
+    "zh-CN": "插件响应不符合 JSON-RPC 2.0。",
+    "en-US": "The plugin response is not valid JSON-RPC 2.0.",
+    "ja-JP": "プラグインの応答が JSON-RPC 2.0 に準拠していません。"
+  },
+  "Plugins.ProviderFailed": {
+    "zh-CN": "插件报告错误，请检查插件配置及服务器连接。",
+    "en-US": "The plugin reported an error. Check its configuration and server connection.",
+    "ja-JP": "プラグインでエラーが発生しました。設定とサーバー接続を確認してください。"
+  },
+  "Extensions.ApprovalTitle": {
+    "zh-CN": "更改自动审批模式",
+    "en-US": "Change approval mode",
+    "ja-JP": "承認モードの変更"
+  },
+  "Extensions.ApprovalFullWarning": {
+    "zh-CN": "完全访问权限将自动批准此插件已获授权的 Nonet 操作，包括删除歌单、移除引用和停用插件，可能无法撤销。不会授予系统命令或任意文件访问。仅为可信插件启用。",
+    "en-US": "Full access automatically approves this plugin's permitted Nonet actions, including potentially irreversible deletions. It does not grant shell or arbitrary file access. Enable only for trusted plugins.",
+    "ja-JP": "完全アクセスは許可済みの Nonet 操作（削除を含む）を自動承認します。システムコマンドや任意ファイルへのアクセスは許可しません。信頼できるプラグインにのみ有効にしてください。"
+  },
+  "Extensions.ApprovalAssistWarning": {
+    "zh-CN": "帮我批准会自动应用可恢复的设置和界面布局。删除数据、启停插件等高风险操作仍需确认。",
+    "en-US": "Assisted approval automatically applies reversible settings and layouts. Deletion and plugin execution still require confirmation.",
+    "ja-JP": "補助承認は復元可能な設定とレイアウトを自動適用します。削除やプラグイン実行は確認が必要です。"
+  },
+  "Extensions.ApplyLayout": {
+    "zh-CN": "应用布局",
+    "en-US": "Apply layout",
+    "ja-JP": "レイアウトを適用"
+  },
+  "Extensions.ApplyLayoutConfirm": {
+    "zh-CN": "此插件将重新排列导航、页面和播放器控件。必要播放功能会保留，可在设置或终端恢复默认布局。是否应用？",
+    "en-US": "This plugin will rearrange navigation, content and player controls. Essential controls remain available; settings or terminal can restore defaults. Apply?",
+    "ja-JP": "ナビゲーション、ページ、プレーヤーの配置を変更します。必須機能は残り、設定やターミナルで復元できます。適用しますか？"
+  },
+  "Extensions.CreatePluginConfirm": {
+    "zh-CN": "创建插件项目 {0}？仅在独立项目目录写入新文件，不覆盖既有项目。数据插件可安装；生成的 C# 源码不会自动编译或运行。",
+    "en-US": "Create plugin project {0}? New files only; existing projects are not overwritten. Data plugins can be installed. Generated C# source is not automatically built or executed.",
+    "ja-JP": "プラグイン {0} を作成しますか？既存プロジェクトは上書きしません。データプラグインは導入可能ですが、生成された C# は自動実行しません。"
+  },
+  "Extensions.SelectProjectFolder": {
+    "zh-CN": "选择插件项目目录",
+    "en-US": "Choose plugin project folder",
+    "ja-JP": "プラグインプロジェクトの場所を選択"
+  },
+  "Extensions.ProjectFolder": {
+    "zh-CN": "插件项目目录",
+    "en-US": "Plugin project folder",
+    "ja-JP": "プラグインプロジェクトの場所"
+  },
+  "Extensions.ProjectFolderNotSelected": {
+    "zh-CN": "尚未选择；首次生成时需选择目录",
+    "en-US": "Not selected; choose before generating a project",
+    "ja-JP": "未選択：初回作成時に選択してください"
+  },
+  "Extensions.ProjectFolderHint": {
+    "zh-CN": "只在此目录创建独立的新项目，不覆盖旧插件，不自动执行生成代码。",
+    "en-US": "Creates separate new projects here, without overwriting existing plugins or executing generated code.",
+    "ja-JP": "既存プラグインを上書きせず、新しいプロジェクトのみ作成します。生成コードは実行しません。"
+  }
 }

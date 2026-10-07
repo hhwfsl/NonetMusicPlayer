@@ -103,15 +103,31 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
             case "repeat":
                 var repeat = new StackPanel { Spacing = node.Spacing };
                 var childBindings = new List<Action<JsonObject>>(); var signature = "";
+                var retainedRows = new List<JsonObject>();
                 bindings.Add(state =>
                 {
                     var data = Value(node.Bind, state, item) as JsonArray;
                     var next = data?.ToJsonString() ?? "[]";
                     if (signature != next)
                     {
-                        signature = next; _activeContextMenu?.Close(); _activeContextMenu = null; repeat.Children.Clear(); childBindings.Clear();
-                        foreach (var row in data?.Take(1000) ?? [])
-                            if (node.Template is not null) repeat.Children.Add(Build(node.Template, row, childBindings));
+                        signature = next;
+                        var rows = (data?.Take(1000) ?? []).ToArray();
+                        if (rows.Length == retainedRows.Count && rows.All(r => r is JsonObject))
+                        {
+                            // 流式正文只更新原来的文本控件，避免每个片段重建列表、打断选择和滚动。
+                            for (var i = 0; i < rows.Length; i++)
+                            {
+                                var copy = rows[i]!.DeepClone().AsObject();
+                                if (String(retainedRows[i]["id"]) != String(copy["id"])) { _activeContextMenu?.Close(); _activeContextMenu = null; }
+                                retainedRows[i].Clear(); foreach (var pair in copy) retainedRows[i][pair.Key] = pair.Value?.DeepClone();
+                            }
+                        }
+                        else
+                        {
+                            _activeContextMenu?.Close(); _activeContextMenu = null; repeat.Children.Clear(); childBindings.Clear(); retainedRows.Clear();
+                            foreach (var row in rows)
+                                if (node.Template is not null) { var retained = row?.DeepClone(); if (retained is JsonObject obj) retainedRows.Add(obj); repeat.Children.Add(Build(node.Template, retained, childBindings)); }
+                        }
                     }
                     foreach (var update in childBindings.ToArray()) update(state);
                 }); control = repeat; break;

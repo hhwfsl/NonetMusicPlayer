@@ -39,6 +39,9 @@ public sealed class PluginManifest
     public bool AudioTagWriteConsent { get; set; }
     /// <summary>宿主在警告确认后保存，安装包不能预授予主进程信任。</summary>
     public bool ManagedExecutionConsent { get; set; }
+    /// <summary>可选审批能力；模式由宿主在用户保存配置并确认后授予，安装包不能预授予。</summary>
+    public bool SupportsApprovalModes { get; set; }
+    public string ApprovalMode { get; set; } = "ask";
     public void Validate()
     {
         Author = string.IsNullOrWhiteSpace(Author) ? "Author" : Author.Trim();
@@ -56,7 +59,8 @@ public sealed class PluginManifest
         if (!System.Version.TryParse(Version, out _)) throw new InvalidDataException("插件版本需要形如 1.0.0。");
         if (Type == "extension")
         {
-            if (Runtime is not ("process" or "managed") || EntryPoints.Count == 0 || PageEntry.Length == 0
+            if (Runtime is not ("process" or "managed" or "declarative") || Runtime != "declarative" && EntryPoints.Count == 0
+                || Runtime == "declarative" && (EntryPoints.Count != 0 || Permissions.Any(p => p is "process" or "in-process" or "network")) || PageEntry.Length == 0
                 || Permissions.Any(p => !ExtensionContract.Permissions.Contains(p))
                 || Runtime == "process" && !Permissions.Contains("process")
                 || Runtime == "managed" && (!Permissions.Contains("in-process") || ExtensionClass.Length == 0)

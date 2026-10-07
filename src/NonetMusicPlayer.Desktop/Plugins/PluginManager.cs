@@ -122,7 +122,8 @@ public sealed partial class PluginManager : IDisposable
         foreach (Action<string> subscriber in UiPluginUnavailable.GetInvocationList())
             try { subscriber(id); } catch (Exception error) { AppLog.Warning("PluginUI", "插件页面释放失败", error); }
     }
-    public void Configure(PluginManifest manifest, string json, bool confirmAudioTagWrite = false)
+    public void Configure(PluginManifest manifest, string json, bool confirmAudioTagWrite = false) => Configure(manifest, json, confirmAudioTagWrite, false);
+    public void Configure(PluginManifest manifest, string json, bool confirmAudioTagWrite, bool confirmApprovalMode)
     {
         RequireWritable();
         RequireInstalled(manifest);
@@ -132,6 +133,10 @@ public sealed partial class PluginManager : IDisposable
         PluginConfigSchema.Validate(schema, System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject());
         if (manifest.Type == "lyrics" && EmbeddingRequested(json) && !manifest.Permissions.Contains("audio-tags")) throw new InvalidOperationException(L10n.T("LyricsSearch.ConsentRequired"));
         if (NeedsAudioTagConfirmation(manifest, json) && !confirmAudioTagWrite) throw new InvalidOperationException(L10n.T("LyricsSearch.ConsentRequired"));
+        var requestedMode = manifest.SupportsApprovalModes ? document.RootElement.TryGetProperty("approvalMode", out var mode) ? mode.GetString() ?? "ask" : "ask" : "ask";
+        if (!PluginApprovalPolicy.IsMode(requestedMode)) throw new InvalidDataException("Invalid approval mode.");
+        if (NeedsApprovalModeConfirmation(manifest, json) && !confirmApprovalMode) throw new InvalidOperationException("Approval mode requires explicit user consent.");
+        var priorApproval = manifest.ApprovalMode; manifest.ApprovalMode = requestedMode;
         var priorTagConsent = manifest.AudioTagWriteConsent;
         if (manifest.Type == "lyrics") manifest.AudioTagWriteConsent = manifest.Permissions.Contains("audio-tags") && EmbeddingRequested(json) && (manifest.AudioTagWriteConsent || confirmAudioTagWrite);
         var previous = manifest.Configuration; var priorSession = _sessionConfiguration.GetValueOrDefault(manifest.Id);
@@ -139,7 +144,7 @@ public sealed partial class PluginManager : IDisposable
         // 安装索引只写脱敏值；Agent 的完整配置另存为账户加密 JSON。
         var persisted = Scrub(document.RootElement).AsObject(); PluginConfigSchema.RemoveSensitiveFields(schema, persisted); manifest.Configuration = persisted.ToJsonString();
         try { if (manifest.Enabled && manifest.Type is "ui" or "lyrics" or "agent") ReadUiPage(manifest); Save(); if (manifest.Type is "agent" or "extension") PluginConfigurationStore.Write(_storage.PluginsFolder, manifest, json, manifest.Configuration); }
-        catch { manifest.Configuration = previous; manifest.AudioTagWriteConsent = priorTagConsent; if (priorSession is null) _sessionConfiguration.Remove(manifest.Id); else _sessionConfiguration[manifest.Id] = priorSession; Save(); throw; }
+        catch { manifest.ApprovalMode = priorApproval; manifest.Configuration = previous; manifest.AudioTagWriteConsent = priorTagConsent; if (priorSession is null) _sessionConfiguration.Remove(manifest.Id); else _sessionConfiguration[manifest.Id] = priorSession; Save(); throw; }
         StopExtension(manifest.Id);
         if (_clients.Remove(manifest.Id, out var client)) client.Dispose();
         if (manifest.Type is "ui" or "lyrics" or "agent" or "extension") { NotifyUiUnavailable(manifest.Id); if (_pets.Remove(manifest.Id, out var pet)) pet.Close(); RefreshUiRuntime(manifest); }

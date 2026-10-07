@@ -94,6 +94,8 @@ public sealed class AppSettings
     public bool TitleButtonsOnLeft { get; set; } = OperatingSystem.IsMacOS();
     public Dictionary<string, string> KeyBindings { get; set; } = [];
     public string BackupFolder { get; set; } = "";
+    /// <summary>仅用户选择的插件开发目录；模型不接受任意目录参数。</summary>
+    public string PluginDevelopmentFolder { get; set; } = "";
     [JsonIgnore] public string? ValidationWarning { get; private set; }
     public double Volume { get; set; } = 80;
     public string DeviceName { get; set; } = "Playback.SystemDefault";

@@ -57,7 +57,7 @@ public static class AgentPluginContract
         foreach (var call in reply.Calls)
             if (call is null || string.IsNullOrEmpty(call.Id) || call.Id.Length > 100 || !ids.Add(call.Id) || call.Id.Any(char.IsControl)
                 || string.IsNullOrEmpty(call.Operation) || call.Operation.Length > 50 || call.Arguments is null || call.Arguments.Length > 16
-                || call.Arguments.Any(a => a is null || a.Length > 2000 || a.Any(char.IsControl)))
+                || call.Arguments.Any(a => a is null || a.Length > (call.Operation.StartsWith("extension.", StringComparison.Ordinal) ? 100000 : 2000) || !call.Operation.StartsWith("extension.", StringComparison.Ordinal) && a.Any(char.IsControl)))
                 throw new InvalidDataException("Invalid agent tool call.");
     }
 }

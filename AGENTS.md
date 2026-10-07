@@ -1,7 +1,7 @@
 # 项目维护要求
 
 - 使用单一 `NonetMusicPlayer` 工程目录开发、构建和发布；本地测试版本放在 `publish/desktop` 与 `publish/cli`。不再维护两个主工程目录。
-- GitHub 暂仅提交桌面、CLI、共享核心、主项目 SDK/打包器与必要测试；移动端仅本地保留。本次不提交插件模板或任何具体插件。禁止上传使用数据、凭据、缓存、旧开发历史和本地归档。
+- GitHub 暂仅提交桌面、CLI、共享核心、主项目 SDK/打包器与必要测试；移动端仅本地保留。插件模板仅在用户明确要求时单独公开；具体私人插件不上传。禁止上传使用数据、凭据、缓存、旧开发历史和本地归档。
 - 正式发布前检查暂存区文件范围并扫描敏感内容；纯净 ZIP 从全新暂存构建，作为 Release 资产上传，不提交进源码 Git。更新测试版时保留数据及旧包备份。
 - 保留用户已有修改，尤其是未提交的 XAML 布局；新增或改写的代码使用中文说明性注释。
 - 插件模板单独保存在 `../NonetMusicPlayerPlugin`；开发插件通过 ProjectReference 依赖主项目的 `src/NonetMusicPlayer.PluginSdk`，打包使用主项目 `tools/NonetMusicPlayer.PluginPackager`，调试运行真实宿主。不在模板复制 SDK 或另一套打包代码。用户指定插件仅放在 `../MyNonetMusicPlayerPlugin`，一个文件夹一个插件；发行包单独放在各插件的 dist，不生成源码 ZIP，不放入主项目 samples。

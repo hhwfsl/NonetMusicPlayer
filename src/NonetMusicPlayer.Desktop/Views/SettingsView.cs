@@ -105,6 +105,14 @@ public sealed class SettingsView : UserControl, IDisposable
             Ui.Row(L10n.T("Lyrics.LyricsTimingOffset"), L10n.T("Lyrics.PositiveValuesShowLyricsEarlierNegativeValuesLaterUnit"), Ui.Range(-10, 10, s.LyricOffset, v => { s.LyricOffset = v; Changed(); }, " s")),
             Ui.Text(L10n.T("Lyrics.MatchingLRCTXTFilesNextToMusicFilesAre"), 12, true));
         var pendingDataPath = new ContentControl();
+        var projectPath = new ContentControl { Content = string.IsNullOrEmpty(s.PluginDevelopmentFolder) ? Ui.Text(L10n.T("Extensions.ProjectFolderNotSelected"), 12, true) : Ui.PathLink(L10n.T("Extensions.ProjectFolder"), s.PluginDevelopmentFolder) };
+        var projectChoose = Ui.AsyncButton(L10n.T("Extensions.SelectProjectFolder"), async () =>
+        {
+            var folders = await owner.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = L10n.T("Extensions.SelectProjectFolder") });
+            var path = folders.FirstOrDefault()?.TryGetLocalPath(); if (string.IsNullOrWhiteSpace(path)) return;
+            s.PluginDevelopmentFolder = Path.GetFullPath(path); Changed(); projectPath.Content = Ui.PathLink(L10n.T("Extensions.ProjectFolder"), s.PluginDevelopmentFolder);
+        });
+        var projectRow = Ui.Row(L10n.T("Extensions.ProjectFolder"), L10n.T("Extensions.ProjectFolderHint"), Ui.Stack(projectPath, projectChoose));
         var data = Ui.Card(L10n.T("Common.DataAndRecovery"),
             Ui.AsyncButton(L10n.T("Common.ResetSettings"), async () =>
             {
@@ -153,6 +161,7 @@ public sealed class SettingsView : UserControl, IDisposable
         AddSection(sections, terminal, L10n.T("Terminal.Title"), "terminal cli 终端 ターミナル log 日志 字体 font 历史 scrollback 透明度 opacity", false);
         AddSection(sections, lyrics, L10n.T("Lyrics.Lyrics"), "lyrics 歌词 文件夹 路径 时间 微调 offset", false);
         AddSection(sections, ShortcutSettings.Create(vm), L10n.T("Settings.KeyboardShortcuts"), "shortcut keyboard 快捷键 按键 hotkey", false);
+        ((StackPanel)data.Child!).Children.Add(projectRow);
         AddSection(sections, data, L10n.T("Common.DataAndRecovery"), "data 数据 目录 路径 backup 恢复 备份 undo 撤销", false);
         AddSection(sections, (Border)owner.AboutSettings(), L10n.T("Update.About"), "about version update repository github 关于 バージョン 更新 仓库", true);
         _empty = Ui.Text(L10n.T("Common.NoMatchingSettings1616FA"), 13, true); _empty.IsVisible = false; sections.Children.Add(_empty);

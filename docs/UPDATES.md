@@ -1,6 +1,6 @@
 # 桌面软件更新
 
-适用于 Nonet 0.4.0-beta.5。更新源为 [hhwfsl/NonetMusicPlayer](https://github.com/hhwfsl/NonetMusicPlayer)。只有 GitHub Release 中符合下述契约的桌面资产才会触发应用更新；上传源码不等同于发布更新。
+适用于 Nonet 0.4.0-beta.5 及后续版本。更新源为 [hhwfsl/NonetMusicPlayer](https://github.com/hhwfsl/NonetMusicPlayer)。只有 GitHub Release 中符合下述契约的桌面资产才会触发应用更新；上传源码不等同于发布更新。
 
 ## 使用
 
@@ -21,6 +21,8 @@ NonetMusicPlayer.Desktop-0.4.0-beta.1-linux-x64.zip
 ```
 
 Release 标签可为 `desktop-v<版本>` 或 `v<版本>`。程序按语义版本比较预发布编号，过滤 draft、非桌面资产及不匹配的系统/进程架构。Android 和 CLI 的 Release 不会触发桌面更新。
+
+更新检查会对所有符合条件的 Release 按数字语义版本排序，不使用 GitHub 返回列表的第一项判定最新版本。例如 `beta.11 > beta.10 > beta.8`。GitHub 网页对同日预发布后缀的排序可能与数字语义版本不同；下载当前版本应使用 README 的版本链接。
 
 `scripts/publish-desktop.ps1 -CleanOnly -SkipInstaller` 将从全新 artifacts 暂存目录生成 ZIP，输出到 `publish/desktop/archives`，不读取或覆盖正在使用的发布目录。macOS ZIP 解压到 `Nonet.app` 内；可执行文件路径为 `Contents/MacOS/Nonet`，Windows 为 `Nonet.exe`，Linux 为 `Nonet`。
 

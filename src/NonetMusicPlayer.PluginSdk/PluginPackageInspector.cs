@@ -22,7 +22,7 @@ public static class PluginPackageInspector
         var manifestEntry = zip.GetEntry("manifest.json") ?? throw new InvalidDataException("包根目录缺少 manifest.json。");
         if (manifestEntry.Length > 100_000) throw new InvalidDataException("插件清单过大。");
         using var stream = manifestEntry.Open(); var manifest = JsonSerializer.Deserialize(stream, PluginJsonContext.Default.PluginManifest) ?? throw new InvalidDataException("插件清单为空。");
-        manifest.Validate(); manifest.Enabled = false; manifest.Configuration = "{}"; manifest.AudioTagWriteConsent = false; manifest.ManagedExecutionConsent = false; manifest.OriginRepository = "";
+        manifest.Validate(); manifest.Enabled = false; manifest.Configuration = "{}"; manifest.AudioTagWriteConsent = false; manifest.ManagedExecutionConsent = false; manifest.ApprovalMode = "ask"; manifest.OriginRepository = "";
         var schemaEntry = zip.GetEntry(PluginConfigSchema.FileName) ?? zip.GetEntry("plugin_config_schema");
         if (zip.GetEntry(PluginConfigSchema.FileName) is not null && zip.GetEntry("plugin_config_schema") is not null) throw new InvalidDataException("插件只能包含一份配置规范。");
         System.Text.Json.Nodes.JsonObject? configSchema = null;
@@ -37,6 +37,8 @@ public static class PluginPackageInspector
         }
         if (manifest.Type == "extension")
         {
+            if (manifest.Runtime == "declarative" && zip.Entries.Any(e => e.FullName != "manifest.json" && e.FullName != manifest.PageEntry && e != schemaEntry && !IsLicenseFile(e.FullName)))
+                throw new InvalidDataException("Declarative packages cannot contain executable files or unused assets.");
             using var page = (zip.GetEntry(manifest.PageEntry) ?? throw new InvalidDataException("Missing extension page.")).Open();
             ExtensionContract.ReadPage(page);
         }

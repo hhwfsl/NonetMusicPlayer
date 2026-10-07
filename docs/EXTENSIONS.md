@@ -9,9 +9,21 @@
 
 两者都不是 OS 沙箱，安装前必须信任开发者。permissions 只限制通过宿主 API 进行的操作，不阻止插件自有 OS 操作。网络与文件权限必须在清单说明。
 
+- declarative：纯数据控件树及宿主服务动作，不需要外部进程。不得附带程序或脚本；需 runtime.declarative.v1。
+
+## 可选布局、审批与项目能力（SDK 4.3）
+
+ui.workspace.v1 提供 ui 服务：read 返回当前与默认布局；apply 接收布局 JSON 字符串；reset 恢复默认。可重排 Navigation/Content/Player 和播放器必要控件；新增 page.songs/page.history/page.albums/page.artists/page.playlist/page.statistics 替换插槽。设置与终端保留恢复入口，不开放任意 XAML 注入。
+
+development.v1 的 development 服务需 ui-extend、plugins-control、plugin-development。package 生成并安装无程序的声明式插件；source 只生成新 C# 项目，不编译执行。目录由用户选择，ID 为 custom.<小写名称>，不覆盖旧项目。首次生成须选择工作区，设置中的数据与恢复可更改目录。
+
+approvals.v1 通过清单 supportsApprovalModes=true 和配置 approvalMode=ask/assist/full 使用。ask 保留原确认；assist 自动批准可恢复设置和布局；full 批准已授权的宿主事务。模式升级由用户在宿主确认；安装包、模型和请求参数不能预授予，也不扩大系统权限。
+
+纯数据页面可提供 initialState 与 actions 字典；action 是受权限约束的 service/arguments 数据，不求值脚本。新增字段是可选能力，原 Contract 1/2 接口与默认含义保持不变。
+
 ## 清单
 
-稳定 id 是身份；数字 version 判断更新，仓库 owner/name 与 GitHub 一致。type=extension、contractVersion=2、runtime=process/managed、pageEntry 指向包内 Schema 2 JSON。managed 额外指定 extensionClass 和 in-process 权限；process 指定 process 权限。入口按 RID 声明，发行时每个 RID 一个 .impp。
+稳定 id 是身份；数字 version 判断更新，仓库 owner/name 与 GitHub 一致。type=extension、contractVersion=2、runtime=process/managed/declarative、pageEntry 指向包内 Schema 2 JSON。managed 额外指定 extensionClass 和 in-process 权限；process 指定 process 权限。入口按 RID 声明，发行时每个 RID 一个 .impp。
 
 requiredCapabilities 声明真正需要的协议，如 ui.tree.v2/state.v1/actions.v1/services.v1。初始化回报支持的能力；宿主缺少必需能力则拒绝启动，而不能猜测执行。可选能力采用协商与降级，不在旧字段上改变含义。
 
