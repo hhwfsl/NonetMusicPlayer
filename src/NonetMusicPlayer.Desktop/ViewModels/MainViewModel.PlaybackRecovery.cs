@@ -13,6 +13,13 @@ public sealed partial class MainViewModel
         double resumePosition, bool preserveQueueScope, bool preserveFailures)
     {
         if (track is null || _disposed) return;
+        if (Plugins.HasHook("playback.before"))
+        {
+            var decision = await Plugins.EvaluateHooksAsync("playback.before", new() { ["trackId"] = track.Id, ["source"] = sourcePage });
+            if (decision.Cancel) return;
+            if (decision.Data["trackId"]?.GetValue<string>() is { } selected && selected != track.Id)
+                track = (list ?? SourceTracks(sourcePage)).FirstOrDefault(t => t.Id == selected) ?? track;
+        }
         if (_lyricsPlaybackLease is { } restriction && (restriction.Track.Id != track.Id || !restriction.Starting && !preserveQueueScope)) { RejectLyricsPlaybackChange(); return; }
         var request = Interlocked.Increment(ref _playRequest);
         await _playGate.WaitAsync();

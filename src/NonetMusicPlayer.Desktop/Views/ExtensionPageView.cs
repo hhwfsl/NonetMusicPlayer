@@ -16,6 +16,8 @@ namespace NonetMusicPlayer.Desktop.Views;
 /// <summary>仅解释通用控件和状态路径，不识别插件 ID、聊天或其他业务。</summary>
 public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboardScope
 {
+    public event Action? Failed;
+    public event Action? UnavailableView;
     private readonly ExtensionSession _session;
     private readonly PluginManager _manager;
     private readonly Dictionary<string, JsonNode?> _inputs;
@@ -31,7 +33,7 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
         {
             try { await _session.StartAsync(); Refresh(_session.Frame); }
             catch (OperationCanceledException) { }
-            catch (Exception error) { manager.ReportExtensionError(error); }
+            catch (Exception error) { if (_disposed) return; Dispose(); manager.ReportExtensionError(error); Failed?.Invoke(); }
         };
         FullTextToolTips.SetEnabled(this, false);
     }
@@ -244,10 +246,10 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
     {
         if (_disposed) return;
         if (!Dispatcher.UIThread.CheckAccess()) { Dispatcher.UIThread.Post(() => Refresh(frame)); return; }
-        try { foreach (var binding in _bindings.ToArray()) binding(frame.State); }
-        catch (Exception error) { Dispose(); _manager.ReportExtensionError(error); }
+        try { var state = (JsonObject)frame.State.DeepClone(); if (_session.Manifest.Permissions.Contains("music-read")) state["host"] = _session.HostState(); foreach (var binding in _bindings.ToArray()) binding(state); }
+        catch (Exception error) { Dispose(); _manager.ReportExtensionError(error); Failed?.Invoke(); }
     }
-    private void Unavailable(string id) { if (id == _session.Manifest.Id) Dispose(); }
+    private void Unavailable(string id) { if (id == _session.Manifest.Id) { Dispose(); UnavailableView?.Invoke(); } }
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e) { Dispose(); base.OnDetachedFromVisualTree(e); }
     public void Dispose() { if (_disposed) return; _disposed = true; _activeContextMenu?.Close(); _activeContextMenu = null; _session.Changed -= Refresh; _manager.UiPluginUnavailable -= Unavailable; _bindings.Clear(); foreach (var asset in _assets) asset.Dispose(); _assets.Clear(); }
 }

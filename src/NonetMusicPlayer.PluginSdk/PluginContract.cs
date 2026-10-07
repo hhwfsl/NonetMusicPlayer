@@ -30,6 +30,8 @@ public sealed class PluginManifest
     public string ExtensionClass { get; set; } = "";
     public List<string> RequiredCapabilities { get; set; } = [];
     public List<string> Events { get; set; } = [];
+    /// <summary>可选、有限时的流程决策；只声明需要的钩子，未声明时没有开销。</summary>
+    public List<string> Hooks { get; set; } = [];
     public List<string> ProvidedServices { get; set; } = [];
     public List<ExtensionContribution> Contributions { get; set; } = [];
     public bool Enabled { get; set; }
@@ -45,7 +47,7 @@ public sealed class PluginManifest
     public void Validate()
     {
         Author = string.IsNullOrWhiteSpace(Author) ? "Author" : Author.Trim();
-        ProvidedServices ??= []; RequiredCapabilities ??= []; Events ??= []; Contributions ??= []; Permissions ??= []; EntryPoints ??= []; Tokens ??= []; Widgets ??= []; MenuContributions ??= []; Configuration ??= "{}";
+        Hooks ??= []; ProvidedServices ??= []; RequiredCapabilities ??= []; Events ??= []; Contributions ??= []; Permissions ??= []; EntryPoints ??= []; Tokens ??= []; Widgets ??= []; MenuContributions ??= []; Configuration ??= "{}";
         LifecycleMethods ??= [];
         RepositoryOwner ??= ""; RepositoryName ??= ""; OriginRepository ??= ""; Platform ??= "";
         if (Platform.Length > 0 && !PluginPlatformPolicy.IsRid(Platform)) throw new InvalidDataException("Invalid plugin platform.");
@@ -54,7 +56,7 @@ public sealed class PluginManifest
         if (LifecycleMethods.Count > 3 || LifecycleMethods.Any(m => m is not ("lifecycle.disable" or "lifecycle.uninstall" or "lifecycle.shutdown")) || LifecycleMethods.Count > 0 && Type is not ("provider" or "lyrics" or "agent" or "extension")) throw new InvalidDataException("只有进程插件可声明受支持的进程生命周期方法。");
         if (!System.Text.RegularExpressions.Regex.IsMatch(Id ?? "", "^[a-z][a-z0-9.-]{2,80}$") || string.IsNullOrWhiteSpace(Name) || Name.Length > 100)
             throw new InvalidDataException("插件标识或名称不合法。");
-        if ((Description?.Length ?? 0) > 2000 || (Author?.Length ?? 0) > 100 || Permissions.Count > 16 || Permissions.Any(p => string.IsNullOrWhiteSpace(p) || p.Length > 32)) throw new InvalidDataException("插件描述或权限清单过长。");
+        if ((Description?.Length ?? 0) > 2000 || (Author?.Length ?? 0) > 100 || Permissions.Count > 32 || Permissions.Any(p => string.IsNullOrWhiteSpace(p) || p.Length > 32)) throw new InvalidDataException("插件描述或权限清单过长。");
         if (!(ContractVersion == 1 && Type is "provider" or "theme" or "widget" or "ui" or "lyrics" or "agent" || ContractVersion == 2 && Type == "extension")) throw new InvalidDataException("不支持此插件类型或 Contract 版本。");
         if (!System.Version.TryParse(Version, out _)) throw new InvalidDataException("插件版本需要形如 1.0.0。");
         if (Type == "extension")
@@ -68,6 +70,10 @@ public sealed class PluginManifest
                 || Events.Count > 32 || Events.Any(e => e.Length is 0 or > 100)
                 || Contributions.Count > 32 || Contributions.Any(c => !ExtensionContract.Slots.Contains(c.Slot) || c.Label.Length is 0 or > 100 || c.Action.Length is 0 or > 100))
                 throw new InvalidDataException("Invalid extension capabilities or permissions.");
+            if (Hooks.Count > 8 || Hooks.Distinct().Count() != Hooks.Count || Hooks.Any(h => !UniversalExtensionContract.Hooks.Contains(h)) || Hooks.Count > 0 && (!Permissions.Contains("workflow") || !RequiredCapabilities.Contains("workflow.v1"))) throw new InvalidDataException("Invalid workflow hooks.");
+            if (Permissions.Contains("audio-processing") && (Runtime != "managed" || !RequiredCapabilities.Contains("audio.pcm.v1"))) throw new InvalidDataException("PCM processing requires trusted managed runtime.");
+            if (Permissions.Contains("native-ui") && (Runtime != "managed" || !RequiredCapabilities.Contains("ui.native.v1"))) throw new InvalidDataException("Native UI requires trusted managed runtime.");
+            if (Contributions.Any(c => c.Native) && (Runtime != "managed" || !Permissions.Contains("native-ui") || !Permissions.Contains("ui-extend"))) throw new InvalidDataException("Native contribution permission required.");
             if (ProvidedServices.Count > 16 || ProvidedServices.Any(n => !System.Text.RegularExpressions.Regex.IsMatch(n, "^[a-z][a-z0-9.-]{1,80}$"))) throw new InvalidDataException("Invalid extension service.");
             foreach (var contribution in Contributions.Where(c => c.View is not null))
             {

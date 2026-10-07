@@ -38,6 +38,7 @@ public sealed partial class MainWindow
     private void BuildExtensionSlots()
     {
         if (_vm is null) return;
+        BuildExtensionSurfaces(); BuildExtensionTray();
         PlayerExtensionActions.Items.Clear(); TitleExtensionActions.Items.Clear();
         void Fill(MenuFlyout flyout, string slot)
         {
@@ -70,8 +71,27 @@ public sealed partial class MainWindow
     private Control? ExtensionReplacement(string slot)
     {
         if (_vm is null) return null;
-        var candidate = _vm.Plugins.Contributions(slot).FirstOrDefault(c => c.Contribution.View is not null);
-        return candidate.Plugin is null ? null : new ExtensionPageView(_vm.Plugins, candidate.Plugin, candidate.Contribution.View);
+        var candidate = _vm.Plugins.Contributions(slot).FirstOrDefault(c => (c.Contribution.View is not null || c.Contribution.Native) && !_failedSurfaces.Contains(c.Plugin.Id + ":" + slot));
+        return candidate.Plugin is null ? null : ContributionView(candidate.Plugin, candidate.Contribution);
+    }
+    internal IEnumerable<(Border Card, string Title)> ExtensionSettingsSections()
+    {
+        if (_vm is null) yield break;
+        foreach (var (plugin, contribution) in _vm.Plugins.Contributions("settings.sections"))
+            if (contribution.View is not null || contribution.Native)
+                yield return (Ui.Card(contribution.Label, ContributionView(plugin, contribution)), contribution.Label);
+    }
+    private void BuildExtensionTray()
+    {
+        if (_tray is null || _trayOpen is null || _trayExit is null || _vm is null) return;
+        var menu = _tray.Menu ?? new NativeMenu(); menu.Items.Clear(); menu.Items.Add(_trayOpen); menu.Items.Add(_trayExit);
+        foreach (var (plugin, contribution) in _vm.Plugins.Contributions("tray.actions"))
+        {
+            var item = new NativeMenuItem(contribution.Label);
+            item.Click += async (_, _) => { try { await InvokeContributionAsync(plugin, contribution); } catch (Exception error) { _vm.ReportError(plugin.Name, error); } };
+            menu.Items.Add(item);
+        }
+        _tray.Menu = menu;
     }
     private Control ExtensionHomeCards()
     {
@@ -79,7 +99,7 @@ public sealed partial class MainWindow
         if (_vm is null) return cards;
         foreach (var (plugin, contribution) in _vm.Plugins.Contributions("home.cards"))
         {
-            if (contribution.View is not null) cards.Children.Add(new ExtensionPageView(_vm.Plugins, plugin, contribution.View));
+            if (contribution.View is not null || contribution.Native) cards.Children.Add(ContributionView(plugin, contribution));
             else
             {
                 var button = Ui.AsyncButton(contribution.Label, () => InvokeContributionAsync(plugin, contribution));

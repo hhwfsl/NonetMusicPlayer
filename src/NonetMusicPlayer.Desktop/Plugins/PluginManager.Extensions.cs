@@ -40,23 +40,36 @@ public sealed partial class PluginManager
     {
         if (_uiVm is null) return;
         _uiVm.PropertyChanged += ExtensionPropertyChanged; _uiVm.OperationCompleted += ExtensionOperation;
+        if (_uiHost is not null) _uiHost.PropertyChanged += ExtensionWindowChanged;
+        _uiVm.SettingsChanged += ExtensionSettingsChanged; _uiVm.ViewChanged += ExtensionLibraryChanged;
     }
     private void DetachExtensionEvents()
     {
-        if (_uiVm is not null) { _uiVm.PropertyChanged -= ExtensionPropertyChanged; _uiVm.OperationCompleted -= ExtensionOperation; }
+        if (_uiVm is not null) { _uiVm.PropertyChanged -= ExtensionPropertyChanged; _uiVm.OperationCompleted -= ExtensionOperation; _uiVm.SettingsChanged -= ExtensionSettingsChanged; _uiVm.ViewChanged -= ExtensionLibraryChanged; }
+        if (_uiHost is not null) _uiHost.PropertyChanged -= ExtensionWindowChanged;
         foreach (var session in _extensions.Values) session.Dispose(); _extensions.Clear();
     }
     private void ExtensionPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is "PlaybackPosition" or "CurrentTrack" or "IsPlaying" or "Volume" or "Page")
+            foreach (var session in _extensions.Values.ToArray()) session.RefreshHostPresentation();
+        if (e.PropertyName == "PlaybackPosition") { BroadcastExtensionEvent("player.position", new() { ["position"] = _uiVm?.PlaybackPosition, ["duration"] = _uiVm?.PlaybackDuration }); }
+        if (e.PropertyName == "Page") BroadcastExtensionEvent("navigation.changed", new() { ["page"] = _uiVm?.Page });
         if (e.PropertyName == "CurrentTrack") BroadcastExtensionEvent("player.track-changed", new()
         { ["id"] = _uiVm?.CurrentTrack?.Id, ["title"] = _uiVm?.CurrentTrack?.Title, ["artist"] = _uiVm?.CurrentTrack?.Artist });
         else if (e.PropertyName == "IsPlaying") BroadcastExtensionEvent("player.state-changed", new() { ["playing"] = _uiVm?.IsPlaying });
     }
+    private void ExtensionWindowChanged(object? sender, Avalonia.AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property.Name is "WindowState" or "IsVisible" or "Bounds") BroadcastExtensionEvent("window.changed", new() { ["state"] = _uiHost?.WindowState.ToString(), ["visible"] = _uiHost?.IsVisible, ["width"] = _uiHost?.Bounds.Width, ["height"] = _uiHost?.Bounds.Height });
+    }
+    private void ExtensionSettingsChanged(object? sender, EventArgs e) => BroadcastExtensionEvent("settings.changed", new());
+    private void ExtensionLibraryChanged(object? sender, EventArgs e) => BroadcastExtensionEvent("library.changed", new());
     private void ExtensionOperation(object? sender, CommandResult result) => BroadcastExtensionEvent("operation.completed",
         new() { ["operation"] = result.Operation, ["success"] = result.Success, ["data"] = PluginCommandPolicy.Sanitize(result.Data) });
-    public void BroadcastExtensionEvent(string name, JsonObject data)
+    public void BroadcastExtensionEvent(string name, JsonObject data, string? exceptId = null)
     {
-        foreach (var plugin in Installed.Where(p => p.Enabled && p.Type == "extension" && p.Events.Contains(name)).ToArray())
+        foreach (var plugin in Installed.Where(p => p.Enabled && p.Type == "extension" && p.Id != exceptId && UniversalExtensionContract.MatchesEvent(p.Events, name)).ToArray())
             _ = Extension(plugin).EventAsync(new(name, (JsonObject)data.DeepClone()));
     }
 }

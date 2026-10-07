@@ -104,4 +104,4 @@ page.music/page.lyrics 可替换相应默认页。必须有 ui-extend；多个�
 
 首次 v2 已有方法、构造器、字段意义和默认值被冻结。后续采用新可选字段、独立可选接口和能力版本；不删除旧 v1/v2 适配。不得给 INonetExtension 添加必需成员，破坏已编译实现。运行 --extensions 回归会使用 artifacts/frozen-extension-v2 首次冻结的工作进程/程序集，不覆盖旧字节；另运行 --compatibility 验证 v1。
 
-此层不等于可以在 JSON-RPC 中传每个音频采样，也不支持任意运行 XAML。实时 DSP、解码器等需要独立、版本化的低延迟音频接口，当前基线没有提供这些接口。桌宠可由浮层、图片、状态和播放器命令组成，但 OS 桌面注入不属于宿主权限。
+实时采样不经过 JSON-RPC；SDK 4.4 新增独立的可信托管 PCM 音效接口和原生视图接口，详见 [UNIVERSAL_EXTENSIONS](UNIVERSAL_EXTENSIONS.md)。解码器、设备和播放时钟仍为宿主核心。数据 UI 不支持任意 XAML。桌宠可由浮层、图片、状态和播放器命令组成，但 OS 桌面注入不属于宿主权限。

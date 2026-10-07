@@ -13,9 +13,12 @@ using NonetMusicPlayer.Core.Streaming;
 
 namespace NonetMusicPlayer.Core.Audio;
 /// <summary>按需解码的原生音频后端。桌面与命令行共用设备恢复和解码资源生命周期。</summary>
-public sealed class NativeAudioPlayer : IAudioPlayer
+public sealed class NativeAudioPlayer : IAudioPlayer, IExtensionAudioHost
 {
     private readonly object _gate = new();
+    private readonly ExtensionAudioPipeline _extensionAudio = new();
+    public event EventHandler? ProcessorBypassed { add => _extensionAudio.ProcessorBypassed += value; remove => _extensionAudio.ProcessorBypassed -= value; }
+    public void SetExtensionProcessors(IReadOnlyList<NonetMusicPlayer.Core.Plugins.ExtensionPcmLease> processors) => _extensionAudio.SetProcessors(processors);
     private MiniAudioEngine? _engine;
     private AudioPlaybackDevice? _device;
     private SoundPlayer? _player;
@@ -110,6 +113,7 @@ public sealed class NativeAudioPlayer : IAudioPlayer
                 var decoded = new DecodedDataProvider(_engine!, _stream, e => DecodeFailed(sourceGeneration, e));
                 _data = decoded; _decodedFormat = decoded.Format; _loadedSources++; EnsureDevice(decoded.Format);
                 _player = new SoundPlayer(_engine!, decoded.Format, _data) { Volume = _volume };
+                _extensionAudio.SampleRate = decoded.Format.SampleRate; _player.AddModifier(_extensionAudio);
                 _player.PlaybackEnded += Ended; _device!.MasterMixer.AddComponent(_player); cancellationToken.ThrowIfCancellationRequested();
                 AppLog.Info("Audio.Load", $"已载入音频会话 {sourceGeneration}，{decoded.Format.SampleRate} Hz / {decoded.Format.Channels} 声道，时长 {_player.Duration:0.000} 秒");
             }

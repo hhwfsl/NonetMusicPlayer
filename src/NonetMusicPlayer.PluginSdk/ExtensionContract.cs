@@ -8,10 +8,10 @@ namespace NonetMusicPlayer.Core.Plugins;
 public static class ExtensionContract
 {
     public const int Version = 2;
-    public static readonly string[] Capabilities = ["ui.tree.v2", "lyrics.v1", "dialogs.v1", "state.v1", "actions.v1", "events.v1", "commands.v1", "services.v1", "files.pick.v1", "ui.layout-bind.v1", "ui.context-menu.v1", "ui.controls.v1", "dialogs.prompt.v1", "approvals.v1", "ui.workspace.v1", "runtime.declarative.v1", "development.v1"];
-    public static readonly string[] Slots = ["lyrics.more", "song.more", "playlist.more", "player.actions", "titlebar.actions", "home.cards", "overlay", "page.music", "page.lyrics", "page.songs", "page.history", "page.albums", "page.artists", "page.playlist", "page.statistics"];
+    public static readonly string[] Capabilities = ["ui.tree.v2", "lyrics.v1", "dialogs.v1", "state.v1", "actions.v1", "events.v1", "commands.v1", "services.v1", "files.pick.v1", "ui.layout-bind.v1", "ui.context-menu.v1", "ui.controls.v1", "dialogs.prompt.v1", "approvals.v1", "ui.workspace.v1", "runtime.declarative.v1", "development.v1", .. UniversalExtensionContract.Capabilities];
+    public static readonly string[] Slots = ["lyrics.more", "song.more", "playlist.more", "player.actions", "titlebar.actions", "home.cards", "overlay", "page.music", "page.lyrics", "page.songs", "page.history", "page.albums", "page.artists", "page.playlist", "page.statistics", .. UniversalExtensionContract.Slots];
     public static readonly string[] Permissions = ["process", "network", "navigation", "player-control", "music-read", "library-write",
-        "settings-write", "window-control", "plugins-control", "lyrics-write", "user-files", "in-process", "ui-extend", "plugin-services", "plugin-development"];
+        "settings-write", "window-control", "plugins-control", "lyrics-write", "user-files", "in-process", "ui-extend", "plugin-services", "plugin-development", "workflow", "native-ui", "audio-tags", "audio-processing"];
     public static ExtensionPage ReadPage(Stream input)
     {
         using var buffer = new MemoryStream(); input.CopyTo(buffer);
@@ -60,7 +60,7 @@ public static class ExtensionContract
         if (page.Actions.Count > 64 || page.InitialState.ToJsonString().Length > 128000) throw new InvalidDataException("Declarative state/actions exceed limit.");
         foreach (var (name, action) in page.Actions)
         {
-            if (name.Length is 0 or > 100 || action.Service is not ("commands" or "ui" or "lyrics" or "dialogs.notify") || action.Arguments.ToJsonString().Length > 128000)
+            if (name.Length is 0 or > 100 || !UniversalExtensionContract.IsService(action.Service) && action.Service is not ("commands" or "ui" or "lyrics" or "dialogs.notify") || action.Arguments.ToJsonString().Length > 128000)
                 throw new InvalidDataException("Invalid declarative action.");
         }
         return page;
@@ -70,8 +70,8 @@ public static class ExtensionContract
         // 状态是数据而不是代码，控制 UI 的输入仍受控件树上限约束。
         if (frame.State.ToJsonString().Length > 2_000_000 || frame.Requests.Count > 16) throw new InvalidDataException("Extension state is too large.");
         foreach (var request in frame.Requests)
-            if (request.Id.Length is 0 or > 100 || request.Service is not ("commands" or "catalog" or "config" or "files.pick" or "lyrics" or "dialogs.confirm" or "dialogs.notify" or "dialogs.prompt" or "ui" or "development") && !request.Service.StartsWith("plugin:", StringComparison.Ordinal)
-                || request.Arguments.ToJsonString().Length > (request.Service is "ui" or "development" ? 128000 : 32000)) throw new InvalidDataException("Invalid service request.");
+            if (request.Id.Length is 0 or > 100 || !UniversalExtensionContract.IsService(request.Service) && request.Service is not ("commands" or "catalog" or "config" or "files.pick" or "lyrics" or "dialogs.confirm" or "dialogs.notify" or "dialogs.prompt" or "ui" or "development") && !request.Service.StartsWith("plugin:", StringComparison.Ordinal)
+                || request.Arguments.ToJsonString().Length > (request.Service is "ui" or "development" or "lyrics" ? 128000 : 32000)) throw new InvalidDataException("Invalid service request.");
     }
 }
 public sealed class ExtensionPage
@@ -127,6 +127,8 @@ public sealed class ExtensionNode
 public sealed record ExtensionContribution(string Slot, string Label, string Action, string Icon = "")
 {
     public ExtensionNode? View { get; init; }
+    /// <summary>可信托管插件可选原生视图；旧贡献省略时仍使用控件树。</summary>
+    public bool Native { get; init; }
 }
 public sealed class ExtensionFrame
 {

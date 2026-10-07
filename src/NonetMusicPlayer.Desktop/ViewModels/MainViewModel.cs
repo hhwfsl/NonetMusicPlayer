@@ -67,6 +67,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         try { Volume = Settings.Volume; _audio.Volume = (float)(Volume / 100); _audio.DeviceName = Settings.DeviceName; }
         catch (Exception e) { ReportError(L10n.T("Playback.UnableToApplyAudioSettings"), e); }
         VisibleTracks.CollectionChanged += (_, _) => { OnPropertyChanged(nameof(TrackCountText)); OnPropertyChanged(nameof(IsEmptyStateVisible)); };
+        if (_audio is Core.Audio.IExtensionAudioHost extensible) extensible.ProcessorBypassed += ExtensionAudioBypassed;
         _audio.PlaybackStopped += PlaybackEnded;
         _audio.PlaybackFailed += PlaybackFailed;
         _audio.OutputDeviceChanged += OutputChanged;
@@ -157,6 +158,12 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     partial void OnPlayingSourcePageChanged(string value) { OnPropertyChanged(nameof(PlayingPlaylistId)); RefreshPlayingRows(); }
     public void Navigate(string page, string? title = null)
     {
+        var request = ++_extensionNavigationRequest;
+        if (page is not ("settings" or "plugins" or "terminal") && Plugins.HasHook("navigation.before")) { _ = NavigateWithHooksAsync(page, title, request); return; }
+        NavigateCore(page, title);
+    }
+    private void NavigateCore(string page, string? title)
+    {
         Page = page == "favorites" ? "playlist:" + Playlist.LikedId : page == "temporary" ? "library" : page; SearchText = "";
         PageTitle = title ?? LocalizedTitleForPage(Page);
         OnPropertyChanged(nameof(CurrentPlaylist));
@@ -178,6 +185,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     }
     public async Task<IReadOnlyList<TrackItem>> ImportAsync(IEnumerable<string> paths, bool favorite = false, Playlist? playlist = null, bool autoplay = false)
     {
+        if (Plugins.HasHook("import.before") && (await Plugins.EvaluateHooksAsync("import.before", new() { ["playlistId"] = playlist?.Id, ["inputCount"] = paths.Count() })).Cancel) return [];
         if (IsBusy) { ReportWarning(L10n.T("Common.AnImportIsInProgressWaitForItTo")); return []; }
         IsBusy = true; var cancellation = new CancellationTokenSource(); _scanCancellation = cancellation; var inputs = paths.ToArray(); StatusText = L10n.T("Lyrics.ScanningMusicArtworkAndLyrics");
         try
@@ -537,6 +545,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     {
         if (_disposed) return; _lyricsPlaybackLease?.Dispose(); UpdateListeningStatistics(); _disposed = true; _lyricsSearchLifetime.Cancel(); Interlocked.Increment(ref _playRequest); _scanCancellation?.Cancel(); _timer.Stop(); Save();
         _audio.PlaybackStopped -= PlaybackEnded; _audio.PlaybackFailed -= PlaybackFailed;
+        if (_audio is Core.Audio.IExtensionAudioHost extensible) extensible.ProcessorBypassed -= ExtensionAudioBypassed;
         _audio.OutputDeviceChanged -= OutputChanged; _audio.OutputDevicesChanged -= DevicesChanged;
         try { _audio.Dispose(); Plugins.Dispose(); } catch (Exception error) { AppLog.Error("Shutdown", "关闭播放资源失败", error); }
         foreach (var track in _observedTracks) track.PropertyChanged -= TrackChanged;

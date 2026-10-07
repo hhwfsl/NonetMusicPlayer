@@ -16,7 +16,7 @@ public sealed partial class MainWindow
     internal void ForgetPluginUpdate(string id) { _pluginUpdates.Remove(id); PluginUpdatesChanged?.Invoke(this, EventArgs.Empty); }
 
     /// <summary>后台只检查元数据，限制并发；缺失仓库/离线不打断启动，也不自动下载插件。</summary>
-    private async Task CheckPluginUpdatesAsync()
+    internal async Task CheckPluginUpdatesAsync()
     {
         if (_vm is null) return;
         using var throttle = new SemaphoreSlim(2);

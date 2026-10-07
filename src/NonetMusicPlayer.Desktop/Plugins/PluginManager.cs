@@ -70,6 +70,7 @@ public sealed partial class PluginManager : IDisposable
         if (!enabled) StopExtension(manifest.Id);
         if (!enabled && _clients.Remove(manifest.Id, out var client)) { client.NotifyLifecycle(manifest, "lifecycle.disable"); client.Dispose(); }
         var previous = manifest.Enabled; manifest.Enabled = enabled;
+        if (enabled) ResetHookFailures(manifest.Id);
         try { Save(); }
         catch
         {
@@ -81,6 +82,7 @@ public sealed partial class PluginManager : IDisposable
         finally { if (!manifest.Enabled && manifest.Type is "ui" or "widget" or "lyrics" or "agent" or "extension") NotifyUiUnavailable(manifest.Id); RefreshUiRuntime(manifest); }
         OperationCompleted?.Invoke(this, CommandResults.Completed(enabled ? "plugins.enable" : "plugins.disable"));
         PublishLifecycle(manifest, enabled ? "enabled" : "disabled");
+        if (enabled && manifest.Type == "extension" && manifest.Permissions.Contains("audio-processing") && _uiVm is not null) _ = StartAudioExtensionAsync(manifest);
     }
     public PluginPageDefinition LoadPage(PluginManifest manifest)
     {
@@ -131,14 +133,14 @@ public sealed partial class PluginManager : IDisposable
         if (document.RootElement.ValueKind != JsonValueKind.Object) throw new InvalidDataException("配置必须是 JSON 对象。");
         var schema = ReadConfigurationSchema(manifest);
         PluginConfigSchema.Validate(schema, System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject());
-        if (manifest.Type == "lyrics" && EmbeddingRequested(json) && !manifest.Permissions.Contains("audio-tags")) throw new InvalidOperationException(L10n.T("LyricsSearch.ConsentRequired"));
+        if (HasLyricsSource(manifest) && EmbeddingRequested(json) && !manifest.Permissions.Contains("audio-tags")) throw new InvalidOperationException(L10n.T("LyricsSearch.ConsentRequired"));
         if (NeedsAudioTagConfirmation(manifest, json) && !confirmAudioTagWrite) throw new InvalidOperationException(L10n.T("LyricsSearch.ConsentRequired"));
         var requestedMode = manifest.SupportsApprovalModes ? document.RootElement.TryGetProperty("approvalMode", out var mode) ? mode.GetString() ?? "ask" : "ask" : "ask";
         if (!PluginApprovalPolicy.IsMode(requestedMode)) throw new InvalidDataException("Invalid approval mode.");
         if (NeedsApprovalModeConfirmation(manifest, json) && !confirmApprovalMode) throw new InvalidOperationException("Approval mode requires explicit user consent.");
         var priorApproval = manifest.ApprovalMode; manifest.ApprovalMode = requestedMode;
         var priorTagConsent = manifest.AudioTagWriteConsent;
-        if (manifest.Type == "lyrics") manifest.AudioTagWriteConsent = manifest.Permissions.Contains("audio-tags") && EmbeddingRequested(json) && (manifest.AudioTagWriteConsent || confirmAudioTagWrite);
+        if (HasLyricsSource(manifest)) manifest.AudioTagWriteConsent = manifest.Permissions.Contains("audio-tags") && EmbeddingRequested(json) && (manifest.AudioTagWriteConsent || confirmAudioTagWrite);
         var previous = manifest.Configuration; var priorSession = _sessionConfiguration.GetValueOrDefault(manifest.Id);
         _sessionConfiguration[manifest.Id] = json;
         // 安装索引只写脱敏值；Agent 的完整配置另存为账户加密 JSON。
@@ -207,8 +209,8 @@ public sealed partial class PluginManager : IDisposable
     {
         try
         {
-            var client = await GetClientAsync(manifest); var items = new List<TrackItem>();
-            var catalog = await client.ReadCatalogAsync(cancellationToken);
+            var items = new List<TrackItem>();
+            var catalog = manifest.Type == "extension" ? await ReadExtensionCatalogAsync(manifest, cancellationToken) : await (await GetClientAsync(manifest)).ReadCatalogAsync(cancellationToken);
             foreach (var item in catalog)
             {
                     var track = new TrackItem(manifest.Id + ":" + item.Id, item.Title, item.Artist, item.Album, "", "." + item.Format, 0) { ProviderId = manifest.Id, ProviderTrackId = item.Id, DurationSeconds = item.DurationSeconds };
@@ -227,6 +229,14 @@ public sealed partial class PluginManager : IDisposable
         var manifest = Installed.FirstOrDefault(p => p.Id == track.ProviderId) ?? throw new InvalidOperationException("音源插件已卸载。");
         try
         {
+            if (manifest.Type == "extension")
+            {
+                if (!manifest.Enabled || !HasMediaSource(manifest) || !manifest.Permissions.Contains("network")) throw new InvalidDataException("Media source is unavailable.");
+                var answer = await Extension(manifest).InvokeProvidedServiceAsync("media-source", new() { ["method"] = "playback.resolve", ["trackId"] = track.ProviderTrackId }, default);
+                var media = answer.Deserialize<PlaybackSource>(AppStorage.Json) ?? throw new InvalidDataException("Empty media source.");
+                if (media.Kind != "loopback-http") throw new InvalidDataException("Unsupported media source kind.");
+                LoopbackRangeStream.Validate(new Uri(media.Url)); return media.Url;
+            }
             var client = await GetClientAsync(manifest);
             // 旧曲库来自前一进程；新的音源进程需先建立自己的曲目映射。
             if (!client.CatalogInitialized) await client.ReadCatalogAsync();

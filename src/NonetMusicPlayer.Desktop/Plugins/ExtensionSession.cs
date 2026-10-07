@@ -19,6 +19,7 @@ public sealed partial class ExtensionSession : IDisposable
     private bool _initialized, _polling, _disposed, _gesture;
     private readonly HashSet<string> _handled = [];
     private static readonly AsyncLocal<string[]?> ServiceStack = new();
+    private static readonly AsyncLocal<bool> DecisionScope = new();
     public Dictionary<string, JsonNode?> Inputs { get; } = [];
     public ExtensionFrame Frame { get; private set; } = new();
     public event Action<ExtensionFrame>? Changed;
@@ -73,17 +74,33 @@ public sealed partial class ExtensionSession : IDisposable
         }
         finally { _gesture = false; _gate.Release(); }
     }
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, ExtensionEvent> _pendingEvents = new();
+    private int _eventPump;
     public async Task EventAsync(ExtensionEvent value)
     {
-        if (_disposed || !Manifest.Events.Contains(value.Name)) return;
+        if (_disposed || !UniversalExtensionContract.MatchesEvent(Manifest.Events, value.Name)) return;
+        // 同名事件只保留最新值，慢进程不会积累几千条进度或界面更新。
+        if (_pendingEvents.Count >= 64 && !_pendingEvents.ContainsKey(value.Name)) return;
+        _pendingEvents[value.Name] = value;
+        if (Interlocked.CompareExchange(ref _eventPump, 1, 0) != 0) return;
         try
         {
-            await StartAsync(); await _gate.WaitAsync(_lifetime.Token);
-            try { await PublishAsync(await CallAsync("extension.event", new() { ["event"] = JsonSerializer.Serialize(value, ExtensionJson.Default.ExtensionEvent) })); }
-            finally { _gate.Release(); }
+            await StartAsync();
+            while (!_disposed && _pendingEvents.Keys.FirstOrDefault() is { } key)
+            {
+                if (!_pendingEvents.TryRemove(key, out var next)) continue;
+                await _gate.WaitAsync(_lifetime.Token);
+                try { await PublishAsync(await CallAsync("extension.event", new() { ["event"] = JsonSerializer.Serialize(next, ExtensionJson.Default.ExtensionEvent) })); }
+                finally { _gate.Release(); }
+            }
         }
         catch (OperationCanceledException) { }
         catch (Exception error) { AppLog.Warning("Extensions", "Extension event failed: " + Manifest.Id, error); }
+        finally
+        {
+            Interlocked.Exchange(ref _eventPump, 0);
+            if (!_disposed && _pendingEvents.Values.FirstOrDefault() is { } pending) _ = EventAsync(pending);
+        }
     }
     private async Task<ExtensionFrame> CallAsync(string method, Dictionary<string, string>? args = null)
         {
@@ -131,6 +148,15 @@ public sealed partial class ExtensionSession : IDisposable
     }
     private async Task<JsonObject> ServiceAsync(ExtensionHostRequest request)
     {
+        if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+            return await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => ServiceAsync(request));
+        if (DecisionScope.Value) return new() { ["success"] = false, ["reason"] = "Host requests are not permitted during workflow decisions." };
+        var prior = Caller.Value; Caller.Value = Manifest.Id;
+        try { return UniversalExtensionContract.IsService(request.Service) ? await UniversalServiceAsync(request) : await LegacyServiceAsync(request); }
+        finally { Caller.Value = prior; }
+    }
+    private async Task<JsonObject> LegacyServiceAsync(ExtensionHostRequest request)
+    {
         var args = request.Arguments;
         if (request.Service == "ui") return await UiServiceAsync(args);
         if (request.Service == "development") return await DevelopmentServiceAsync(args);
@@ -154,8 +180,16 @@ public sealed partial class ExtensionSession : IDisposable
         if (request.Service == "lyrics")
         {
             var vm = _manager.ExtensionViewModel;
-            var track = vm.State.Tracks.FirstOrDefault(t => t.Id == args["trackId"]?.GetValue<string>()) ?? throw new InvalidDataException("Unknown track ID.");
+            var track = vm.State.Tracks.Concat(vm.State.RecentTemporaryTracks).FirstOrDefault(t => t.Id == args["trackId"]?.GetValue<string>()) ?? throw new InvalidDataException("Unknown track ID.");
             var operation = args["operation"]?.GetValue<string>() ?? "read";
+            if (operation == "parse")
+            {
+                if (!Manifest.Permissions.Contains("music-read")) throw new InvalidDataException("Music read permission required.");
+                var lines = Services.LyricsService.Parse(args["text"]?.GetValue<string>() ?? vm.Lyrics.ReadForTrack(track.Id, track.FilePath));
+                // 未标注结束时间的逐字片段使用 null，不将内部 NaN 发到 JSON 协议。
+                JsonArray Words(IReadOnlyList<Services.LyricWord> words) => new(words.Select(w => (JsonNode?)new JsonObject { ["seconds"] = w.Seconds, ["text"] = w.Text, ["endSeconds"] = double.IsFinite(w.EndSeconds) ? JsonValue.Create(w.EndSeconds) : null }).ToArray());
+                return new() { ["success"] = true, ["lines"] = new JsonArray(lines.Select(l => (JsonNode?)new JsonObject { ["seconds"] = l.Seconds, ["text"] = l.Text, ["translation"] = l.Translation, ["timed"] = l.Timed, ["words"] = Words(l.Words), ["translationWords"] = Words(l.TranslationWords) }).ToArray()) };
+            }
             if (operation == "read")
             {
                 if (!Manifest.Permissions.Contains("music-read")) throw new InvalidDataException("Music read permission required.");
@@ -201,6 +235,7 @@ public sealed partial class ExtensionSession : IDisposable
         {
             if (!Manifest.Permissions.Contains("plugin-services")) throw new InvalidDataException("Plugin service permission required.");
             var parts = request.Service[7..].Split('/');
+            if (parts.Length != 2) throw new InvalidDataException("Invalid plugin service.");
             var target = _manager.Installed.FirstOrDefault(p => p.Id == parts[0] && p.Enabled && p.Type == "extension");
             if (parts.Length != 2 || target is null || target.Id == Manifest.Id || !target.ProvidedServices.Contains(parts[1])) throw new InvalidDataException("Service unavailable.");
             var prior = ServiceStack.Value ?? [];
@@ -224,7 +259,7 @@ public sealed partial class ExtensionSession : IDisposable
             if (operation is "playlist.add" or "playlist.remove" or "playlist.move")
                 foreach (var id in arguments.Skip(1).Take(operation == "playlist.move" ? 1 : int.MaxValue))
                     if (!tracks.Contains(id)) throw new InvalidDataException("Track ID required.");
-            var encoded = PluginCommandPolicy.ValidateFor(new(request.Id, operation, arguments), Manifest.Permissions);
+            var encoded = UniversalPluginCommandPolicy.ValidateFor(new(request.Id, operation, arguments), Manifest.Permissions);
             if (PluginApprovalPolicy.RequiresConfirmation(Manifest.ApprovalMode, operation, PluginCommandPolicy.RequiresConfirmation(operation)) && !await PlayerDialog.Confirm(Owner, L10n.T("Agent.Confirm"), encoded, L10n.T("Common.Confirm")))
                 return new() { ["success"] = false, ["reason"] = "User declined. Do not retry." };
             _lifetime.Token.ThrowIfCancellationRequested();
@@ -233,7 +268,7 @@ public sealed partial class ExtensionSession : IDisposable
         }
         throw new InvalidDataException("Service is not enabled.");
     }
-    private async Task DisposeManagedAsync(string reason) { try { await _managed!.Instance.EventAsync(new(reason, new()), CancellationToken.None).AsTask().WaitAsync(TimeSpan.FromSeconds(2)); await _managed.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2)); } catch (Exception error) { AppLog.Warning("Extensions", "Managed cleanup failed.", error); } }
+    private async Task DisposeManagedAsync(string reason) { try { await ReleaseAudioAsync(); await _managed!.Instance.EventAsync(new(reason, new()), CancellationToken.None).AsTask().WaitAsync(TimeSpan.FromSeconds(2)); await _managed.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2)); } catch (Exception error) { AppLog.Warning("Extensions", "Managed cleanup failed.", error); } }
     public void Dispose() => Stop("lifecycle.shutdown");
     public void Stop(string reason)
     {

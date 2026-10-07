@@ -15,6 +15,7 @@ namespace NonetMusicPlayer.Desktop.Views;
 public sealed class SettingsView : UserControl, IDisposable
 {
     private readonly MainViewModel _vm;
+    private readonly List<IDisposable> _extensionViews = [];
     private readonly ComboBox _devices;
     private bool _updatingDevices;
     private readonly Border _layoutCard;
@@ -163,6 +164,11 @@ public sealed class SettingsView : UserControl, IDisposable
         AddSection(sections, ShortcutSettings.Create(vm), L10n.T("Settings.KeyboardShortcuts"), "shortcut keyboard 快捷键 按键 hotkey", false);
         ((StackPanel)data.Child!).Children.Add(projectRow);
         AddSection(sections, data, L10n.T("Common.DataAndRecovery"), "data 数据 目录 路径 backup 恢复 备份 undo 撤销", false);
+        foreach (var (card, title) in owner.ExtensionSettingsSections())
+        {
+            foreach (var view in card.GetVisualDescendants().OfType<IDisposable>()) _extensionViews.Add(view);
+            AddSection(sections, card, title, title, true);
+        }
         AddSection(sections, (Border)owner.AboutSettings(), L10n.T("Update.About"), "about version update repository github 关于 バージョン 更新 仓库", true);
         _empty = Ui.Text(L10n.T("Common.NoMatchingSettings1616FA"), 13, true); _empty.IsVisible = false; sections.Children.Add(_empty);
         _scroll = Ui.Scroll(sections);
@@ -308,5 +314,5 @@ public sealed class SettingsView : UserControl, IDisposable
         combo.SelectionChanged += (_, _) => { if (!refreshing && combo.Tag is not true && combo.SelectedItem is string name && name != customFont) { settings.FontFamily = name == defaultFont ? "" : name; changed(); } };
         return combo;
     }
-    public void Dispose() { _vm.AudioDevicesChanged -= RefreshDevices; _vm.SettingsChanged -= RefreshDevices; }
+    public void Dispose() { foreach (var view in _extensionViews) view.Dispose(); _extensionViews.Clear(); _vm.AudioDevicesChanged -= RefreshDevices; _vm.SettingsChanged -= RefreshDevices; }
 }

@@ -25,7 +25,7 @@ public sealed partial class MainWindow
                 _trayOpen.Click += (_, _) => RestoreFromTray(); _trayExit.Click += (_, _) => ExitApplication();
                 var menu = new NativeMenu(); menu.Items.Add(_trayOpen); menu.Items.Add(_trayExit);
                 _tray = new TrayIcon { Icon = Icon ?? new WindowIcon(AssetLoader.Open(new Uri("avares://Nonet/Assets/icon.ico"))), ToolTipText = "Nonet", Menu = menu, IsVisible = true };
-                _tray.Clicked += (_, _) => RestoreFromTray();
+                _tray.Clicked += (_, _) => RestoreFromTray(); BuildExtensionTray();
                 if (_tray.NativeMenuExporter is null) { _tray.Dispose(); _tray = null; }
             }
             catch (Exception error) { _tray?.Dispose(); _tray = null; AppLog.Warning("Tray", L10n.T("Common.SystemTrayUnavailable"), error); }

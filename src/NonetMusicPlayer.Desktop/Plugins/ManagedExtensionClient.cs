@@ -23,6 +23,9 @@ internal sealed class ManagedExtensionClient : IAsyncDisposable
         protected override Assembly? Load(AssemblyName name)
         {
             if (name.Name == typeof(INonetExtension).Assembly.GetName().Name) return typeof(INonetExtension).Assembly;
+            // 原生 UI 必须使用宿主已加载的 Avalonia 类型身份，不能加载第二份框架副本。
+            if (name.Name?.StartsWith("Avalonia", StringComparison.Ordinal) == true)
+                return AssemblyLoadContext.Default.LoadFromAssemblyName(name);
             var resolved = _resolver.ResolveAssemblyToPath(name);
             if (resolved is null) return null;
             using var stream = File.OpenRead(resolved); return LoadFromStream(stream);

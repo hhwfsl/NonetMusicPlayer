@@ -2,9 +2,9 @@
 
 本项目由 AI 完成，尚未经过人工代码 review。测试仅在 Windows 环境进行；macOS 和 Linux 只生成了交叉构建产物，未进行对应系统的实机测试。当前为预发布版本，使用或继续开发前请自行审查代码并备份数据。
 
-软件名称：**Nonet**。当前桌面版与 CLI 源码版本：**0.4.0-beta.11**。公开仓库仅包含桌面端、独立 CLI、共享核心、插件 SDK、主项目打包器和必要测试；不包含具体插件、移动端源码或构建产物。插件模板单独发布在 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)。
+软件名称：**Nonet**。当前桌面版与 CLI 源码版本：**0.4.0-beta.12**。公开仓库仅包含桌面端、独立 CLI、共享核心、插件 SDK、主项目打包器和必要测试；不包含具体插件、移动端源码或构建产物。插件模板单独发布在 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)。
 
-桌面预发布下载：[Nonet 0.4.0-beta.11](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.11)（Windows、macOS、Linux 纯净 ZIP 及 Windows 安装版）。
+已公开桌面版本见 [Releases](https://github.com/hhwfsl/NonetMusicPlayer/releases)。源码版本可能高于公开版本；本地构建不等同于远程发布。
 
 ## 技术栈
 
@@ -17,7 +17,7 @@
 | 媒体标签 | TagLibSharp 2.3.0 |
 | 桌面持久化 | SQLite，Microsoft.Data.Sqlite 10.0.12 |
 | CLI 与共用 JSON | System.Text.Json，持久化模型使用 Source Generation |
-| 插件开发 SDK | NonetMusicPlayer.PluginSdk 4.3.0，Contract v1/v2、页面 Schema v1/v2 |
+| 插件开发 SDK | NonetMusicPlayer.PluginSdk 4.4.0，Contract v1/v2、页面 Schema v1/v2 |
 
 CLI 不引用 Avalonia，通过系统终端运行。插件 SDK 无图形、音频或外部 NuGet 依赖。实际依赖以各项目的 `.csproj` 为准；第三方许可见 [docs/licenses](docs/licenses)。
 
@@ -71,9 +71,9 @@ pwsh -File scripts/publish-cli.ps1 -CleanOnly
 桌面更新资产的文件名固定为：
 
 ```text
-NonetMusicPlayer.Desktop-0.4.0-beta.11-win-x64.zip
-NonetMusicPlayer.Desktop-0.4.0-beta.11-osx-x64.zip
-NonetMusicPlayer.Desktop-0.4.0-beta.11-linux-x64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.12-win-x64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.12-osx-x64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.12-linux-x64.zip
 ```
 
 macOS ZIP 从 `Contents/` 开始组织，解压到 `Nonet.app/` 内；Linux/macOS 的 ZIP 保存可执行权限。未进行代码签名或 macOS 公证。更新清单与校验规则见 [UPDATES.md](docs/UPDATES.md)。
@@ -116,4 +116,4 @@ UI 夹具使用 Avalonia.Headless 与隔离测试数据，不等同于跨平台�
 
 构建、变更和接口资料：[CHANGELOG](CHANGELOG.md)、[CLI 构建与使用](src/NonetMusicPlayerCli/README.md)、[插件开发与依赖](docs/PLUGIN_DEVELOPMENT.md)、[插件 Contract](docs/PLUGIN_DEVELOPMENT.md)、[存储](docs/STORAGE.md)、[本地化](docs/LOCALIZATION.md)。
 
-插件开发使用主项目的 SDK 4.3.0（程序集兼容基线为 4.0.0.0），并直接引用源码；通用扩展接口见 [EXTENSIONS](docs/EXTENSIONS.md)，旧插件兼容策略见 [PLUGIN_DEVELOPMENT](docs/PLUGIN_DEVELOPMENT.md)。
+插件开发使用主项目的 SDK 4.4.0（程序集兼容基线为 4.0.0.0），并直接引用源码；通用扩展接口见 [EXTENSIONS](docs/EXTENSIONS.md) 与 [非核心扩展参考](docs/UNIVERSAL_EXTENSIONS.md)，旧插件兼容策略见 [PLUGIN_DEVELOPMENT](docs/PLUGIN_DEVELOPMENT.md)。

@@ -30,6 +30,7 @@ public sealed partial class MainWindow
     {
         if (_vm is null) return;
         Commands = new(new DesktopCommandBackend(this));
+        Commands.BeforeExecute = async (command, token) => command.Name is "app.exit" or "window.close" || !(await _vm.Plugins.EvaluateHooksAsync("command.before", new() { ["operation"] = command.Name }, token)).Cancel;
         Terminal = new(Commands, GetTerminalOptions());
         _lastLyricsVisible = _vm.Settings.DesktopLyricsVisible; _lastLyricsLocked = _vm.Settings.DesktopLyricsLocked;
         _vm.OperationCompleted += PlayerOperationCompleted;

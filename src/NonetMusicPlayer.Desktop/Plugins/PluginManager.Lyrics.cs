@@ -12,9 +12,9 @@ public sealed partial class PluginManager
     {
         using var document = JsonDocument.Parse(json); return document.RootElement.TryGetProperty("embedLyrics", out var enabled) && enabled.ValueKind == JsonValueKind.True;
     }
-    public bool NeedsAudioTagConfirmation(PluginManifest plugin, string json) => plugin.Type == "lyrics" && EmbeddingRequested(json) && !plugin.AudioTagWriteConsent;
+    public bool NeedsAudioTagConfirmation(PluginManifest plugin, string json) => HasLyricsSource(plugin) && EmbeddingRequested(json) && !plugin.AudioTagWriteConsent;
     public bool EmbedsLyrics(PluginManifest plugin) => EmbeddingRequested(ConfigurationValues(plugin).ToJsonString());
-    public IEnumerable<PluginManifest> AutomaticLyricsPlugins => Installed.Where(p => p.Enabled && p.Type == "lyrics" && ConfigurationValues(p)["autoFetch"]?.GetValue<bool>() != false).ToArray();
+    public IEnumerable<PluginManifest> AutomaticLyricsPlugins => Installed.Where(p => p.Enabled && HasLyricsSource(p) && ConfigurationValues(p)["autoFetch"]?.GetValue<bool>() != false).ToArray();
     public async Task<LyricsSearchResult> SearchLyricsAsync(PluginManifest plugin, LyricsQuery query, CancellationToken token = default)
     {
         var result = (await LyricsCallAsync(plugin, "lyrics.search", new() { ["query"] = JsonSerializer.Serialize(query, LyricsPluginJson.Options) }, token)).Deserialize<LyricsSearchResult>(LyricsPluginJson.Options);
@@ -33,7 +33,7 @@ public sealed partial class PluginManager
         using var operation = CancellationTokenSource.CreateLinkedTokenSource(token);
         void CancelOnLifecycle(PluginManifest changed, string stage) { if (changed.Id == plugin.Id && stage is "disabled" or "uninstalling" or "shutdown") operation.Cancel(); }
         LifecycleChanged += CancelOnLifecycle;
-        try { RequireInstalled(plugin); if (plugin.Type != "lyrics" || !plugin.Enabled) throw new InvalidOperationException(L10n.T("Plugins.EnableThisPagePluginFirst")); var client = await GetClientAsync(plugin, operation.Token); return await client.CallAsync(method, parameters, operation.Token); }
+        try { RequireInstalled(plugin); if (!HasLyricsSource(plugin) || !plugin.Enabled) throw new InvalidOperationException(L10n.T("Plugins.EnableThisPagePluginFirst")); if (plugin.Type == "extension") return await CallExtensionLyricsAsync(plugin, method, parameters, operation.Token); var client = await GetClientAsync(plugin, operation.Token); return await client.CallAsync(method, parameters, operation.Token); }
         finally { LifecycleChanged -= CancelOnLifecycle; _lyricsGate.Release(); }
     }
     private static LyricsFetchResult ValidateLyrics(LyricsFetchResult? result)
@@ -44,7 +44,7 @@ public sealed partial class PluginManager
     public async Task ApplyLyricsAsync(PluginManifest plugin, TrackItem track, LyricsFetchResult result, LyricsService lyrics, bool embed, CancellationToken token = default)
     {
         RequireWritable(); RequireInstalled(plugin); ValidateLyrics(result);
-        if (!plugin.Enabled || plugin.Type != "lyrics" || string.IsNullOrWhiteSpace(result.Text)) throw new InvalidOperationException(L10n.T("LyricsSearch.NoMatch"));
+        if (!plugin.Enabled || !HasLyricsSource(plugin) || string.IsNullOrWhiteSpace(result.Text)) throw new InvalidOperationException(L10n.T("LyricsSearch.NoMatch"));
         if (embed)
         {
             if (!plugin.Permissions.Contains("audio-tags") || !plugin.AudioTagWriteConsent || !EmbedsLyrics(plugin)) throw new InvalidOperationException(L10n.T("LyricsSearch.ConsentRequired"));

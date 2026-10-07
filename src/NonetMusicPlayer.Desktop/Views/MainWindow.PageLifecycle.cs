@@ -22,7 +22,7 @@ public sealed partial class MainWindow
     private string? _cachedSettingsKey;
     private SettingsView SettingsPage()
     {
-        var key = _vm!.Settings.Language + "|" + _vm.Storage.Root + "|" + _vm.Storage.BackupFolder + "|" + _vm.Lyrics.Folder + "|" + LayoutConfiguration.AppliedJson;
+        var key = _vm!.Settings.Language + "|" + _vm.Storage.Root + "|" + _vm.Storage.BackupFolder + "|" + _vm.Lyrics.Folder + "|" + LayoutConfiguration.AppliedJson + "|" + string.Join(";", _vm.Plugins.Installed.Where(p => p.Enabled).Select(p => p.Id + ":" + p.Version));
         if (_cachedSettings is null || !ReferenceEquals(_cachedSettingsProfile, _vm.Settings) || _cachedSettingsKey != key)
         {
             _cachedSettings?.Dispose(); _cachedSettings = new SettingsView(this, _vm); _cachedSettingsProfile = _vm.Settings; _cachedSettingsKey = key;

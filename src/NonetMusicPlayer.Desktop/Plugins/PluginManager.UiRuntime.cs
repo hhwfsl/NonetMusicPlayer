@@ -15,12 +15,14 @@ public sealed partial class PluginManager
         if (_uiHost == host && _uiVm == vm) return;
         DisposeUiRuntime(); _uiHost = host; _uiVm = vm; AttachExtensionEvents(); host.Closed += HostClosed; host.Opened += HostOpened;
         if (!host.IsVisible) return;
+        foreach (var plugin in Installed.Where(p => p.Enabled && p.Type == "extension" && p.Permissions.Contains("audio-processing"))) _ = StartAudioExtensionAsync(plugin);
         foreach (var plugin in Installed.Where(p => p.Enabled && p.Type == "ui")) RefreshUiRuntime(plugin);
     }
     public void DetachHost(Window host) { if (_uiHost == host) DisposeUiRuntime(); }
     private void HostClosed(object? sender, EventArgs e) => DisposeUiRuntime();
     private void HostOpened(object? sender, EventArgs e)
     {
+        foreach (var plugin in Installed.Where(p => p.Enabled && p.Type == "extension" && p.Permissions.Contains("audio-processing"))) _ = StartAudioExtensionAsync(plugin);
         foreach (var plugin in Installed.Where(p => p.Enabled && p.Type == "ui")) RefreshUiRuntime(plugin);
     }
     private void RefreshUiRuntime(PluginManifest manifest)

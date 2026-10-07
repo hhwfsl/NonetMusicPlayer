@@ -10,7 +10,7 @@ public sealed partial class ExtensionSession
 {
     private JsonObject ExtensionCatalog()
     {
-        var catalog = JsonNode.Parse(PluginCommandPolicy.CatalogFor(Manifest.Permissions))!.AsObject();
+        var catalog = UniversalPluginCommandPolicy.CatalogFor(Manifest.Permissions);
         if (Manifest.Permissions.Contains("ui-extend"))
         {
             var commands = catalog["commands"]!.AsArray();

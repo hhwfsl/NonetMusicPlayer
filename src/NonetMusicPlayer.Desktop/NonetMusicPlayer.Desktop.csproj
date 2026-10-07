@@ -7,9 +7,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/icon.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <Version>0.4.0-beta.11</Version>
+    <Version>0.4.0-beta.12</Version>
     <AssemblyVersion>0.4.0.0</AssemblyVersion>
-    <FileVersion>0.4.0.11</FileVersion>
+    <FileVersion>0.4.0.12</FileVersion>
     <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
   </PropertyGroup>
 

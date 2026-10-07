@@ -22,6 +22,11 @@ public sealed partial class MainWindow
             var button = new Button { Content = content, Tag = "plugin:" + plugin.Id, Padding = new(10, 0), Height = 44 }; button.Classes.Add("nav");
             ToolTip.SetTip(button, plugin.NavigationLabel); button.Click += (_, _) => _vm.Navigate("plugin:" + plugin.Id, plugin.NavigationLabel); PluginNavigation.Children.Add(button);
         }
+        foreach (var (plugin, contribution) in _vm.Plugins.Contributions("navigation.items"))
+        {
+            var button = Ui.AsyncButton(contribution.Label, () => InvokeContributionAsync(plugin, contribution)); button.Classes.Add("nav");
+            ToolTip.SetTip(button, contribution.Label); PluginNavigation.Children.Add(button);
+        }
         PluginSection.IsVisible = PluginNavigation.Children.Count > 0;
     }
     private Control PluginPage(string page)
@@ -81,6 +86,6 @@ public sealed partial class MainWindow
         var menu = new ContextMenu();
         menu.Items.Add(Menu(L10n.T("Common.ChangeArtwork"), async () => { var files = await OpenFilesAsync(L10n.T("Common.Choose") + (type == "artist" ? L10n.T("Library.Artists") : L10n.T("Library.Albums")) + L10n.T("Common.Artwork"), ["*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp"], false); if (files.Length == 0) return; var cropped = await CoverCropDialog.Show(this, _vm.Storage, files[0]); if (cropped is null) return; _vm.SetGroupCover(type, name, cropped); ShowPage(); }, IconKind.Edit));
         menu.Items.Add(Menu(L10n.T("Common.RestoreDefaultCover"), () => { _vm.SetGroupCover(type, name, null); ShowPage(); return Task.CompletedTask; }, IconKind.Album));
-        menu.Items.Add(Menu(L10n.T("Common.UseApplicationDefaultCover"), () => { _vm.SetGroupSoftwareDefaultCover(type, name); ShowPage(); return Task.CompletedTask; }, IconKind.Music)); OpenMenu(anchor, menu);
+        menu.Items.Add(Menu(L10n.T("Common.UseApplicationDefaultCover"), () => { _vm.SetGroupSoftwareDefaultCover(type, name); ShowPage(); return Task.CompletedTask; }, IconKind.Music)); AddExtensionMenu(menu, type + ".more", new() { ["name"] = name, ["type"] = type }); OpenMenu(anchor, menu);
     }
 }

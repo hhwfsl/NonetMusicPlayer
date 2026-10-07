@@ -128,7 +128,7 @@ public sealed class PluginsView : UserControl, IDisposable
             folder.Name = "PluginOpenFolder"; folder.Content = Icon(IconKind.Folder); folder.VerticalAlignment = VerticalAlignment.Center;
             ToolTip.SetTip(folder, L10n.T("Plugins.OpenFolder")); Avalonia.Automation.AutomationProperties.SetName(folder, L10n.T("Plugins.OpenFolder"));
             Grid.SetColumn(folder, 3); actions.Children.Add(folder);
-            if (plugin.Type == "provider")
+            if (PluginManager.HasMediaSource(plugin))
             {
                 var more = Ui.Button("", () => { }); more.Name = "PluginMore";
                 more.Content = Icon(IconKind.More); ToolTip.SetTip(more, L10n.T("Common.More")); Avalonia.Automation.AutomationProperties.SetName(more, L10n.T("Common.More"));

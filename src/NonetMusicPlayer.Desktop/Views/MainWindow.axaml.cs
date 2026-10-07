@@ -39,6 +39,7 @@ public sealed partial class MainWindow : Window
         DragDrop.SetAllowDrop(this, true);
         AddHandler(DragDrop.DragOverEvent, DragOver);
         AddHandler(DragDrop.DropEvent, Library_Drop);
+        AddHandler(KeyDownEvent, (_, e) => RecoverExtensionInterface(e), RoutingStrategies.Tunnel, true);
         AddHandler(KeyDownEvent, Shortcuts, RoutingStrategies.Tunnel);
         AddHandler(KeyUpEvent, (_, e) => { if (e.Key == Key.Space) ActiveLyricsTimingTool()?.ReleaseAnnotationKey(); if (_handledShortcutKeys.Remove(e.Key)) e.Handled = true; }, RoutingStrategies.Tunnel);
         Deactivated += (_, _) => { _handledShortcutKeys.Clear(); ActiveLyricsTimingTool()?.ReleaseAnnotationKey(); };
@@ -86,7 +87,7 @@ public sealed partial class MainWindow : Window
         { BuildPlaylists(); BuildPluginNavigation(); return; }
         ShowPage();
     }
-    private void SettingsChanged(object? sender, EventArgs e) { Terminal?.Configure(GetTerminalOptions()); ApplyAppearance(); BuildPluginNavigation(); }
+    private void SettingsChanged(object? sender, EventArgs e) { Terminal?.Configure(GetTerminalOptions()); ApplyAppearance(); BuildPluginNavigation(); BuildExtensionSlots(); }
     private void ApplyAppearance()
     {
         if (_vm is null || _applyingAppearance) return; var s = _vm.Settings; _applyingAppearance = true;

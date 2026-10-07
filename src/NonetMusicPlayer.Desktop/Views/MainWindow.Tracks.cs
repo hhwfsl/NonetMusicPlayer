@@ -146,7 +146,11 @@ public sealed partial class MainWindow
                 : L10n.T("Playlists.RemoveOnlyFromThisPlaylistLibraryAndMusicFiles"), L10n.T("Common.Remove"))) _vm.RemoveTracks(tracks);
         }, IconKind.Trash));
         }
-        AddExtensionMenu(menu, "song.more", new System.Text.Json.Nodes.JsonObject { ["trackIds"] = new System.Text.Json.Nodes.JsonArray(tracks.Select(t => (System.Text.Json.Nodes.JsonNode?)System.Text.Json.Nodes.JsonValue.Create(t.Id)).ToArray()) });
+        var extensionContext = new System.Text.Json.Nodes.JsonObject { ["trackIds"] = new System.Text.Json.Nodes.JsonArray(tracks.Select(t => (System.Text.Json.Nodes.JsonNode?)System.Text.Json.Nodes.JsonValue.Create(t.Id)).ToArray()) };
+        // 已冻结的歌曲菜单插槽在新页面分类中继续有效，新增分类只提供更精确的上下文。
+        AddExtensionMenu(menu, "song.more", extensionContext);
+        var contextualSlot = _vm.Page == "history" ? "history.more" : tracks.Length > 1 ? "selection.more" : _vm.Page == "songs" ? "library.more" : "song.more";
+        if (contextualSlot != "song.more") AddExtensionMenu(menu, contextualSlot, extensionContext);
         OpenMenu(anchor, menu);
     }
     private void LocatePlayingTrack(object? sender, EventArgs e)

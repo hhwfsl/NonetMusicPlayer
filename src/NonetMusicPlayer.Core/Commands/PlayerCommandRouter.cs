@@ -9,6 +9,8 @@ public sealed class PlayerCommandRouter(IPlayerCommandBackend backend)
     private readonly SemaphoreSlim _gate = new(1);
     private readonly Queue<CommandResult> _journal = new();
     private readonly object _journalGate = new();
+    /// <summary>可选宿主流程闸门，在参数与确认校验之后执行；不能替换或预批准命令。</summary>
+    public Func<PlayerCommand, CancellationToken, Task<bool>>? BeforeExecute { get; set; }
     public event EventHandler<CommandResult>? ResultPublished;
     public IReadOnlyList<CommandResult> Journal { get { lock (_journalGate) return _journal.ToArray(); } }
     public static IReadOnlyList<CommandDefinition> Definitions { get; } =
@@ -68,6 +70,7 @@ public sealed class PlayerCommandRouter(IPlayerCommandBackend backend)
                 lock (_journalGate) _journal.Clear();
                 result = CommandResults.Completed("clear");
             }
+            else if (BeforeExecute is not null && !await BeforeExecute(command, cancellationToken)) result = new(command.Name, false, NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.Cancelled"));
             else result = await backend.ExecuteAsync(command with { Confirmed = true }, cancellationToken);
         }
         catch (OperationCanceledException) { result = new("command", false, NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.Cancelled")); }
