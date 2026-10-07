@@ -9,6 +9,8 @@ using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Avalonia.LogicalTree;
+using NonetMusicPlayer.Desktop.Controls;
 using NonetMusicPlayer.Core.Plugins;
 using NonetMusicPlayer.Core.Commands;
 using NonetMusicPlayer.Desktop.Plugins;
@@ -86,6 +88,55 @@ internal static class ExtensionChecks
             vm.Plugins.SetEnabled(installed, false); Pump();
             Check(!installed.Enabled, "Disable releases session and page.");
         }
+        // 新增能力单独使用当前夹具；上面的冻结包保持旧二进制字节不变。
+        const string dynamicPage = """{"schemaVersion":2,"root":{"type":"grid","id":"DynamicFixture","columns":"180,*","columnsBind":"columns","children":[{"type":"repeat","bind":"items","template":{"type":"button","text":"Item","contextActions":[{"type":"button","text":"Item action","action":"increment","parameter":"item.id"}]}},{"type":"button","id":"ExpandedContent","column":1,"text":"Collapse","action":"collapse","openMenuOnClick":true,"contextActions":[{"type":"button","text":"Expand","action":"expand"}]}]}}""";
+        var dynamicPackage = Path.Combine(root, "dynamic.impp");
+        var dynamicManifest = new PluginManifest { Id = "fixture.dynamic", Name = "Dynamic", Type = "extension", ContractVersion = 2, PageEntry = "page.json",
+            Permissions = ["process","navigation","ui-extend"], RequiredCapabilities = ["ui.layout-bind.v1","ui.context-menu.v1"],
+            EntryPoints = new() { ["win-x64"] = "bin/NonetMusicPlayer.ExtensionFixture.exe" } };
+        using (var zip = ZipFile.Open(dynamicPackage, ZipArchiveMode.Create))
+        {
+            Write(zip, "manifest.json", JsonSerializer.Serialize(dynamicManifest, AppStorage.Json)); Write(zip, "page.json", dynamicPage);
+            foreach (var file in Directory.GetFiles(fixture).Where(f => !f.EndsWith(".pdb"))) zip.CreateEntryFromFile(file, "bin/" + Path.GetFileName(file));
+        }
+        var dynamicPlugin = vm.Plugins.Install(dynamicPackage); vm.Plugins.SetEnabled(dynamicPlugin, true);
+        var dynamicSession = vm.Plugins.Extension(dynamicPlugin); Wait(dynamicSession.StartAsync()); vm.Navigate("plugin:" + dynamicPlugin.Id); Pump();
+        var dynamicView = window.GetVisualDescendants().OfType<ExtensionPageView>().Single();
+        var dynamicGrid = dynamicView.GetVisualDescendants().OfType<Grid>().Single(g => g.Name == "DynamicFixture");
+        var expandingContent = dynamicView.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "ExpandedContent");
+        window.UpdateLayout(); var beforeWidth = expandingContent.Bounds.Width;
+        Wait(dynamicSession.InvokeAsync("collapse", new())); window.UpdateLayout(); Pump();
+        Check(dynamicGrid.ColumnDefinitions[0].Width.Value == 0 && expandingContent.Bounds.Width > beforeWidth + 100, "State-bound columns release space instead of leaving a hidden sidebar gap");
+        Wait(dynamicSession.InvokeAsync("expand", new())); window.UpdateLayout(); Pump();
+        Check(dynamicGrid.ColumnDefinitions[0].Width.Value == 180, "State-bound columns restore original size");
+        expandingContent.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+        Check(expandingContent.ContextMenu!.IsOpen, "Left click opens the optional menu without invoking the button action");
+        expandingContent.ContextMenu.Close(); Pump();
+        var itemButton = dynamicView.GetVisualDescendants().OfType<Button>().Single(b => b.Content is TextBlock { Text: "Item" });
+        var menuAction = itemButton.ContextMenu!.Items.OfType<MenuItem>().Single();
+        menuAction.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        var contextDeadline = DateTime.UtcNow.AddSeconds(5);
+        while (dynamicSession.Frame.State["parameter"]?.GetValue<string>() != "first" && DateTime.UtcNow < contextDeadline) { Pump(); Thread.Sleep(5); }
+        Check(dynamicSession.Frame.State["parameter"]?.GetValue<string>() == "first", "Context action forwards the selected item parameter");
+        var noAuthor = JsonSerializer.Deserialize<PluginManifest>("""{"id":"fixture.author","name":"No author","author":"  ","type":"widget","widgets":[{"title":"Title","text":"Text"}]}""", AppStorage.Json)!;
+        noAuthor.Validate(); Check(noAuthor.Author == "Author", "Unspecified author uses the literal Author fallback");
+        vm.Plugins.SetEnabled(dynamicPlugin, false);
+        var lyricsPackage = Path.Combine(root, "layout-lyrics.impp");
+        using (var zip = ZipFile.Open(lyricsPackage, ZipArchiveMode.Create))
+        {
+            Write(zip, "manifest.json", """{"id":"fixture.lyrics","name":"Lyrics","version":"1.0.0","type":"lyrics","permissions":["network","process","lyrics-search","navigation"],"pageEntry":"page.json","entryPoints":{"win-x64":"worker.exe"}}""");
+            Write(zip, "page.json", """{"schemaVersion":1,"title":"Lyrics","widgets":[{"type":"lyrics-search"}]}""");
+            Write(zip, "worker.exe", "Layout-only fixture, never executed.");
+        }
+        var lyricsPlugin = vm.Plugins.Install(lyricsPackage);
+        using (var legacyLyrics = new LyricsSearchControl(vm.Plugins, lyricsPlugin))
+        {
+            var all = legacyLyrics.GetLogicalDescendants().OfType<Control>().ToArray();
+            var actions = all.OfType<Grid>().Single(g => g.Name == "LyricsSearchActions");
+            var operations = all.Single(c => c.Name == "LyricsSearchOperations"); var pagination = all.Single(c => c.Name == "LyricsSearchPagination");
+            Check(ReferenceEquals(operations.Parent, actions) && ReferenceEquals(pagination.Parent, actions) && Grid.GetColumn(pagination) == 1, "Legacy lyrics actions share a row with right-aligned pagination");
+            Check(all.OfType<TextBlock>().Single(t => t.Name == "LyricsSearchPageNumber").VerticalAlignment == Avalonia.Layout.VerticalAlignment.Center, "Lyrics page number is vertically centered");
+        }
         var managedBaseline = vm.Plugins.Installed.Single(p => p.Id == "baseline.managed");
         vm.Plugins.SetEnabled(managedBaseline, true);
         var managedUpdate = Path.Combine(root, "managed-update.impp");
@@ -139,7 +190,7 @@ internal static class ExtensionChecks
         window.Close(); Console.WriteLine("PASS frozen Contract v2 process/managed, generic UI/actions/events, consent, navigation, permissions and unlink.");
     }
     /// <summary>可选实际包外观验证；默认回归不依赖任何具体插件目录。</summary>
-    public static void RenderPackage(string package, string output)
+    public static void RenderPackage(string package, string output, string? action = null)
     {
         if (Application.Current is null) AppBuilder.Configure<NonetMusicPlayer.Desktop.App>().UseSkia().WithInterFont().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false }).SetupWithoutStarting();
         var root = Path.Combine(Path.GetFullPath(output), Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
@@ -151,6 +202,7 @@ internal static class ExtensionChecks
         Check(plugin.Runtime == "process", "Inspection never silently authorizes managed code.");
         vm.Plugins.SetEnabled(plugin, true); window.Show(); Pump();
         Wait(vm.Plugins.Extension(plugin).StartAsync()); vm.Navigate("plugin:" + plugin.Id); Pump();
+        if (action is not null) { Wait(vm.Plugins.Extension(plugin).InvokeAsync(action, new(), userGesture: true)); Pump(); }
         foreach (var size in new[] { (1280d, 800d), (900d, 650d) })
         {
             window.Width = size.Item1; window.Height = size.Item2; Pump(); window.UpdateLayout(); Pump();

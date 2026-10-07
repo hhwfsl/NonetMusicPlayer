@@ -9,7 +9,7 @@ public sealed class PluginManifest
     public int ContractVersion { get; set; } = 1;
     public string Type { get; set; } = "provider";
     public string Description { get; set; } = "";
-    public string Author { get; set; } = "";
+    public string Author { get; set; } = "Author";
     /// <summary>开发者在源码清单中声明的 GitHub 账户及仓库名；旧包允许省略。</summary>
     public string RepositoryOwner { get; set; } = "";
     public string RepositoryName { get; set; } = "";
@@ -41,6 +41,7 @@ public sealed class PluginManifest
     public bool ManagedExecutionConsent { get; set; }
     public void Validate()
     {
+        Author = string.IsNullOrWhiteSpace(Author) ? "Author" : Author.Trim();
         ProvidedServices ??= []; RequiredCapabilities ??= []; Events ??= []; Contributions ??= []; Permissions ??= []; EntryPoints ??= []; Tokens ??= []; Widgets ??= []; MenuContributions ??= []; Configuration ??= "{}";
         LifecycleMethods ??= [];
         RepositoryOwner ??= ""; RepositoryName ??= ""; OriginRepository ??= ""; Platform ??= "";

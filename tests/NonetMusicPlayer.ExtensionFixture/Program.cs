@@ -26,10 +26,17 @@ while (Console.ReadLine() is { } line)
 /// <summary>无业务耦合的计数器夹具，用于进程/托管模式和 v2 冻结基线回归。</summary>
 public sealed class BaselineExtension : INonetExtension
 {
-    private readonly ExtensionFrame _frame = new() { State = new() { ["count"] = 0, ["lastEvent"] = "", ["text"] = "selectable fixture" } };
+    private readonly ExtensionFrame _frame = new() { State = new() { ["count"] = 0, ["lastEvent"] = "", ["text"] = "selectable fixture", ["columns"] = "180,*", ["items"] = new JsonArray((JsonNode)new JsonObject { ["id"] = "first", ["title"] = "First item" }) } };
     private string _storage = "";
     public ValueTask<ExtensionFrame> InitializeAsync(ExtensionInitialization initialization, CancellationToken cancellationToken) { _storage = initialization.StorageDirectory; return ValueTask.FromResult(_frame); }
-    public ValueTask<ExtensionFrame> InvokeAsync(ExtensionInvocation invocation, CancellationToken cancellationToken) { _frame.Revision++; _frame.State["count"] = (_frame.State["count"]?.GetValue<int>() ?? 0) + 1; return ValueTask.FromResult(_frame); }
+    public ValueTask<ExtensionFrame> InvokeAsync(ExtensionInvocation invocation, CancellationToken cancellationToken)
+    {
+        _frame.Revision++; _frame.State["count"] = (_frame.State["count"]?.GetValue<int>() ?? 0) + 1;
+        if (invocation.Action == "collapse") _frame.State["columns"] = "0,*";
+        if (invocation.Action == "expand") _frame.State["columns"] = "180,*";
+        _frame.State["parameter"] = invocation.Values["parameter"]?.DeepClone();
+        return ValueTask.FromResult(_frame);
+    }
     public ValueTask<ExtensionFrame> SyncAsync(CancellationToken cancellationToken) => ValueTask.FromResult(_frame);
     public ValueTask<ExtensionFrame> CompleteAsync(string requestId, JsonObject result, CancellationToken cancellationToken) => ValueTask.FromResult(_frame);
     public ValueTask<ExtensionFrame> EventAsync(ExtensionEvent value, CancellationToken cancellationToken) { _frame.State["lastEvent"] = value.Name; _frame.Revision++; return ValueTask.FromResult(_frame); }

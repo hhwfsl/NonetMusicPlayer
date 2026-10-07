@@ -124,6 +124,15 @@ public sealed class ExtensionSession : IDisposable
     private async Task<JsonObject> ServiceAsync(ExtensionHostRequest request)
     {
         var args = request.Arguments;
+        if (request.Service == "dialogs.prompt")
+        {
+            if (!_gesture) throw new InvalidDataException("An input dialog requires a user gesture.");
+            var text = args["text"]?.GetValue<string>() ?? ""; var initial = args["initial"]?.GetValue<string>() ?? "";
+            if (text.Length > 4000 || initial.Length > 200) throw new InvalidDataException("Dialog input too long.");
+            var value = await PlayerDialog.Prompt(Owner, Manifest.Name, text, initial);
+            if (value?.Length > 200) return new() { ["success"] = false };
+            return new() { ["success"] = value is not null, ["value"] = value };
+        }
         if (request.Service is "dialogs.confirm" or "dialogs.notify")
         {
             var text = args["text"]?.GetValue<string>() ?? "";

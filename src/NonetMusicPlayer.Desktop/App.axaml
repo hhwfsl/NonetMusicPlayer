@@ -105,6 +105,26 @@
         <Style Selector="Button:pressed /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
         </Style>
+        <!-- 扩展样式只组合宿主主题资源，不接收插件 XAML 或颜色表达式。 -->
+        <Style Selector="Button.extension-ghost, Button.extension-row">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="MinWidth" Value="32" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="Button.extension-pill">
+            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.extension-row">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Border.extension-row:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+        </Style>
+        <Style Selector="Border.extension-row.selected">
+            <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+        </Style>
         <Style Selector="Button.nav">
             <Setter Property="Height" Value="44" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />

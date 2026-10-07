@@ -41,7 +41,7 @@ public sealed class LyricsSearchControl : UserControl, IDisposable
         _source = new ComboBox { ItemsSource = new[] { "kugou", "netease", "qq" }, SelectedItem = manager.ConfigurationValues(plugin)["preferredSource"]?.GetValue<string>() ?? "kugou", MinHeight = 40 };
         _previousPage = Action("LyricsSearch.PreviousPage", () => SearchPageAsync(Math.Max(1, _page - 1)));
         _nextPage = Action("LyricsSearch.NextPage", () => SearchPageAsync(_page + 1));
-        _pageLabel = Ui.RawText("1", 13);
+        _pageLabel = Ui.RawText("1", 13); _pageLabel.Name = "LyricsSearchPageNumber"; _pageLabel.VerticalAlignment = VerticalAlignment.Center;
         _status = Ui.RawText(L10n.T("LyricsSearch.Instructions"), 13, true); _status.TextWrapping = TextWrapping.Wrap;
         _preview = new TextBox { Name = "LyricsSearchPreview", IsVisible = false, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 240, FontSize = 14, MaxLength = 2_000_000 };
         // 歌词编辑区不复制全文到悬浮提示；局部值覆盖应用的自动 tooltip 样式。
@@ -59,7 +59,12 @@ public sealed class LyricsSearchControl : UserControl, IDisposable
         _associate = Action(manager.EmbedsLyrics(plugin) ? "LyricsSearch.Embed" : "LyricsSearch.Associate", AssociateAsync);
         _download = Action("LyricsSearch.Download", DownloadAsync);
         var searchRow = new Grid { ColumnDefinitions = new("*,120,150,Auto"), ColumnSpacing = 8 }; searchRow.Children.Add(_query); Grid.SetColumn(_source, 1); searchRow.Children.Add(_source); Grid.SetColumn(_format, 2); searchRow.Children.Add(_format); Grid.SetColumn(_search, 3); searchRow.Children.Add(_search);
-        Content = Ui.Stack(Ui.Text("LyricsSearch.ChooseSong", 13, true), _songs, searchRow, _status, _results, Ui.Actions(_previousPage, _pageLabel, _nextPage), Ui.Actions(_load, _associate, _download), _preview);
+        var actions = new Grid { Name = "LyricsSearchActions", ColumnDefinitions = new("*,Auto"), ColumnSpacing = 12 };
+        var operations = Ui.Actions(_load, _associate, _download); operations.Name = "LyricsSearchOperations"; operations.VerticalAlignment = VerticalAlignment.Center;
+        var pagination = new StackPanel { Name = "LyricsSearchPagination", Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+        pagination.Children.Add(_previousPage); pagination.Children.Add(_pageLabel); pagination.Children.Add(_nextPage);
+        actions.Children.Add(operations); Grid.SetColumn(pagination, 1); actions.Children.Add(pagination);
+        Content = Ui.Stack(Ui.Text("LyricsSearch.ChooseSong", 13, true), _songs, searchRow, _status, _results, actions, _preview);
         AttachedToVisualTree += (_, _) =>
         {
             var tracks = Vm.State.Tracks.Where(t => t.ProviderId is null).ToList(); if (Vm.CurrentTrack is { ProviderId: null } current && tracks.All(t => t.Id != current.Id)) tracks.Insert(0, current);

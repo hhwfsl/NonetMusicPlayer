@@ -51,7 +51,7 @@ internal static partial class ReleaseVerifier
                 var plugin = manager.Install(Path.GetFullPath(package)); id = plugin.Id; manager.SetEnabled(plugin, true);
                 var config = manager.ConfigurationValues(plugin);
                 config["baseUrl"] = $"http://127.0.0.1:{port}/v1"; config["model"] = "fixture-model";
-                config["apiKey"] = "TEST-ONLY-RELEASE-KEY"; config["maxTokens"] = 0; config["timeoutSeconds"] = 0;
+                config["apiKey"] = "TEST-ONLY-RELEASE-KEY"; config["maxTokens"] = 1200; config["timeoutSeconds"] = 90;
                 manager.Configure(plugin, config.ToJsonString());
                 var models = manager.AgentModelsAsync(plugin, config.ToJsonString(), deadline.Token).GetAwaiter().GetResult();
                 if (models.Models is not ["fixture-model"]) throw new InvalidDataException("Trimmed model discovery failed.");

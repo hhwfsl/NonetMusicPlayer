@@ -25,6 +25,30 @@ schemaVersion=2，root 为通用节点，ownsHeader=true 时页面自己承担�
 
 页面最多 128 KiB / 512 个静态节点 / 24 层；帧状态最多 2 MB，重复区单次最多 1000 项；插件应分页长数据。长任务只修改必要状态，宿主不重建整个页面，消息正文可使用 selectable-text 复制，容器无需选中。输入草稿随会话保留；页面离开仅解除 UI 订阅，不结束插件任务。
 
+### 可选布局与菜单能力（SDK 4.1 / Nonet 0.4.0-beta.9）
+
+新增字段不改变 Schema 2 或既有接口，使用时在 requiredCapabilities 中声明对应能力；不使用这些字段的原 v1/v2 包仍可运行。
+
+- `ui.layout-bind.v1`：grid 的 `columnsBind` 读取状态字符串，例如 `"208,*"` / `"0,*"`，用于展开/收起后释放宽度。只接受原有安全尺寸语法，不执行表达式。首帧缺失时保留静态 columns，只有尺寸变化才重新验证和布局。
+- `ui.context-menu.v1`：任意节点可带 `contextActions`，最多 16 个 type=button 的动作，使用 text/action/icon/parameter；parameter 的 item.id 指向当前重复项。由宿主提供原生右键菜单和键盘菜单操作，不授予新的业务权限，同页面只保留一个菜单。
+
+示例：`{"type":"grid","columns":"208,*","columnsBind":"layoutColumns","contextActions":[{"type":"button","text":"删除","action":"delete","parameter":"item.id","icon":"Trash"}]}`。确认删除由插件请求 dialogs.confirm；菜单本身不能绕过宿主确认。
+
+清单 author 是显示名称，不是 GitHub 用户名；未填或空白使用 Author。包文件名可用友好短名（如 nonet-agent-1.3.0-win-x64.impp），身份仍由清单 id 判定，更新来源仍使用 repositoryOwner/repositoryName。托管 SDK AssemblyVersion 固定 4.0.0.0，包版本可递增，不要求旧程序集重编译。
+
+### 可选通用控件（SDK 4.2 / Nonet 0.4.0-beta.10）
+
+声明 `ui.controls.v1` 可使用 icon、checkbox 节点，以及 variant/selectedIf/openMenuOnClick：
+
+- icon 用宿主已有图标名，不执行矢量代码。
+- checkbox 绑定可空布尔值（null 展示部分选中），交互值写入 input 并触发 action/parameter。插件负责全选和多选规则，不绑定特定业务。
+- variant 仅接受 ghost/pill/row，颜色来自宿主主题；selectedIf 绑定布尔选中态。
+- button 带 contextActions 和 openMenuOnClick=true 时，左键打开与原生右键相同的菜单。菜单不会直接执行按钮本身的空 action，键盘也可打开。
+
+声明 `dialogs.prompt.v1` 可在当次用户操作中请求 dialogs.prompt，arguments 为 text（说明）/initial（初始文本）；返回 success/value。只能弹纯文本输入，不允许自动后台弹层或执行输入内容。插件验证业务名称，宿主限制长度；它不是脚本、命令或任意宿主方法接口。
+
+所有字段都是新增可选值，原 v1/v2 默认行为和 INonetExtension 成员保持不变。
+
 ## RPC 和托管接口
 
 所有 RPC 保留原 jsonrpc/id/method/params 结构；params 值是字符串，包括序列化的 DTO。进程启动：

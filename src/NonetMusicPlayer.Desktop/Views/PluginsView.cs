@@ -100,7 +100,7 @@ public sealed class PluginsView : UserControl, IDisposable
             enabled.Classes.Add("plugin-enabled");
             Avalonia.Automation.AutomationProperties.SetName(enabled, plugin.Name + " · " + L10n.T("Common.On"));
             ToolTip.SetTip(enabled, L10n.T(plugin.Enabled ? L10n.T("Plugins.DisablePlugin") : L10n.T("Plugins.EnablePlugin")));
-            var author = string.IsNullOrWhiteSpace(plugin.Author) ? L10n.T("Common.UnknownAuthor") : plugin.Author;
+            var author = string.IsNullOrWhiteSpace(plugin.Author) ? "Author" : plugin.Author;
             var title = Ui.RawText(plugin.Name, 17); title.VerticalAlignment = VerticalAlignment.Center; title.MaxLines = 1; title.TextWrapping = Avalonia.Media.TextWrapping.NoWrap;
             var badge = Ui.AsyncButton("New", async () => { if (owner.PluginUpdate(plugin.Id) is { } info) await owner.ConfirmPluginUpdateAsync(plugin, info); });
             badge.Name = "PluginNewVersion"; badge.FontSize = 10; badge.MinWidth = 38; badge.MinHeight = 22; badge.Padding = new(8, 1);

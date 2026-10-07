@@ -21,6 +21,7 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
     private readonly Dictionary<string, JsonNode?> _inputs;
     private readonly List<Action<JsonObject>> _bindings = [];
     private bool _disposed, _applyInputs;
+    private ContextMenu? _activeContextMenu;
     public ExtensionPageView(PluginManager manager, PluginManifest manifest, ExtensionNode? root = null)
     {
         _manager = manager; _session = manager.Extension(manifest); _inputs = _session.Inputs;
@@ -64,6 +65,18 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
             case "grid":
                 var grid = new Grid { ColumnDefinitions = new(node.Columns), RowDefinitions = new(node.Rows),
                     ColumnSpacing = node.Spacing, RowSpacing = node.Spacing };
+                var appliedColumns = "";
+                if (node.ColumnsBind.Length > 0) bindings.Add(state =>
+                {
+                    var dimensions = String(Value(node.ColumnsBind, state, item));
+                    // 首帧前保留静态尺寸；只有值改变时验证，避免轮询重复分配布局对象。
+                    if (dimensions.Length == 0 || dimensions == appliedColumns) return;
+                    if (dimensions.Length > 256 || dimensions.Split(',').Length > 32) throw new InvalidDataException("Invalid bound columns.");
+                    // 动态尺寸复用 SDK 验证，不执行任意表达式或布局代码。
+                    using var check = new MemoryStream(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new ExtensionPage { Root = new() { Type = "grid", Columns = dimensions } }, ExtensionJson.Default.ExtensionPage));
+                    ExtensionContract.ReadPage(check);
+                    grid.ColumnDefinitions = new(dimensions); appliedColumns = dimensions;
+                });
                 foreach (var child in node.Children) grid.Children.Add(Build(child, item, bindings));
                 control = grid; break;
             case "stack":
@@ -96,7 +109,7 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
                     var next = data?.ToJsonString() ?? "[]";
                     if (signature != next)
                     {
-                        signature = next; repeat.Children.Clear(); childBindings.Clear();
+                        signature = next; _activeContextMenu?.Close(); _activeContextMenu = null; repeat.Children.Clear(); childBindings.Clear();
                         foreach (var row in data?.Take(1000) ?? [])
                             if (node.Template is not null) repeat.Children.Add(Build(node.Template, row, childBindings));
                     }
@@ -139,14 +152,28 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
                     e.Handled = true; await Invoke(node, item, node.EnterAction);
                 }, RoutingStrategies.Tunnel, handledEventsToo: true);
                 control = input; break;
+            case "icon":
+                control = new VectorIcon { Kind = Enum.TryParse<IconKind>(node.Icon, out var standalone) ? standalone : IconKind.Plugins, Width = node.Width > 0 ? node.Width : 24, Height = node.Height > 0 ? node.Height : 24 }; break;
+            case "checkbox":
+                var checkbox = new CheckBox { Content = node.Text, IsThreeState = false, VerticalAlignment = VerticalAlignment.Center, MinWidth = 20, MinHeight = 28 };
+                var checkboxUpdating = false;
+                bindings.Add(state =>
+                {
+                    checkboxUpdating = true;
+                    checkbox.IsChecked = Value(node.Bind, state, item)?.GetValue<bool>();
+                    checkboxUpdating = false;
+                });
+                checkbox.IsCheckedChanged += async (_, _) => { if (checkboxUpdating) return; _inputs[node.Input] = JsonValue.Create(checkbox.IsChecked == true); await Invoke(node, item); };
+                control = checkbox; break;
             case "button":
                 var label = Ui.RawText(node.Text); label.TextWrapping = TextWrapping.NoWrap; label.TextTrimming = TextTrimming.CharacterEllipsis;
                 // 先建立组合内容再挂载，避免同一标签同时归属按钮和内部布局。
                 Control buttonContent = Enum.TryParse<IconKind>(node.Icon, out var icon)
-                    ? Ui.Actions(new VectorIcon { Kind = icon, Width = 18, Height = 18 }, label) : label;
+                    ? node.Text.Length == 0 && node.Bind.Length == 0 ? new VectorIcon { Kind = icon, Width = 18, Height = 18 }
+                        : Ui.Actions(new VectorIcon { Kind = icon, Width = 18, Height = 18 }, label) : label;
                 var button = new Button { Content = buttonContent, HorizontalContentAlignment = HorizontalAlignment.Stretch, MinHeight = 36 };
                 ToolTip.SetTip(button, node.Tooltip.Length > 0 ? node.Tooltip : node.Text);
-                button.Click += async (_, _) => await Invoke(node, item);
+                button.Click += async (_, _) => { if (node.OpenMenuOnClick && button.ContextMenu is { } menu) menu.Open(button); else await Invoke(node, item); };
                 if (node.Bind.Length > 0) bindings.Add(state => { label.Text = String(Value(node.Bind, state, item)); ToolTip.SetTip(button, node.Tooltip.Length > 0 ? node.Tooltip : label.Text); });
                 control = button; break;
             case "toggle":
@@ -175,6 +202,20 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
                 if (node.Bind.Length > 0) bindings.Add(state => text.Text = String(Value(node.Bind, state, item)));
                 control = text; break;
         }
+        if (node.ContextActions.Count > 0)
+        {
+            var menu = new ContextMenu();
+            foreach (var action in node.ContextActions)
+            {
+                var entry = new MenuItem { Header = action.Text };
+                if (Enum.TryParse<IconKind>(action.Icon, out var kind)) entry.Icon = new VectorIcon { Kind = kind, Width = 18, Height = 18 };
+                entry.Click += async (_, _) => await Invoke(action, item); menu.Items.Add(entry);
+            }
+            menu.Opened += (_, _) => { if (_activeContextMenu != menu) _activeContextMenu?.Close(); _activeContextMenu = menu; };
+            control.ContextMenu = menu;
+        }
+        if (node.Variant.Length > 0) control.Classes.Add("extension-" + node.Variant);
+        if (node.SelectedIf.Length > 0) bindings.Add(state => control.Classes.Set("selected", Value(node.SelectedIf, state, item)?.GetValue<bool>() == true));
         control.Name = node.Id.Length > 0 ? node.Id : null;
         control.Margin = Thickness.Parse(node.Margin);
         control.HorizontalAlignment = node.Align switch { "left" => HorizontalAlignment.Left, "right" => HorizontalAlignment.Right, "center" => HorizontalAlignment.Center, _ => HorizontalAlignment.Stretch };
@@ -192,5 +233,5 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
     }
     private void Unavailable(string id) { if (id == _session.Manifest.Id) Dispose(); }
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e) { Dispose(); base.OnDetachedFromVisualTree(e); }
-    public void Dispose() { if (_disposed) return; _disposed = true; _session.Changed -= Refresh; _manager.UiPluginUnavailable -= Unavailable; _bindings.Clear(); foreach (var asset in _assets) asset.Dispose(); _assets.Clear(); }
+    public void Dispose() { if (_disposed) return; _disposed = true; _activeContextMenu?.Close(); _activeContextMenu = null; _session.Changed -= Refresh; _manager.UiPluginUnavailable -= Unavailable; _bindings.Clear(); foreach (var asset in _assets) asset.Dispose(); _assets.Clear(); }
 }
