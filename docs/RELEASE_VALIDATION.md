@@ -1,3 +1,24 @@
+# Nonet 0.4.0-beta.11 发布验证
+
+日期：2026-10-07。仅 Windows 实际执行；macOS/Linux 为交叉构建，不代表实机通过。
+
+- 317 个桌面、CLI、共享核心、SDK、打包器、测试及文档文件的独立源码快照构建通过，0 警告、0 错误；不包含移动端、具体插件、用户数据和本地历史。
+- 独立快照的 Core / 命令 / TUI、桌面更新、工作区扩展与冻结旧 Contract v1 兼容回归通过。
+- 更新检测按数字语义版本选取候选，不使用 GitHub Release 列表第一项；离线模拟覆盖资产筛选、下载、SHA-256、清单、替换与拒绝非法包。
+- 三个平台 ZIP 从新暂存目录构建，版本、逐文件 SHA-256、GPL 许可、禁止用户数据路径与 POSIX 执行权限全部通过。
+- 实际 Windows 精简程序验证 44.1 kHz 单声道播放时钟、自然结束、内嵌封面、持久化、字体、桌面歌词/托盘配置及插件配置，不使用用户音频或凭据。
+- Windows 安装器从同一纯净暂存生成；隔离安装的 12 个程序文件与 ZIP 对应文件 SHA-256 全部一致。安装后的实际程序通过播放及持久化验证，隔离卸载保留非程序测试数据。
+- 本次构建和测试没有替换现有 Windows 使用目录。
+
+复现：
+
+    dotnet build NonetMusicPlayer.slnx -c Release
+    dotnet run --project tests/NonetMusicPlayer.CoreChecks -c Release -- artifacts/core-checks
+    dotnet run --project tests/NonetMusicPlayer.UiChecks.Desktop -c Release -- artifacts/updates --desktop-revision-only
+    dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/workspace --workspace
+    dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/compatibility --compatibility
+    pwsh -File scripts/verify-clean-desktop.ps1 -Version 0.4.0-beta.11
+
 # Nonet 0.4.0-beta.8 通用扩展验证
 
 日期：2026-10-07。Windows 实际发行程序与 Avalonia Headless 验证；macOS/Linux 桌面仅构建发行包，不能替代实机验证。
