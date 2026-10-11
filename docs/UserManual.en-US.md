@@ -66,6 +66,8 @@ LRC accepts `[mm:ss]`, `[mm:ss.xx]`, `[mm:ss.xxx]`, `[mm:ss:xx]` and `[mm:ss;xx]
 
 ## Settings and appearance
 
+On Windows, macOS and Linux, Settings → Appearance can place window buttons on either side. Right: minimize, maximize/restore, close. Left: close, minimize, maximize/restore. Changes apply immediately and persist. macOS defaults to the left; Windows/Linux default to the right.
+
 Language changes apply immediately. The default theme follows the system; Light and Dark are also available. The theme color applies to selection and interaction states. Select a color with the wheel, RGB fields or hexadecimal input. Background image and available control styles provide further customization.
 
 JSON layouts can adjust supported regions and necessary player controls. Export a working layout first, edit it in your own external editor, save, then validate and reload in Settings. Settings does not display the JSON contents. Invalid layouts preserve the current layout. Reset defaults or restore a valid backup if needed. Layouts cannot run scripts or remove required playback controls; see UI_LAYOUT.md for the schema.

@@ -16,11 +16,11 @@ sudo pacman -Syu --needed unzip xwayland-satellite libx11 libice libsm libxrandr
 
 安装 xwayland-satellite 后退出并重新登录 niri。在 niri 会话的终端中检查 `niri --version`、`xwayland-satellite --version` 和 `printenv DISPLAY`。DISPLAY 应由当前会话设置；不要随意覆盖成 `:0`。旧 niri 请先升级并依照其对应版本的官方文档配置。
 
-从 Release 下载 `NonetMusicPlayer.Desktop-<version>-linux-x64.zip`，以下以 0.4.0-beta.17 为例，在用户可写目录解压后运行：
+从 Release 下载 `NonetMusicPlayer.Desktop-<version>-linux-x64.zip`，以下以 0.4.0-beta.18 为例，在用户可写目录解压后运行：
 
 ```bash
 mkdir -p "$HOME/Applications/Nonet"
-unzip "$HOME/Downloads/NonetMusicPlayer.Desktop-0.4.0-beta.17-linux-x64.zip" -d "$HOME/Applications/Nonet"
+unzip "$HOME/Downloads/NonetMusicPlayer.Desktop-0.4.0-beta.18-linux-x64.zip" -d "$HOME/Applications/Nonet"
 cd "$HOME/Applications/Nonet"
 chmod +x Nonet
 ./Nonet
@@ -29,6 +29,8 @@ chmod +x Nonet
 升级既有安装前退出 Nonet、备份数据，再替换程序文件；不要将旧目录中的使用数据重新打包上传。应用已有的在线更新也会排除数据。
 
 ## 音频、文件选择与托盘
+
+窗口按键位置可在设置 → 外观中切换为左上角或右上角，立即生效并保存。Linux 默认在右侧；左侧采用关闭、最小化、最大化/还原的顺序。
 
 - 使用系统已有的 PipeWire 或 PulseAudio 会话。不因安装 Nonet 而替换音频系统。PipeWire 用户可用 `wpctl status` 检查输出；声音有问题时检查应用输出设备及 Data/Logs 中的错误。ALSA/Pulse 库用于运行时设备接入；音乐解码所需的 FFmpeg 原生库已随包提供，不需要额外安装视频背景工具。
 - 文件选择对话框使用桌面 portal；精简 niri 环境中若对话框不出现，可安装 `xdg-desktop-portal` 与 `xdg-desktop-portal-gtk`，并按照现有桌面 portal 配置指定 FileChooser 后端，然后重新登录。

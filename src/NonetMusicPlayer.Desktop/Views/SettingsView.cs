@@ -66,7 +66,10 @@ public sealed class SettingsView : UserControl, IDisposable
             Ui.Row(L10n.T("Common.TextSize"), L10n.T("Common.AdjustBodyTextSize"), Ui.Range(11, 18, s.FontSize, v => { s.FontSize = v; Changed(); }, " px")),
             advancedAppearance);
         var layout = LayoutCard(owner, vm);
-        if (OperatingSystem.IsWindows()) advancedAppearance.Children.Add(Ui.Row(L10n.T("Common.WindowButtonPosition"), L10n.T("Common.WindowsOrderOnTheRightMacOSOrderOnThe"), Ui.Choice([L10n.T("Common.TopRight"), L10n.T("Common.TopLeft")], s.TitleButtonsOnLeft ? L10n.T("Common.TopLeft") : L10n.T("Common.TopRight"), v => { s.TitleButtonsOnLeft = v == L10n.T("Common.TopLeft"); Changed(); })));
+        // 标题栏由应用自绘，三个桌面平台都可切换位置；平台默认值仍由设置模型决定。
+        var titleButtonPosition = Ui.Choice([L10n.T("Common.TopRight"), L10n.T("Common.TopLeft")], s.TitleButtonsOnLeft ? L10n.T("Common.TopLeft") : L10n.T("Common.TopRight"), v => { s.TitleButtonsOnLeft = v == L10n.T("Common.TopLeft"); Changed(); });
+        titleButtonPosition.Name = "TitleButtonPosition";
+        advancedAppearance.Children.Add(Ui.Row(L10n.T("Common.WindowButtonPosition"), L10n.T("Common.WindowsOrderOnTheRightMacOSOrderOnThe"), titleButtonPosition));
         _layoutCard = layout;
         var devices = new[] { "Playback.SystemDefault" };
         devices = vm.AudioDevices.ToArray();

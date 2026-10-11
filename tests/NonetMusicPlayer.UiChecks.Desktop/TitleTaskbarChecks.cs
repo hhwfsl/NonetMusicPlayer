@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using NonetMusicPlayer.Desktop.Services;
 using NonetMusicPlayer.Desktop.ViewModels;
 using NonetMusicPlayer.Desktop.Views;
@@ -14,14 +15,22 @@ internal static class TitleTaskbarChecks
     internal static void Run(MainWindow window, MainViewModel vm)
     {
         var originalLeft = vm.Settings.TitleButtonsOnLeft;
+        var originalPage = vm.Page;
         try
         {
-            vm.Settings.TitleButtonsOnLeft = false; vm.ApplySettings(); Pump(window);
+            // 从实际设置入口切换，而非直接修改模型；左右布局不再跳过非 Windows 平台。
+            vm.Navigate("settings"); Pump(window);
+            var settings = (SettingsView)window.FindControl<ContentControl>("AlternatePage")!.Content!;
+            var position = settings.GetVisualDescendants().OfType<ComboBox>().Single(control => control.Name == "TitleButtonPosition");
+            position.SelectedItem = L10n.T("Common.TopRight"); Pump(window);
+            Require(!vm.Settings.TitleButtonsOnLeft, "Right selection updates shared preference");
             var lights = window.FindControl<StackPanel>("TitleButtons")!;
             Require(lights.Children.Select(c => c.Name).SequenceEqual(["MinimizeWindowButton", "MaximizeWindowButton", "CloseWindowButton"]), "Right title controls use Windows action ordering");
-            if (!OperatingSystem.IsWindows()) return;
-            vm.Settings.TitleButtonsOnLeft = true; vm.ApplySettings(); Pump(window);
+            position.SelectedItem = L10n.T("Common.TopLeft"); Pump(window);
+            Require(vm.Settings.TitleButtonsOnLeft && Grid.GetColumn(lights) == 0, "Left selection updates preference and places controls on left");
             Require(lights.Children.Select(c => c.Name).SequenceEqual(["CloseWindowButton", "MinimizeWindowButton", "MaximizeWindowButton"]), "Left title controls use macOS action ordering");
+            vm.Save(); Require(vm.Storage.Load().Settings.TitleButtonsOnLeft, "Title position persists across restart");
+            if (!OperatingSystem.IsWindows()) { Console.WriteLine("PASS TITLE: setting present, both positions/orderings and persistence"); return; }
             var type = typeof(MainWindow); var edges = ((Grid)window.Content!).Children.OfType<Border>().Where(border => border.Tag is string).ToArray();
             type.GetField("_awaitingMovePointer", PrivateInstance)!.SetValue(window, true);
             foreach (var edge in edges) edge.IsHitTestVisible = false;
@@ -46,7 +55,7 @@ internal static class TitleTaskbarChecks
             Require(((System.Collections.IDictionary)typeof(WindowsTaskbarService).GetField("_icons", PrivateInstance)!.GetValue(taskbar)!).Count == 0, "Thumbnail icon ownership releases on disposal");
             Console.WriteLine("PASS TITLE/TASKBAR: platform ordering, native cursor suppression/restoration, HICON create/cache/dispose and thumbnail command routing");
         }
-        finally { vm.Settings.TitleButtonsOnLeft = originalLeft; vm.ApplySettings(); Pump(window); }
+        finally { vm.Settings.TitleButtonsOnLeft = originalLeft; vm.ApplySettings(); vm.Navigate(originalPage); Pump(window); }
     }
     private static void Pump(MainWindow window) { Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); Dispatcher.UIThread.RunJobs(); }
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
