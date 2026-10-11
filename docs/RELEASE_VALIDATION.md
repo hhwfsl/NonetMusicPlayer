@@ -198,9 +198,9 @@ pwsh -File tests/verify-published-startup.ps1 -Zip publish/desktop/archives/None
 
 ## 发布组织
 
-纯净 ZIP 为 `NonetMusicPlayer.Desktop-0.4.0-beta.1-<rid>.zip`。Windows / Linux 的程序在 ZIP 根目录，macOS 的程序为 `Contents/MacOS/Nonet`，需解压到 `Nonet.app/` 内。三个包均含 `NonetMusicPlayer.update.json`。
+纯净 ZIP 为 `NonetMusicPlayer.Desktop-<version>-<rid>.zip`。Windows / Linux 的程序在 ZIP 根目录，macOS 的程序为 `Contents/MacOS/Nonet`，需解压到 `Nonet.app/` 内。三个包均含 `NonetMusicPlayer.update.json`。
 
-公开源码仅包含桌面、CLI、共享核心 / SDK 和插件模板，不包含使用数据或旧代码历史。原本的发布文件夹不参与取包，不被替换。
+公开源码仅包含桌面、CLI、共享核心 / SDK、打包器与必要测试文档，不包含模板、私人插件、移动端、使用数据或旧开发历史。运行中的发布文件夹不参与取包；原地更新须在程序退出后进行并保留数据与备份。
 
 ## 未完成的平台验证
 
@@ -209,3 +209,15 @@ pwsh -File tests/verify-published-startup.ps1 -Zip publish/desktop/archives/None
 - GitHub 在线 Release 下载到原地更新，需发布符合契约的 Release 资产后继续验证；仅上传源码不会产生在线更新。
 
 复现命令见 README；ZIP 校验使用 `pwsh -File scripts/verify-clean-desktop.ps1`。
+
+## 0.4.0-beta.16 验证范围
+
+- 共享核心回归通过：冻结的插件 Contract、命令参数及确认、本地化资源、音频与歌词模型、持久化和 TUI。
+- 隔离媒体与目录夹具通过：带音轨视频始终静音、GIF/动态 WebP 画面循环、有界帧缓冲、隐藏恢复、损坏文件及临时副本清理、同步旧背景迁移、多文件夹分别建歌单、递归导入与同名歌词。
+- 使用原 Windows 发布目录中的精简程序与随包解码器验证三种动态媒体，不以未裁剪的开发宿主代替；最小化与恢复后背景正常，音乐输出链路未被使用。
+- 自启动默认关闭，验证 Windows 命令引用、Linux Desktop Entry 字段转义与 macOS plist 参数编码；夹具不启用实际系统启动项。登录启动及系统管理策略仍需在各目标系统验证。
+- 三平台桌面 ZIP 与 CLI ZIP 不含使用数据、私人插件或调试文件；文件摘要及 POSIX 可执行权限通过。
+- Windows ZIP 首次启动及独立 CLI 命令通过；Windows 安装器 15 个程序文件与 ZIP 摘要相同，隔离卸载保留非程序数据。
+- Windows 原发布目录的既有数据与更新前备份逐文件摘要相同。Linux/macOS 仅交叉构建及归档验证，未进行实机运行验证。
+
+动态媒体回归命令：先运行 `pwsh -File scripts/prepare-background-decoder.ps1 -Rids win-x64`，再运行 `dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/media-folders --media-folders`。纯净包核验须传入当前版本：`pwsh -File scripts/verify-clean-desktop.ps1 -Version 0.4.0-beta.16`。

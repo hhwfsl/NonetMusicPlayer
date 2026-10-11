@@ -23,6 +23,8 @@ public sealed class PluginManifest
     public List<WidgetDefinition> Widgets { get; set; } = [];
     public string NavigationLabel { get; set; } = "";
     public string PageEntry { get; set; } = "";
+    /// <summary>可选页面声明，旧清单默认保留页面；纯浮层或后台扩展可显式关闭。</summary>
+    public bool HasPage { get; set; } = true;
     public string NavigationIcon { get; set; } = "";
     /// <summary>包内导航图片，省略时保留矢量图标；不能指定外部路径。</summary>
     public string NavigationImage { get; set; } = "";
@@ -67,7 +69,7 @@ public sealed class PluginManifest
         if (Type == "extension")
         {
             if (Runtime is not ("process" or "managed" or "declarative") || Runtime != "declarative" && EntryPoints.Count == 0
-                || Runtime == "declarative" && (EntryPoints.Count != 0 || Permissions.Any(p => p is "process" or "in-process" or "network")) || PageEntry.Length == 0
+                || Runtime == "declarative" && (EntryPoints.Count != 0 || Permissions.Any(p => p is "process" or "in-process" or "network")) || HasPage && PageEntry.Length == 0
                 || Permissions.Any(p => !ExtensionContract.Permissions.Contains(p))
                 || Runtime == "process" && !Permissions.Contains("process")
                 || Runtime == "managed" && (!Permissions.Contains("in-process") || ExtensionClass.Length == 0)
@@ -85,10 +87,16 @@ public sealed class PluginManifest
                 using var input = new MemoryStream(JsonSerializer.SerializeToUtf8Bytes(new ExtensionPage { Root = contribution.View! }, ExtensionJson.Default.ExtensionPage));
                 ExtensionContract.ReadPage(input);
             }
-            PluginPathPolicy.ValidateRelativePath(PageEntry);
-            if (!PageEntry.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Extension page must be JSON.");
+            if (HasPage)
+            {
+                PluginPathPolicy.ValidateRelativePath(PageEntry);
+                if (!PageEntry.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Extension page must be JSON.");
+            }
+            else if (PageEntry.Length != 0 || !RequiredCapabilities.Contains("ui.page-optional.v1"))
+                throw new InvalidDataException("Page-less extensions require ui.page-optional.v1 and an empty pageEntry.");
             NavigationLabel = string.IsNullOrWhiteSpace(NavigationLabel) ? Name : NavigationLabel.Trim();
         }
+        if (!HasPage && Type != "extension") throw new InvalidDataException("Only Contract v2 extensions may omit their page.");
         if (Type == "provider" && (!Permissions.Contains("network") || !Permissions.Contains("process"))) throw new InvalidDataException("音源插件必须声明 network 与 process 权限。");
         if (Type == "lyrics" && (!Permissions.Contains("network") || !Permissions.Contains("process") || !Permissions.Contains("lyrics-search")
             || Permissions.Any(p => p is not ("network" or "process" or "lyrics-search" or "navigation" or "audio-tags")) || EntryPoints.Count == 0 || Tokens.Count != 0 || Widgets.Count != 0))

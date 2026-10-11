@@ -164,6 +164,8 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     }
     private void NavigateCore(string page, string? title)
     {
+        // 浮层/后台扩展没有独立页面，导航命令不能为其创建空白页。
+        if (page.StartsWith("plugin:", StringComparison.Ordinal) && Plugins.Installed.Any(p => p.Id == page[7..] && !p.HasPage)) return;
         Page = page == "favorites" ? "playlist:" + Playlist.LikedId : page == "temporary" ? "library" : page; SearchText = "";
         PageTitle = title ?? LocalizedTitleForPage(Page);
         OnPropertyChanged(nameof(CurrentPlaylist));
@@ -266,7 +268,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         catch (Exception error) { ReportError(L10n.T("Playback.CouldNotOpenTemporaryAudio"), error); }
         finally { IsBusy = false; }
     }
-    public void CancelImport() { _scanCancellation?.Cancel(); CompleteOperation("import.cancel"); }
+    public void CancelImport() { _cancelFolderPlaylists = true; _scanCancellation?.Cancel(); CompleteOperation("import.cancel"); }
     public async Task PlayTrackAsync(TrackItem? track, IEnumerable<TrackItem>? list = null)
     {
         if (RejectLyricsPlaybackChange()) return;
@@ -398,8 +400,15 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     public void ResetSettings()
     {
         var previous = Settings;
+        if (previous.StartOnLogin && !SetStartOnLogin(false)) return;
         State.Settings = new AppSettings { LyricsFolder = previous.LyricsFolder, BackupFolder = previous.BackupFolder };
         Volume = Settings.Volume; SetPlayMode(Settings.PlayMode); ApplySettings(); ReloadLyrics(); CompleteOperation("settings.reset");
+    }
+    /// <summary>只有明确的用户设置操作才写入系统启动注册；失败时保留原设置。</summary>
+    public bool SetStartOnLogin(bool enabled)
+    {
+        try { AutoStartService.SetEnabled(enabled); Settings.StartOnLogin = enabled; ApplySettings(); return true; }
+        catch (Exception error) { ReportError(L10n.T("Startup.ChangeFailed"), error); return false; }
     }
     private void ApplyLyricsDirectory()
     {

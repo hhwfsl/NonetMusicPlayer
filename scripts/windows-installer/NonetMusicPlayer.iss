@@ -58,6 +58,9 @@ Source: "{#PackageDirectory}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PackageDirectory}\UserManual.zh-CN.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PackageDirectory}\UserManual.en-US.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PackageDirectory}\UserManual.ja-JP.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PackageDirectory}\VideoDecoder\ffmpeg.exe"; DestDir: "{app}\VideoDecoder"; Flags: ignoreversion
+Source: "{#PackageDirectory}\VideoDecoder\LICENSE.txt"; DestDir: "{app}\VideoDecoder"; Flags: ignoreversion
+Source: "{#PackageDirectory}\VideoDecoder\NOTICE.txt"; DestDir: "{app}\VideoDecoder"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\Nonet"; Filename: "{app}\Nonet.exe"; WorkingDir: "{app}"

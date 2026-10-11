@@ -57,6 +57,11 @@ public sealed partial class App : Application
             {
                 // 托盘恢复会再次触发 Opened；启动参数及启动警告只处理一次，避免重复播放文件。
                 if (initialized) return; initialized = true;
+                if (_mainViewModel.Settings.StartOnLogin)
+                {
+                    try { AutoStartService.SetEnabled(true); }
+                    catch (Exception error) { _mainViewModel.ReportError(L10n.T("Startup.ChangeFailed"), error); }
+                }
                 _mainViewModel.PublishStartupNotifications();
                 if (_mainViewModel.Storage.RecoveryMessage is { } warning) _mainViewModel.ReportWarning(warning);
                 Program.Instance?.Receive(files => Dispatcher.UIThread.Post(async () =>

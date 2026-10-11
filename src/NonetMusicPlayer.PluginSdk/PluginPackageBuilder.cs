@@ -20,13 +20,16 @@ public static class PluginPackageBuilder
         manifest.Validate();
         if (rid is not null) PluginPlatformPolicy.RequireSupported(manifest, rid);
         var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "manifest.json" };
-        if (manifest.Type is "ui" or "lyrics" or "agent" or "extension") files.Add(manifest.PageEntry);
+        if (manifest.PageEntry.Length > 0 && manifest.Type is "ui" or "lyrics" or "agent" or "extension") files.Add(manifest.PageEntry);
         if (manifest.NavigationImage.Length > 0) files.Add(manifest.NavigationImage);
         if (manifest.Type == "extension")
         {
-            using var pageInput = File.OpenRead(Path.Combine(source, manifest.PageEntry));
             void Collect(ExtensionNode node) { if (node.Asset.Length > 0) files.Add(node.Asset); foreach (var child in node.Children) Collect(child); if (node.Template is not null) Collect(node.Template); }
-            Collect(ExtensionContract.ReadPage(pageInput).Root);
+            if (manifest.HasPage)
+            {
+                using var pageInput = File.OpenRead(Path.Combine(source, manifest.PageEntry));
+                Collect(ExtensionContract.ReadPage(pageInput).Root);
+            }
             foreach (var contribution in manifest.Contributions) if (contribution.View is not null) Collect(contribution.View);
         }
         foreach (var entry in manifest.EntryPoints.Values) files.Add(entry);

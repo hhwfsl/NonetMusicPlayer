@@ -85,11 +85,16 @@ public sealed partial class ExtensionSession
         }
         if (operation is "background" or "playlist-cover" or "album-cover" or "artist-cover")
         {
-            var files = await Owner.OpenFilesAsync(Manifest.Name, ["*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp"], false);
+            var files = await Owner.OpenFilesAsync(Manifest.Name, operation == "background" ? AppBackgroundService.MediaPatterns : ["*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp"], false);
             if (files.Length == 0) return new() { ["success"] = false };
+            if (operation == "background")
+            {
+                var background = AppBackgroundService.IsDynamic(files[0]) ? await AppBackgroundService.ImportDynamicAsync(vm.Storage, files[0]) : await CoverCropDialog.ShowBackground(Owner, vm.Storage, files[0]);
+                if (background is null) return new() { ["success"] = false };
+                vm.Settings.BackgroundImagePath = background; vm.ApplySettings(); return new() { ["success"] = true };
+            }
             var image = await CoverCropDialog.Show(Owner, vm.Storage, files[0]); if (image is null) return new() { ["success"] = false };
-            if (operation == "background") { vm.Settings.BackgroundImagePath = AppBackgroundService.Import(vm.Storage, image); vm.ApplySettings(); }
-            else if (operation == "playlist-cover") vm.SetPlaylistCover(vm.Playlists.FirstOrDefault(p => p.Id == args["playlistId"]?.GetValue<string>()) ?? throw new InvalidDataException("Unknown playlist."), image);
+            if (operation == "playlist-cover") vm.SetPlaylistCover(vm.Playlists.FirstOrDefault(p => p.Id == args["playlistId"]?.GetValue<string>()) ?? throw new InvalidDataException("Unknown playlist."), image);
             else vm.SetGroupCover(operation == "album-cover" ? "album" : "artist", args["name"]?.GetValue<string>() ?? throw new InvalidDataException("Missing group."), image);
             return new() { ["success"] = true };
         }

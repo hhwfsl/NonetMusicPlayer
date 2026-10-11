@@ -28,6 +28,9 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        AppBackgroundImage.PlaybackFailed += error => _vm?.ReportError(L10n.T("Background.PlaybackFailed"), error);
+        PropertyChanged += (_, e) => { if (e.Property == IsVisibleProperty || e.Property == WindowStateProperty) AppBackgroundImage.SetPlaybackActive(IsVisible && WindowState != WindowState.Minimized); };
+        Closed += (_, _) => AppBackgroundImage.Dispose();
         InputCommitService.Install(this);
         InputCommitService.Bind(LibrarySearch, text => { if (_vm is not null) _vm.SearchText = text; });
         InitializeTrayLifecycle();
@@ -112,7 +115,7 @@ public sealed partial class MainWindow : Window
         foreach (var plugin in _vm.Plugins.Installed.Where(p => p.Enabled && (p.Type == "theme" || p.Type == "extension" && p.Permissions.Contains("ui-extend"))))
             foreach (var token in plugin.Tokens) palette[token.Key] = token.Value;
         ThemeService.Apply(s, palette);
-        AppBackgroundImage.Source = AppBackgroundService.GetImage(s.BackgroundImagePath);
+        AppBackgroundImage.SetMedia(s.BackgroundImagePath);
         AppBackgroundImage.Opacity = Math.Clamp(s.BackgroundImageOpacity, 0, 1);
         AppBackgroundImage.Stretch = Enum.TryParse<Stretch>(s.BackgroundImageStretch, out var stretch) ? stretch : Stretch.UniformToFill;
         MyMusicNavigation.IsVisible = s.MyMusicExpanded; MyMusicChevron.Kind = s.MyMusicExpanded ? IconKind.ChevronUp : IconKind.ChevronDown;
@@ -284,8 +287,18 @@ public sealed partial class MainWindow : Window
     }
     private async void CreatePlaylist_Click(object? sender, RoutedEventArgs e)
     {
-        if (_vm is null) return; var name = await PlayerDialog.Prompt(this, L10n.T("Playlists.NewPlaylist"), L10n.T("Playlists.ChooseANameForTheNewPlaylist"), L10n.T("Playlists.NewPlaylist")); if (name is null) return;
-        try { var playlist = _vm.CreatePlaylist(name); _vm.Navigate("playlist:" + playlist.Id); } catch (Exception exception) { _vm.ReportError(L10n.T("Common.CreationFailed"), exception); }
+        if (_vm is null) return; var choice = await PlayerDialog.CreatePlaylist(this); if (choice is null) return;
+        try
+        {
+            if (!choice.FromFolders) { var playlist = _vm.CreatePlaylist(choice.Name ?? ""); _vm.Navigate("playlist:" + playlist.Id); return; }
+            var selected = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = L10n.T("Playlists.CreateFromFolders"), AllowMultiple = true });
+            var paths = selected.Select(folder => folder.TryGetLocalPath()).OfType<string>().ToArray();
+            foreach (var folder in selected) folder.Dispose();
+            if (paths.Length == 0) return;
+            var playlists = await _vm.CreatePlaylistsFromFoldersAsync(paths);
+            if (playlists.FirstOrDefault() is { } first) _vm.Navigate("playlist:" + first.Id);
+        }
+        catch (Exception exception) { _vm.ReportError(L10n.T("Common.CreationFailed"), exception); }
     }
     private async Task RenameAsync(Playlist playlist)
     {

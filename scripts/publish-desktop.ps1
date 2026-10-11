@@ -39,6 +39,7 @@ function Write-MacIcon([string]$Destination) {
     } finally { $stream.Dispose() }
 }
 foreach ($target in $targets) {
+    & (Join-Path $PSScriptRoot 'prepare-background-decoder.ps1') -Rids @($target.Rid)
     $stage = Assert-ChildPath (Join-Path $artifactRoot ("publish-stage-" + $target.Rid + "-" + $timestamp)) $artifactRoot
     $binary = Join-Path $stage "binary"
     dotnet restore $projectPath --configfile (Join-Path $repositoryRoot "NuGet.Config") -r $target.Rid --disable-parallel
@@ -86,6 +87,12 @@ foreach ($target in $targets) {
     }
     # Offline manuals are opened by the native in-app viewer, without a browser dependency.
     $manualDestination = if ($target.Name -eq "macos") { $macos } else { $package }
+    $decoderDestination = Join-Path $manualDestination 'VideoDecoder'
+    [IO.Directory]::CreateDirectory($decoderDestination) | Out-Null
+    $decoderFile = if ($target.Name -eq 'windows') { 'ffmpeg.exe' } else { 'ffmpeg' }
+    foreach ($decoderPart in @($decoderFile,'LICENSE.txt','NOTICE.txt')) {
+        Copy-Item -LiteralPath (Join-Path $repositoryRoot "artifacts/video-decoder/$($target.Rid)/$decoderPart") -Destination (Join-Path $decoderDestination $decoderPart)
+    }
     foreach ($language in @("zh-CN", "en-US", "ja-JP")) {
         Copy-Item -LiteralPath (Join-Path $repositoryRoot "docs/UserManual.$language.md") -Destination $manualDestination
     }

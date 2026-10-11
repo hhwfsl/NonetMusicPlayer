@@ -18,7 +18,7 @@ public sealed partial class MainWindow
         if (_vm is null) return;
         if (contribution.Action == "open-page")
         {
-            if (!plugin.Permissions.Contains("navigation")) throw new InvalidDataException("Navigation permission required.");
+            if (!plugin.HasPage || !plugin.Permissions.Contains("navigation")) throw new InvalidDataException("Navigation permission required.");
             _vm.Navigate("plugin:" + plugin.Id, plugin.NavigationLabel); return;
         }
         await _vm.Plugins.Extension(plugin).InvokeAsync(contribution.Action, context ?? new(), userGesture: true);

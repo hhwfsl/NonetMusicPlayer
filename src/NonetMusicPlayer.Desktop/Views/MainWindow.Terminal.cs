@@ -136,6 +136,8 @@ public sealed partial class MainWindow
                         var updated = JsonSerializer.SerializeToNode(vm.Settings, AppStorage.Json)!.AsObject(); var setting = updated.Select(p => p.Key).FirstOrDefault(k => k.Equals(Arg(0), StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.UnknownSetting"));
                         if (vm.IsLyricsTimingActive && setting.Equals("playMode", StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException(L10n.T("LyricsTiming.PlaybackRestricted"));
                         var value = CommandResults.ParseSettingValue(Arg(1)); SettingsContract.Validate(setting, value); updated[setting] = value;
+                        if (setting.Equals("startOnLogin", StringComparison.OrdinalIgnoreCase))
+                        { if (!vm.SetStartOnLogin(value!.GetValue<bool>())) throw new IOException(L10n.T("Startup.ChangeFailed")); break; }
                         var replacement = updated.Deserialize<AppSettings>(AppStorage.Json) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.InvalidSettings"));
                         replacement.Validate(); vm.State.Settings = replacement; vm.Volume = replacement.Volume; vm.ApplySettings(); break;
                     case "settings.reset": vm.ResetSettings(); break;

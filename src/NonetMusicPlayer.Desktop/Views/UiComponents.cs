@@ -91,6 +91,22 @@ internal static class Ui
 }
 public sealed class PlayerDialog : Window
 {
+    public sealed record PlaylistCreation(string? Name, bool FromFolders);
+    /// <summary>名称创建与目录创建共享入口；选择目录前先关闭弹窗，取消不创建任何歌单。</summary>
+    public static Task<PlaylistCreation?> CreatePlaylist(Window owner)
+    {
+        var input = new TextBox { Name = "NewPlaylistName", Text = L10n.T("Playlists.NewPlaylist"), MinHeight = 44 };
+        PlayerDialog? dialog = null;
+        var folders = Ui.Button(L10n.T("Playlists.CreateFromFolders"), () => dialog!.Close(new PlaylistCreation(null, true)));
+        folders.Name = "CreatePlaylistFromFolders";
+        var icon = new NonetMusicPlayer.Desktop.Controls.VectorIcon { Kind = NonetMusicPlayer.Desktop.Controls.IconKind.Folder, Width = 18, Height = 18 };
+        folders.Content = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8, Children = { icon, Ui.Text(L10n.T("Playlists.CreateFromFolders")) } };
+        dialog = new PlayerDialog(L10n.T("Playlists.NewPlaylist"), L10n.T("Playlists.ChooseANameForTheNewPlaylist"), Ui.Stack(input, folders), window => window.Close(new PlaylistCreation(input.Text, false)), L10n.T("Playlists.Create"))
+        { Width = Math.Clamp(owner.Bounds.Width - 40, 350, 560), MaxHeight = Math.Clamp(owner.Bounds.Height - 28, 300, 650) };
+        dialog.Opened += (_, _) => { input.Focus(); input.SelectAll(); };
+        input.KeyDown += (_, e) => { if (e.Key == Key.Enter) { dialog.Close(new PlaylistCreation(input.Text, false)); e.Handled = true; } };
+        return dialog.ShowDialog<PlaylistCreation?>(owner);
+    }
     private PlayerDialog(string title, string description, Control? content, Action<PlayerDialog> accept, string acceptText)
     {
         InputCommitService.Install(this);

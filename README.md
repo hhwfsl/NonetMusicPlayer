@@ -2,7 +2,7 @@
 
 本项目由 AI 完成，尚未经过人工代码 review。测试仅在 Windows 环境进行；macOS 和 Linux 只生成了交叉构建产物，未进行对应系统的实机测试。当前为预发布版本，使用或继续开发前请自行审查代码并备份数据。
 
-软件名称：**Nonet**。当前桌面版与 CLI 源码版本：**0.4.0-beta.12**。公开仓库仅包含桌面端、独立 CLI、共享核心、插件 SDK、主项目打包器和必要测试；不包含具体插件、移动端源码或构建产物。插件模板单独发布在 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)。
+软件名称：**Nonet**。当前桌面版与 CLI 源码版本：**0.4.0-beta.16**。公开仓库仅包含桌面端、独立 CLI、共享核心、插件 SDK、主项目打包器和必要测试；不包含具体插件、移动端源码或构建产物。插件模板单独发布在 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)。
 
 已公开桌面版本见 [Releases](https://github.com/hhwfsl/NonetMusicPlayer/releases)。源码版本可能高于公开版本；本地构建不等同于远程发布。
 
@@ -15,9 +15,10 @@
 | MVVM | CommunityToolkit.Mvvm 8.4.2 |
 | 音频 | SoundFlow 1.4.1，SoundFlow.Codecs.FFMpeg 1.4.0 |
 | 媒体标签 | TagLibSharp 2.3.0 |
+| 动态背景 | FFmpeg 8.0.3（独立 LGPL 解码器），SkiaSharp 3.119.4（动态 WebP） |
 | 桌面持久化 | SQLite，Microsoft.Data.Sqlite 10.0.12 |
 | CLI 与共用 JSON | System.Text.Json，持久化模型使用 Source Generation |
-| 插件开发 SDK | NonetMusicPlayer.PluginSdk 4.5.0，Contract v1/v2、页面 Schema v1/v2 |
+| 插件开发 SDK | NonetMusicPlayer.PluginSdk 4.6.0，Contract v1/v2、页面 Schema v1/v2 |
 
 CLI 不引用 Avalonia，通过系统终端运行。插件 SDK 无图形、音频或外部 NuGet 依赖。实际依赖以各项目的 `.csproj` 为准；第三方许可见 [docs/licenses](docs/licenses)。
 
@@ -41,6 +42,15 @@ dotnet build NonetMusicPlayer.slnx -c Release --no-restore
 ```
 
 ## 从源码启动
+
+动态背景需要先准备对应平台的独立解码器，然后重新构建。下载版本和 SHA-256 固定在 `scripts/background-decoder.json`，缓存位于 `artifacts/video-decoder`，不进入 Git。Windows 示例：
+
+```text
+pwsh -File scripts/prepare-background-decoder.ps1 -Rids win-x64
+dotnet build src/NonetMusicPlayer.Desktop -c Release
+```
+
+Linux 与 macOS x64 分别使用 `linux-x64`、`osx-x64`。发布脚本自动准备解码器。只分发 FFmpeg 可执行文件及必要许可，不包含 ffprobe。背景格式、资源边界和第三方来源见 [BACKGROUND_MEDIA.md](docs/BACKGROUND_MEDIA.md)。
 
 桌面端：
 
@@ -116,4 +126,6 @@ UI 夹具使用 Avalonia.Headless 与隔离测试数据，不等同于跨平台�
 
 构建、变更和接口资料：[CHANGELOG](CHANGELOG.md)、[CLI 构建与使用](src/NonetMusicPlayerCli/README.md)、[插件开发与依赖](docs/PLUGIN_DEVELOPMENT.md)、[插件 Contract](docs/PLUGIN_DEVELOPMENT.md)、[存储](docs/STORAGE.md)、[本地化](docs/LOCALIZATION.md)。
 
-插件开发使用主项目的 SDK 4.5.0（程序集兼容基线为 4.0.0.0），并直接引用源码；通用扩展接口见 [EXTENSIONS](docs/EXTENSIONS.md) 与 [非核心扩展参考](docs/UNIVERSAL_EXTENSIONS.md)，旧插件兼容策略见 [PLUGIN_DEVELOPMENT](docs/PLUGIN_DEVELOPMENT.md)。
+插件开发使用主项目的 SDK 4.6.0（程序集兼容基线为 4.0.0.0），并直接引用源码；通用扩展接口见 [EXTENSIONS](docs/EXTENSIONS.md) 与 [非核心扩展参考](docs/UNIVERSAL_EXTENSIONS.md)，旧插件兼容策略见 [PLUGIN_DEVELOPMENT](docs/PLUGIN_DEVELOPMENT.md)。
+
+背景解码器为独立、未修改的 FFmpeg 8.0.3（LGPL-2.1-or-later），其对应源码、依赖源码与固定构建脚本随 [同版本 Release](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.16) 提供。许可与构建说明见 [背景媒体文档](docs/BACKGROUND_MEDIA.md)。

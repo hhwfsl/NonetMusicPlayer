@@ -46,16 +46,15 @@ public static class PluginPackageInspector
         Asset(manifest.NavigationImage);
         if (manifest.Type == "extension")
         {
-            using (var source = (zip.GetEntry(manifest.PageEntry) ?? throw new InvalidDataException("Missing extension page.")).Open())
+            void Collect(ExtensionNode node) { Asset(node.Asset); foreach (var child in node.Children) Collect(child); if (node.Template is not null) Collect(node.Template); }
+            if (manifest.HasPage)
             {
-                void Collect(ExtensionNode node) { Asset(node.Asset); foreach (var child in node.Children) Collect(child); if (node.Template is not null) Collect(node.Template); }
+                using var source = (zip.GetEntry(manifest.PageEntry) ?? throw new InvalidDataException("Missing extension page.")).Open();
                 Collect(ExtensionContract.ReadPage(source).Root);
-                foreach (var contribution in manifest.Contributions) if (contribution.View is not null) Collect(contribution.View);
             }
+            foreach (var contribution in manifest.Contributions) if (contribution.View is not null) Collect(contribution.View);
             if (manifest.Runtime == "declarative" && zip.Entries.Any(e => e.FullName != "manifest.json" && e.FullName != manifest.PageEntry && e != schemaEntry && !IsLicenseFile(e.FullName) && !declaredAssets.Contains(e.FullName)))
                 throw new InvalidDataException("Declarative packages cannot contain executable files or unused assets.");
-            using var page = (zip.GetEntry(manifest.PageEntry) ?? throw new InvalidDataException("Missing extension page.")).Open();
-            ExtensionContract.ReadPage(page);
         }
         if (manifest.Type is "ui" or "lyrics" or "agent")
         {

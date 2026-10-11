@@ -21,6 +21,8 @@ public sealed partial class PluginManager
     public ExtensionPage LoadExtensionPage(PluginManifest manifest)
     {
         RequireInstalled(manifest); manifest.Validate();
+        // 无页面的声明式扩展仍可使用状态、动作和插槽，不读取或伪造包内页面文件。
+        if (!manifest.HasPage) return new ExtensionPage { Root = new ExtensionNode { Type = "stack" } };
         var path = Path.Combine(ExtensionDirectory(manifest), manifest.PageEntry); PluginPathPolicy.RejectLinkedAncestors(path);
         using var input = File.OpenRead(path); return ExtensionContract.ReadPage(input);
     }

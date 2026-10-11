@@ -82,6 +82,7 @@ public sealed class AppSettings
     public bool DesktopLyricsLocked { get; set; }
     public bool OptimizeMemoryWhenMinimized { get; set; } = true;
     public bool CloseToTray { get; set; } = true;
+    public bool StartOnLogin { get; set; }
     public double FontSize { get; set; } = 13;
     public string FontFamily { get; set; } = "";
     public string? FontFilePath { get; set; }

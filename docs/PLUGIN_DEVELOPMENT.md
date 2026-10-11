@@ -1,4 +1,4 @@
-# 通用扩展层 v2 / SDK 4.5
+# 通用扩展层 v2 / SDK 4.6
 
 新版插件优先使用通用扩展，而不是请求宿主新增某个业务部件。最低宿主为 Nonet 0.4.0-beta.8。原 Contract v1 / 页面 Schema 1 / 旧 RPC 保留；LDDC 等旧插件通过原能力适配层运行，不按宿主发行版本淘汰插件。
 
@@ -472,3 +472,23 @@ Native AOT 使用源生成 AgentPluginJson。应在目标系统构建 AOT；无�
 兼容性验证应覆盖冻结旧包、无可选字段的旧 AgentReply、Schema 无分组/预设时的原控件、初始化/取消/退出、新 manager 的配置恢复，以及日志/安装索引不含明文凭据。
 
 SDK 4.5 新增包内图片图标、复合输入区、用户交互与内联审批、独立原生浮层，详见 UNIVERSAL_EXTENSIONS；插件仍按能力协商，不按应用版本淘汰。
+
+## 无独立页面的扩展（SDK 4.6）
+
+Contract v2 扩展可声明 `"hasPage": false`、`"pageEntry": ""`，并将 `ui.page-optional.v1` 放入 requiredCapabilities。省略 hasPage 时仍为 true，保留旧包行为；旧 Contract v1 不使用此字段关闭页面。无页面扩展仍可提供插槽、事件、流程和原生浮层，不生成侧栏页面按钮，直接导航也不会产生空白页。
+
+没有页面的包不需要 page.json；打包、检查、启用、同 ID 更新和卸载后重新接入均使用同一规则。仍须满足其他权限与运行形态约束。若没有导航贡献，不必申请 navigation 权限。配置表单仍由插件中心管理，不因省略业务页面而消失。
+
+示例清单片段：
+
+```json
+{
+  "type": "extension",
+  "contractVersion": 2,
+  "hasPage": false,
+  "pageEntry": "",
+  "requiredCapabilities": ["ui.page-optional.v1"]
+}
+```
+
+此片段不是完整安装清单，必须另行声明身份、运行形态、入口及所需权限。纯后台/浮层扩展不必创建无意义的空页面。

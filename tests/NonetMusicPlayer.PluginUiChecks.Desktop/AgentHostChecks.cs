@@ -32,7 +32,12 @@ internal static class AgentHostChecks
         {
             Write(zip, "manifest.json", """{"id":"fixture.agent","name":"Generic Agent","version":"1.0.0","type":"agent","permissions":["network","process","agent-control","navigation"],"pageEntry":"page.json","entryPoints":{"win-x64":"worker.exe"}}""");
             Write(zip, "page.json", """{"schemaVersion":1,"title":"Generic Agent","widgets":[{"type":"agent-chat","title":"Chat"}]}""");
-            Write(zip, PluginConfigSchema.FileName, """{"provider":{"type":"string","default":"custom","enum":[{"value":"custom","label":"Custom"},{"value":"fixture","label":"Fixture","defaults":{"baseUrl":"https://preset.invalid/v1","apiKey":"","model":""}}]},"baseUrl":{"type":"string","default":""},"model":{"type":"string","default":"","ui:widget":"agent-model"},"apiKey":{"type":"string","default":"","sensitive":true,"ui:widget":"password"},"maxTokens":{"type":"int","default":1200,"min":0},"timeoutSeconds":{"type":"int","default":90,"min":0}}""");
+            Write(zip, PluginConfigSchema.FileName, """
+                {"provider":{"type":"string","default":"custom","ui:group":"Model","enum":[{"value":"custom","label":"Custom"},{"value":"fixture","label":"Fixture","defaults":{"baseUrl":"https://preset.invalid/v1","apiKey":"","model":""}}]},
+                "baseUrl":{"type":"string","default":"","ui:group":"Model"},"model":{"type":"string","default":"","ui:widget":"agent-model","ui:group":"Model"},"apiKey":{"type":"string","default":"","sensitive":true,"ui:widget":"password","ui:group":"Model"},
+                "maxTokens":{"type":"int","default":1200,"min":0,"ui:group":"Advanced","ui:collapsed":true},"timeoutSeconds":{"type":"int","default":90,"min":0,"ui:group":"Advanced","ui:collapsed":true},
+                "nested":{"type":"object","ui:group":"Advanced","ui:collapsed":true,"items":{"enabled":{"type":"bool","default":true}}}}
+                """);
             Write(zip, "worker.exe", "Not executed by this UI fixture");
         }
         var plugin = vm.Plugins.Install(package); vm.Plugins.SetEnabled(plugin, true); vm.ApplySettings();
@@ -49,12 +54,34 @@ internal static class AgentHostChecks
         var overlay = window.OpenPluginConfigurationAsync(plugin); Render(window);
         var form = window.GetVisualDescendants().OfType<PluginConfigView>().Single();
         Check(form.Draft["apiKey"]!.GetValue<string>() == "TEST-ONLY-RESTART-KEY", "Opening saved provider does not reset its key");
+        // 重现日志中的展开路径；重复展开和布局重算必须不产生第二个视觉父级。
+        ExpandAdvanced();
         var selector = form.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "PluginConfig_provider");
         selector.SelectedIndex = 0; selector.SelectedIndex = 1; Render(window);
         Check(form.Draft["apiKey"]!.GetValue<string>() == "" && form.Draft["baseUrl"]!.GetValue<string>() == "https://preset.invalid/v1", "Preset applies same-schema defaults and clears old key");
+        ExpandAdvanced();
         Check(form.GetVisualDescendants().OfType<Button>().Any(b => b.Name == "AgentFetchModels"), "Schema model selector has discovery button");
         form.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "ClosePluginConfiguration").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); Render(window);
         Check(overlay.IsCompleted && !overlay.Result, "Closing model draft does not save");
+        overlay = window.OpenPluginConfigurationAsync(plugin); Render(window);
+        form = window.GetVisualDescendants().OfType<PluginConfigView>().Single(); ExpandAdvanced();
+        form.Save(); Render(window);
+        Check(overlay.IsCompleted && overlay.Result, "Expanded configuration saves and closes");
+        overlay = window.OpenPluginConfigurationAsync(plugin); Render(window);
+        form = window.GetVisualDescendants().OfType<PluginConfigView>().Single(); ExpandAdvanced();
+        form.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "ClosePluginConfiguration").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); Render(window);
+
+        void ExpandAdvanced()
+        {
+            var expander = form.GetVisualDescendants().OfType<Expander>().Single(e => Equals(e.Header, "Advanced"));
+            for (var i = 0; i < 3; i++)
+            {
+                expander.IsExpanded = true; Render(window);
+                Check(form.GetVisualDescendants().OfType<TextBox>().Any(c => c.Name == "PluginConfig_maxTokens"), "Advanced controls attach on expansion");
+                expander.IsExpanded = false; Render(window);
+            }
+            expander.IsExpanded = true; Render(window);
+        }
         vm.Navigate("plugin:" + plugin.Id); Render(window);
         var control = window.GetVisualDescendants().OfType<AgentChatControl>().Single();
         Check(control.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "AgentTranscript") is { IsReadOnly: true }, "Read-only chat transcript");

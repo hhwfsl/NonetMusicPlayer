@@ -17,7 +17,7 @@ public sealed partial class MainWindow
     {
         foreach (var bitmap in _pluginNavigationAssets) bitmap.Dispose(); _pluginNavigationAssets.Clear();
         PluginNavigation.Children.Clear(); if (_vm is null) return;
-        foreach (var plugin in _vm.Plugins.Installed.Where(p => p.Enabled && p.Type is "ui" or "widget" or "lyrics" or "agent" or "extension"))
+        foreach (var plugin in _vm.Plugins.Installed.Where(p => p.Enabled && p.HasPage && p.Type is "ui" or "widget" or "lyrics" or "agent" or "extension"))
         {
             var label = Ui.RawText(plugin.NavigationLabel); label.TextWrapping = TextWrapping.NoWrap; label.TextTrimming = TextTrimming.CharacterEllipsis;
             var content = new Grid { ColumnDefinitions = new("30,*") }; content.Children.Add(new VectorIcon { Kind = Enum.TryParse<IconKind>(plugin.NavigationIcon, out var declaredIcon) ? declaredIcon : plugin.Permissions.Contains("lyrics-editor") || plugin.Type == "lyrics" ? IconKind.Lyrics : plugin.Type == "agent" ? IconKind.Plugins : IconKind.Game, Width = 20, Height = 20 }); if (plugin.NavigationImage.Length > 0)
@@ -45,7 +45,7 @@ public sealed partial class MainWindow
     }
     private Control PluginPage(string page)
     {
-        var plugin = _vm?.Plugins.Installed.FirstOrDefault(p => p.Enabled && p.Type is "ui" or "widget" or "lyrics" or "agent" or "extension" && "plugin:" + p.Id == page);
+        var plugin = _vm?.Plugins.Installed.FirstOrDefault(p => p.Enabled && p.HasPage && p.Type is "ui" or "widget" or "lyrics" or "agent" or "extension" && "plugin:" + p.Id == page);
         if (plugin is null) return Ui.Card(L10n.T("Plugins.PluginIsDisabled"), Ui.Text(L10n.T("Plugins.EnableThisPluginInThePluginManagerFirst"), 13, true));
         try { return plugin.Type == "extension" ? new ExtensionPageView(_vm!.Plugins, plugin) : new PluginPageView(_vm!.Plugins, plugin, includeTitle: false); }
         catch (Exception e) { _vm!.ReportError(L10n.T("Plugins.UnableToOpenPluginPage"), e); return Ui.Card(L10n.T("Common.PageFailedToLoad"), Ui.Text(L10n.T("Plugins.DataIsUnchangedCheckThePluginSPageConfiguration"), 13, true)); }

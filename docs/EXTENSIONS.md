@@ -105,3 +105,23 @@ page.music/page.lyrics 可替换相应默认页。必须有 ui-extend；多个�
 首次 v2 已有方法、构造器、字段意义和默认值被冻结。后续采用新可选字段、独立可选接口和能力版本；不删除旧 v1/v2 适配。不得给 INonetExtension 添加必需成员，破坏已编译实现。运行 --extensions 回归会使用 artifacts/frozen-extension-v2 首次冻结的工作进程/程序集，不覆盖旧字节；另运行 --compatibility 验证 v1。
 
 实时采样不经过 JSON-RPC；SDK 4.4 新增独立的可信托管 PCM 音效接口和原生视图接口，详见 [UNIVERSAL_EXTENSIONS](UNIVERSAL_EXTENSIONS.md)。解码器、设备和播放时钟仍为宿主核心。数据 UI 不支持任意 XAML。桌宠可由浮层、图片、状态和播放器命令组成，但 OS 桌面注入不属于宿主权限。
+
+## 无独立页面的扩展（SDK 4.6）
+
+Contract v2 扩展可声明 `"hasPage": false`、`"pageEntry": ""`，并将 `ui.page-optional.v1` 放入 requiredCapabilities。省略 hasPage 时仍为 true，保留旧包行为；旧 Contract v1 不使用此字段关闭页面。无页面扩展仍可提供插槽、事件、流程和原生浮层，不生成侧栏页面按钮，直接导航也不会产生空白页。
+
+没有页面的包不需要 page.json；打包、检查、启用、同 ID 更新和卸载后重新接入均使用同一规则。仍须满足其他权限与运行形态约束。若没有导航贡献，不必申请 navigation 权限。配置表单仍由插件中心管理，不因省略业务页面而消失。
+
+示例清单片段：
+
+```json
+{
+  "type": "extension",
+  "contractVersion": 2,
+  "hasPage": false,
+  "pageEntry": "",
+  "requiredCapabilities": ["ui.page-optional.v1"]
+}
+```
+
+此片段不是完整安装清单，必须另行声明身份、运行形态、入口及所需权限。纯后台/浮层扩展不必创建无意义的空页面。

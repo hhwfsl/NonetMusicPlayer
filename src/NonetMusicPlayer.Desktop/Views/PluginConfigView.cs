@@ -73,8 +73,12 @@ public sealed class PluginConfigView : UserControl
                 foreach (var item in group) { var clone = item.Value!.DeepClone().AsObject(); clone.Remove("ui:group"); subset[item.Key] = clone; }
                 var section = Fields(subset, values, depth);
                 section.Margin = new(0, 8, 0, 0);
-                var grouped = Ui.Stack(Ui.RawText(group.Key, 18), section); grouped.Margin = new(0, panel.Children.Count == 0 ? 0 : 24, 0, 0);
-                panel.Children.Add(group.Any(item => item.Value?["ui:collapsed"]?.GetValue<bool>() == true) ? new Expander { Header = group.Key, Content = section } : grouped);
+                // 一个控件只能有一个视觉父级；先选择容器，再挂载内容，避免展开时重复挂载。
+                Control grouped = group.Any(item => item.Value?["ui:collapsed"]?.GetValue<bool>() == true)
+                    ? new Expander { Header = group.Key, Content = section, HorizontalAlignment = HorizontalAlignment.Stretch }
+                    : Ui.Stack(Ui.RawText(group.Key, 18), section);
+                grouped.Margin = new(0, panel.Children.Count == 0 ? 0 : 24, 0, 0);
+                panel.Children.Add(grouped);
             }
             return panel;
         }

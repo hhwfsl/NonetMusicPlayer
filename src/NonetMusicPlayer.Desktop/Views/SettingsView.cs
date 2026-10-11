@@ -43,14 +43,14 @@ public sealed class SettingsView : UserControl, IDisposable
         var backgroundButtons = new WrapPanel { Orientation = Avalonia.Layout.Orientation.Horizontal };
         var selectBackground = Ui.AsyncButton(L10n.T("Settings.ChooseBackgroundImage"), async () =>
         {
-            var files = await owner.OpenFilesAsync(L10n.T("Settings.ChooseBackgroundImage"), ["*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp"], false); if (files.Length == 0) return;
-            var stored = await CoverCropDialog.ShowBackground(owner, vm.Storage, files[0]); if (stored is null) return;
+            var files = await owner.OpenFilesAsync(L10n.T("Settings.ChooseBackgroundImage"), AppBackgroundService.MediaPatterns, false); if (files.Length == 0) return;
+            var stored = AppBackgroundService.IsDynamic(files[0]) ? await AppBackgroundService.ImportDynamicAsync(vm.Storage, files[0]) : await CoverCropDialog.ShowBackground(owner, vm.Storage, files[0]); if (stored is null) return;
             s.BackgroundImagePath = stored; Changed(); backgroundPath.Content = Ui.PathLink(L10n.T("Settings.BackgroundImage"), stored);
         }); selectBackground.Margin = new(0, 0, 8, 4); backgroundButtons.Children.Add(selectBackground);
         backgroundButtons.Children.Add(Ui.Button(L10n.T("Settings.RemoveBackgroundImage"), () => { s.BackgroundImagePath = null; Changed(); backgroundPath.Content = Ui.Text(L10n.T("Settings.NoBackgroundImage"), 12, true); }));
         var advancedAppearance = Ui.Stack(
             Ui.Row(L10n.T("Common.CornerRadius"), L10n.T("Common.AdjustRoundedCornersOnButtonsInputsAndSelectedItems"), Ui.Range(0, 22, s.ControlCornerRadius, v => { s.ControlCornerRadius = v; Changed(); }, " px")),
-            Ui.Row(L10n.T("Settings.BackgroundImage"), L10n.T("Settings.ChooseAnApplicationWideBackgroundImageUpToMB"), Ui.Stack(backgroundPath, backgroundButtons)),
+            Ui.Row(L10n.T("Settings.BackgroundImage"), L10n.T("Background.MediaHint"), Ui.Stack(backgroundPath, backgroundButtons)),
             Ui.Row(L10n.T("Settings.BackgroundOpacity35693E"), L10n.T("Settings.TheBackgroundCoversTheEntireWindowAdjustEachRegion"), Ui.Range(0, 100, s.BackgroundImageOpacity * 100, v => { s.BackgroundImageOpacity = v / 100; Changed(); }, "%")),
             Ui.Row(L10n.T("Settings.TitleBarOpacity"), L10n.T("Settings.OnlyChangesTheBackgroundOverlayTextAndButtonsRemain"), Ui.Range(0, 100, s.TitleBarOpacity * 100, v => { s.TitleBarOpacity = v / 100; Changed(); }, "%")),
             Ui.Row(L10n.T("Settings.SidebarOpacity"), L10n.T("Settings.AppliesWhenABackgroundImageIsEnabled"), Ui.Range(0, 100, s.NavigationOpacity * 100, v => { s.NavigationOpacity = v / 100; Changed(); }, "%")),
@@ -81,6 +81,10 @@ public sealed class SettingsView : UserControl, IDisposable
             Ui.Row(L10n.T("Common.ConfirmBeforeClosing"), L10n.T("Common.ShowAConfirmationBeforeClosing"), Ui.Toggle(s.ConfirmClose, v => { s.ConfirmClose = v; Changed(); })));
         ((StackPanel)playback.Child!).Children.Add(Ui.Row(L10n.T("Common.OptimizeMemoryWhenMinimized"), L10n.T("Settings.MemoryContinuity"), Ui.Toggle(s.OptimizeMemoryWhenMinimized, v => { s.OptimizeMemoryWhenMinimized = v; Changed(); })));
         ((StackPanel)playback.Child!).Children.Add(Ui.Row(L10n.T("Common.CloseButtonAction"), L10n.T("Common.KeepRunningInTheTrayExitFromItsMenu"), Ui.Choice([L10n.T("Common.HideToTray"), L10n.T("Common.ExitApplication4A67B7")], s.CloseToTray ? L10n.T("Common.HideToTray") : L10n.T("Common.ExitApplication4A67B7"), v => { s.CloseToTray = v == L10n.T("Common.HideToTray"); Changed(); })));
+        Avalonia.Controls.ToggleSwitch? startOnLogin = null;
+        startOnLogin = Ui.Toggle(s.StartOnLogin, value => { if (!vm.SetStartOnLogin(value)) startOnLogin!.IsChecked = s.StartOnLogin; });
+        startOnLogin.Name = "StartOnLoginToggle";
+        ((StackPanel)playback.Child!).Children.Add(Ui.Row(L10n.T("Startup.StartOnLogin"), L10n.T("Startup.Hint"), startOnLogin));
         if (OperatingSystem.IsWindows()) ((StackPanel)playback.Child!).Children.Add(Ui.Row(L10n.T("Playback.DefaultAudioPlayer"), L10n.T("Playback.RegisterAudioFormatsThenChooseTheDefaultAppIn"), Ui.AsyncButton(L10n.T("Playback.SetDefaultPlayer"), async () =>
         {
             if (!await PlayerDialog.Confirm(owner, L10n.T("Playback.RegisterAudioFileSupport"), L10n.T("Playback.AddThisAppToYourAudioFileHandlersAnd"), L10n.T("Common.RegisterAndOpenSettings"))) return;

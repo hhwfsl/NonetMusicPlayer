@@ -66,7 +66,7 @@ public sealed partial class PluginManager : IDisposable
         manifest.Validate();
         if (enabled && manifest.Type is "ui" or "lyrics" or "agent") ReadUiPage(manifest);
         if (enabled && manifest.Runtime == "managed" && !manifest.ManagedExecutionConsent) throw new InvalidOperationException(L10n.T("Extensions.ManagedWarning"));
-        if (enabled && manifest.Type == "extension") LoadExtensionPage(manifest);
+        if (enabled && manifest.Type == "extension" && manifest.HasPage) LoadExtensionPage(manifest);
         if (!enabled) StopExtension(manifest.Id);
         if (!enabled && _clients.Remove(manifest.Id, out var client)) { client.NotifyLifecycle(manifest, "lifecycle.disable"); client.Dispose(); }
         var previous = manifest.Enabled; manifest.Enabled = enabled;

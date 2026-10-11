@@ -171,6 +171,31 @@ public sealed partial class MainViewModel
         var playlist = new Playlist { Name = ValidName(name) }; State.Playlists.Add(playlist); Playlists.Add(playlist);
         Save(); ViewChanged?.Invoke(this, EventArgs.Empty); CompleteOperation("playlist.create", new System.Text.Json.Nodes.JsonObject { ["id"] = playlist.Id }); return playlist;
     }
+    /// <summary>每个选中目录独立建立歌单，复用既有导入、歌词匹配和去重流程。</summary>
+    public async Task<IReadOnlyList<Playlist>> CreatePlaylistsFromFoldersAsync(IEnumerable<string> paths)
+    {
+        if (IsBusy || _creatingFolderPlaylists) { ReportWarning(L10n.T("Common.AnImportIsInProgressWaitForItTo")); return []; }
+        var folders = paths.Select(Path.GetFullPath).Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToArray();
+        if (folders.Any(path => !Directory.Exists(path))) throw new DirectoryNotFoundException(L10n.T("Playlists.FolderMissing"));
+        var created = new List<Playlist>(); _cancelFolderPlaylists = false; _creatingFolderPlaylists = true;
+        try
+        {
+            // 保持整批目录事务的重入保护，覆盖扫描结束后异步歌词扩展仍在运行的阶段。
+            foreach (var folder in folders)
+            {
+                if (_cancelFolderPlaylists || _disposed) break;
+                var name = Path.GetFileName(Path.TrimEndingDirectorySeparator(folder));
+                if (string.IsNullOrWhiteSpace(name)) name = folder;
+                if (name.Length > 80) { name = name[..79] + "…"; ReportWarning(L10n.T("Playlists.FolderNameShortened")); }
+                var playlist = CreatePlaylist(name); created.Add(playlist);
+                await ImportAsync([folder], playlist: playlist);
+            }
+            StatusText = L10n.Format("Playlists.FolderPlaylistsCreated", created.Count); return created;
+        }
+        finally { _creatingFolderPlaylists = false; }
+    }
+    private bool _cancelFolderPlaylists;
+    private bool _creatingFolderPlaylists;
     public void RenamePlaylist(Playlist playlist, string name)
     {
         if (playlist.IsSystem) { ReportWarning(L10n.T("Playlists.LikedSongsCannotBeRenamedOrDeletedItsDescription")); return; }

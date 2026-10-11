@@ -146,3 +146,11 @@ This is prerelease software. Keep backups and avoid untrusted native process plu
 Back to Top is an icon button after Clear Search in Settings and after Batch Selection in track, recent, album and artist lists. It changes only the viewport, not playback or selected tracks.
 
 Plugin versions are checked in the background on startup. New appears beside an available update; click to review readonly notes and confirm. Updates use the same cancellable toast workflow, preserve ID/configuration, and require matching-platform assets. The folder button opens the installed plugin directory.
+
+## Background media, login startup and folder playlists
+
+The background option in Settings → Appearance accepts still images, GIF, animated WebP and local video (MP4, M4V, MOV, WebM, MKV, AVI). Video is always silent. Still images support cropping and a 20 MB file limit; animated media has a 50 MB limit and uses Fill or Fit. All formats share opacity controls and preserve the original file. Dynamic backgrounds pause when minimized or hidden to the tray, then restart their loop without affecting music.
+
+Start at Login in Settings → Playback is off by default. Enabling it registers Nonet for the current user's desktop login. Disabling it or resetting settings removes that entry. System startup management and security policies remain effective.
+
+Use the sidebar playlist add button, then Create from Folders, to select multiple folders. Each folder becomes a separate playlist named after that folder; supported audio is imported recursively with covers and matching local lyrics. Empty folders create empty playlists. Canceling the picker creates nothing; canceling an active import retains playlists already created. Source audio is never deleted.

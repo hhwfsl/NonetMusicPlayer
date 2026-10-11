@@ -6,7 +6,9 @@ internal static class Program
         try
         {
             var output = args.FirstOrDefault() ?? "artifacts/plugin-ui-checks";
+            if (args.Contains("--media-folders")) { MediaAndFolderChecks.Run(output); return 0; }
             if (Array.IndexOf(args, "--inspect-extension") is var packageIndex && packageIndex >= 0) { ExtensionChecks.RenderPackage(args[packageIndex + 1], output, Array.IndexOf(args, "--invoke") is var actionIndex && actionIndex >= 0 ? args[actionIndex + 1] : null); return 0; }
+            if (args.Contains("--page-less")) { PageLessExtensionChecks.Run(output); return 0; }
             if (args.Contains("--composer")) { ComposerExtensionChecks.Run(output); return 0; }
             if (args.Contains("--universal")) { UniversalExtensionChecks.Run(output); return 0; }
             if (args.Contains("--workspace")) { WorkspaceExtensionChecks.Run(output); return 0; }

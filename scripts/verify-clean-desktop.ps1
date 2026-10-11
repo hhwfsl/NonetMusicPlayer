@@ -27,6 +27,10 @@ foreach ($taskRid in @('win-x64','osx-x64','linux-x64')) {
         $taskLicense = if ($taskRid -eq 'osx-x64') { 'Contents/MacOS/LICENSE' } else { 'LICENSE' }
         if (-not $taskSeen.Contains($taskExe) -or -not $taskSeen.Contains($taskLicense)) { throw '缺少 Nonet 可执行文件或 GPL 许可证。' }
         if ($taskRid -ne 'win-x64' -and ($taskZip.GetEntry($taskExe).ExternalAttributes -shr 16 -band 0x1FF) -ne 0x1ED) { throw '缺少 POSIX 可执行权限。' }
+        $taskDecoderPrefix = if ($taskRid -eq 'osx-x64') { 'Contents/MacOS/VideoDecoder/' } else { 'VideoDecoder/' }
+        $taskDecoderFile = $taskDecoderPrefix + $(if ($taskRid -eq 'win-x64') { 'ffmpeg.exe' } else { 'ffmpeg' })
+        if (-not $taskSeen.Contains($taskDecoderFile) -or -not $taskSeen.Contains($taskDecoderPrefix + 'LICENSE.txt') -or -not $taskSeen.Contains($taskDecoderPrefix + 'NOTICE.txt')) { throw '缺少背景解码器或许可文件。' }
+        if ($taskRid -ne 'win-x64' -and ($taskZip.GetEntry($taskDecoderFile).ExternalAttributes -shr 16 -band 0x1FF) -ne 0x1ED) { throw '背景解码器缺少 POSIX 可执行权限。' }
         $taskReader = [IO.StreamReader]::new($taskZip.GetEntry($taskLicense).Open())
         try { if ($taskReader.ReadToEnd() -notmatch 'Version 3, 29 June 2007') { throw 'GPL 许可内容不完整。' } } finally { $taskReader.Dispose() }
         Write-Host "PASS clean $taskRid : $($taskSeen.Count) required files, $([math]::Round((Get-Item -LiteralPath $taskPath).Length / 1MB,2)) MiB, full SHA-256 and executable permissions"
