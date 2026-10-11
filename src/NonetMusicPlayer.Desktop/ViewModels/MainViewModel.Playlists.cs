@@ -15,7 +15,7 @@ public sealed partial class MainViewModel
         if (source == "favorites") source = "playlist:" + Playlist.LikedId;
         if (source?.StartsWith("playlist:", StringComparison.Ordinal) == true)
             return State.Playlists.Any(p => p.Id == source[9..]) ? source : "library";
-        return source is "library" or "songs" or "history" or "temporary" || source?.StartsWith("album:", StringComparison.Ordinal) == true || source?.StartsWith("artist:", StringComparison.Ordinal) == true ? source! : "library";
+        return source is "library" or "songs" or "history" or "temporary" or "cloud-search" || source?.StartsWith("album:", StringComparison.Ordinal) == true || source?.StartsWith("artist:", StringComparison.Ordinal) == true ? source! : "library";
     }
     private string TitleForPage(string page) => page switch
     {
@@ -25,6 +25,7 @@ public sealed partial class MainViewModel
     };
     private IEnumerable<TrackItem> SourceTracks(string page)
     {
+        if (page == "cloud-search") return _cloudSearchTracks.Where(t => Plugins.MusicSearchSources.Any(p => p.Id == t.ProviderId));
         if (page == "temporary") return _temporaryTracks;
         var providers = Plugins.Installed.Where(p => p.Enabled).Select(p => p.Id).ToHashSet(StringComparer.Ordinal);
         bool Available(TrackItem t) => t.ProviderId is null || providers.Contains(t.ProviderId);

@@ -10,6 +10,7 @@ public sealed partial class MainViewModel
         if (page == "playlist:" + Playlist.LikedId || page == "favorites") return L10n.T("Playlists.LikedSongs");
         if (page == "library") return L10n.T("Home.Music");
         if (page == "songs") return L10n.T("Home.Songs");
+        if (page == "cloud-search") return L10n.Format("MusicSearch.Results", Plugins.MusicSearchSources.FirstOrDefault(p => p.Id == _musicSearchSource)?.MusicSearch?.Label ?? L10n.T("MusicSearch.Cloud"));
         if (page == "terminal") return L10n.T("Terminal.Title");
         if (page.StartsWith("plugin:", StringComparison.Ordinal)) return Plugins.Installed.FirstOrDefault(p => p.Id == page[7..])?.NavigationLabel ?? L10n.T("Plugins.PluginCenter");
         return page is "history" or "albums" or "artists" or "lyrics" or "settings" or "plugins" or "statistics"

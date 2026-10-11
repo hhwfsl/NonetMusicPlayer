@@ -49,9 +49,10 @@ public sealed class ProviderClient : IDisposable
             }
             using var document = JsonDocument.Parse(line.ToString()); var response = document.RootElement;
             if (!response.TryGetProperty("jsonrpc", out var version) || version.GetString() != "2.0" || response.GetProperty("id").GetInt64() != id) throw new InvalidDataException(Localization.LocalizationCatalog.Get("Plugins.InvalidRpc"));
-            if (response.TryGetProperty("error", out _)) throw new IOException(Localization.LocalizationCatalog.Get("Plugins.ProviderFailed"));
+            if (response.TryGetProperty("error", out _)) throw new ProviderRemoteException(Localization.LocalizationCatalog.Get("Plugins.ProviderFailed"));
             return response.GetProperty("result").Clone();
         }
+        catch (ProviderRemoteException) { throw; } // 有效 RPC 错误不破坏消息边界，账号/权限错误后允许再次操作。
         catch { Dispose(); throw; }
         finally { _rpcGate.Release(); }
     }
@@ -96,3 +97,5 @@ public sealed class ProviderClient : IDisposable
         catch (Exception error) { Diagnostics.AppLog.Warning("Plugins", "Plugin lifecycle callback failed: " + method, error); }
     }
 }
+/// <summary>可恢复的插件业务拒绝，与进程断开或协议损坏区分。</summary>
+public sealed class ProviderRemoteException(string message) : IOException(message);

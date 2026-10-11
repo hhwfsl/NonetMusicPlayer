@@ -16,6 +16,7 @@ public static class CoreJson
 [JsonSerializable(typeof(PluginManifest))]
 [JsonSerializable(typeof(List<PluginManifest>))]
 [JsonSerializable(typeof(ProviderCatalog))]
+[JsonSerializable(typeof(MusicSearchPage))]
 [JsonSerializable(typeof(PlaybackSource))]
 [JsonSerializable(typeof(RpcRequest))]
 [JsonSerializable(typeof(HeadlessPlayerState))]

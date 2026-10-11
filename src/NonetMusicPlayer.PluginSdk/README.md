@@ -1,6 +1,8 @@
 # NonetMusicPlayer.PluginSdk
 
-SDK 3.3.0，清单 Contract v1 / 页面 Schema v1。该 SDK 由 Nonet 主项目维护，只依赖 .NET 10 BCL，无桌面 UI、音频和外部 NuGet 包依赖。源码采用 GPL-3.0-only。
+SDK 4.7.0，支持清单 Contract v1/v2、页面 Schema v1/v2。该 SDK 由 Nonet 主项目维护，只依赖 .NET 10 BCL，无桌面 UI、音频和外部 NuGet 包依赖。源码采用 GPL-3.0-only。既有程序集身份仍为 4.0.0.0，新增接口均为可选。
+
+搜索型音源可声明 `PluginManifest.MusicSearch`，通过 `MusicSearchPage` / `ProviderTrack` 提供分页结果。`MusicSearchContract` 是共同校验源，`MusicSourceJson` 提供 Native AOT 兼容的序列化上下文。具体协议见主项目 `docs/UNIVERSAL_EXTENSIONS.md`。
 
 `PluginManifest`、`PluginPageContract`、`PluginConfigSchema`、`PluginPathPolicy`、`PluginPackageInspector` 是宿主与开发工具使用的同一套校验。为兼容既有调用，公开类型命名空间仍是 `NonetMusicPlayer.Core.Plugins`，实际程序集已独立为 `NonetMusicPlayer.PluginSdk`。
 

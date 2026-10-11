@@ -2,7 +2,7 @@
 
 本项目由 AI 完成，尚未经过人工代码 review。测试仅在 Windows 环境进行；macOS 和 Linux 只生成了交叉构建产物，未进行对应系统的实机测试。当前为预发布版本，使用或继续开发前请自行审查代码并备份数据。
 
-软件名称：**Nonet**。当前桌面版与 CLI 源码版本：**0.4.0-beta.18**。公开仓库仅包含桌面端、独立 CLI、共享核心、插件 SDK、主项目打包器和必要测试；不包含具体插件、移动端源码或构建产物。插件模板单独发布在 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)。
+软件名称：**Nonet**。当前桌面版与 CLI 源码版本：**0.4.0-beta.19**。公开仓库仅包含桌面端、独立 CLI、共享核心、插件 SDK、主项目打包器和必要测试；不包含具体插件、移动端源码或构建产物。插件模板单独发布在 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)。
 
 已公开桌面版本见 [Releases](https://github.com/hhwfsl/NonetMusicPlayer/releases)。源码版本可能高于公开版本；本地构建不等同于远程发布。
 
@@ -17,7 +17,7 @@
 | 媒体标签 | TagLibSharp 2.3.0 |
 | 桌面持久化 | SQLite，Microsoft.Data.Sqlite 10.0.12 |
 | CLI 与共用 JSON | System.Text.Json，持久化模型使用 Source Generation |
-| 插件开发 SDK | NonetMusicPlayer.PluginSdk 4.6.0，Contract v1/v2、页面 Schema v1/v2 |
+| 插件开发 SDK | NonetMusicPlayer.PluginSdk 4.7.0，Contract v1/v2、页面 Schema v1/v2 |
 
 CLI 不引用 Avalonia，通过系统终端运行。插件 SDK 无图形、音频或外部 NuGet 依赖。实际依赖以各项目的 `.csproj` 为准；第三方许可见 [docs/licenses](docs/licenses)。
 

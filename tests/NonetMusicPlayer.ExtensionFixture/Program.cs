@@ -31,6 +31,18 @@ public sealed class BaselineExtension : INonetExtension
     public ValueTask<ExtensionFrame> InitializeAsync(ExtensionInitialization initialization, CancellationToken cancellationToken) { _storage = initialization.StorageDirectory; return ValueTask.FromResult(_frame); }
     public ValueTask<ExtensionFrame> InvokeAsync(ExtensionInvocation invocation, CancellationToken cancellationToken)
     {
+        if (invocation.Action == "service:media-source")
+        {
+            var track = new ProviderTrack { Id = "remote-1", Title = "Cloud fixture", Artist = "Fixture artist", Album = "Fixture album", DurationSeconds = 180 };
+            _frame.State["serviceResult"] = invocation.Values["method"]?.GetValue<string>() switch
+            {
+                "music.search" => JsonSerializer.SerializeToNode(new MusicSearchPage { Tracks = [track], NextCursor = "next", Total = 2 }, MusicSourceJson.Default.MusicSearchPage),
+                "music.describe" => JsonSerializer.SerializeToNode(track, MusicSourceJson.Default.ProviderTrack),
+                "catalog.list" => JsonSerializer.SerializeToNode(new ProviderCatalog { Tracks = [track] }, MusicSourceJson.Default.ProviderCatalog),
+                _ => new JsonObject()
+            };
+            _frame.Revision++; return ValueTask.FromResult(_frame);
+        }
         _frame.Revision++; _frame.State["count"] = (_frame.State["count"]?.GetValue<int>() ?? 0) + 1;
         if (invocation.Action == "collapse") _frame.State["columns"] = "0,*";
         if (invocation.Action == "expand") _frame.State["columns"] = "180,*";

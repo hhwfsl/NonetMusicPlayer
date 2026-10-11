@@ -1,0 +1,12 @@
+{
+  "MusicSearch.Source": { "zh-CN": "搜索来源", "en-US": "Search source", "ja-JP": "検索元" },
+  "MusicSearch.Placeholder": { "zh-CN": "搜索歌曲、艺术家", "en-US": "Search tracks and artists", "ja-JP": "曲・アーティストを検索" },
+  "MusicSearch.Search": { "zh-CN": "搜索", "en-US": "Search", "ja-JP": "検索" },
+  "MusicSearch.Results": { "zh-CN": "{0} · 搜索结果", "en-US": "{0} · Search results", "ja-JP": "{0} · 検索結果" },
+  "MusicSearch.NextPage": { "zh-CN": "下一页搜索结果", "en-US": "Next results page", "ja-JP": "次の検索結果" },
+  "MusicSearch.QueryTooLong": { "zh-CN": "搜索内容不能超过 300 个字符。", "en-US": "Search text must not exceed 300 characters.", "ja-JP": "検索語は300文字以内にしてください。" },
+  "MusicSearch.Failed": { "zh-CN": "音乐搜索失败，请检查音源配置与网络连接。", "en-US": "Music search failed. Check the source configuration and connection.", "ja-JP": "検索に失敗しました。音源設定と接続を確認してください。" },
+  "MusicSearch.Empty": { "zh-CN": "未找到歌曲。", "en-US": "No tracks found.", "ja-JP": "曲が見つかりません。" },
+  "MusicSearch.ImportConfirm": { "zh-CN": "从 {0} 导入「{1}」为新的云端歌曲歌单？不会下载音频文件或修改云端歌单。", "en-US": "Import “{1}” from {0} as a new playlist of cloud tracks? Audio files will not be downloaded and the remote playlist will not be modified.", "ja-JP": "{0} の「{1}」をクラウド曲の新しいプレイリストとして取り込みますか？音声の保存や元のプレイリストの変更は行いません。" },
+  "MusicSearch.Cloud": { "zh-CN": "云端", "en-US": "Cloud", "ja-JP": "クラウド" }
+}

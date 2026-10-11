@@ -1,4 +1,6 @@
-# 通用扩展层 v2 / SDK 4.6
+# 通用扩展层 v2 / SDK 4.7
+
+SDK 4.7 / Nonet 0.4.0-beta.19 新增可选 `media.search.v1` 和 `media.import.v1`。搜索型音源声明 `musicSearch` 并提供 `media-source` 服务，不在宿主加入供应商逻辑。搜索结果不自动加入音乐库；用户加入歌单时保存稳定插件 ID 和歌曲 ID，播放时重新解析。端点、分页和权限规范见 [通用接口参考](UNIVERSAL_EXTENSIONS.md#音乐搜索与目录导入sdk-47)。
 
 新版插件优先使用通用扩展，而不是请求宿主新增某个业务部件。最低宿主为 Nonet 0.4.0-beta.8。原 Contract v1 / 页面 Schema 1 / 旧 RPC 保留；LDDC 等旧插件通过原能力适配层运行，不按宿主发行版本淘汰插件。
 

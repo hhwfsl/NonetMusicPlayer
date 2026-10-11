@@ -102,10 +102,11 @@ public sealed partial class ExtensionSession : IDisposable
             if (!_disposed && _pendingEvents.Values.FirstOrDefault() is { } pending) _ = EventAsync(pending);
         }
     }
-    private async Task<ExtensionFrame> CallAsync(string method, Dictionary<string, string>? args = null)
+    private async Task<ExtensionFrame> CallAsync(string method, Dictionary<string, string>? args = null, CancellationToken token = default, TimeSpan? timeout = null)
         {
+        using var combined = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token, token);
         var instance = _declarative ?? _managed?.Instance;
-        if (instance is null) return (await _process!.CallAsync(method, args, _lifetime.Token)).Deserialize(ExtensionJson.Default.ExtensionFrame) ?? throw new InvalidDataException("Empty frame.");
+        if (instance is null) return (await _process!.CallAsync(method, args, combined.Token, timeout)).Deserialize(ExtensionJson.Default.ExtensionFrame) ?? throw new InvalidDataException("Empty frame.");
         return await Task.Run(async () => method switch
         {
             "extension.invoke" => await instance.InvokeAsync(JsonSerializer.Deserialize(args!["invocation"], ExtensionJson.Default.ExtensionInvocation)!, _lifetime.Token),

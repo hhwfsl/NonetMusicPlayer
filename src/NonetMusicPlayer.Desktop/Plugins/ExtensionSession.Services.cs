@@ -46,6 +46,17 @@ public sealed partial class ExtensionSession
         var args = request.Arguments;
         switch (request.Service)
         {
+            case "media": {
+                if (!_gesture || !Manifest.Permissions.Contains("library-write") || !PluginManager.HasMediaSource(Manifest)
+                    || args["operation"]?.GetValue<string>() != "import-catalog") throw new InvalidDataException("Interactive media import permission required.");
+                var catalogId = args["catalogId"]?.GetValue<string>() ?? ""; var playlistName = args["name"]?.GetValue<string>() ?? Manifest.Name;
+                if (playlistName.Length is 0 or > 200 || playlistName.Any(char.IsControl)) throw new InvalidDataException("Invalid playlist name.");
+                if (!await ConfirmExtensionAsync("media.import", true, L10n.Format("MusicSearch.ImportConfirm", Manifest.Name, playlistName))) return new() { ["success"] = false };
+                var imported = await _manager.ReadMusicCatalogAsync(Manifest, catalogId, _lifetime.Token);
+                if (imported.Count == 0) return new() { ["success"] = false, ["message"] = L10n.T("MusicSearch.Empty") };
+                var playlist = _manager.ExtensionViewModel.CreatePlaylist(playlistName); _manager.ExtensionViewModel.AddToPlaylist(playlist, imported);
+                return new() { ["success"] = true, ["playlistId"] = playlist.Id, ["count"] = imported.Count };
+            }
             case "artwork": return await ArtworkServiceAsync(args);
             case "maintenance":
                 var action = args["operation"]?.GetValue<string>() ?? "";
@@ -166,12 +177,14 @@ public sealed partial class ExtensionSession
         if (!reentrant) { await StartAsync(); await _gate.WaitAsync(token); }
         try
         {
-            var frame = await CallAsync("extension.invoke", new() { ["invocation"] = JsonSerializer.Serialize(new ExtensionInvocation("service:" + name, arguments), ExtensionJson.Default.ExtensionInvocation) });
+            // 音源详情可能组合鉴权、图片和歌词请求，使用有界长时限，不改变旧普通动作的默认时限。
+            var frame = await CallAsync("extension.invoke", new() { ["invocation"] = JsonSerializer.Serialize(new ExtensionInvocation("service:" + name, arguments), ExtensionJson.Default.ExtensionInvocation) }, token, name == "media-source" ? TimeSpan.FromSeconds(120) : null);
             ExtensionContract.ValidateFrame(frame);
             if (frame.Requests.Count > 0) throw new InvalidDataException("Media service results cannot recursively request host transactions.");
             using var document = JsonDocument.Parse(frame.State["serviceResult"]?.ToJsonString() ?? "{}");
             return document.RootElement.Clone();
         }
+        catch { if (_process?.IsDisposed == true) Dispose(); throw; }
         finally { if (!reentrant) _gate.Release(); }
     }
     private async Task<JsonObject> RequestNativeServiceAsync(ExtensionHostRequest request, bool userGesture, CancellationToken token)

@@ -70,6 +70,8 @@ public sealed partial class MainWindow : Window
         if (_vm is not null) { DetachPlayerCommands(); _vm.Plugins.DetachHost(this); _vm.ViewChanged -= ViewChanged; _vm.NavigationRequested -= ResetSongPagePosition; _vm.SettingsChanged -= SettingsChanged; _vm.LocatePlayingTrack -= LocatePlayingTrack; _vm.UserNotification -= UserNotification; }
         _desktopLyrics?.Dispose(); _taskbar?.Dispose();
         _vm = DataContext as MainViewModel; if (_vm is null) return;
+        _vm.MusicSearchChanged += MusicSearchStateChanged;
+        Closed += (_, _) => _vm.MusicSearchChanged -= MusicSearchStateChanged;
         _vm.ViewChanged += ViewChanged; _vm.SettingsChanged += SettingsChanged; Workspace.Profile = _vm.Settings;
         _vm.NavigationRequested += ResetSongPagePosition;
         _vm.LocatePlayingTrack += LocatePlayingTrack; _vm.UserNotification += UserNotification;
@@ -87,7 +89,7 @@ public sealed partial class MainWindow : Window
         { BuildPlaylists(); BuildPluginNavigation(); return; }
         ShowPage();
     }
-    private void SettingsChanged(object? sender, EventArgs e) { Terminal?.Configure(GetTerminalOptions()); ApplyAppearance(); BuildPluginNavigation(); BuildExtensionSlots(); }
+    private void SettingsChanged(object? sender, EventArgs e) { Terminal?.Configure(GetTerminalOptions()); ApplyAppearance(); BuildPluginNavigation(); BuildExtensionSlots(); BuildMusicSearchHeader(); }
     private void ApplyAppearance()
     {
         if (_vm is null || _applyingAppearance) return; var s = _vm.Settings; _applyingAppearance = true;
@@ -193,6 +195,7 @@ public sealed partial class MainWindow : Window
         LibraryActions.IsVisible = !alternate; SearchContainer.IsVisible = !alternate; TrackCountLabel.IsVisible = !alternate;
         UserManualButton.IsVisible = _vm.Page == "settings";
         PageBackToTop.IsVisible = _vm.Page is "library" or "plugins" or "statistics";
+        BuildMusicSearchHeader();
         BuildPlaylistHeader(); UpdateSelectionToolbar();
         if (_vm.Page.StartsWith("plugin:") && _vm.Plugins.Installed.FirstOrDefault(p => "plugin:" + p.Id == _vm.Page && p.Type == "extension") is { } extension)
             PageHeading.IsVisible = !_vm.Plugins.LoadExtensionPage(extension).OwnsHeader;

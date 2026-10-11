@@ -1,4 +1,23 @@
-# 通用扩展接口参考（SDK 4.6）
+# 通用扩展接口参考（SDK 4.7）
+
+## 音乐搜索与目录导入（SDK 4.7）
+
+仅需搜索的音源可继续使用 Contract v1 provider；需要页面/导入交互的音源使用 Contract v2 extension，声明 `providedServices: ["media-source"]`。两者均声明可选 `musicSearch: {"label":"音源名","pageSize":30}`、`network` 权限。v2 需要 `process` 或已确认的托管模式，按需声明 `media.search.v1` / `media.import.v1`。旧包未声明此字段时不增加搜索项、不请求新方法。
+
+v1 直接使用同名 RPC；v2 使用 `extension.invoke`，动作 `service:media-source`，在 Values 传入 method 及以下字符串参数。返回 `ExtensionFrame.State.serviceResult`，不能在媒体查询帧附带递归宿主事务。
+
+| method | 参数 | 返回 |
+| --- | --- | --- |
+| `music.search` | query、cursor、limit | `MusicSearchPage`：tracks、nextCursor、可选 total/message |
+| `music.describe` | trackId | `ProviderTrack`，可选有界 CoverBase64 / Lyrics |
+| `catalog.list` | catalogId、cursor | `ProviderCatalog`；省略 catalogId 保持旧目录语义 |
+| `playback.resolve` | trackId | 既有 `PlaybackSource`，kind 为 loopback-http |
+
+query 为 1–300 字符；每页 1–100 首；游标最多 512 字符；歌曲 ID 最多 300 字符，标题/艺术家/专辑最多 1000 字符。SDK 共同验证元数据、重复 ID、有限时长和大小。音频 URL 只保留在内存，不能作为歌单永久身份。宿主仅接受回环 HTTP 播放地址，音源应实现增量流式 Range 代理，按其服务器协议管理鉴权与短时地址。
+
+v2 插件的用户动作可请求 `media` 服务：`{"operation":"import-catalog","catalogId":"稳定目录ID","name":"歌单名"}`。需声明 `library-write`，且必须来自用户手势并遵循宿主确认。宿主只请求发起插件自己的媒体服务，按游标校验并读取整个目录，最多 50000 首；全部成功后才一次性建立歌单。拒绝、重复游标、网络失败不建立半个歌单。不会修改远程歌单或下载音频。
+
+搜索结果属于临时集合，可播放、收藏和加入普通歌单。加入后保存稳定 `ProviderId` / `ProviderTrackId`；卸载或禁用音源不会删除歌单引用，重新启用可继续使用。封面/歌词详情在播放时按需加载，尊重用户取消歌词关联及已有手动歌词。
 
 ## 设计边界
 

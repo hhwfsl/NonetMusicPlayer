@@ -299,6 +299,7 @@ public sealed class AppStorage
 [JsonSerializable(typeof(List<PluginManifest>))]
 [JsonSerializable(typeof(PluginManifest))]
 [JsonSerializable(typeof(ProviderCatalog))]
+[JsonSerializable(typeof(MusicSearchPage))]
 [JsonSerializable(typeof(PlaybackSource))]
 [JsonSerializable(typeof(RpcRequest))]
 [JsonSerializable(typeof(Dictionary<string, string>))]

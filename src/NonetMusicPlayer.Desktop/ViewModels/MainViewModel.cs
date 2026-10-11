@@ -442,6 +442,11 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         try
         {
             var tracks = await Plugins.LoadCatalogAsync(plugin, Lyrics); if (_disposed) return;
+            if (plugin.MusicSearch is not null)
+            {
+                // 搜索型音源的已收藏曲目不属于刷新目录快照，不能因空目录删除用户的云端引用。
+                Save(); ApplyFilter(); ViewChanged?.Invoke(this, EventArgs.Empty); StatusText = L10n.Format("Common.SourceUpdatedSongs", tracks.Count); return;
+            }
             var favoriteIds = LikedPlaylist.TrackIds.ToHashSet();
             State.Tracks.RemoveAll(t => t.ProviderId == plugin.Id); foreach (var track in tracks) track.IsFavorite = favoriteIds.Contains(track.Id);
             State.Tracks.InsertRange(0, tracks); ObserveTracks(); RefreshSourceQueue();

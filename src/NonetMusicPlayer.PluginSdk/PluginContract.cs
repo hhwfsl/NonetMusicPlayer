@@ -37,6 +37,8 @@ public sealed class PluginManifest
     /// <summary>可选、有限时的流程决策；只声明需要的钩子，未声明时没有开销。</summary>
     public List<string> Hooks { get; set; } = [];
     public List<string> ProvidedServices { get; set; } = [];
+    /// <summary>可选注册音乐主页搜索来源；来源身份始终使用插件的稳定 ID。</summary>
+    public MusicSearchSource? MusicSearch { get; set; }
     public List<ExtensionContribution> Contributions { get; set; } = [];
     public bool Enabled { get; set; }
     public string Configuration { get; set; } = "{}";
@@ -52,6 +54,10 @@ public sealed class PluginManifest
     {
         Author = string.IsNullOrWhiteSpace(Author) ? "Author" : Author.Trim();
         Hooks ??= []; ProvidedServices ??= []; RequiredCapabilities ??= []; Events ??= []; Contributions ??= []; Permissions ??= []; EntryPoints ??= []; Tokens ??= []; Widgets ??= []; MenuContributions ??= []; Configuration ??= "{}";
+        if (MusicSearch is { } search && (string.IsNullOrWhiteSpace(search.Label) || search.Label.Length > 100 || search.Label.Any(char.IsControl)
+            || search.PageSize is < 1 or > 100 || !Permissions.Contains("network")
+            || !(Type == "provider" || Type == "extension" && ProvidedServices.Contains("media-source"))))
+            throw new InvalidDataException("Music search requires a declared media source and network permission.");
         LifecycleMethods ??= []; NavigationImage ??= "";
         if (NavigationImage.Length > 0) PluginPathPolicy.ValidateRelativePath(NavigationImage);
         foreach (var overlay in Contributions.Where(c => c.Overlay is not null).Select(c => c.Overlay!))

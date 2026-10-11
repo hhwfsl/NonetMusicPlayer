@@ -259,7 +259,7 @@
                                     <Grid Margin="0,0,0,12" RowDefinitions="Auto,Auto,Auto">
                                         <Grid
                                             x:Name="PageHeading"
-                                            ColumnDefinitions="*,Auto"
+                                            ColumnDefinitions="*,Auto,Auto"
                                             RowDefinitions="Auto,Auto">
                                             <StackPanel
                                                 x:Name="PageHeadingLabel"
@@ -275,7 +275,8 @@
                                                     Foreground="{DynamicResource TextSecondaryBrush}"
                                                     Text="{Binding TrackCountText}" />
                                             </StackPanel>
-                                            <Button x:Name="PageBackToTop" Grid.Column="1" IsVisible="False"
+                                            <ContentControl x:Name="MusicSearchHeader" Grid.Column="1" IsVisible="False" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                            <Button x:Name="PageBackToTop" Grid.Column="2" IsVisible="False"
                                                     Width="44" Height="44" Classes="transport" Click="PageBackToTop_Click"
                                                     AutomationProperties.Name="{ui:Loc Key='Common.BackToTop'}"
                                                     ToolTip.Tip="{ui:Loc Key='Common.BackToTop'}">
@@ -283,7 +284,7 @@
                                             </Button>
                                             <Button
                                                 x:Name="UserManualButton"
-                                                Grid.Column="1"
+                                                Grid.Column="2"
                                                 Click="UserManual_Click"
                                                 IsVisible="False">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -563,15 +564,12 @@
                                                                     <Image Source="{Binding Artwork}" Stretch="UniformToFill" />
                                                                 </Grid>
                                                             </Border>
-                                                            <TextBlock
-                                                                Grid.Column="3"
-                                                                Margin="0,0,12,0"
-                                                                VerticalAlignment="Center"
-                                                                Classes="track-title"
-                                                                FontWeight="Medium"
-                                                                Text="{Binding Title}"
-                                                                TextTrimming="CharacterEllipsis"
-                                                                ToolTip.Tip="{Binding Title}" />
+                                                            <Grid Grid.Column="3" ColumnDefinitions="*,Auto" Margin="0,0,12,0" VerticalAlignment="Center">
+                                                                <TextBlock Classes="track-title" FontWeight="Medium" Text="{Binding Title}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}" VerticalAlignment="Center" />
+                                                                <Border Grid.Column="1" IsVisible="{Binding IsCloud}" CornerRadius="4" Padding="5,2" Margin="8,0,0,0" Background="{DynamicResource SurfaceRaisedBrush}">
+                                                                    <TextBlock Text="{Binding SourceText}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                                </Border>
+                                                            </Grid>
                                                             <TextBlock
                                                                 Grid.Column="4"
                                                                 Margin="0,0,12,0"
