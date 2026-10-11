@@ -44,13 +44,13 @@ public sealed class SettingsView : UserControl, IDisposable
         var selectBackground = Ui.AsyncButton(L10n.T("Settings.ChooseBackgroundImage"), async () =>
         {
             var files = await owner.OpenFilesAsync(L10n.T("Settings.ChooseBackgroundImage"), AppBackgroundService.MediaPatterns, false); if (files.Length == 0) return;
-            var stored = AppBackgroundService.IsDynamic(files[0]) ? await AppBackgroundService.ImportDynamicAsync(vm.Storage, files[0]) : await CoverCropDialog.ShowBackground(owner, vm.Storage, files[0]); if (stored is null) return;
+            var stored = await CoverCropDialog.ShowBackground(owner, vm.Storage, files[0]); if (stored is null) return;
             s.BackgroundImagePath = stored; Changed(); backgroundPath.Content = Ui.PathLink(L10n.T("Settings.BackgroundImage"), stored);
         }); selectBackground.Margin = new(0, 0, 8, 4); backgroundButtons.Children.Add(selectBackground);
         backgroundButtons.Children.Add(Ui.Button(L10n.T("Settings.RemoveBackgroundImage"), () => { s.BackgroundImagePath = null; Changed(); backgroundPath.Content = Ui.Text(L10n.T("Settings.NoBackgroundImage"), 12, true); }));
         var advancedAppearance = Ui.Stack(
             Ui.Row(L10n.T("Common.CornerRadius"), L10n.T("Common.AdjustRoundedCornersOnButtonsInputsAndSelectedItems"), Ui.Range(0, 22, s.ControlCornerRadius, v => { s.ControlCornerRadius = v; Changed(); }, " px")),
-            Ui.Row(L10n.T("Settings.BackgroundImage"), L10n.T("Background.MediaHint"), Ui.Stack(backgroundPath, backgroundButtons)),
+            Ui.Row(L10n.T("Settings.BackgroundImage"), L10n.T("Background.StaticHint"), Ui.Stack(backgroundPath, backgroundButtons)),
             Ui.Row(L10n.T("Settings.BackgroundOpacity35693E"), L10n.T("Settings.TheBackgroundCoversTheEntireWindowAdjustEachRegion"), Ui.Range(0, 100, s.BackgroundImageOpacity * 100, v => { s.BackgroundImageOpacity = v / 100; Changed(); }, "%")),
             Ui.Row(L10n.T("Settings.TitleBarOpacity"), L10n.T("Settings.OnlyChangesTheBackgroundOverlayTextAndButtonsRemain"), Ui.Range(0, 100, s.TitleBarOpacity * 100, v => { s.TitleBarOpacity = v / 100; Changed(); }, "%")),
             Ui.Row(L10n.T("Settings.SidebarOpacity"), L10n.T("Settings.AppliesWhenABackgroundImageIsEnabled"), Ui.Range(0, 100, s.NavigationOpacity * 100, v => { s.NavigationOpacity = v / 100; Changed(); }, "%")),

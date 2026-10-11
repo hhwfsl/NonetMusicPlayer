@@ -28,9 +28,6 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        AppBackgroundImage.PlaybackFailed += error => _vm?.ReportError(L10n.T("Background.PlaybackFailed"), error);
-        PropertyChanged += (_, e) => { if (e.Property == IsVisibleProperty || e.Property == WindowStateProperty) AppBackgroundImage.SetPlaybackActive(IsVisible && WindowState != WindowState.Minimized); };
-        Closed += (_, _) => AppBackgroundImage.Dispose();
         InputCommitService.Install(this);
         InputCommitService.Bind(LibrarySearch, text => { if (_vm is not null) _vm.SearchText = text; });
         InitializeTrayLifecycle();
@@ -115,7 +112,7 @@ public sealed partial class MainWindow : Window
         foreach (var plugin in _vm.Plugins.Installed.Where(p => p.Enabled && (p.Type == "theme" || p.Type == "extension" && p.Permissions.Contains("ui-extend"))))
             foreach (var token in plugin.Tokens) palette[token.Key] = token.Value;
         ThemeService.Apply(s, palette);
-        AppBackgroundImage.SetMedia(s.BackgroundImagePath);
+        AppBackgroundImage.Source = AppBackgroundService.GetImage(s.BackgroundImagePath);
         AppBackgroundImage.Opacity = Math.Clamp(s.BackgroundImageOpacity, 0, 1);
         AppBackgroundImage.Stretch = Enum.TryParse<Stretch>(s.BackgroundImageStretch, out var stretch) ? stretch : Stretch.UniformToFill;
         MyMusicNavigation.IsVisible = s.MyMusicExpanded; MyMusicChevron.Kind = s.MyMusicExpanded ? IconKind.ChevronUp : IconKind.ChevronDown;

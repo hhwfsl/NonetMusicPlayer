@@ -1,17 +1,67 @@
 {
-  "Playlists.Create": { "zh-CN": "新建", "en-US": "Create", "ja-JP": "作成" },
-  "Background.MediaHint": { "zh-CN": "图片、GIF / 动态 WebP 或视频。图片上限 20 MB，动态背景上限 50 MB；视频仅播放画面，隐藏窗口时暂停背景。", "en-US": "Images, GIF / animated WebP, or video. Images: up to 20 MB; animations/video: up to 50 MB. Video is silent; backgrounds pause while the window is hidden.", "ja-JP": "画像、GIF・アニメーション WebP、動画。画像は 20 MB、動的背景は 50 MB まで。動画は無音で、非表示時は背景を停止します。" },
-  "Background.MediaSizeLimit": { "zh-CN": "动态背景文件必须大于 0 且不超过 50 MB。", "en-US": "Animated background files must be nonempty and no larger than 50 MB.", "ja-JP": "動的背景ファイルは空でなく、50 MB 以下である必要があります。" },
-  "Background.MediaMissing": { "zh-CN": "背景文件不存在。", "en-US": "The background file does not exist.", "ja-JP": "背景ファイルが存在しません。" },
-  "Background.UnsupportedMedia": { "zh-CN": "无法读取此背景媒体，请选择可解码的图片、动图或视频。", "en-US": "This background media cannot be read. Choose a supported image, animation, or video.", "ja-JP": "この背景メディアを読み込めません。対応する画像、アニメーション、動画を選択してください。" },
-  "Background.DecoderUnavailable": { "zh-CN": "视频背景解码器不可用，请修复或重新安装 Nonet。", "en-US": "The background decoder is unavailable. Repair or reinstall Nonet.", "ja-JP": "背景デコーダーが使用できません。Nonet を修復または再インストールしてください。" },
-  "Background.PlaybackFailed": { "zh-CN": "动态背景播放失败，音乐播放不受影响。", "en-US": "Animated background playback failed. Music playback is unaffected.", "ja-JP": "動的背景の再生に失敗しました。音楽再生には影響しません。" },
-  "Startup.StartOnLogin": { "zh-CN": "开机自启动", "en-US": "Start at login", "ja-JP": "ログイン時に起動" },
-  "Startup.Hint": { "zh-CN": "登录当前系统账户后启动 Nonet，默认关闭；仅管理当前用户的 Nonet 启动项。", "en-US": "Launch Nonet when this account logs in. Off by default; only Nonet's current-user startup entry is managed.", "ja-JP": "現在のアカウントへのログイン時に Nonet を起動します。既定ではオフで、このユーザーの Nonet 起動項目のみ管理します。" },
-  "Startup.InvalidExecutable": { "zh-CN": "请使用 Nonet 应用入口运行后设置开机自启动。", "en-US": "Run the Nonet application executable before configuring startup.", "ja-JP": "自動起動を設定する前に Nonet の実行ファイルから起動してください。" },
-  "Startup.ChangeFailed": { "zh-CN": "无法修改开机自启动设置。", "en-US": "Unable to change startup settings.", "ja-JP": "自動起動設定を変更できませんでした。" },
-  "Playlists.CreateFromFolders": { "zh-CN": "以文件夹新建", "en-US": "Create from folders", "ja-JP": "フォルダーから作成" },
-  "Playlists.FolderMissing": { "zh-CN": "所选文件夹已不存在。", "en-US": "A selected folder no longer exists.", "ja-JP": "選択したフォルダーが存在しません。" },
-  "Playlists.FolderNameShortened": { "zh-CN": "文件夹名称超过歌单名称上限，已缩短至 80 个字符。", "en-US": "A folder name exceeded the playlist limit and was shortened to 80 characters.", "ja-JP": "フォルダー名がプレイリスト名の上限を超えたため、80 文字に短縮しました。" },
-  "Playlists.FolderPlaylistsCreated": { "zh-CN": "已按文件夹建立 {0} 个歌单。", "en-US": "Created {0} playlists from folders.", "ja-JP": "フォルダーから {0} 件のプレイリストを作成しました。" }
+  "Playlists.Create": {
+    "zh-CN": "新建",
+    "en-US": "Create",
+    "ja-JP": "作成"
+  },
+  "Startup.StartOnLogin": {
+    "zh-CN": "开机自启动",
+    "en-US": "Start at login",
+    "ja-JP": "ログイン時に起動"
+  },
+  "Startup.Hint": {
+    "zh-CN": "登录当前系统账户后启动 Nonet，默认关闭；仅管理当前用户的 Nonet 启动项。",
+    "en-US": "Launch Nonet when this account logs in. Off by default; only Nonet's current-user startup entry is managed.",
+    "ja-JP": "現在のアカウントへのログイン時に Nonet を起動します。既定ではオフで、このユーザーの Nonet 起動項目のみ管理します。"
+  },
+  "Startup.InvalidExecutable": {
+    "zh-CN": "请使用 Nonet 应用入口运行后设置开机自启动。",
+    "en-US": "Run the Nonet application executable before configuring startup.",
+    "ja-JP": "自動起動を設定する前に Nonet の実行ファイルから起動してください。"
+  },
+  "Startup.ChangeFailed": {
+    "zh-CN": "无法修改开机自启动设置。",
+    "en-US": "Unable to change startup settings.",
+    "ja-JP": "自動起動設定を変更できませんでした。"
+  },
+  "Playlists.CreateFromFolders": {
+    "zh-CN": "以文件夹新建",
+    "en-US": "Create from folders",
+    "ja-JP": "フォルダーから作成"
+  },
+  "Playlists.FolderMissing": {
+    "zh-CN": "所选文件夹已不存在。",
+    "en-US": "A selected folder no longer exists.",
+    "ja-JP": "選択したフォルダーが存在しません。"
+  },
+  "Playlists.FolderNameShortened": {
+    "zh-CN": "文件夹名称超过歌单名称上限，已缩短至 80 个字符。",
+    "en-US": "A folder name exceeded the playlist limit and was shortened to 80 characters.",
+    "ja-JP": "フォルダー名がプレイリスト名の上限を超えたため、80 文字に短縮しました。"
+  },
+  "Playlists.FolderPlaylistsCreated": {
+    "zh-CN": "已按文件夹建立 {0} 个歌单。",
+    "en-US": "Created {0} playlists from folders.",
+    "ja-JP": "フォルダーから {0} 件のプレイリストを作成しました。"
+  },
+  "Background.StaticHint": {
+    "zh-CN": "支持 PNG、JPG、JPEG、静态 WebP 和 BMP，图片上限 20 MB；可裁剪并调节各区域不透明度。",
+    "en-US": "PNG, JPG, JPEG, still WebP and BMP; up to 20 MB. Crop images and adjust each region's opacity.",
+    "ja-JP": "PNG、JPG、JPEG、静止 WebP、BMP。上限は 20 MB。切り抜きと領域ごとの不透明度を調整できます。"
+  },
+  "Background.StaticOnly": {
+    "zh-CN": "背景仅支持静态图片，不支持视频、GIF、动态 WebP 或 APNG。",
+    "en-US": "Backgrounds support still images only, not video, GIF, animated WebP or APNG.",
+    "ja-JP": "背景は静止画のみです。動画、GIF、アニメーション WebP、APNG には対応していません。"
+  },
+  "Background.RetiredSetting": {
+    "zh-CN": "视频和动图背景已移除，原背景已关闭；其他设置和用户原文件保持不变。",
+    "en-US": "Video and animated backgrounds were removed. The previous background was disabled; other settings and original files are unchanged.",
+    "ja-JP": "動画・動く背景を廃止したため、以前の背景を無効にしました。他の設定と元ファイルは変更しません。"
+  },
+  "Background.CleanupFailed": {
+    "zh-CN": "旧视频背景解码器未能清理，请检查程序目录的写入权限。音乐播放不受影响。",
+    "en-US": "The obsolete background decoder could not be removed. Check installation-folder write permissions. Music playback is unaffected.",
+    "ja-JP": "旧背景デコーダーを削除できません。インストール先の書き込み権限を確認してください。音楽再生には影響しません。"
+  }
 }

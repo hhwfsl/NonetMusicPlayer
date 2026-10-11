@@ -10,8 +10,9 @@ namespace NonetMusicPlayer.Desktop.Services;
 public static class AppBackgroundService
 {
     public const int MaximumDimension = 1600;
-    public static readonly string[] MediaPatterns = ["*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp", "*.gif", "*.mp4", "*.m4v", "*.mov", "*.webm", "*.mkv", "*.avi"];
-    public static readonly string[] VideoExtensions = [".mp4", ".m4v", ".mov", ".webm", ".mkv", ".avi"];
+    public static readonly string[] MediaPatterns = ["*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp"];
+    // 仅用于识别旧配置与清理应用管理副本，不提供这些媒体的播放能力。
+    private static readonly string[] RetiredExtensions = [".gif", ".mp4", ".m4v", ".mov", ".webm", ".mkv", ".avi"];
     private static readonly object Gate = new();
     private static Bitmap? _bitmap;
     private static string? _path;
@@ -21,8 +22,6 @@ public static class AppBackgroundService
 
     public static string Import(AppStorage storage, string source)
     {
-        // 旧数据迁移仍是同步入口；在工作线程执行异步导入，避免等待 UI 同步上下文形成死锁。
-        if (IsDynamic(source)) return Task.Run(() => ImportDynamicAsync(storage, source)).GetAwaiter().GetResult();
         if (storage.IsMigrating) throw new InvalidOperationException(L10n.T("Settings.AppDataIsBeingCopiedChangeTheBackgroundAfter"));
         var targetFolder = Path.Combine(storage.ArtworkFolder, "Backgrounds"); DataDirectoryService.RejectLinkedAncestors(targetFolder); Directory.CreateDirectory(targetFolder);
         using var input = OpenValidated(source, out var width, out var height);
@@ -43,50 +42,16 @@ public static class AppBackgroundService
         }
         return target;
     }
-    public static bool IsDynamic(string? path)
+    /// <summary>静态背景入口统一校验，避免动态 WebP/APNG 经裁剪弹窗绕过限制。</summary>
+    public static void ValidateSource(string path) { using var input = OpenValidated(path, out _, out _); }
+    public static bool IsRetiredMedia(string? path)
     {
         if (string.IsNullOrWhiteSpace(path)) return false;
         var extension = Path.GetExtension(path).ToLowerInvariant();
-        if (extension == ".gif" || VideoExtensions.Contains(extension)) return true;
+        if (RetiredExtensions.Contains(extension)) return true;
         if (extension is not (".webp" or ".png") || !File.Exists(path)) return false;
-        using var stream = File.OpenRead(path); using var codec = SKCodec.Create(stream); return codec?.FrameCount > 1;
-    }
-    /// <summary>复制并验证有界动态媒体，保留原文件；失败或取消不会留下半成品。</summary>
-    public static async Task<string> ImportDynamicAsync(AppStorage storage, string source, CancellationToken token = default)
-    {
-        if (storage.IsMigrating) throw new InvalidOperationException(L10n.T("Settings.AppDataIsBeingCopiedChangeTheBackgroundAfter"));
-        var file = new FileInfo(source);
-        if (!file.Exists || file.Length is <= 0 or > 50 * 1024 * 1024) throw new InvalidDataException(L10n.T("Background.MediaSizeLimit"));
-        if (!IsDynamic(source)) throw new InvalidDataException(L10n.T("Background.UnsupportedMedia"));
-        var folder = Path.Combine(storage.ArtworkFolder, "Backgrounds"); DataDirectoryService.RejectLinkedAncestors(folder); Directory.CreateDirectory(folder);
-        var temporary = Path.Combine(folder, Guid.NewGuid().ToString("N") + Path.GetExtension(source).ToLowerInvariant());
-        try
-        {
-            await using (var input = file.OpenRead()) await using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write))
-            {
-                // 逐块核对实际读入量，防止导入期间增长的源文件突破容量上限。
-                var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(64 * 1024);
-                try
-                {
-                    long copied = 0; int count;
-                    while ((count = await input.ReadAsync(buffer.AsMemory(0, 64 * 1024), token)) != 0)
-                    {
-                        copied += count;
-                        if (copied > 50 * 1024 * 1024) throw new InvalidDataException(L10n.T("Background.MediaSizeLimit"));
-                        await output.WriteAsync(buffer.AsMemory(0, count), token);
-                    }
-                }
-                finally { System.Buffers.ArrayPool<byte>.Shared.Return(buffer); }
-            }
-            if (new FileInfo(temporary).Length > 50 * 1024 * 1024) throw new InvalidDataException(L10n.T("Background.MediaSizeLimit"));
-            await BackgroundVideoDecoder.ValidateAsync(temporary, token);
-            await using var hashed = File.OpenRead(temporary); var hash = Convert.ToHexString(await SHA256.HashDataAsync(hashed, token))[..24];
-            await hashed.DisposeAsync(); var target = Path.Combine(folder, hash + Path.GetExtension(temporary));
-            DataDirectoryService.RejectLinkedAncestors(folder);
-            if (File.Exists(target)) { DataDirectoryService.RejectLinkedAncestors(target); return target; }
-            File.Move(temporary, target); return target;
-        }
-        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        try { using var stream = File.OpenRead(path); using var codec = SKCodec.Create(stream); return codec?.FrameCount > 1; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return false; }
     }
     public static IImage? GetImage(string? path)
     {
@@ -122,7 +87,7 @@ public static class AppBackgroundService
                 if (active is not null && root != storage.Root) active = DataDirectoryService.Remap(active, storage.Root, root);
                 var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
                 var images = Directory.EnumerateFiles(folder, "*", SearchOption.TopDirectoryOnly)
-                    .Where(file => Path.GetExtension(file).ToLowerInvariant() is ".png" or ".jpg" or ".jpeg" or ".webp" or ".bmp" or ".gif" || VideoExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()))
+                    .Where(file => Path.GetExtension(file).ToLowerInvariant() is ".png" or ".jpg" or ".jpeg" or ".webp" or ".bmp" || RetiredExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()))
                     .Select(file => new FileInfo(file))
                     .Where(file => (file.Attributes & FileAttributes.ReparsePoint) == 0 && !string.Equals(file.FullName, active, comparison))
                     .OrderByDescending(file => file.LastWriteTimeUtc).ThenBy(file => file.Name, StringComparer.Ordinal).ToArray();
@@ -144,9 +109,11 @@ public static class AppBackgroundService
     }
     private static FileStream OpenValidated(string path, out int width, out int height)
     {
+        if (!MediaPatterns.Contains("*" + Path.GetExtension(path).ToLowerInvariant())) throw new InvalidDataException(L10n.T("Background.StaticOnly"));
         var file = new FileInfo(path);
         if (!file.Exists || file.Length <= 0 || file.Length > 20 * 1024 * 1024) throw new InvalidDataException(L10n.T("Settings.BackgroundImagesMustBeSmallerThanMB"));
         using var probe = File.OpenRead(path); using var codec = SKCodec.Create(probe);
+        if (codec?.FrameCount > 1) throw new InvalidDataException(L10n.T("Background.StaticOnly"));
         if (codec is null || codec.Info.Width <= 0 || codec.Info.Height <= 0 || (long)codec.Info.Width * codec.Info.Height > 64 * 1024 * 1024) throw new InvalidDataException(L10n.T("Settings.UnsupportedBackgroundImageOrExcessiveDimensions"));
         width = codec.Info.Width; height = codec.Info.Height; return File.OpenRead(path);
     }

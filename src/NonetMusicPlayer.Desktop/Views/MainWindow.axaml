@@ -25,7 +25,7 @@
             ClipToBounds="True"
             CornerRadius="12">
             <Grid RowDefinitions="52,*">
-                <ui:BackgroundMediaView
+                <Image
                     x:Name="AppBackgroundImage"
                     Grid.RowSpan="2"
                     IsHitTestVisible="False"

@@ -48,6 +48,7 @@ public sealed class CoverCropDialog : Window
     }
     public static async Task<string?> ShowBackground(Window owner, AppStorage storage, string path)
     {
+        AppBackgroundService.ValidateSource(path);
         using var image = await Task.Run(() => CoverCropService.Load(path));
         return await new CoverCropDialog(owner, storage, image, true).ShowDialog<string?>(owner);
     }

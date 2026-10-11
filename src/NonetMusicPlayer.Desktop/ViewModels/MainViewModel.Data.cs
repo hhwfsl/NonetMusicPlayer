@@ -100,6 +100,8 @@ public sealed partial class MainViewModel
         State.Tracks = restored.Tracks; State.Playlists = restored.Playlists; State.MusicFolders = restored.MusicFolders; State.History = restored.History;
         State.RecentTemporaryTracks = restored.RecentTemporaryTracks;
         State.Settings = restored.Settings; State.Settings.BackupFolder = Storage.BackupFolder; State.Settings.LyricsFolder = "";
+        // 旧备份的动态背景按启动时相同规则迁移，不重新导入已移除的媒体类型。
+        NormalizeRetiredBackground();
         if (State.Settings.BackgroundImagePath is { } background && File.Exists(background) && !DataDirectoryService.Contains(Storage.Root, background)) State.Settings.BackgroundImagePath = AppBackgroundService.Import(Storage, background);
         State.ListeningEntries = restored.ListeningEntries; State.GroupCovers = restored.GroupCovers; State.SoftwareDefaultGroupCovers = restored.SoftwareDefaultGroupCovers;
         State.LastTrackId = restored.LastTrackId; State.LastPosition = restored.LastPosition; State.LastSourcePage = restored.LastSourcePage; State.LastPlaylistId = restored.LastPlaylistId;

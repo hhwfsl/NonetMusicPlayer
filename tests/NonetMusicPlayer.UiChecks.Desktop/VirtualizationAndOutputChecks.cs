@@ -75,12 +75,14 @@ internal static class VirtualizationAndOutputChecks
         Require(crop.Crop.X < before.X && crop.Crop.Y < before.Y, "Cover crop changes through actual pointer dragging");
         crop.SetCrop(0, 0, Math.Min(image.Original.Width, image.Original.Height) / 2d);
         var result = CoverCropService.Export(vm.Storage, image, crop.Crop); using var bitmap = new Bitmap(result);
-        Require(bitmap.PixelSize == new PixelSize(320, 320) && crop.Crop.X == 0, "Precise crop exports a bounded square cover");
+        // 封面已改为保留裁剪区域原图像素；不能再按旧版固定 320px 断言。
+        var expectedSize = (int)Math.Round(Math.Min(image.Original.Width, image.Original.Height) / 2d);
+        Require(bitmap.PixelSize == new PixelSize(expectedSize, expectedSize) && crop.Crop.X == 0, "Precise crop preserves source-region pixels without enlarging or shrinking");
         using var frame = window.CaptureRenderedFrame()!; frame.Save(Path.Combine(output, "beta7-crop.png"), PngBitmapEncoderOptions.Default); window.Close();
         var oversized = Path.Combine(output, "oversize-cover.png"); using (var file = File.Create(oversized)) file.SetLength(CoverCropService.MaximumFileBytes + 1);
         var rejected = false; try { using var invalid = CoverCropService.Load(oversized); } catch (InvalidDataException) { rejected = true; }
         Require(rejected, "Oversized image is rejected before decoding");
-        Console.WriteLine("PASS CROP: draggable picture, precise coordinates, 320px output and 20MiB pre-decode limit");
+        Console.WriteLine("PASS CROP: draggable picture, precise coordinates, original-region output and 20MiB pre-decode limit");
     }
     private static void OutputAndTemporary(string output)
     {

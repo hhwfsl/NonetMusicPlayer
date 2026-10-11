@@ -1,24 +1,12 @@
 # 桌面背景与系统集成
 
-## 背景媒体
+## 静态背景
 
-在「设置 → 外观」的同一个背景设置中选择图片、GIF、动态 WebP 或视频。支持的视频容器为 MP4、M4V、MOV、WebM、MKV、AVI；实际视频编码必须受内置解码器支持。不读取网络播放列表。
+在「设置 → 外观」选择 PNG、JPG、JPEG、静态 WebP 或 BMP。仅支持静态图片；GIF、动态 WebP/APNG 和视频不再作为背景。扩展事务的背景选择遵守相同限制。
 
-静态图片沿用裁剪、20 MB 文件上限和有界解码。动态背景文件上限为 50 MB，保留为应用管理目录中的副本，不修改或删除用户原文件。动图与视频不打开静态裁剪弹窗，通过铺放方式选择填满或完整显示；所有格式共用背景和区域不透明度设置。
+图片可裁剪，文件上限为 20 MB；缓存最长边不超过 1600 像素，并限制源图像尺寸。铺放方式、背景不透明度和各区域不透明度仍可调节。应用保存自己的裁剪副本，不修改或删除用户原文件。
 
-视频及 GIF 在独立解码进程中逐帧输出 RGBA，明确使用 `-map 0:v:0 -an -sn -dn`，不会创建音频播放输出。视频输出限制为不超过 1280×720、24 fps，解码线程限制为两个；界面消费一帧后才读取下一帧，避免无限排队。不预先解码整段视频。
-
-动态 WebP 使用既有 Skia 引擎，按帧合成并依据时间选择当前画面；不缓存所有解码帧。为控制资源，动态栅格源最多 1600 万像素、10000 帧。界面最多持有当前帧与绘制位图；栅格合成还需有界的原始尺寸工作区。动态背景会增加 CPU 和内存开销，实际解码器工作区取决于编码和分辨率。
-
-隐藏至托盘或最小化时停止动态背景并释放像素资源，恢复时重新开始背景循环，不影响音乐进度或页面滚动位置。切换和移除背景会取消旧解码。错误通过应用提示显示，音乐播放仍使用独立的原音频链路。后台清理只删除受管理 Backgrounds 目录的闲置副本；退出时仅保留当前应用的媒体副本。
-
-## 解码器来源与构建
-
-FFmpeg 8.0.3，分发为未修改的独立、可替换 LGPL-2.1-or-later 程序。二进制来自 [AtlasYang/ffmpeg-static-builds 固定构建](https://github.com/AtlasYang/ffmpeg-static-builds/releases/tag/ffmpeg-8.0.3-build4)，版本、资产名和 SHA-256 固定在 `scripts/background-decoder.json`。Windows、Linux、macOS x64 各只携带本机解码器及许可文件，不携带 ffprobe 或其他平台文件。
-
-对应 FFmpeg 源码为 [8.0.3 官方源码](https://ffmpeg.org/releases/ffmpeg-8.0.3.tar.xz)，同时作为 `FFmpeg-8.0.3-source.tar.xz` 附在 Nonet 的同版本 Release；它不是运行时必需文件，不放入应用包。构建脚本及外部库的固定版本见上述构建仓库同名标签下的 `scripts/versions.sh`、`scripts/build-deps.sh`、`scripts/build-ffmpeg.sh`。构建配置可从该 Release 的各平台 `configure.txt` 资产或 `VideoDecoder/ffmpeg -buildconf` 查看。`VideoDecoder/NOTICE.txt` 保留外部库的版权、许可及专利授权文本，构建源文件位于同一 Release 的 `FFmpeg-background-build-sources.zip`。
-
-Linux 二进制使用其上游 glibc 基线；macOS 二进制使用上游部署目标。当前只在 Windows 实机验证，不将交叉构建等同于 Linux/macOS 实机测试。完整 LGPL 文本随解码器分发。主程序源码仍为 GPL-3.0。
+0.4.0-beta.17 启动时会关闭旧动态背景配置并提示。原地升级后仅清理程序目录 VideoDecoder 中已知的旧解码器与专属许可文件；目录包含未知文件时不递归删除。背景管理目录的闲置应用副本沿用退出清理规则。用户原视频或图片不参与删除。音乐播放所需的 soundflow-ffmpeg 原生库与其许可继续保留。
 
 ## 开机自启动
 

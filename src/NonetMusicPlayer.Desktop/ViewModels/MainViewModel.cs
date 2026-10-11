@@ -61,6 +61,8 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         _maintainedBackground = Storage.Root + "\0" + Settings.BackgroundImagePath;
         TrimHistory();
         AppLog.Initialize(Storage.Root);
+        if (!RetiredBackgroundCleanup.Run()) ReportWarning(L10n.T("Background.CleanupFailed"));
+        NormalizeRetiredBackground();
         AppBackgroundService.CleanupUnused(Storage, Settings.BackgroundImagePath);
         foreach (var playlist in State.Playlists) Playlists.Add(playlist);
         ApplyLyricsDirectory();
@@ -380,6 +382,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     public void ApplySettings()
     {
         Settings.Validate();
+        NormalizeRetiredBackground();
         if (_lyricsPlaybackLease is { } lease) Settings.PlayMode = lease.SavedMode;
         if (Settings.ValidationWarning is { } settingsWarning) ReportWarning(settingsWarning);
         try
@@ -403,6 +406,13 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         if (previous.StartOnLogin && !SetStartOnLogin(false)) return;
         State.Settings = new AppSettings { LyricsFolder = previous.LyricsFolder, BackupFolder = previous.BackupFolder };
         Volume = Settings.Volume; SetPlayMode(Settings.PlayMode); ApplySettings(); ReloadLyrics(); CompleteOperation("settings.reset");
+    }
+    /// <summary>旧动态背景仅取消配置引用，不修改原文件或其他外观设置。</summary>
+    private void NormalizeRetiredBackground()
+    {
+        if (!AppBackgroundService.IsRetiredMedia(Settings.BackgroundImagePath)) return;
+        Settings.BackgroundImagePath = null;
+        ReportWarning(L10n.T("Background.RetiredSetting"));
     }
     /// <summary>只有明确的用户设置操作才写入系统启动注册；失败时保留原设置。</summary>
     public bool SetStartOnLogin(bool enabled)

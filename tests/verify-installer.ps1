@@ -6,9 +6,17 @@ $taskStage = Join-Path $taskRoot ('artifacts/installer-check-' + [guid]::NewGuid
 $taskAllowed = [IO.Path]::GetFullPath((Join-Path $taskRoot 'artifacts')).TrimEnd('\') + '\'
 if (-not [IO.Path]::GetFullPath($taskStage).StartsWith($taskAllowed, [StringComparison]::OrdinalIgnoreCase)) { throw '夹具目录越界。' }
 if (Get-Process -Name Nonet -ErrorAction SilentlyContinue) { throw '先关闭 Nonet，再执行隔离安装器检查。' }
+# 模拟 beta.16 的解码器残留，只删除已知发行文件，未知用户文件应当保留。
+$taskRetired = Join-Path $taskStage 'VideoDecoder'
+[IO.Directory]::CreateDirectory($taskRetired) | Out-Null
+foreach ($taskName in @('ffmpeg.exe','ffmpeg','LICENSE.txt','NOTICE.txt')) { [IO.File]::WriteAllText((Join-Path $taskRetired $taskName),'obsolete fixture') }
+[IO.File]::WriteAllText((Join-Path $taskRetired 'keep.txt'),'unknown user fixture')
 $taskArgs = @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/NOICONS','/LMPQA=1',('/DIR="' + $taskStage + '"'))
 $taskProcess = Start-Process -FilePath ([IO.Path]::GetFullPath($Installer)) -ArgumentList $taskArgs -WindowStyle Hidden -Wait -PassThru
 if ($taskProcess.ExitCode -ne 0) { throw '隔离安装失败。' }
+foreach ($taskName in @('ffmpeg.exe','ffmpeg','LICENSE.txt','NOTICE.txt')) { if (Test-Path -LiteralPath (Join-Path $taskRetired $taskName)) { throw '安装器未清理旧背景解码器。' } }
+if (-not (Test-Path -LiteralPath (Join-Path $taskRetired 'keep.txt'))) { throw '安装器不应删除旧目录中的未知文件。' }
+Write-Host 'PASS installer migration: retired decoder removed, unknown file retained.'
 try {
     Add-Type -AssemblyName System.IO.Compression
     $taskArchive = [IO.Compression.ZipFile]::OpenRead([IO.Path]::GetFullPath($Zip))

@@ -25,11 +25,11 @@ foreach ($taskFile in @('NonetMusicPlayer.slnx','Directory.Build.props','global.
 foreach ($taskFolder in @('src/NonetMusicPlayer.Desktop','src/NonetMusicPlayer.Core','src/NonetMusicPlayerCli','src/NonetMusicPlayer.PluginSdk','tools/NonetMusicPlayer.PluginPackager','tests','assets/icons','scripts/macos','scripts/windows-installer')) {
     Copy-TaskTree (Join-Path $taskSource $taskFolder) (Join-Path $taskDestination $taskFolder)
 }
-foreach ($taskScript in @('publish-desktop.ps1','publish-cli.ps1','package-desktop-update.ps1','verify-clean-desktop.ps1','build-windows-installer.ps1','sync-plugin-foundation.ps1','pack-plugin.ps1','export-desktop-source.ps1','prepare-background-decoder.ps1','background-decoder.json')) {
+foreach ($taskScript in @('publish-desktop.ps1','publish-cli.ps1','package-desktop-update.ps1','verify-clean-desktop.ps1','build-windows-installer.ps1','sync-plugin-foundation.ps1','pack-plugin.ps1','export-desktop-source.ps1')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $taskScript) -Destination (Join-Path $taskDestination 'scripts')
 }
 [IO.Directory]::CreateDirectory((Join-Path $taskDestination 'docs')) | Out-Null
-foreach ($taskDocument in @('CLI.md','COMMANDS.md','LOCALIZATION.md','EXTENSIONS.md','UNIVERSAL_EXTENSIONS.md','PLUGIN_DEVELOPMENT.md','RELEASE_VALIDATION.md','STORAGE.md','UI_LAYOUT.md','UPDATES.md','USER_MANUAL.md','UserManual.zh-CN.md','UserManual.en-US.md','UserManual.ja-JP.md','WINDOWS_INSTALLER.md','BACKGROUND_MEDIA.md')) {
+foreach ($taskDocument in @('CLI.md','COMMANDS.md','LOCALIZATION.md','EXTENSIONS.md','UNIVERSAL_EXTENSIONS.md','PLUGIN_DEVELOPMENT.md','RELEASE_VALIDATION.md','STORAGE.md','UI_LAYOUT.md','UPDATES.md','USER_MANUAL.md','UserManual.zh-CN.md','UserManual.en-US.md','UserManual.ja-JP.md','WINDOWS_INSTALLER.md','BACKGROUND_MEDIA.md','LINUX.md')) {
     Copy-Item -LiteralPath (Join-Path $taskSource ('docs/' + $taskDocument)) -Destination (Join-Path $taskDestination 'docs')
 }
 Copy-TaskTree (Join-Path $taskSource 'docs/licenses') (Join-Path $taskDestination 'docs/licenses')

@@ -89,7 +89,7 @@ public sealed partial class ExtensionSession
             if (files.Length == 0) return new() { ["success"] = false };
             if (operation == "background")
             {
-                var background = AppBackgroundService.IsDynamic(files[0]) ? await AppBackgroundService.ImportDynamicAsync(vm.Storage, files[0]) : await CoverCropDialog.ShowBackground(Owner, vm.Storage, files[0]);
+                var background = await CoverCropDialog.ShowBackground(Owner, vm.Storage, files[0]);
                 if (background is null) return new() { ["success"] = false };
                 vm.Settings.BackgroundImagePath = background; vm.ApplySettings(); return new() { ["success"] = true };
             }

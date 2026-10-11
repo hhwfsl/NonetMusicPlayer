@@ -7,20 +7,13 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/icon.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <Version>0.4.0-beta.16</Version>
+    <Version>0.4.0-beta.17</Version>
     <AssemblyVersion>0.4.0.0</AssemblyVersion>
-    <FileVersion>0.4.0.16</FileVersion>
+    <FileVersion>0.4.0.17</FileVersion>
     <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
-    <BackgroundDecoderRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</BackgroundDecoderRid>
-    <BackgroundDecoderRid Condition="'$(BackgroundDecoderRid)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">win-x64</BackgroundDecoderRid>
-    <BackgroundDecoderRid Condition="'$(BackgroundDecoderRid)' == '' and $([MSBuild]::IsOSPlatform('Linux'))">linux-x64</BackgroundDecoderRid>
-    <BackgroundDecoderRid Condition="'$(BackgroundDecoderRid)' == ''">osx-x64</BackgroundDecoderRid>
-    <BackgroundDecoderFile Condition="'$(BackgroundDecoderRid)' == 'win-x64'">ffmpeg.exe</BackgroundDecoderFile>
-    <BackgroundDecoderFile Condition="'$(BackgroundDecoderFile)' == ''">ffmpeg</BackgroundDecoderFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="../../artifacts/video-decoder/$(BackgroundDecoderRid)/$(BackgroundDecoderFile)" Condition="Exists('../../artifacts/video-decoder/$(BackgroundDecoderRid)/$(BackgroundDecoderFile)')" Link="VideoDecoder/$(BackgroundDecoderFile)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
     <ProjectReference Include="../NonetMusicPlayer.Core/NonetMusicPlayer.Core.csproj" />
     <AvaloniaResource Include="Assets/**" />
     <!-- 原生插件共享的 GUI 公共类型不能按内置页面使用范围裁剪。 -->

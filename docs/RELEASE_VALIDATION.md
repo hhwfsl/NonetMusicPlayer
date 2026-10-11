@@ -220,4 +220,24 @@ pwsh -File tests/verify-published-startup.ps1 -Zip publish/desktop/archives/None
 - Windows ZIP 首次启动及独立 CLI 命令通过；Windows 安装器 15 个程序文件与 ZIP 摘要相同，隔离卸载保留非程序数据。
 - Windows 原发布目录的既有数据与更新前备份逐文件摘要相同。Linux/macOS 仅交叉构建及归档验证，未进行实机运行验证。
 
-动态媒体回归命令：先运行 `pwsh -File scripts/prepare-background-decoder.ps1 -Rids win-x64`，再运行 `dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/media-folders --media-folders`。纯净包核验须传入当前版本：`pwsh -File scripts/verify-clean-desktop.ps1 -Version 0.4.0-beta.16`。
+以上为 beta.16 的历史验证记录。动态背景及其专用回归工具已在 beta.17 移除；如需复现 beta.16，应检出对应版本的源码。
+
+## 0.4.0-beta.17 验证范围
+
+静态背景与目录导入回归命令：
+
+```powershell
+dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/background-folders-beta17 --background-folders
+pwsh -File scripts/verify-clean-desktop.ps1 -Version 0.4.0-beta.17
+```
+
+移除视频、GIF、动态 WebP/APNG 背景及专用解码器；保留音乐播放依赖的 SoundFlow FFmpeg 原生库、开机自启动及以文件夹新建歌单。旧设置迁移和解码器清理只作用于应用管理的路径，不修改用户原媒体。
+
+日期：2026-10-11。验证运行于 Windows；Linux/macOS 未做实机交互验证。
+
+- 解决方案构建成功，0 警告 / 0 错误。共享核心、完整桌面交互、旧插件 Contract 兼容及静态背景/目录导入检查通过。封面测试按现有原图像素策略修正旧版固定 320px 断言。
+- 实际音频回归覆盖 WAV、FLAC、MP3，44.1/48/96 kHz、单/双声道、定位、输出设备重绑、10 次自然切歌、4 次重复播放及损坏流恢复。精简的原 Windows 发布程序亦通过真实音频、封面、歌词、持久化和插件配置检查。
+- 三个平台桌面 ZIP 均通过逐文件 SHA-256、清单、GPL 内容、纯净文件范围及 POSIX 权限检查；文件数恢复为 Windows 12、macOS 15、Linux 12，不包含 VideoDecoder 或独立 FFmpeg 程序。三个独立 CLI ZIP 同样不包含图形依赖或使用数据。
+- Windows ZIP 首次启动及 CLI 单次命令通过。安装器的 12 个程序文件与 ZIP 摘要一致；模拟旧 VideoDecoder 后，安装只移除已知解码器文件，保留未知文件；卸载保留非程序数据。
+- 原 Windows 发布目录更新前后，400 个数据与引导配置文件的 SHA-256 保持一致。旧程序备份保留在本地 artifacts，不进入公开源码或发行包。
+- 当前源码不再依赖动态背景专用构建工具。静态背景、关闭旧动态配置、不修改原媒体、受控解码器清理、图片缓存上限、文件夹递归导入、同名歌词关联及自启动默认关闭均通过隔离测试。

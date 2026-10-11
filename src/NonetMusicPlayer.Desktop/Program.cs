@@ -22,7 +22,6 @@ internal static class Program
             if (args.Length == 3 && args[0] == "--verify-extension-plugin") return Services.ReleaseVerifier.RunExtension(args[1], args[2]);
             if (args.Length == 3 && args[0] == "--verify-agent-plugin") return Services.ReleaseVerifier.RunAgent(args[1], args[2]);
             if (args.Length == 3 && args[0] == "--verify-plugin-configuration") return Services.ReleaseVerifier.RunPluginConfiguration(args[1], args[2]);
-            if (args.Length == 3 && args[0] == "--verify-background") return Services.ReleaseVerifier.RunBackground(args[1], args[2]);
             if (args.Length == 3 && args[0] == "--verify-lyrics-plugin") return Services.ReleaseVerifier.RunLyrics(args[1], args[2]);
             using var instance = new SingleInstanceService();
             if (!instance.IsPrimary)
