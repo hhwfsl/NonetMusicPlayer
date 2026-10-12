@@ -7,6 +7,8 @@ public sealed class MusicSearchSource
 {
     public string Label { get; set; } = "";
     public int PageSize { get; set; } = 30;
+    /// <summary>可选的按可见行批量获取封面；旧音源默认仍在搜索结果内返回图片。</summary>
+    public bool DeferredArtwork { get; set; }
 }
 
 public sealed class MusicSearchPage

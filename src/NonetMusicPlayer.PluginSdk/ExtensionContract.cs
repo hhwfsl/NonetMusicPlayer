@@ -46,6 +46,7 @@ public static class ExtensionContract
                     throw new InvalidDataException("Invalid layout spacing.");
             }
             if (node.Asset.Length > 0) PluginPathPolicy.ValidateRelativePath(node.Asset);
+            if (node.ImageDataBind.Length > 200 || node.ImageDataBind.Length > 0 && node.Type != "image") throw new InvalidDataException("Invalid image data binding.");
             if (node.SelectedBind.Length > 200 || node.ColumnsBind.Length > 200 || node.ContextActions.Count > 16 || node.SelectedIf.Length > 200 || node.Variant is not ("" or "ghost" or "pill" or "row" or "accent")) throw new InvalidDataException("Invalid optional UI capability.");
             foreach (var action in node.ContextActions)
             {
@@ -122,6 +123,8 @@ public sealed class ExtensionNode
     public double Minimum { get; set; }
     public double Maximum { get; set; } = 100;
     public string Asset { get; set; } = "";
+    /// <summary>可选绑定 PNG/JPEG 的 Base64 数据，不接受网址或文件路径；旧静态资源行为不变。</summary>
+    public string ImageDataBind { get; set; } = "";
     public bool Horizontal { get; set; }
     public bool Multiline { get; set; }
     public bool ScrollToEnd { get; set; }

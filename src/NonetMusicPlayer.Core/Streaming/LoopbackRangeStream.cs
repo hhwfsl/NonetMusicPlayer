@@ -8,6 +8,7 @@ public sealed class LoopbackRangeStream : Stream
     private readonly HttpClient _http = new(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(20) };
     private readonly Uri _uri;
     private readonly long _length;
+    private readonly CancellationTokenSource _lifetime = new();
     private long _position;
     private byte[] _buffer = [];
     private long _bufferStart;
@@ -35,9 +36,9 @@ public sealed class LoopbackRangeStream : Stream
         if (_position >= Length || output.Length == 0) return 0;
         if (_position < _bufferStart || _position >= _bufferStart + _buffer.Length)
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, _uri); var end = Math.Min(Length - 1, _position + 262143);
+            using var request = new HttpRequestMessage(HttpMethod.Get, _uri); var end = Math.Min(Length - 1, _position + 1048575);
             request.Headers.Range = new RangeHeaderValue(_position, end);
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token); timeout.CancelAfter(TimeSpan.FromSeconds(20));
             using var response = _http.Send(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             if (response.StatusCode != HttpStatusCode.PartialContent || response.Content.Headers.ContentRange?.From != _position || response.Content.Headers.ContentRange?.Length != Length) throw new InvalidDataException("插件未正确响应 HTTP Range（需要 206 和 Content-Range）。");
             if (response.Content.Headers.ContentLength != end - _position + 1) throw new InvalidDataException("插件流长度不一致。");
@@ -56,5 +57,7 @@ public sealed class LoopbackRangeStream : Stream
     public override void Flush() { }
     public override void SetLength(long value) => throw new NotSupportedException();
     public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    protected override void Dispose(bool disposing) { if (disposing) _http.Dispose(); base.Dispose(disposing); }
+    /// <summary>切歌/退出先打断后台读取，解码器释放后再真正关闭 Stream。</summary>
+    public void CancelPendingReads() { if (!_lifetime.IsCancellationRequested) _lifetime.Cancel(); }
+    protected override void Dispose(bool disposing) { if (disposing) { CancelPendingReads(); _http.Dispose(); } base.Dispose(disposing); }
 }

@@ -113,9 +113,9 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _isEditingLayout;
     [ObservableProperty] private string _playingSourcePage = "library";
     public string TrackCountText => string.Format(L10n.T("Common.Tracks"), VisibleTracks.Count);
-    public bool IsEmptyStateVisible => !IsBusy && VisibleTracks.Count == 0;
-    public string EmptyStateTitle => L10n.T(SearchText.Length > 0 ? L10n.T("Common.NoMatchingSongs") : CurrentPlaylist?.IsSystem == true ? L10n.T("Common.KeepYourFavoriteSongsHere") : L10n.T("Library.MakeMusicPartOfYourDay"));
-    public string EmptyStateDescription => L10n.T(SearchText.Length > 0 ? L10n.T("Library.SearchSongsArtistsAlbumsOrSourcesPressEscTo") : L10n.T("Playlists.AddMusicFilesOrDragSongsIntoAPlaylist"));
+    public bool IsEmptyStateVisible => !IsBusy && !ShowMusicSearchSpinner && VisibleTracks.Count == 0;
+    public string EmptyStateTitle => Page == "cloud-search" ? L10n.T("MusicSearch.Empty") : L10n.T(SearchText.Length > 0 ? L10n.T("Common.NoMatchingSongs") : CurrentPlaylist?.IsSystem == true ? L10n.T("Common.KeepYourFavoriteSongsHere") : L10n.T("Library.MakeMusicPartOfYourDay"));
+    public string EmptyStateDescription => Page == "cloud-search" ? "" : L10n.T(SearchText.Length > 0 ? L10n.T("Library.SearchSongsArtistsAlbumsOrSourcesPressEscTo") : L10n.T("Playlists.AddMusicFilesOrDragSongsIntoAPlaylist"));
     public string CurrentTitle => CurrentTrack?.Title ?? L10n.T("Common.ChooseASongToPlay");
     public string CurrentArtist => CurrentTrack?.Artist ?? L10n.T("Statistics.YourMusicYourWay");
     public IImage? CurrentArtwork => CurrentTrack?.Artwork;
@@ -169,6 +169,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         // 浮层/后台扩展没有独立页面，导航命令不能为其创建空白页。
         if (page.StartsWith("plugin:", StringComparison.Ordinal) && Plugins.Installed.Any(p => p.Id == page[7..] && !p.HasPage)) return;
         Page = page == "favorites" ? "playlist:" + Playlist.LikedId : page == "temporary" ? "library" : page; SearchText = "";
+        LeaveMusicSearch(Page);
         PageTitle = title ?? LocalizedTitleForPage(Page);
         OnPropertyChanged(nameof(CurrentPlaylist));
         ApplyFilter(); ViewChanged?.Invoke(this, EventArgs.Empty);

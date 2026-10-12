@@ -25,7 +25,7 @@ public sealed partial class MainViewModel
     };
     private IEnumerable<TrackItem> SourceTracks(string page)
     {
-        if (page == "cloud-search") return _cloudSearchTracks.Where(t => Plugins.MusicSearchSources.Any(p => p.Id == t.ProviderId));
+        if (page == "cloud-search") { var sources = Plugins.MusicSearchSources.Select(p => p.Id).ToHashSet(StringComparer.Ordinal); return _cloudSearchTracks.Where(t => sources.Contains(t.ProviderId!)); }
         if (page == "temporary") return _temporaryTracks;
         var providers = Plugins.Installed.Where(p => p.Enabled).Select(p => p.Id).ToHashSet(StringComparer.Ordinal);
         bool Available(TrackItem t) => t.ProviderId is null || providers.Contains(t.ProviderId);
@@ -248,6 +248,7 @@ public sealed partial class MainViewModel
         var ids = State.Tracks.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
         foreach (var track in tracks)
         {
+            Plugins.PersistSearchCover(track);
             if (ids.Add(track.Id)) State.Tracks.Insert(0, track);
             if (PlayingSourcePage == "temporary" && _temporaryTracks.Any(t => t.Id == track.Id))
             {

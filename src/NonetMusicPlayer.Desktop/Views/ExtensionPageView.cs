@@ -137,7 +137,23 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
                 }); control = repeated; break;
             case "image":
                 var image = new Image { Stretch = Stretch.Uniform };
-                if (node.Asset.Length > 0)
+                if (node.ImageDataBind.Length > 0)
+                {
+                    string? priorData = null;
+                    Avalonia.Media.Imaging.Bitmap? dynamicImage = null;
+                    // 轮询时只在数据变化后解码，替换和页面离开时立即释放上一张图片。
+                    _assets.Add(new ImageLifetime(() => { image.Source = null; dynamicImage?.Dispose(); dynamicImage = null; }));
+                    bindings.Add(state =>
+                    {
+                        var data = String(Value(node.ImageDataBind, state, item));
+                        if (data == priorData) return;
+                        priorData = data; image.Source = null; dynamicImage?.Dispose(); dynamicImage = null;
+                        if (data.Length == 0) return;
+                        try { dynamicImage = BoundedPluginImage.Decode(data, (int)(node.Width > 0 ? Math.Min(1024, node.Width * 2) : 512)); image.Source = dynamicImage; }
+                        catch (Exception error) when (error is InvalidDataException or FormatException or ArgumentException) { AppLog.Warning("Extensions", "Invalid dynamic image: " + _session.Manifest.Id); }
+                    });
+                }
+                else if (node.Asset.Length > 0)
                 {
                     var path = Path.Combine(_manager.ExtensionDirectory(_session.Manifest), node.Asset); PluginPathPolicy.RejectLinkedAncestors(path);
                     if (new FileInfo(path).Length > 10_000_000) throw new InvalidDataException("Extension image is too large.");
@@ -262,6 +278,7 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
         catch (Exception error) { Dispose(); _manager.ReportExtensionError(error); Failed?.Invoke(); }
     }
     private void Unavailable(string id) { if (id == _session.Manifest.Id) { Dispose(); UnavailableView?.Invoke(); } }
+    private sealed class ImageLifetime(Action dispose) : IDisposable { public void Dispose() => dispose(); }
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e) { Dispose(); base.OnDetachedFromVisualTree(e); }
     public void Dispose() { if (_disposed) return; _disposed = true; _activeContextMenu?.Close(); _activeContextMenu = null; _session.Changed -= Refresh; _manager.UiPluginUnavailable -= Unavailable; _bindings.Clear(); foreach (var asset in _assets) asset.Dispose(); _assets.Clear(); }
 }

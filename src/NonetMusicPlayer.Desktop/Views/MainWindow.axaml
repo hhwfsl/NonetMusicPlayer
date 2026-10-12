@@ -512,6 +512,9 @@
                                             ItemsSource="{Binding VisibleTracks}"
                                             ScrollViewer.BringIntoViewOnFocusChange="False"
                                             SelectionMode="Multiple">
+                                            <ListBox.ItemsPanel>
+                                                <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+                                            </ListBox.ItemsPanel>
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate x:DataType="models:TrackItem">
                                                     <Border
@@ -649,6 +652,16 @@
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
                                         </ui:TrackListBox>
+                                        <ui:LoadingSpinner
+                                            x:Name="MusicSearchSpinner"
+                                            Grid.Row="2"
+                                            Width="36"
+                                            Height="36"
+                                            Margin="0,0,0,20"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="{Binding MusicSearchSpinnerAlignment}"
+                                            Brush="{DynamicResource AccentBrush}"
+                                            IsVisible="{Binding ShowMusicSearchSpinner}" />
                                         <StackPanel
                                             Grid.Row="2"
                                             MaxWidth="480"

@@ -21,7 +21,7 @@ public sealed class NativeAudioPlayer : IAudioPlayer, IExtensionAudioHost
     public void SetExtensionProcessors(IReadOnlyList<NonetMusicPlayer.Core.Plugins.ExtensionPcmLease> processors) => _extensionAudio.SetProcessors(processors);
     private MiniAudioEngine? _engine;
     private AudioPlaybackDevice? _device;
-    private SoundPlayer? _player;
+    private SoundFlow.Abstracts.SoundPlayerBase? _player;
     private ISoundDataProvider? _data;
     private Stream? _stream;
     private AudioFormat? _decodedFormat;
@@ -44,8 +44,10 @@ public sealed class NativeAudioPlayer : IAudioPlayer, IExtensionAudioHost
     public long PlaybackGeneration => Volatile.Read(ref _commandGeneration);
     public AudioBufferSnapshot BufferSnapshot
     {
-        get { lock (_gate) return new(_loadedSources, _releasedSources, _data is not null ? 1 : 0, (_data as DecodedDataProvider)?.MaxDecodeSamples ?? 0, (_data as DecodedDataProvider)?.DecodeCalls ?? 0); }
+        get { lock (_gate) { var decoder = (_data is BufferedPcmDataProvider buffered ? buffered.Source : _data) as DecodedDataProvider; return new(_loadedSources, _releasedSources, _data is not null ? 1 : 0, decoder?.MaxDecodeSamples ?? 0, decoder?.DecodeCalls ?? 0); } }
     }
+    /// <summary>当前云端 PCM 缓冲容量；本地按需解码时为零，不包含完整歌曲数据。</summary>
+    public int CloudBufferBytes { get { lock (_gate) return (_data as BufferedPcmDataProvider)?.BufferBytes ?? 0; } }
     public AudioFormat? DecodedFormat { get { lock (_gate) return _decodedFormat; } }
     public bool IsPlaying { get { lock (_gate) return _player?.State == PlaybackState.Playing; } }
     public TimeSpan Duration { get { lock (_gate) return TimeSpan.FromSeconds(_player?.Duration ?? 0); } }
@@ -111,8 +113,15 @@ public sealed class NativeAudioPlayer : IAudioPlayer, IExtensionAudioHost
                 // 请求格式只是采样类型提示；采样率和声道数仍来自音源，必须检查实际输出。
                 var sourceGeneration = _sourceGeneration;
                 var decoded = new DecodedDataProvider(_engine!, _stream, e => DecodeFailed(sourceGeneration, e));
-                _data = decoded; _decodedFormat = decoded.Format; _loadedSources++; EnsureDevice(decoded.Format);
-                _player = new SoundPlayer(_engine!, decoded.Format, _data) { Volume = _volume };
+                _data = decoded; _decodedFormat = decoded.Format; _loadedSources++;
+                if (_stream is LoopbackRangeStream cloud)
+                {
+                    var buffered = new BufferedPcmDataProvider(decoded, decoded.Format.Channels, cloud.CancelPendingReads); _data = buffered;
+                    buffered.PrimeAsync(cancellationToken).GetAwaiter().GetResult();
+                    _player = new BufferedSoundPlayer(_engine!, decoded.Format, buffered) { Volume = _volume };
+                }
+                else _player = new SoundPlayer(_engine!, decoded.Format, _data) { Volume = _volume };
+                EnsureDevice(decoded.Format);
                 _extensionAudio.SampleRate = decoded.Format.SampleRate; _player.AddModifier(_extensionAudio);
                 _player.PlaybackEnded += Ended; _device!.MasterMixer.AddComponent(_player); cancellationToken.ThrowIfCancellationRequested();
                 AppLog.Info("Audio.Load", $"已载入音频会话 {sourceGeneration}，{decoded.Format.SampleRate} Hz / {decoded.Format.Channels} 声道，时长 {_player.Duration:0.000} 秒");
@@ -176,7 +185,7 @@ public sealed class NativeAudioPlayer : IAudioPlayer, IExtensionAudioHost
             if (_device is null && _decodedFormat is { } format) { EnsureDevice(format); _device!.MasterMixer.AddComponent(_player); }
             if (_device?.IsRunning == true) _device.Stop();
             if (_failedSource == _sourceGeneration) throw new InvalidOperationException("当前音频解码已失败，请重新载入或切换歌曲。");
-            if (_data is DecodedDataProvider { AtEnd: true }) _player.Seek(TimeSpan.Zero);
+            if (_data is DecodedDataProvider { AtEnd: true } or BufferedPcmDataProvider { AtEnd: true }) _player.Seek(TimeSpan.Zero);
             _lastDevicePosition = _player.Time; _lastDeviceAdvance = System.Diagnostics.Stopwatch.GetTimestamp();
             try { _player.Play(); if (_device?.IsRunning == false) _device.Start(); }
             catch (Exception error) { _player.Pause(); ReleaseDevice(); throw new AudioOutputUnavailableException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Playback.AudioOutputCouldNotBeOpenedTheTrackAnd"), error); }
@@ -216,7 +225,9 @@ public sealed class NativeAudioPlayer : IAudioPlayer, IExtensionAudioHost
             if (_player.State == PlaybackState.Playing)
             {
                 if (Math.Abs(_player.Time - _lastDevicePosition) > .01) { _lastDevicePosition = _player.Time; _lastDeviceAdvance = System.Diagnostics.Stopwatch.GetTimestamp(); }
-                stuck = _device?.IsRunning != true || System.Diagnostics.Stopwatch.GetElapsedTime(_lastDeviceAdvance).TotalSeconds > 3;
+                var buffering = _data is BufferedPcmDataProvider { IsBuffering: true };
+                if (buffering) _lastDeviceAdvance = System.Diagnostics.Stopwatch.GetTimestamp();
+                stuck = _device?.IsRunning != true || !buffering && System.Diagnostics.Stopwatch.GetElapsedTime(_lastDeviceAdvance).TotalSeconds > 3;
             }
             var restored = _device is null && _engine.PlaybackDevices.Length > 0;
             if (!disappeared && !changedDefault && !stuck && !restored) return;

@@ -1,4 +1,8 @@
-# 通用扩展层 v2 / SDK 4.7
+# 通用扩展层 v2 / SDK 4.9
+
+SDK 4.9 / Nonet 0.4.0-beta.21 新增可选 `media.artwork-batch.v1`。搜索音源可声明 `musicSearch.deferredArtwork=true`，先返回歌曲元数据，再按可见行接收批量封面请求。分页结果滚动到底自动追加，宿主保留虚拟化；旧音源无需修改，详见 [分页与按需封面](UNIVERSAL_EXTENSIONS.md#分页与按需封面sdk-49可选)。
+
+SDK 4.8 / Nonet 0.4.0-beta.20 新增可选 `ui.image-data.v1`。登录页面可绑定有界 PNG/JPEG 数据显示二维码；搜索返回的 `CoverBase64` 会直接显示在结果行。仅使用此新增能力的包声明对应 requiredCapabilities，旧包不需要重编译，详见 [动态图片绑定](UNIVERSAL_EXTENSIONS.md#动态图片绑定sdk-48可选)。
 
 SDK 4.7 / Nonet 0.4.0-beta.19 新增可选 `media.search.v1` 和 `media.import.v1`。搜索型音源声明 `musicSearch` 并提供 `media-source` 服务，不在宿主加入供应商逻辑。搜索结果不自动加入音乐库；用户加入歌单时保存稳定插件 ID 和歌曲 ID，播放时重新解析。端点、分页和权限规范见 [通用接口参考](UNIVERSAL_EXTENSIONS.md#音乐搜索与目录导入sdk-47)。
 

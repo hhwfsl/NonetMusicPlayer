@@ -19,6 +19,8 @@ public sealed partial class TrackItem : ObservableObject
     public long FileSize { get; set; }
     public double DurationSeconds { get; set; }
     public string? CoverPath { get; set; }
+    /// <summary>搜索缩略图尚未建立持久引用；加入歌单或播放时转存到正式封面目录。</summary>
+    [JsonIgnore] public bool HasSearchCover { get; set; }
     public string? LyricsSourcePath { get; set; }
     /// <summary>用户主动取消关联后同时屏蔽外部和内嵌歌词，重新手动关联时清除。</summary>
     public bool LyricsDisabled { get; set; }
@@ -58,4 +60,6 @@ public sealed partial class TrackItem : ObservableObject
     private string? _artworkPath;
     private IImage? _artwork;
     public void ReleaseArtwork() { ArtworkCache.Shared.Invalidate(_artworkPath); _artwork = null; _artworkPath = null; }
+    /// <summary>同一路径从缩略图更新为高清封面后重新建立绘制代理，避免沿用旧尺寸裁切。</summary>
+    public void RefreshArtwork() { ReleaseArtwork(); OnPropertyChanged(nameof(Artwork)); OnPropertyChanged(nameof(HasArtwork)); }
 }

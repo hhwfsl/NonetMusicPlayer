@@ -59,6 +59,8 @@ public sealed class PluginManifest
             || !(Type == "provider" || Type == "extension" && ProvidedServices.Contains("media-source"))))
             throw new InvalidDataException("Music search requires a declared media source and network permission.");
         LifecycleMethods ??= []; NavigationImage ??= "";
+        if (MusicSearch?.DeferredArtwork == true && !RequiredCapabilities.Contains("media.artwork-batch.v1"))
+            throw new InvalidDataException("Deferred artwork requires media.artwork-batch.v1.");
         if (NavigationImage.Length > 0) PluginPathPolicy.ValidateRelativePath(NavigationImage);
         foreach (var overlay in Contributions.Where(c => c.Overlay is not null).Select(c => c.Overlay!))
             if (!double.IsFinite(overlay.Width) || !double.IsFinite(overlay.Height) || overlay.Width is < 80 or > 2000 || overlay.Height is < 80 or > 2000) throw new InvalidDataException("Invalid overlay size.");

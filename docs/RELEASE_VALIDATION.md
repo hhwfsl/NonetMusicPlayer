@@ -1,3 +1,28 @@
+# Nonet 0.4.0-beta.21 本地发布验证
+
+日期：2026-10-12。Windows 实际宿主验证。下文记录本地验证；公开源码和 Release 使用另行审查的桌面/CLI 快照及全新纯净构建，不包含本地开发历史、移动端、私人插件、模板或用户数据。
+
+- 主工程构建通过，0 警告、0 错误；Core、既有 UI、Contract v1、冻结 v2 进程/托管和通用扩展回归通过。
+- 搜索首次请求完成前已进入结果页并显示加载动画；底部滚动自动追加 30 首，6,000 条元数据只实现 7 个可见行控件，旧行身份保持不变。
+- 按需封面、离页迟到响应丢弃及搜索输入清空通过；真实公开音源搜索两页、封面和 Range 请求通过。
+- 真实原生音频后端播放 96 kHz/24 位 PCM；24 秒期间注入 5 次 1.2 秒网络等待，时钟连续、无错误设备恢复，PCM 容量 3,072,000 字节；暂停、寻址和自然结束通过。
+- 原发布目录精简 `Nonet.exe` 验证云端搜索封面、歌单稳定 ID、歌词、PCM 缓冲、实际解码/时钟/寻址、音源进程重新启用及插件配置反复展开保存。
+- 原目录发布版本为 0.4.0-beta.21；528 个原数据及引导文件逐文件 SHA-256 未改变，旧程序已作本地备份。纯净 Windows ZIP 在复制用户数据前独立构建，不含运行数据。
+- 本地模板直接引用 SDK 4.9，文档一致性与基础包测试通过。新接口是可选能力，原 Contract、页面 Schema 和程序集身份不变。
+- 私人音源的 Windows AOT、Linux/macOS 自包含包分别校验；Linux 实际进程初始化、错误恢复和退出通过，macOS 未作实机测试。私人插件不进入播放器仓库。
+
+复现：
+
+```powershell
+dotnet build NonetMusicPlayer.slnx -c Release
+dotnet run --project tests/NonetMusicPlayer.CoreChecks -c Release -- artifacts/core
+dotnet run --project tests/NonetMusicPlayer.CoreChecks -c Release -- artifacts/streaming --streaming-audio-only
+dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/search --music-search
+dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/compatibility --compatibility
+dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/extensions --extensions
+dotnet run --project tests/NonetMusicPlayer.PluginUiChecks.Desktop -c Release -- artifacts/universal --universal
+```
+
 # Nonet 0.4.0-beta.13 发布验证
 
 日期：2026-10-08。Windows 环境实际执行；macOS/Linux 为交叉构建及包校验，不代表实机通过。

@@ -19,10 +19,13 @@ internal static partial class ReleaseVerifier
             var window=new MainWindow { DataContext=vm };
             var plugin=vm.Plugins.Install(Path.GetFullPath(package));vm.Plugins.SetEnabled(plugin,true);
             Wait(vm.SearchMusicAsync(plugin.Id,query));
+            Wait(vm.LoadMusicSearchArtworkAsync(vm.VisibleTracks.Take(12)));
             var track=vm.VisibleTracks.FirstOrDefault()??throw new InvalidDataException("No music source results.");
             if(vm.State.Tracks.Count!=0)throw new InvalidDataException("Search incorrectly stored tracks.");
+            var searchArtwork=track.HasArtwork;
             var list=vm.CreatePlaylist("Verification cloud tracks");vm.AddToPlaylist(list,[track]);
             Wait(vm.PlayTrackAsync(track,[track]));if(!vm.IsPlaying||audio.Duration.TotalSeconds<=1)throw new InvalidDataException("Source playback failed.");
+            if(audio.CloudBufferBytes<=0||audio.CloudBufferBytes>NonetMusicPlayer.Core.Audio.BufferedPcmDataProvider.MaximumBufferBytes)throw new InvalidDataException("Published cloud PCM buffer unavailable or unbounded.");
             VerifyPlaybackClock(audio);audio.Position=TimeSpan.FromSeconds(2);
             if(Math.Abs(audio.Position.TotalSeconds-2)>.3)throw new InvalidDataException("Streaming seek failed.");
             vm.Save();var persisted=storage.Load().Tracks.Single();
@@ -30,7 +33,7 @@ internal static partial class ReleaseVerifier
             vm.DisablePlugin(plugin);vm.Plugins.SetEnabled(plugin,true);
             var resolved=Wait(vm.Plugins.ResolveAsync(persisted));using(var stream=new LoopbackRangeStream(new Uri(resolved))) { var bytes=new byte[32];stream.ReadExactly(bytes);stream.Seek(1024,SeekOrigin.Begin);stream.ReadExactly(bytes); }
             vm.DisablePlugin(plugin);window.Close();
-            AppStorage.AtomicWrite(Path.Combine(root,"result.txt"),"PASS\nPublishedHost=True\nSearch=True\nStableCloudPlaylist=True\nArtwork="+File.Exists(track.CoverPath)+"\nLyrics="+(vm.Lyrics.ExistingPath(track.Id)is not null)+"\nStreamingDecode=True\nSeek=True\nProcessRestart=True\n");return 0;
+            AppStorage.AtomicWrite(Path.Combine(root,"result.txt"),"PASS\nPublishedHost=True\nSearch=True\nSearchArtwork="+searchArtwork+"\nStableCloudPlaylist=True\nArtwork="+File.Exists(track.CoverPath)+"\nLyrics="+(vm.Lyrics.ExistingPath(track.Id)is not null)+"\nStreamingDecode=True\nSeek=True\nProcessRestart=True\n");return 0;
         }
         catch(Exception error){AppStorage.AtomicWrite(Path.Combine(root,"result.txt"),"FAIL\n"+AppLog.Redact(error.GetType().Name+": "+error.Message));return 1;}
     }
