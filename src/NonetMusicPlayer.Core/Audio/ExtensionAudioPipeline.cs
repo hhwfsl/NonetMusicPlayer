@@ -40,7 +40,7 @@ public sealed class ExtensionAudioPipeline : SoundModifier
                 {
                     saved.AsSpan(0, buffer.Length).CopyTo(buffer); processor.Revoke();
                     // 只在首次故障时后台记录，实时线程不执行日志 IO。
-                    ThreadPool.QueueUserWorkItem(_ => { AppLog.Warning("PluginAudio", "Processor bypassed; original audio preserved.", error); try { ProcessorBypassed?.Invoke(this, EventArgs.Empty); }
+                    ThreadPool.QueueUserWorkItem(_ => { AppLog.Warning("PluginAudio", "Processor bypassed; original audio preserved.", error); try { processor.ReportFailure(error); ProcessorBypassed?.Invoke(this, EventArgs.Empty); }
                         catch (Exception notificationError) { AppLog.Warning("PluginAudio", "Bypass notification failed.", notificationError); } });
                 }
                 finally { processor.Exit(); }

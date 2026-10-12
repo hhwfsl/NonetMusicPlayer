@@ -265,3 +265,47 @@ Contract v2 扩展可声明 `"hasPage": false`、`"pageEntry": ""`，并将 `ui.
 ```
 
 此片段不是完整安装清单，必须另行声明身份、运行形态、入口及所需权限。纯后台/浮层扩展不必创建无意义的空页面。
+
+## 运行时与故障管理（SDK 4.10）
+
+新插件默认使用 `runtime=managed`。Contract v2 实现既有 `INonetExtension`；Contract v1 的 provider/lyrics/agent 可选实现 `INonetManagedRpcPlugin`，保持原方法名及 JSON 结果。清单声明 `in-process`、`extensionClass` 和目标 RID 的 DLL 入口。构建为 .NET 10 类库，不打包 .NET 运行时或 SDK DLL，保留自身依赖与 deps.json。每平台单独生成 .impp。
+
+`process` 自包含 .NET 与 Native AOT 保持同等支持，不要求旧插件重打包。进程仍使用 stdin/stdout JSON-RPC；stdout 不能写诊断日志。新进程实现可用 RPC 错误码 -32603 报告内部程序错误；-32000 等旧业务错误仍可恢复。AOT 跨 OS 需要目标原生工具链。
+
+### 信任边界
+
+托管插件不是沙箱，也不是崩溃隔离。宿主可捕获自身调用、生命周期、事件及受监督任务中的普通异常并停用对应插件；栈溢出、任意线程未捕获异常、FailFast、原生致命崩溃或全局状态污染仍可能使 Nonet 退出。导入与首次启用显示风险提示，更新包撤销托管授权。取消令牌只支持协作停止；无法强制杀死不合作线程或保证立即卸载 DLL。需要崩溃隔离时选择 process，不因模式不同削减服务能力。
+
+### 运行时连接与后台任务
+
+实现可选 `INonetRuntimeAware.AttachRuntime(PluginRuntimeContext)`，并声明 `runtime.supervised.v1`。宿主在初始化之前连接运行时上下文：
+
+```csharp
+private PluginRuntimeContext? _runtime;
+public void AttachRuntime(PluginRuntimeContext context) => _runtime = context;
+// 在明确的插件动作中启动；禁止 async void、未观察任务和自建无监督线程。
+public Task RefreshAsync() => _runtime!.RunAsync(async token =>
+{
+    await RefreshCacheAsync(token);
+    _runtime.Log("Cache refreshed.");
+});
+```
+
+`Lifetime` 在停用、更新、卸载或退出时取消。后台循环必须响应取消；DisposeAsync 解除事件、停止网络代理和后台任务。普通未处理异常触发统一故障停用，不能通过继续轮询自动重新启动故障插件。取消及 `PluginOperationException` 表示预期业务拒绝，不作为程序故障；不要用业务异常隐藏程序错误。初始化、动作、事件、音效、原生视图和运行时监督任务采用相同插件归属。
+
+### 日志
+
+所有形态可请求 `log` 服务（`logging.v1`）：
+
+```json
+{"id":"log-1","service":"log","arguments":{"level":"info","message":"Cache refreshed."}}
+```
+
+可信托管插件也可调用 `PluginRuntimeContext.Log(message, level)`。info/warning/error 写入宿主 Logs，并发布到终端日志流。宿主添加插件名称及稳定 ID，脱敏凭据、地址和本机路径，单条最多 4000 字符且限制日志频率。不要写 API Key、Cookie、用户上传内容或模型消息；换行不能伪造日志前缀。
+
+### 独立歌词轨道
+
+`lyrics.tracks.v1` 为音源 ProviderTrack 增加可选 `lyricsTranslation`，`lyrics` 保留原文；旧字段与旧包行为不变。可以返回标准 LRC、Enhanced LRC 或原生网易云 YRC。不要把独立翻译直接拼接到原文中。宿主按原文时间有界匹配译文，译文使用独立较小字体，逐字翻译保留自身时序；无自身逐字时序时跟随原文进度比例。匹配不到的译文不变成第二条同等级原文。
+
+宿主保存显式原文/译文段标识。可导入原生网易云 API JSON 的 lrc/yrc/tlyric/ytlrc 字段以及双段 LRC；普通时间戳重复与旧双语 LRC仍按既有规则处理。旧云端自动歌词可刷新为显式轨道，手动关联歌词不被覆盖。
+

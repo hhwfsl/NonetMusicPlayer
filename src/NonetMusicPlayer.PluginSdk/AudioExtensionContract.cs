@@ -20,6 +20,9 @@ public sealed class ExtensionPcmLease(INonetPcmProcessor processor)
 {
     private int _enabled = 1, _active;
     public bool Enabled => Volatile.Read(ref _enabled) == 1;
+    /// <summary>后台发布处理器故障，宿主可据此停用所属插件；旧处理器无需修改。</summary>
+    public event Action<Exception>? Faulted;
+    public void ReportFailure(Exception error) => Faulted?.Invoke(error);
     public bool TryEnter()
     {
         if (!Enabled) return false;

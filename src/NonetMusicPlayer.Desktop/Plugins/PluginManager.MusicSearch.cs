@@ -110,7 +110,9 @@ public sealed partial class PluginManager
                 using var output = new MemoryStream(); image.Save(output, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
                 await File.WriteAllBytesAsync(path, output.ToArray()); track.CoverPath = path; track.HasSearchCover = false; track.RefreshArtwork();
             }
-            if (!track.LyricsDisabled && lyrics.ExistingPath(track.Id) is null && item.Lyrics is { Length: > 0 } text) lyrics.Save(track.Id, text);
+            if (!track.LyricsDisabled && item.Lyrics is { Length: > 0 } text && (lyrics.ExistingPath(track.Id) is null
+                || track.LyricsSourcePath is null && item.LyricsTranslation is { Length: > 0 } && !lyrics.Read(track.Id).Contains("[nonet:translation]", StringComparison.Ordinal)))
+                lyrics.SaveProvider(track.Id, text, item.LyricsTranslation);
         }
         catch (Exception error) { AppLog.Warning("MusicSource", "Optional metadata unavailable: " + plugin.Id, error); }
         PersistSearchCover(track);

@@ -31,6 +31,7 @@ public sealed partial class ExtensionSession
         if (_pcm is null && _managed?.Instance is INonetAudioExtension factory)
         {
             _pcm = new(factory.CreateProcessor()); _audioOwner = _manager.ExtensionViewModel;
+            _pcm.Faulted += error => _manager.ReportPluginFault(Manifest, error);
             await Dispatcher.UIThread.InvokeAsync(() => _audioOwner.SetExtensionAudio(Manifest.Id, _pcm));
         }
     }
@@ -92,14 +93,7 @@ public sealed partial class ExtensionSession
             case "log":
                 var text = args["message"]?.GetValue<string>() ?? "";
                 if (text.Length is 0 or > 4000) throw new InvalidDataException("Invalid log message.");
-                text = AppLog.Redact(text); var category = "Plugin:" + Manifest.Id;
-                switch (args["level"]?.GetValue<string>() ?? "info")
-                {
-                    case "info": AppLog.Info(category, text); break;
-                    case "warning": AppLog.Warning(category, text); break;
-                    case "error": AppLog.Error(category, text); break;
-                    default: throw new InvalidDataException("Invalid log level.");
-                }
+                _manager.WritePluginLog(Manifest, args["level"]?.GetValue<string>() ?? "info", text);
                 return new() { ["success"] = true };
             case "events":
                 if (!Manifest.Permissions.Contains("plugin-services")) throw new InvalidDataException("Plugin service permission required.");
@@ -184,7 +178,8 @@ public sealed partial class ExtensionSession
             using var document = JsonDocument.Parse(frame.State["serviceResult"]?.ToJsonString() ?? "{}");
             return document.RootElement.Clone();
         }
-        catch { if (_process?.IsDisposed == true) Dispose(); throw; }
+        catch (OperationCanceledException) when (token.IsCancellationRequested || _lifetime.IsCancellationRequested) { throw; }
+        catch (Exception error) { _manager.ReportPluginFault(Manifest, error); throw; }
         finally { if (!reentrant) _gate.Release(); }
     }
     private async Task<JsonObject> RequestNativeServiceAsync(ExtensionHostRequest request, bool userGesture, CancellationToken token)

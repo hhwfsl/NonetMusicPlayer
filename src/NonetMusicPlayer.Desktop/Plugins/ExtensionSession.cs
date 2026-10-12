@@ -42,7 +42,7 @@ public sealed partial class ExtensionSession : IDisposable
             {
                 if (!Manifest.ManagedExecutionConsent) throw new InvalidDataException("Explicit managed consent required.");
                 var path = Path.Combine(_manager.ExtensionDirectory(Manifest), Manifest.EntryPoints[PluginPlatformPolicy.CurrentRid]);
-                PluginPathPolicy.RejectLinkedAncestors(path); _managed = new(path, Manifest.ExtensionClass);
+                PluginPathPolicy.RejectLinkedAncestors(path); _managed = new(path, Manifest.ExtensionClass, _manager.RuntimeFor(Manifest, _lifetime.Token));
                 var initialization = new ExtensionInitialization(2, _manager.ConfigurationValues(Manifest).ToJsonString(),
                     _manager.ExtensionStorage(Manifest), ExtensionContract.Capabilities);
                 Frame = await Task.Run(async () => await _managed.Instance.InitializeAsync(initialization, _lifetime.Token), _lifetime.Token);
@@ -60,9 +60,12 @@ public sealed partial class ExtensionSession : IDisposable
             Frame = await CallAsync("extension.sync"); ExtensionContract.ValidateFrame(Frame); _initialized = true;
             }
         }
-        catch { Dispose(); throw; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { Dispose(); throw; }
+        catch (Exception error) { _manager.ReportPluginFault(Manifest, error); Dispose(); throw; }
         finally { _gate.Release(); }
-        await PublishAsync(Frame);
+        try { await PublishAsync(Frame); }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { throw; }
+        catch (Exception error) { _manager.ReportPluginFault(Manifest, error); throw; }
     }
     public async Task InvokeAsync(string action, JsonObject values, bool userGesture = false)
     {
@@ -72,6 +75,8 @@ public sealed partial class ExtensionSession : IDisposable
             _gesture = userGesture;
             await PublishAsync(await CallAsync("extension.invoke", new() { ["invocation"] = JsonSerializer.Serialize(new ExtensionInvocation(action, values), ExtensionJson.Default.ExtensionInvocation) }));
         }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { throw; }
+        catch (Exception error) { _manager.ReportPluginFault(Manifest, error); throw; }
         finally { _gesture = false; _gate.Release(); }
     }
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, ExtensionEvent> _pendingEvents = new();
@@ -94,8 +99,8 @@ public sealed partial class ExtensionSession : IDisposable
                 finally { _gate.Release(); }
             }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception error) { AppLog.Warning("Extensions", "Extension event failed: " + Manifest.Id, error); }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception error) { _manager.ReportPluginFault(Manifest, error); }
         finally
         {
             Interlocked.Exchange(ref _eventPump, 0);
@@ -105,15 +110,16 @@ public sealed partial class ExtensionSession : IDisposable
     private async Task<ExtensionFrame> CallAsync(string method, Dictionary<string, string>? args = null, CancellationToken token = default, TimeSpan? timeout = null)
         {
         using var combined = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token, token);
+        if ((timeout ?? TimeSpan.FromSeconds(20)) is var limit && limit > TimeSpan.Zero) combined.CancelAfter(limit);
         var instance = _declarative ?? _managed?.Instance;
         if (instance is null) return (await _process!.CallAsync(method, args, combined.Token, timeout)).Deserialize(ExtensionJson.Default.ExtensionFrame) ?? throw new InvalidDataException("Empty frame.");
         return await Task.Run(async () => method switch
         {
-            "extension.invoke" => await instance.InvokeAsync(JsonSerializer.Deserialize(args!["invocation"], ExtensionJson.Default.ExtensionInvocation)!, _lifetime.Token),
-            "extension.event" => await instance.EventAsync(JsonSerializer.Deserialize(args!["event"], ExtensionJson.Default.ExtensionEvent)!, _lifetime.Token),
-            "extension.complete" => await instance.CompleteAsync(args!["id"], JsonNode.Parse(args["result"])!.AsObject(), _lifetime.Token),
-            _ => await instance.SyncAsync(_lifetime.Token)
-        }, _lifetime.Token);
+            "extension.invoke" => await instance.InvokeAsync(JsonSerializer.Deserialize(args!["invocation"], ExtensionJson.Default.ExtensionInvocation)!, combined.Token),
+            "extension.event" => await instance.EventAsync(JsonSerializer.Deserialize(args!["event"], ExtensionJson.Default.ExtensionEvent)!, combined.Token),
+            "extension.complete" => await instance.CompleteAsync(args!["id"], JsonNode.Parse(args["result"])!.AsObject(), combined.Token),
+            _ => await instance.SyncAsync(combined.Token)
+        }, combined.Token).WaitAsync(combined.Token);
     }
     private async Task PublishAsync(ExtensionFrame frame)
     {
@@ -143,8 +149,8 @@ public sealed partial class ExtensionSession : IDisposable
                 try { await PublishAsync(await CallAsync("extension.sync")); } finally { _gate.Release(); }
             }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception error) { Dispose(); _manager.ReportExtensionError(error); }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception error) { _manager.ReportPluginFault(Manifest, error); Dispose(); }
         finally { _polling = false; }
     }
     private async Task<JsonObject> ServiceAsync(ExtensionHostRequest request)

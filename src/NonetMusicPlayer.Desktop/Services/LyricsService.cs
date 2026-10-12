@@ -77,7 +77,75 @@ public sealed class LyricsService
         AppStorage.AtomicWrite(PathFor(id), content);
         if (MirrorFolder is { } mirror) AppStorage.AtomicWrite(Path.Combine(mirror, MusicLibraryScanner.StableId(id) + ".lrc"), content);
     }
+    /// <summary>显式歌词轨道优先；原生网易云 YRC 按毫秒时序解析，不按语言猜测译文。</summary>
     public static IReadOnlyList<LyricLine> Parse(string text)
+    {
+        const string separator = "[nonet:translation]";
+        if (text.Contains(separator, StringComparison.Ordinal))
+        {
+            var parts = text.Split(separator, 2);
+            return MergeTracks(ParseTrack(parts[0].Replace("[nonet:original]", "")), ParseTrack(parts[1]));
+        }
+        if (text.TrimStart().StartsWith('{'))
+        {
+            try
+            {
+                using var json = System.Text.Json.JsonDocument.Parse(text);
+                var root = json.RootElement;
+                string Track(string name) => root.TryGetProperty(name, out var value) && value.ValueKind == System.Text.Json.JsonValueKind.Object && value.TryGetProperty("lyric", out var lyric) ? lyric.GetString() ?? "" : "";
+                var original = Track("yrc"); if (original.Length == 0) original = Track("lrc");
+                var translated = Track("ytlrc"); if (translated.Length == 0) translated = Track("tlyric");
+                if (original.Length > 0) return MergeTracks(ParseTrack(original), ParseTrack(translated));
+            }
+            catch (System.Text.Json.JsonException) { }
+        }
+        // 网易云导出的双轨 LRC 常先写完整原文再从头写译文，时间戳允许细小偏差。
+        var rows = text.Replace("\r", "").Split('\n'); var first = double.NaN; var last = double.NaN; var count = 0;
+        for (var i = 0; i < rows.Length; i++)
+        {
+            var tag = TimeTag.Match(rows[i].Trim());
+            if (!tag.Success || tag.Index != 0) continue;
+            var time = Time(tag);
+            if (count >= 2 && time <= first + .3 && last > first + 1)
+                return MergeTracks(ParseTrack(string.Join('\n', rows[..i])), ParseTrack(string.Join('\n', rows[i..])));
+            if (count++ == 0) first = time; last = time;
+        }
+        return ParseTrack(text);
+    }
+    public void SaveProvider(string id, string original, string? translation)
+        => Save(id, string.IsNullOrWhiteSpace(translation) ? original : "[nonet:original]\n" + original + "\n[nonet:translation]\n" + translation);
+    private static IReadOnlyList<LyricLine> ParseTrack(string text)
+    {
+        var yrc = new List<LyricLine>();
+        foreach (var row in text.Replace("\r", "").Split('\n'))
+        {
+            var header = Regex.Match(row, @"^\[(\d+),(\d+)\]");
+            if (!header.Success) continue;
+            var start = double.Parse(header.Groups[1].Value, CultureInfo.InvariantCulture) / 1000;
+            var body = row[header.Length..]; var tags = Regex.Matches(body, @"\((\d+),(\d+),\d+\)");
+            var words = tags.Select((w, index) => new LyricWord(double.Parse(w.Groups[1].Value, CultureInfo.InvariantCulture) / 1000,
+                body[(w.Index + w.Length)..(index + 1 < tags.Count ? tags[index + 1].Index : body.Length)],
+                (double.Parse(w.Groups[1].Value, CultureInfo.InvariantCulture) + double.Parse(w.Groups[2].Value, CultureInfo.InvariantCulture)) / 1000)).ToArray();
+            var content = string.Concat(words.Select(w => w.Text)).Trim();
+            if (content.Length > 0) yrc.Add(new(start, content) { Words = words, Timed = true });
+        }
+        return yrc.Count > 0 ? yrc.OrderBy(l => l.Seconds).ToArray() : ParseLrc(text);
+    }
+    /// <summary>译文只附着原文，以最近且有界的时间对齐；不制造同等级的第二句歌词。</summary>
+    private static IReadOnlyList<LyricLine> MergeTracks(IReadOnlyList<LyricLine> original, IReadOnlyList<LyricLine> translation)
+    {
+        if (original.Count == 0) return translation;
+        var result = original.ToArray(); var pointer = 0;
+        foreach (var line in translation.Where(l => l.Timed))
+        {
+            while (pointer + 1 < result.Length && Math.Abs(result[pointer + 1].Seconds - line.Seconds) < Math.Abs(result[pointer].Seconds - line.Seconds)) pointer++;
+            var match = result[pointer];
+            if (!match.Timed || Math.Abs(match.Seconds - line.Seconds) > 1.5 || match.Text == line.Text) continue;
+            result[pointer] = match with { Translation = match.Translation.Length == 0 ? line.Text : match.Translation + "\n" + line.Text, TranslationWords = match.Translation.Length == 0 ? line.Words : [] };
+        }
+        return result;
+    }
+    private static IReadOnlyList<LyricLine> ParseLrc(string text)
     {
         var offsetMatch = Regex.Match(text, @"^\s*\[offset:([+-]?\d+)\]\s*$", RegexOptions.IgnoreCase | RegexOptions.Multiline);
         var offset = offsetMatch.Success && double.TryParse(offsetMatch.Groups[1].Value, CultureInfo.InvariantCulture, out var ms) ? ms / 1000 : 0;

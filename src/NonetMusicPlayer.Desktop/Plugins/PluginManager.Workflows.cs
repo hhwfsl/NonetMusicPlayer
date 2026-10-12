@@ -9,7 +9,7 @@ public sealed partial class PluginManager
     private async Task StartAudioExtensionAsync(PluginManifest plugin)
     {
         try { await Extension(plugin).AttachAudioAsync(); }
-        catch (Exception error) { ReportExtensionError(error); }
+        catch (Exception error) { ReportPluginFault(plugin, error); }
     }
     internal void ResetHookFailures(string id) => _failedHooks.RemoveWhere(key => key.StartsWith(id + ":", StringComparison.Ordinal));
     public bool HasHook(string name) => Installed.Any(p => p.Enabled && p.Type == "extension" && p.Hooks.Contains(name) && p.Id != ExtensionSession.Caller.Value && !_failedHooks.Contains(p.Id + ":" + name));
@@ -29,8 +29,7 @@ public sealed partial class PluginManager
             catch (Exception error) when (!cancellationToken.IsCancellationRequested)
             {
                 _failedHooks.Add(plugin.Id + ":" + name);
-                AppLog.Warning("Extensions", "Workflow disabled for this session: " + plugin.Id + "/" + name, error);
-                _uiVm?.ReportWarning(plugin.Name + " · " + L10n.T("Plugins.UnableToOpenPluginPage"));
+                ReportPluginFault(plugin, error);
             }
         }
         return result;

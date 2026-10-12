@@ -15,3 +15,5 @@
 - 基础工程与插件源码独立存放，但构建必须依赖播放器源码；README 和新手教程给出克隆宿主、指定 NonetPlayerRoot、修改插件、打包、在宿主调试的完整步骤。新插件清单声明稳定 id、数字 version、repositoryOwner 和与 GitHub 一致的 repositoryName；旧包缺少仓库字段仍兼容。
 - 跨工作区更新基础工程需要遵守当前文件写入权限；Git 仅本地管理，未经用户要求不创建远程仓库、不上传、不推送。
 - 本地构建使用 `NUGET_PACKAGES=<本工程>/.packages` 和 NuGet.Config，不手工设置缺少结尾分隔符的 NuGetPackageRoot。
+- 新插件默认采用可信托管共享运行时模式；保留独立进程和 Native AOT 为同等支持形态。导入和首次启用明确提醒致命错误可使宿主退出。普通异常统一归属到插件并停用；禁止把托管加载描述为崩溃隔离。
+

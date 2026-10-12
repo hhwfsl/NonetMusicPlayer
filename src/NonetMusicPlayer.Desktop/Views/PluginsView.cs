@@ -34,6 +34,7 @@ public sealed class PluginsView : UserControl, IDisposable
                     }
                     var details = L10n.Format("Plugins.AuthorTypeVersionPermissionsInstalledPluginsAreDisabledBy", manifest.Author, TypeName(manifest.Type), manifest.Version, manifest.Permissions.Count == 0 ? L10n.T("Common.None") : string.Join(" / ", manifest.Permissions.Select(PermissionName)), manifest.Description);
                     if (previous is not null) details = L10n.Format("Plugins.UpdateDetails", previous.Version, manifest.Version, string.Join(" / ", manifest.Permissions.Select(PermissionName)), manifest.Description);
+                    if (manifest.Runtime == "managed") details += "\n\n" + L10n.T("Extensions.ManagedWarning");
                     if (_disposed || !await PlayerDialog.Confirm(owner, previous is null ? L10n.Format("Common.Install", manifest.Name) : L10n.Format("Plugins.UpdateTitle", manifest.Name), details, L10n.T(previous is null ? "Common.TrustAndInstall" : "Plugins.TrustAndUpdate"))) return;
                     if (vm.IsBusy) throw new InvalidOperationException(L10n.T("Plugins.WaitForTheCurrentOperationBeforeInstallingAPlugin"));
                     vm.IsBusy = true;
@@ -87,7 +88,7 @@ public sealed class PluginsView : UserControl, IDisposable
         {
             var enabled = Ui.Toggle(plugin.Enabled, async value =>
             {
-                if (value && plugin.Type == "extension" && plugin.Runtime == "managed" && !plugin.ManagedExecutionConsent)
+                if (value && plugin.Runtime == "managed" && !plugin.ManagedExecutionConsent)
                 {
                     if (!await PlayerDialog.Confirm(owner, plugin.Name, L10n.T("Extensions.ManagedWarning"), L10n.T("Common.Confirm"))) { owner.ShowPage(); return; }
                     plugin.ManagedExecutionConsent = true;

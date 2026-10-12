@@ -1,4 +1,6 @@
-# 通用扩展层 v2 / SDK 4.9
+# 通用扩展层 v2 / SDK 4.10
+
+SDK 4.10 / Nonet 0.4.0-beta.22 新增可选托管 RPC、受监督后台任务、插件日志及独立歌词轨道。新插件默认共享宿主运行时；保留独立进程和 AOT 形态。详见 [运行时与故障管理](UNIVERSAL_EXTENSIONS.md#运行时与故障管理sdk-410)。
 
 SDK 4.9 / Nonet 0.4.0-beta.21 新增可选 `media.artwork-batch.v1`。搜索音源可声明 `musicSearch.deferredArtwork=true`，先返回歌曲元数据，再按可见行接收批量封面请求。分页结果滚动到底自动追加，宿主保留虚拟化；旧音源无需修改，详见 [分页与按需封面](UNIVERSAL_EXTENSIONS.md#分页与按需封面sdk-49可选)。
 

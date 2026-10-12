@@ -8,19 +8,31 @@ namespace NonetMusicPlayer.Core.Plugins;
 /// <summary>隔离音源进程的 JSON-RPC 客户端，串行请求、响应限长并在失败后释放进程。</summary>
 public sealed class ProviderClient : IDisposable
 {
-    private readonly Process _process;
+    private readonly Process? _process;
+    private readonly ManagedPluginLoader? _managed;
+    private readonly Action<Exception>? _fault;
+    private readonly CancellationTokenSource _lifetime = new();
     private readonly SemaphoreSlim _rpcGate = new(1);
     private long _sequence;
     private bool _disposed;
     public bool CatalogInitialized { get; private set; }
     public bool IsDisposed => _disposed;
-    public ProviderClient(string root, PluginManifest manifest)
+    public ProviderClient(string root, PluginManifest manifest, Action<Exception>? fault = null, Func<CancellationToken, PluginRuntimeContext>? runtime = null)
     {
+        _fault = fault;
         var rid = System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier;
         if (!manifest.EntryPoints.TryGetValue(rid, out var entry)) throw new PlatformNotSupportedException(Localization.LocalizationCatalog.Format("Plugins.RuntimeEntryMissing", rid));
         PluginPathPolicy.ValidateRelativePath(entry);
         var executable = Path.GetFullPath(Path.Combine(root, entry));
         if (!executable.StartsWith(Path.GetFullPath(root) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(executable)) throw new InvalidDataException(Localization.LocalizationCatalog.Get("Plugins.EntryMissing"));
+        if (manifest.Runtime == "managed")
+        {
+            if (!manifest.ManagedExecutionConsent) throw new InvalidOperationException(Localization.LocalizationCatalog.Get("Extensions.ManagedWarning"));
+            PluginPathPolicy.RejectLinkedAncestors(executable);
+            _managed = new(executable, manifest.ExtensionClass, runtime?.Invoke(_lifetime.Token));
+            if (_managed.Instance is not INonetManagedRpcPlugin) throw new InvalidDataException("Managed RPC interface required.");
+            return;
+        }
         if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(executable, File.GetUnixFileMode(executable) | UnixFileMode.UserExecute);
         _process = new Process { StartInfo = new ProcessStartInfo(executable) { WorkingDirectory = root, UseShellExecute = false, CreateNoWindow = true, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Encoding.UTF8, StandardInputEncoding = new UTF8Encoding(false) } };
         _process.ErrorDataReceived += (_, _) => { }; // 持续排空标准错误，不持久化插件凭据或 URL。
@@ -30,16 +42,22 @@ public sealed class ProviderClient : IDisposable
     public async Task<JsonElement> CallAsync(string method, Dictionary<string, string>? parameters = null, CancellationToken cancellationToken = default, TimeSpan? requestTimeout = null)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token);
         // 零时限仅由宿主显式传入；取消、停用和响应大小限制仍然有效。
         var limit = requestTimeout ?? TimeSpan.FromSeconds(method.StartsWith("agent.", StringComparison.Ordinal) ? 150 : method.StartsWith("lyrics.", StringComparison.Ordinal) ? 50 : 20);
         if (limit > TimeSpan.Zero) timeout.CancelAfter(limit);
         await _rpcGate.WaitAsync(timeout.Token);
         try
         {
+            if (_managed is not null)
+            {
+                var reply = await Task.Run(async () => await ((INonetManagedRpcPlugin)_managed.Instance).CallAsync(method, parameters ?? [], timeout.Token), timeout.Token).WaitAsync(timeout.Token);
+                if (reply.GetRawText().Length > 32_000_000) throw new InvalidDataException("Managed response too large.");
+                return reply.Clone();
+            }
             var id = ++_sequence;
             var request = JsonSerializer.Serialize(new RpcRequest { Id = id, Method = method, Params = parameters ?? [] }, CoreJson.Rpc);
-            await _process.StandardInput.WriteLineAsync(request.AsMemory(), timeout.Token); await _process.StandardInput.FlushAsync(timeout.Token);
+            await _process!.StandardInput.WriteLineAsync(request.AsMemory(), timeout.Token); await _process.StandardInput.FlushAsync(timeout.Token);
             var line = new StringBuilder(); var single = new char[1];
             while (true)
             {
@@ -49,11 +67,17 @@ public sealed class ProviderClient : IDisposable
             }
             using var document = JsonDocument.Parse(line.ToString()); var response = document.RootElement;
             if (!response.TryGetProperty("jsonrpc", out var version) || version.GetString() != "2.0" || response.GetProperty("id").GetInt64() != id) throw new InvalidDataException(Localization.LocalizationCatalog.Get("Plugins.InvalidRpc"));
-            if (response.TryGetProperty("error", out _)) throw new ProviderRemoteException(Localization.LocalizationCatalog.Get("Plugins.ProviderFailed"));
+            if (response.TryGetProperty("error", out var failure))
+            {
+                if (failure.TryGetProperty("code", out var code) && code.GetInt32() == -32603) throw new InvalidDataException("Unhandled remote plugin failure.");
+                throw new ProviderRemoteException(Localization.LocalizationCatalog.Get("Plugins.ProviderFailed"));
+            }
             return response.GetProperty("result").Clone();
         }
         catch (ProviderRemoteException) { throw; } // 有效 RPC 错误不破坏消息边界，账号/权限错误后允许再次操作。
-        catch { Dispose(); throw; }
+        catch (PluginOperationException error) { throw new ProviderRemoteException(error.Message); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested || _lifetime.IsCancellationRequested) { throw; }
+        catch (Exception error) { _fault?.Invoke(error); Dispose(); throw; }
         finally { _rpcGate.Release(); }
     }
 
@@ -76,14 +100,21 @@ public sealed class ProviderClient : IDisposable
     public void Dispose()
     {
         if (_disposed) return; _disposed = true;
+        _lifetime.Cancel();
+        if (_managed is not null) { _ = CleanupManagedAsync(); return; }
         try
         {
-            if (!_process.HasExited) _process.Kill(true);
+            if (!_process!.HasExited) _process.Kill(true);
             // Kill 是异步请求；卸载前必须等待实际退出，否则 Windows 仍会锁住插件程序目录。
             if (!_process.WaitForExit(2000)) throw new IOException("Plugin process did not exit; package files retained");
         }
         catch (InvalidOperationException) { }
-        finally { _process.Dispose(); }
+        finally { _process?.Dispose(); }
+    }
+    private async Task CleanupManagedAsync()
+    {
+        try { await _managed!.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2)); }
+        catch (Exception error) { _fault?.Invoke(error); Diagnostics.AppLog.Warning("Plugins", "Managed RPC cleanup failed.", error); }
     }
     /// <summary>可选析构回调最多执行两秒，失败后仍释放进程；不让不响应的插件阻止退出。</summary>
     public void NotifyLifecycle(PluginManifest manifest, string method)

@@ -48,7 +48,9 @@ internal static partial class ReleaseVerifier
             string id;
             using (var manager = new PluginManager(storage))
             {
-                var plugin = manager.Install(Path.GetFullPath(package)); id = plugin.Id; manager.SetEnabled(plugin, true);
+                var plugin = manager.Install(Path.GetFullPath(package)); id = plugin.Id;
+                if (plugin.Runtime == "managed") plugin.ManagedExecutionConsent = true; // 仅夹具显式信任。
+                manager.SetEnabled(plugin, true);
                 var config = manager.ConfigurationValues(plugin);
                 config["baseUrl"] = $"http://127.0.0.1:{port}/v1"; config["model"] = "fixture-model";
                 config["apiKey"] = "TEST-ONLY-RELEASE-KEY"; config["maxTokens"] = 1200; config["timeoutSeconds"] = 90;

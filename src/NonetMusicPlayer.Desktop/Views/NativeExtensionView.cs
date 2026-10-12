@@ -30,7 +30,7 @@ public sealed class NativeExtensionView : UserControl, IDisposable, NonetMusicPl
                 if (view.View is not Control control || control.Parent is not null) throw new InvalidDataException("Native view must be a new Avalonia Control.");
                 Content = control; view.Update(_session.Frame);
             }
-            catch (Exception error) { if (_disposed) return; Dispose(); manager.ReportExtensionError(error); Failed?.Invoke(); }
+            catch (Exception error) { if (_disposed) return; Dispose(); manager.ReportPluginFault(manifest, error); Failed?.Invoke(); }
         };
     }
     private void Refresh(ExtensionFrame frame)
@@ -38,7 +38,7 @@ public sealed class NativeExtensionView : UserControl, IDisposable, NonetMusicPl
         if (_disposed) return;
         if (!Dispatcher.UIThread.CheckAccess()) { Dispatcher.UIThread.Post(() => Refresh(frame)); return; }
         try { _view?.Update(frame); }
-        catch (Exception error) { Dispose(); _manager.ReportExtensionError(error); Failed?.Invoke(); }
+        catch (Exception error) { Dispose(); _manager.ReportPluginFault(_session.Manifest, error); Failed?.Invoke(); }
     }
     private void Unavailable(string id) { if (id == _session.Manifest.Id) { Dispose(); UnavailableView?.Invoke(); } }
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e) { Dispose(); base.OnDetachedFromVisualTree(e); }
@@ -49,9 +49,9 @@ public sealed class NativeExtensionView : UserControl, IDisposable, NonetMusicPl
         if (_view is not null) _ = ReleaseAsync(_view);
         _view = null; Content = null;
     }
-    private static async Task ReleaseAsync(INonetNativeView view)
+    private async Task ReleaseAsync(INonetNativeView view)
     {
         try { await view.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2)); }
-        catch (Exception error) { AppLog.Warning("Extensions", "Native view cleanup failed.", error); }
+        catch (Exception error) { _manager.ReportPluginFault(_session.Manifest, error); }
     }
 }

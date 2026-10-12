@@ -37,7 +37,7 @@ public sealed partial class PluginManager
         LifecycleChanged += Changed;
         try
         {
-            using var client = new ProviderClient(Path.Combine(_storage.PluginsFolder, plugin.Id), plugin);
+            using var client = new ProviderClient(Path.Combine(_storage.PluginsFolder, plugin.Id), plugin, error => ReportPluginFault(plugin, error), token => RuntimeFor(plugin, token));
             var hello = await client.CallAsync("initialize", new() { ["contractVersion"] = plugin.ContractVersion.ToString(), ["configuration"] = draft }, operation.Token);
             if (hello.GetProperty("contractVersion").GetInt32() != plugin.ContractVersion) throw new InvalidDataException("Invalid handshake.");
             var response = await client.CallAsync("agent.models", cancellationToken: operation.Token, requestTimeout: TimeSpan.Zero);

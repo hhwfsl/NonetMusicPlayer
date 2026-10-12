@@ -105,13 +105,14 @@ public sealed class PluginManifest
             NavigationLabel = string.IsNullOrWhiteSpace(NavigationLabel) ? Name : NavigationLabel.Trim();
         }
         if (!HasPage && Type != "extension") throw new InvalidDataException("Only Contract v2 extensions may omit their page.");
-        if (Type == "provider" && (!Permissions.Contains("network") || !Permissions.Contains("process"))) throw new InvalidDataException("音源插件必须声明 network 与 process 权限。");
-        if (Type == "lyrics" && (!Permissions.Contains("network") || !Permissions.Contains("process") || !Permissions.Contains("lyrics-search")
-            || Permissions.Any(p => p is not ("network" or "process" or "lyrics-search" or "navigation" or "audio-tags")) || EntryPoints.Count == 0 || Tokens.Count != 0 || Widgets.Count != 0))
+        if (Type is "provider" or "lyrics" or "agent" && Runtime == "managed" && (!Permissions.Contains("in-process") || ExtensionClass.Length == 0 || EntryPoints.Values.Any(p => !p.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))) throw new InvalidDataException("Managed RPC requires in-process permission, class and DLL entry.");
+        if (Type == "provider" && (!Permissions.Contains("network") || !Permissions.Contains(Runtime == "managed" ? "in-process" : "process"))) throw new InvalidDataException("音源插件必须声明 network 与 process 权限。");
+        if (Type == "lyrics" && (!Permissions.Contains("network") || !Permissions.Contains(Runtime == "managed" ? "in-process" : "process") || !Permissions.Contains("lyrics-search")
+            || Permissions.Any(p => p is not ("network" or "process" or "in-process" or "lyrics-search" or "navigation" or "audio-tags")) || EntryPoints.Count == 0 || Tokens.Count != 0 || Widgets.Count != 0))
             throw new InvalidDataException("歌词插件需声明 network、process、lyrics-search；仅可附加 navigation 与 audio-tags 权限。");
         // Agent 为可选进程能力，保持原有 v1 清单及旧类型的校验行为。
-        if (Type == "agent" && (!Permissions.Contains("network") || !Permissions.Contains("process") || !Permissions.Contains("agent-control")
-            || Permissions.Any(p => p is not ("network" or "process" or "agent-control" or "navigation")) || EntryPoints.Count == 0 || Tokens.Count != 0 || Widgets.Count != 0))
+        if (Type == "agent" && (!Permissions.Contains("network") || !Permissions.Contains(Runtime == "managed" ? "in-process" : "process") || !Permissions.Contains("agent-control")
+            || Permissions.Any(p => p is not ("network" or "process" or "in-process" or "agent-control" or "navigation")) || EntryPoints.Count == 0 || Tokens.Count != 0 || Widgets.Count != 0))
             throw new InvalidDataException("Agent 插件需声明 network、process、agent-control，只允许附加 navigation。");
         if (Type is "lyrics" or "agent")
         {
@@ -166,6 +167,8 @@ public sealed class ProviderTrack
     public string Format { get; set; } = "audio";
     public string? CoverBase64 { get; set; }
     public string? Lyrics { get; set; }
+    /// <summary>可选译文独立轨道；省略保持旧单文本歌词行为。</summary>
+    public string? LyricsTranslation { get; set; }
 }
 public sealed class PlaybackSource { public string Kind { get; set; } = "loopback-http"; public string Url { get; set; } = ""; }
 public sealed class RpcRequest

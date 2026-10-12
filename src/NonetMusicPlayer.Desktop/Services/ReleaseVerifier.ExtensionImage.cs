@@ -21,7 +21,7 @@ internal static partial class ReleaseVerifier
             using var vm=new MainViewModel(new MusicLibraryScanner(storage),new ConfigurationAudio());
             vm.Settings.CloseToTray=false;vm.Settings.ConfirmClose=false;
             window=new MainWindow { DataContext=vm,Width=1100,Height=850 };window.Show();
-            var plugin=vm.Plugins.Install(Path.GetFullPath(package));vm.Plugins.SetEnabled(plugin,true);
+            var plugin=vm.Plugins.Install(Path.GetFullPath(package));if(plugin.Runtime=="managed")plugin.ManagedExecutionConsent=true;vm.Plugins.SetEnabled(plugin,true);
             var session=vm.Plugins.Extension(plugin);Wait(session.StartAsync());vm.Navigate("plugin:"+plugin.Id);
             Wait(session.InvokeAsync(action,new(),userGesture:true));
             var deadline=DateTime.UtcNow.AddSeconds(20);

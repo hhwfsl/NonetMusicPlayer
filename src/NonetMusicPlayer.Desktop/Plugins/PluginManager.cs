@@ -44,6 +44,7 @@ public sealed partial class PluginManager : IDisposable
     public PluginManifest Install(string package)
     {
         var prepared = PrepareInstall(package);
+        if (prepared.Manifest.Runtime == "managed") _uiVm?.ReportWarning(L10n.T("Extensions.ManagedWarning"));
         try { return CommitInstall(prepared.Manifest, prepared.Stage); }
         finally { RemoveInstallStage(prepared.Stage); }
     }
@@ -51,6 +52,8 @@ public sealed partial class PluginManager : IDisposable
     public async Task<PluginManifest> InstallAsync(string package, string? originRepository = null)
     {
         RequireWritable();
+        var inspected = Inspect(package);
+        if (inspected.Runtime == "managed") _uiVm?.ReportWarning(L10n.T("Extensions.ManagedWarning"));
         var prepared = await Task.Run(() => PrepareInstall(package));
         try
         {
@@ -70,7 +73,7 @@ public sealed partial class PluginManager : IDisposable
         if (!enabled) StopExtension(manifest.Id);
         if (!enabled && _clients.Remove(manifest.Id, out var client)) { client.NotifyLifecycle(manifest, "lifecycle.disable"); client.Dispose(); }
         var previous = manifest.Enabled; manifest.Enabled = enabled;
-        if (enabled) ResetHookFailures(manifest.Id);
+        if (enabled) { ResetHookFailures(manifest.Id); _faultedPlugins.TryRemove(manifest.Id, out _); }
         try { Save(); }
         catch
         {
@@ -193,7 +196,10 @@ public sealed partial class PluginManager : IDisposable
         if (!manifest.Enabled) throw new InvalidOperationException("请先启用音源插件。");
         if (_clients.TryGetValue(manifest.Id, out var current) && !current.IsDisposed) return current;
         _clients.Remove(manifest.Id);
-        var client = new ProviderClient(Path.Combine(_storage.PluginsFolder, manifest.Id), manifest);
+        ProviderClient client;
+        try { client = new ProviderClient(Path.Combine(_storage.PluginsFolder, manifest.Id), manifest,
+            error => ReportPluginFault(manifest, error), token => RuntimeFor(manifest, token)); }
+        catch (Exception error) { ReportPluginFault(manifest, error); throw; }
         try
         {
             // 应用版本仅用于报告；握手能力由稳定的 Contract 判断，不能按发行版本淘汰旧插件。
@@ -218,7 +224,7 @@ public sealed partial class PluginManager : IDisposable
                     {
                         var path = Path.Combine(_storage.ArtworkFolder, MusicLibraryScanner.StableId(track.Id) + ".image"); File.WriteAllBytes(path, Convert.FromBase64String(cover)); track.CoverPath = path;
                     }
-                    if (item.Lyrics is { Length: <= 100_000 } text) lyrics.Save(track.Id, text); items.Add(track);
+                    if (item.Lyrics is { Length: <= 100_000 } text) lyrics.SaveProvider(track.Id, text, item.LyricsTranslation); items.Add(track);
             }
             return items.DistinctBy(x => x.Id).ToArray();
         }

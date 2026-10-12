@@ -29,7 +29,7 @@ public static class MusicSearchContract
             || string.IsNullOrWhiteSpace(track.Title) || track.Title.Length > 1000 || track.Artist is null || track.Album is null || track.Format is null || track.Artist.Length > 1000 || track.Album.Length > 1000
             || !double.IsFinite(track.DurationSeconds) || track.DurationSeconds is < 0 or > 604800
             || track.Format.Length > 24 || track.Format.Any(c => !char.IsAsciiLetterOrDigit(c) && c != '-')
-            || track.CoverBase64?.Length > 2_000_000 || track.Lyrics?.Length > 100_000)
+            || track.CoverBase64?.Length > 2_000_000 || track.Lyrics?.Length > 100_000 || track.LyricsTranslation?.Length > 100_000)
             throw new InvalidDataException("Invalid music source metadata.");
     }
     public static void ValidatePage(MusicSearchPage page, int limit)
