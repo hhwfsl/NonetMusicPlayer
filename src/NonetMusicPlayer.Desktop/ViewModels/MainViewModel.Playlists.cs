@@ -15,20 +15,21 @@ public sealed partial class MainViewModel
         if (source == "favorites") source = "playlist:" + Playlist.LikedId;
         if (source?.StartsWith("playlist:", StringComparison.Ordinal) == true)
             return State.Playlists.Any(p => p.Id == source[9..]) ? source : "library";
-        return source is "library" or "songs" or "history" or "temporary" or "cloud-search" || source?.StartsWith("album:", StringComparison.Ordinal) == true || source?.StartsWith("artist:", StringComparison.Ordinal) == true ? source! : "library";
+        return source is "library" or "songs" or "history" or "temporary" or "cloud-search" || source?.StartsWith("album:", StringComparison.Ordinal) == true || source?.StartsWith("artist:", StringComparison.Ordinal) == true || source?.StartsWith("lan:", StringComparison.Ordinal) == true ? source! : "library";
     }
     private string TitleForPage(string page) => page switch
     {
         "library" => L10n.T("Library.MusicLibrary"), "favorites" => L10n.T("Playlists.LikedSongs"), "history" => L10n.T("Playback.RecentlyPlayed"), "albums" => L10n.T("Library.Albums"), "artists" => L10n.T("Library.Artists"),
-        "lyrics" => L10n.T("Playback.NowPlaying"), "settings" => L10n.T("Common.Settings"), "plugins" => L10n.T("Plugins.PluginManager"), "statistics" => L10n.T("Statistics.ListeningStatistics"),
+        "lyrics" => L10n.T("Playback.NowPlaying"), "settings" => L10n.T("Common.Settings"), "plugins" => L10n.T("Plugins.PluginManager"), "statistics" => L10n.T("Statistics.ListeningStatistics"), "devices" => L10n.T("Lan.Title"),
         _ => page.StartsWith("album:") ? page[6..] : page.StartsWith("artist:") ? page[7..] : State.Playlists.FirstOrDefault(p => "playlist:" + p.Id == page) is { } p ? p.IsSystem ? L10n.T("Playlists.LikedSongs") : p.Name : L10n.T("Playlists.Playlists")
     };
     private IEnumerable<TrackItem> SourceTracks(string page)
     {
+        if (page.StartsWith("lan:", StringComparison.Ordinal)) return LanSourceTracks(page);
         if (page == "cloud-search") { var sources = Plugins.MusicSearchSources.Select(p => p.Id).ToHashSet(StringComparer.Ordinal); return _cloudSearchTracks.Where(t => sources.Contains(t.ProviderId!)); }
         if (page == "temporary") return _temporaryTracks;
         var providers = Plugins.Installed.Where(p => p.Enabled).Select(p => p.Id).ToHashSet(StringComparer.Ordinal);
-        bool Available(TrackItem t) => t.ProviderId is null || providers.Contains(t.ProviderId);
+        bool Available(TrackItem t) => t.ProviderId is null || t.ProviderId.StartsWith("lan:", StringComparison.Ordinal) || providers.Contains(t.ProviderId);
         var byId = TrackIndex();
         var referenced = State.Playlists.SelectMany(p => p.TrackIds).ToHashSet(StringComparer.Ordinal);
         var available = State.Tracks.Where(t => Available(t) && referenced.Contains(t.Id));

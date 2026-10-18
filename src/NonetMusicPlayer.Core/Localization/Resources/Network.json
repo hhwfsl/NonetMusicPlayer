@@ -1,0 +1,16 @@
+{
+  "Lan.Title": { "zh-CN": "设备互听", "en-US": "Nearby libraries", "ja-JP": "デバイス共有" },
+  "Lan.Mobile": { "zh-CN": "移动", "en-US": "Device", "ja-JP": "デバイス" },
+  "Lan.Share": { "zh-CN": "共享本机音乐", "en-US": "Share this library", "ja-JP": "このライブラリを共有" },
+  "Lan.Privacy": { "zh-CN": "仅在局域网共享本地歌单、音频、封面和歌词。不共享设置、历史或播放控制。默认关闭，退出后停止共享。", "en-US": "Share local playlists, audio, artwork and lyrics over the LAN. No settings, history or playback control. Off by default; stops on exit.", "ja-JP": "LAN 内でローカルのプレイリスト、音声、画像、歌詞のみ共有します。設定、履歴、再生操作は共有しません。既定はオフで終了時に停止します。" },
+  "Lan.Connect": { "zh-CN": "连接设备", "en-US": "Connect device", "ja-JP": "接続" },
+  "Lan.ConnectHint": { "zh-CN": "粘贴另一端 Nonet 的连接邀请。请确认来自自己的设备，并在同一可信局域网中使用。", "en-US": "Paste an invitation from Nonet on your own device, on the same trusted LAN.", "ja-JP": "同じ信頼できる LAN にある、自分の Nonet の接続招待を貼り付けてください。" },
+  "Lan.CopyInvitation": { "zh-CN": "复制连接邀请", "en-US": "Copy invitation", "ja-JP": "招待をコピー" },
+  "Lan.InvitationHint": { "zh-CN": "邀请五分钟内有效，仅发给自己的设备。", "en-US": "Valid for five minutes. Share only with your own devices.", "ja-JP": "招待は5分間有効です。自分のデバイスにのみ渡してください。" },
+  "Lan.RenewInvitation": { "zh-CN": "刷新连接邀请", "en-US": "Renew invitation", "ja-JP": "招待を更新" },
+  "Lan.Disconnect": { "zh-CN": "断开连接", "en-US": "Disconnect", "ja-JP": "切断" },
+  "Lan.Disconnected": { "zh-CN": "设备已断开。已保存的移动歌曲引用仍保留，重新连接后可播放。", "en-US": "Device disconnected. Saved device references remain for reconnection.", "ja-JP": "切断しました。保存した曲は再接続後に再生できます。" },
+  "Lan.StartFailed": { "zh-CN": "无法启动局域网共享", "en-US": "Could not start LAN sharing", "ja-JP": "共有を開始できません" },
+  "Lan.ConnectFailed": { "zh-CN": "无法连接，请检查邀请、网络和防火墙", "en-US": "Could not connect; check the invitation, network and firewall", "ja-JP": "招待、ネットワーク、ファイアウォールを確認してください" },
+  "Lan.TrackCount": { "zh-CN": "{0} 首歌曲 · 两端独立播放", "en-US": "{0} tracks · independent playback", "ja-JP": "{0} 曲・独立した再生" }
+}

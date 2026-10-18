@@ -58,6 +58,10 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     {
         _listeningClock = timeProvider ?? TimeProvider.System;
         _scanner = scanner; _audio = audioPlayer; State = Storage.Load(); Plugins = new(Storage);
+        // 重启时连接均未建立，清除未收藏的远端临时引用，保留正常歌单中的移动歌曲。
+        var retainedLan = State.Playlists.SelectMany(p => p.TrackIds).ToHashSet(StringComparer.Ordinal);
+        var ephemeralLan = State.RecentTemporaryTracks.Where(t => t.ProviderId?.StartsWith("lan:", StringComparison.Ordinal) == true && !retainedLan.Contains(t.Id)).Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
+        State.RecentTemporaryTracks.RemoveAll(t => ephemeralLan.Contains(t.Id)); State.History.RemoveAll(ephemeralLan.Contains);
         _maintainedBackground = Storage.Root + "\0" + Settings.BackgroundImagePath;
         TrimHistory();
         AppLog.Initialize(Storage.Root);
@@ -93,7 +97,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         _updatingPosition = false;
         _resumePending = CurrentTrack is not null;
         _playingList = SourceTracks(PlayingSourcePage).ToList();
-        Page = PlayingSourcePage == "temporary" ? "library" : PlayingSourcePage; PageTitle = LocalizedTitleForPage(Page);
+        Page = PlayingSourcePage == "temporary" || PlayingSourcePage.StartsWith("lan:", StringComparison.Ordinal) ? "library" : PlayingSourcePage; PageTitle = LocalizedTitleForPage(Page);
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(100), DispatcherPriority.Normal, Tick); _timer.Start();
         if (Plugins.RecoveryMessage is { } pluginWarning) ReportWarning(pluginWarning);
         if (Settings.ValidationWarning is { } settingsWarning) ReportWarning(settingsWarning);
@@ -530,6 +534,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     public void RefreshPlaybackState() => Tick(this, EventArgs.Empty);
     public void Save(bool playbackOnly = false)
     {
+        if (!playbackOnly && _lanServer is not null) RefreshLocalLanCatalog();
         State.LastTrackId = CurrentTrack?.Id; State.LastPosition = PlaybackPosition;
         State.LastTemporaryFile = PlayingSourcePage == "temporary" && CurrentTrack?.ProviderId is null ? CurrentTrack?.FilePath : null;
         State.LastTemporaryCounted = PlayingSourcePage == "temporary" && CurrentTrack is not null && _countedTemporaryIds.Contains(CurrentTrack.Id);
@@ -571,7 +576,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         if (_disposed) return; _lyricsPlaybackLease?.Dispose(); UpdateListeningStatistics(); _disposed = true; _lyricsSearchLifetime.Cancel(); Interlocked.Increment(ref _playRequest); _scanCancellation?.Cancel(); _timer.Stop(); Save();
-        _backgroundAccentCancellation?.Cancel(); _backgroundAccentCancellation?.Dispose();
+        _backgroundAccentCancellation?.Cancel(); _backgroundAccentCancellation?.Dispose(); CloseLan();
         _audio.PlaybackStopped -= PlaybackEnded; _audio.PlaybackFailed -= PlaybackFailed;
         if (_audio is Core.Audio.IExtensionAudioHost extensible) extensible.ProcessorBypassed -= ExtensionAudioBypassed;
         _audio.OutputDeviceChanged -= OutputChanged; _audio.OutputDevicesChanged -= DevicesChanged;

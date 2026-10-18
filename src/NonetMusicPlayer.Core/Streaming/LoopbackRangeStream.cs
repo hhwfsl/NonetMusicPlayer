@@ -5,7 +5,8 @@ namespace NonetMusicPlayer.Core.Streaming;
 /// <summary>仅访问带会话令牌的本地插件地址，按需读取 Range，不接受任意服务器直连。</summary>
 public sealed class LoopbackRangeStream : Stream
 {
-    private readonly HttpClient _http = new(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(20) };
+    private readonly HttpClient _http;
+    private readonly bool _ownsClient;
     private readonly Uri _uri;
     private readonly long _length;
     private readonly CancellationTokenSource _lifetime = new();
@@ -19,16 +20,20 @@ public sealed class LoopbackRangeStream : Stream
         var token = uri.Query.Split('&').FirstOrDefault(x => x.TrimStart('?').StartsWith("token=", StringComparison.Ordinal));
         if (token is null || !System.Text.RegularExpressions.Regex.IsMatch(Uri.UnescapeDataString(token[(token.IndexOf('=') + 1)..]), "^[0-9a-fA-F]{32,}$")) throw new InvalidDataException("播放地址缺少至少 128 位的会话令牌（32 位十六进制）。");
     }
-    public LoopbackRangeStream(Uri uri)
+    public LoopbackRangeStream(Uri uri) : this(uri, null) { }
+    /// <summary>局域网曲库使用已配对、固定证书且带认证的客户端；不放宽插件 URL 验证。</summary>
+    internal LoopbackRangeStream(Uri uri, HttpClient? pairedClient)
     {
-        Validate(uri); _uri = uri;
+        if (pairedClient is null) Validate(uri);
+        _http = pairedClient ?? new(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(20) };
+        _ownsClient = pairedClient is null; _uri = uri;
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Head, uri); using var response = _http.Send(request); response.EnsureSuccessStatusCode();
             _length = response.Content.Headers.ContentLength ?? throw new InvalidDataException("插件流必须提供 Content-Length 与 Range 支持。");
             if (_length <= 0) throw new InvalidDataException("插件返回空音频。");
         }
-        catch { _http.Dispose(); throw; }
+        catch { if (_ownsClient) _http.Dispose(); throw; }
     }
     public override int Read(byte[] buffer, int offset, int count) => Read(buffer.AsSpan(offset, count));
     public override int Read(Span<byte> output)
@@ -59,5 +64,5 @@ public sealed class LoopbackRangeStream : Stream
     public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     /// <summary>切歌/退出先打断后台读取，解码器释放后再真正关闭 Stream。</summary>
     public void CancelPendingReads() { if (!_lifetime.IsCancellationRequested) _lifetime.Cancel(); }
-    protected override void Dispose(bool disposing) { if (disposing) { CancelPendingReads(); _http.Dispose(); } base.Dispose(disposing); }
+    protected override void Dispose(bool disposing) { if (disposing) { CancelPendingReads(); if (_ownsClient) _http.Dispose(); } base.Dispose(disposing); }
 }

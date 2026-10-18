@@ -1,4 +1,6 @@
-# 通用扩展层 v2 / SDK 4.10
+# 通用扩展层 v2 / SDK 4.13
+
+SDK 4.13 新增可选 `network.library.v1`：读取已配对设备、分页查询远端歌单/歌曲、请求打开设备页或启停共享；播放、收藏和加入歌单仍使用原 `commands` 服务。订阅 `network.changed` 获取连接变化。协议细节与权限参见 [通用扩展参考](UNIVERSAL_EXTENSIONS.md)。旧插件不必重新编译，SDK 程序集身份保持 4.0.0.0。
 
 SDK 4.10 / Nonet 0.4.0-beta.22 新增可选托管 RPC、受监督后台任务、插件日志及独立歌词轨道。新插件默认共享宿主运行时；保留独立进程和 AOT 形态。详见 [运行时与故障管理](UNIVERSAL_EXTENSIONS.md#运行时与故障管理sdk-410)。
 

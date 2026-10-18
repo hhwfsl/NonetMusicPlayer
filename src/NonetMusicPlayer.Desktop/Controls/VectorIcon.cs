@@ -8,7 +8,7 @@ public enum IconKind
 {
     Agent, Music, Library, Heart, Playlist, Folder, Search, Plus, Queue, Refresh,
     Previous, Next, Play, Pause, Volume, Mute, RepeatAll, RepeatOne, Shuffle, More, Lyrics,
-    Settings, Plugins, Help, Info, History, Artist, Album, FileAdd, Edit, Trash, SelectAll, Close, Minimize, Maximize, Statistics, Game, Lock, Unlock, Calendar, DesktopLyricsShow, DesktopLyricsHide, MoveUp, MoveDown, Home, Terminal, Back, GitHub, BackToTop, ChevronUp, ChevronDown, Sidebar, NewChat, MultiSelect, Send
+    Settings, Plugins, Help, Info, History, Artist, Album, FileAdd, Edit, Trash, SelectAll, Close, Minimize, Maximize, Statistics, Game, Lock, Unlock, Calendar, DesktopLyricsShow, DesktopLyricsHide, MoveUp, MoveDown, Home, Terminal, Back, GitHub, BackToTop, ChevronUp, ChevronDown, Sidebar, NewChat, MultiSelect, Send, Devices
 }
 
 /// <summary>图标共享 24 像素绘制坐标，避免字体图标的基线偏移。</summary>
@@ -24,6 +24,7 @@ public sealed class VectorIcon : Control
     private static readonly IReadOnlyDictionary<IconKind, Geometry> Geometries =
         new Dictionary<IconKind, Geometry>
         {
+            [IconKind.Devices] = Geometry.Parse("M3 4H17V15H3Z M10 15V20 M6 20H14 M17 9H23V21H17Z"),
             [IconKind.Send] = Geometry.Parse("M12 20V4 M5 11L12 4L19 11"),
             [IconKind.Sidebar] = Geometry.Parse("M5 3H19C21 3 21 5 21 7V17C21 19 21 21 19 21H5C3 21 3 19 3 17V7C3 5 3 3 5 3Z M9 3V21"),
             [IconKind.NewChat] = Geometry.Parse("M12 3C7 3 3 7 3 12C3 15 4 17 6 19L4 22L10 21C16 23 22 18 22 12C22 7 17 3 12 3Z M12 8V16 M8 12H16"),

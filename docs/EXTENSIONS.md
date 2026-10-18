@@ -1,5 +1,7 @@
 # 通用扩展开发：Contract v2
 
+SDK 4.13 的 `network.library.v1` 允许复用宿主已配对设备曲库与共享事务，详见 [通用服务参考](UNIVERSAL_EXTENSIONS.md)。不向插件公开配对密钥或任意文件服务。
+
 宿主提供布局、状态、动作、事件、权限和服务，插件拥有业务与流程。纯 SDK 直接引用主工程，不复制 DLL 源码或另写验证器。基础工程位于相邻 NonetMusicPlayerPlugin，具体插件各自独立目录和 Git。
 
 ## 运行方式

@@ -1,4 +1,22 @@
-# 通用扩展接口参考（SDK 4.9）
+# 通用扩展接口参考（SDK 4.13）
+
+## 局域网设备曲库（SDK 4.13，可选）
+
+声明 `network.library.v1` 后调用 `network` 服务。读操作需要 `music-read`；`peers`、`playlists`、`tracks` 支持 `offset` 与 `limit`（1–100）。查询仅返回稳定 ID 与公开音乐元数据，不返回本地路径、邀请、会话令牌或临时音频 URL。
+
+| operation | 参数 | 返回/行为 |
+| --- | --- | --- |
+| `status` | 无 | sharing、connectedDevices |
+| `peers` | offset、limit | id、name、trackCount、playlistCount |
+| `playlists` | peerId、offset、limit | id、name、description、count、可用于 navigate 的 page |
+| `tracks` | peerId、offset、limit | id、title、artist、album、duration、source=device |
+| `open` | 无 | 进入宿主设备配对页，需要 network、navigation 及直接用户手势 |
+| `set-sharing` | enabled（布尔） | 启停本机只读共享，需要 network、直接用户手势与宿主审批 |
+| `disconnect` | peerId | 断开已配对设备，需要 network、直接用户手势与宿主审批 |
+
+结果沿用 `{success,data,total,offset,limit}`。通过 `commands` 的 `player.play`、`music.info`、`favorite.add`、`playlist.add` 操作返回的歌曲 ID，权限与审批沿用原规则。插件不能替换 TLS 验证器、打开任意路径或操纵对方播放器。配对邀请只在宿主页面处理。共享每次启动默认关闭，认证仅保存在内存。
+
+订阅 `network.changed` 获取 `{sharing,connectedDevices}`，再分页查询最新数据。此事件不含秘密。既有 Contract v1/v2、已编译 SDK 程序集身份 4.0.0.0 和旧默认行为不变。
 
 ## 分页与按需封面（SDK 4.9，可选）
 

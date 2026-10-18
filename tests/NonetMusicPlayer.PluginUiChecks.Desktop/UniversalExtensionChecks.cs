@@ -51,6 +51,11 @@ internal static class UniversalExtensionChecks
         Wait(session.InvokeAsync("query", new())); Check(session.Frame.State["result"]!["total"]!.GetValue<int>() == 205 && session.Frame.State["result"]!["data"]!.AsArray().Count == 5, "Paged host query is actual library data.");
         Wait(session.InvokeAsync("host", new())); Check(session.Frame.State["result"]!["slots"]!.AsArray().Any(n => n!.GetValue<string>() == "shell.workspace"), "Discover real surface catalog.");
         Check(session.Frame.State["result"]!["services"]!.AsArray().Any(n => n!.GetValue<string>() == "appearance"), "New optional appearance service is discoverable.");
+        Check(session.Frame.State["result"]!["capabilities"]!.AsArray().Any(n => n!.GetValue<string>() == "network.library.v1"), "Optional LAN service is discoverable without changing the frozen interface.");
+        Wait(session.InvokeAsync("network", new() { ["operation"] = "status" }));
+        Check(!session.Frame.State["result"]!["sharing"]!.GetValue<bool>() && !session.Frame.State["result"]!.ToJsonString().Contains("key"), "Network status neither starts sharing nor returns pairing secrets.");
+        Wait(session.InvokeAsync("network", new() { ["operation"] = "peers", ["offset"] = 0, ["limit"] = 5 }));
+        Check(session.Frame.State["result"]!["data"]!.AsArray().Count == 0, "Empty device query uses the real host state.");
         Wait(session.InvokeAsync("appearance", new() { ["operation"] = "read" })); Check(!session.Frame.State["result"]!["automatic"]!.GetValue<bool>(), "Plugin reads the real background-color preference.");
         Wait(session.InvokeAsync("appearance", new() { ["operation"] = "extract-background-accent" })); Check(!session.Frame.State["result"]!["found"]!.GetValue<bool>(), "Extraction without a background has no invented color.");
         installed.Permissions.Add("settings-write"); installed.ApprovalMode = "assist";

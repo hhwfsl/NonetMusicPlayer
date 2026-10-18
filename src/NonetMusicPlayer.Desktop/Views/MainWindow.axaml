@@ -214,7 +214,13 @@
                                         <Button
                                             Classes="nav"
                                             Click="Navigate_Click"
-                                            Tag="plugins">
+                                            Tag="devices">
+                                            <Grid ColumnDefinitions="32,*">
+                                                <ui:VectorIcon HorizontalAlignment="Left" Kind="Devices" />
+                                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{ui:Loc Key='Lan.Title'}" />
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="nav" Click="Navigate_Click" Tag="plugins">
                                             <Grid ColumnDefinitions="32,*">
                                                 <ui:VectorIcon HorizontalAlignment="Left" Kind="Plugins" />
                                                 <TextBlock

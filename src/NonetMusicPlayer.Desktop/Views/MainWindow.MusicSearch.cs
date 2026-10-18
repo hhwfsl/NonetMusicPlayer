@@ -25,7 +25,13 @@ public sealed partial class MainWindow
         _musicSearchViewportTimer.Tick += async (_, _) =>
         {
             _musicSearchViewportTimer.Stop(); AttachMusicSearchScroll();
-            if (_vm?.Page != "cloud-search") { _musicSearchScrollRequested = false; return; }
+            if (_vm is null) return;
+            if (_vm.Page != "cloud-search")
+            {
+                _musicSearchScrollRequested = false;
+                await _vm.LoadLanArtworkAsync(TracksList.GetVisualDescendants().OfType<ListBoxItem>().Select(i => i.DataContext).OfType<TrackItem>().DistinctBy(t => t.Id).ToArray());
+                return;
+            }
             var scroll = _musicSearchScroll;
             if (_musicSearchScrollRequested && scroll is not null && !_vm.MusicSearchBusy && _vm.HasMoreMusicResults
                 && scroll.Offset.Y + scroll.Viewport.Height >= scroll.Extent.Height - Math.Max(.5, scroll.Viewport.Height * .15))
@@ -51,7 +57,7 @@ public sealed partial class MainWindow
     }
     private void ScheduleMusicSearchViewport()
     {
-        if (_vm?.Page != "cloud-search") { _musicSearchViewportTimer.Stop(); return; }
+        if (_vm is null || (_vm.Page != "cloud-search" && !_vm.VisibleTracks.Any(t => t.ProviderId?.StartsWith("lan:", StringComparison.Ordinal) == true))) { _musicSearchViewportTimer.Stop(); return; }
         _musicSearchViewportTimer.Stop(); _musicSearchViewportTimer.Start();
     }
     /// <summary>来源来自音源声明，不包含供应商专用分支；未启用或卸载的音源立即退出列表。</summary>

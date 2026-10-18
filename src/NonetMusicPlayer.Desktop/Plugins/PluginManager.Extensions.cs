@@ -9,7 +9,7 @@ public sealed partial class PluginManager
 {
     private readonly Dictionary<string, ExtensionSession> _extensions = [];
     internal ViewModels.MainViewModel ExtensionViewModel => _uiVm ?? throw new InvalidOperationException("Host unavailable.");
-    internal HashSet<string> ExtensionTracks => (_uiVm?.State.Tracks.Select(t => t.Id) ?? []).Concat(_uiVm?.State.RecentTemporaryTracks.Select(t => t.Id) ?? []).ToHashSet();
+    internal HashSet<string> ExtensionTracks => (_uiVm?.CommandTracks.Select(t => t.Id) ?? []).ToHashSet();
     internal MainWindow? ExtensionHost => _uiHost as MainWindow;
     internal string ExtensionDirectory(PluginManifest manifest) => Path.Combine(_storage.PluginsFolder, manifest.Id);
     internal string ExtensionStorage(PluginManifest manifest)
@@ -43,11 +43,11 @@ public sealed partial class PluginManager
         if (_uiVm is null) return;
         _uiVm.PropertyChanged += ExtensionPropertyChanged; _uiVm.OperationCompleted += ExtensionOperation;
         if (_uiHost is not null) _uiHost.PropertyChanged += ExtensionWindowChanged;
-        _uiVm.SettingsChanged += ExtensionSettingsChanged; _uiVm.ViewChanged += ExtensionLibraryChanged;
+        _uiVm.SettingsChanged += ExtensionSettingsChanged; _uiVm.ViewChanged += ExtensionLibraryChanged; _uiVm.LanChanged += ExtensionNetworkChanged;
     }
     private void DetachExtensionEvents()
     {
-        if (_uiVm is not null) { _uiVm.PropertyChanged -= ExtensionPropertyChanged; _uiVm.OperationCompleted -= ExtensionOperation; _uiVm.SettingsChanged -= ExtensionSettingsChanged; _uiVm.ViewChanged -= ExtensionLibraryChanged; }
+        if (_uiVm is not null) { _uiVm.PropertyChanged -= ExtensionPropertyChanged; _uiVm.OperationCompleted -= ExtensionOperation; _uiVm.SettingsChanged -= ExtensionSettingsChanged; _uiVm.ViewChanged -= ExtensionLibraryChanged; _uiVm.LanChanged -= ExtensionNetworkChanged; }
         if (_uiHost is not null) _uiHost.PropertyChanged -= ExtensionWindowChanged;
         foreach (var session in _extensions.Values) session.Dispose(); _extensions.Clear();
     }
@@ -67,6 +67,7 @@ public sealed partial class PluginManager
     }
     private void ExtensionSettingsChanged(object? sender, EventArgs e) => BroadcastExtensionEvent("settings.changed", new());
     private void ExtensionLibraryChanged(object? sender, EventArgs e) => BroadcastExtensionEvent("library.changed", new());
+    private void ExtensionNetworkChanged(object? sender, EventArgs e) => BroadcastExtensionEvent("network.changed", new() { ["sharing"] = _uiVm?.LanSharing, ["connectedDevices"] = _uiVm?.LanPeers.Count });
     private void ExtensionOperation(object? sender, CommandResult result) => BroadcastExtensionEvent("operation.completed",
         new() { ["operation"] = result.Operation, ["success"] = result.Success, ["data"] = PluginCommandPolicy.Sanitize(result.Data) });
     public void BroadcastExtensionEvent(string name, JsonObject data, string? exceptId = null)

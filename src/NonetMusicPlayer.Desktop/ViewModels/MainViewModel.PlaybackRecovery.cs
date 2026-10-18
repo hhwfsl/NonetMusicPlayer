@@ -45,8 +45,10 @@ public sealed partial class MainViewModel
                 try
                 {
                     StatusText = L10n.Format("Playback.Loading", candidate.Title);
-                    if (candidate.ProviderId is not null) await Plugins.EnrichSourceTrackAsync(candidate, Lyrics);
-                    var source = candidate.ProviderId is null ? candidate.FilePath : await Plugins.ResolveAsync(candidate);
+                    var lan = candidate.ProviderId?.StartsWith("lan:", StringComparison.Ordinal) == true;
+                    if (lan) await PrepareLanTrackAsync(candidate);
+                    else if (candidate.ProviderId is not null) await Plugins.EnrichSourceTrackAsync(candidate, Lyrics);
+                    var source = candidate.ProviderId is null || lan ? candidate.FilePath : await Plugins.ResolveAsync(candidate);
                     if (request != Interlocked.Read(ref _playRequest) || _disposed) return;
                     await _audio.LoadAsync(source);
                     if (request != Interlocked.Read(ref _playRequest) || _disposed) { _audio.Stop(); return; }

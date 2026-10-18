@@ -1,6 +1,12 @@
 # Nonet User Manual
 
-Desktop version 0.4.0-beta.25. Chinese, Japanese and English interfaces provide the same features.
+Desktop version 0.4.0-beta.27. Chinese, Japanese and English interfaces provide the same features.
+
+## Nearby libraries
+
+Connect both devices to the same trusted LAN. Open Nearby libraries on the source, enable sharing, then paste its five-minute invitation on the other device. Select a shared playlist to listen independently. Playback controls, settings, history and statistics are not synchronized. Only local audio, artwork and lyrics referenced by local playlists are shared; cloud sources are not relayed.
+
+Like a remote track or add it to a local playlist to retain a Device reference, not an audio download. Temporary libraries disappear on disconnect; saved references become playable after reconnecting. Sharing is off at startup and stops on exit. Allow only private-network firewall access; do not expose the service to the internet. Android shows a foreground notification with a Stop sharing action.
 
 ## Background-based theme color
 

@@ -60,6 +60,7 @@ public sealed partial class ExtensionSession
             }
             case "artwork": return await ArtworkServiceAsync(args);
             case "appearance": return await AppearanceServiceAsync(args);
+            case "network": return await LanServiceAsync(args);
             case "maintenance":
                 var action = args["operation"]?.GetValue<string>() ?? "";
                 if (action == "software-check" && Manifest.Permissions.Contains("settings-write")) await Owner.CheckUpdatesAsync(_gesture);

@@ -71,7 +71,7 @@ public sealed partial class MainWindow
             if (!Dispatcher.UIThread.CheckAccess()) return await Dispatcher.UIThread.InvokeAsync(() => ExecuteAsync(command, cancellationToken));
             var vm = window._vm ?? throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PlayerNotReady"));
             string Arg(int n) => CommandResults.Required(command, n);
-            TrackItem Track(int n = 0) => vm.State.Tracks.Concat(vm.State.RecentTemporaryTracks).FirstOrDefault(t => t.Id == Arg(n)) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.TrackNotFound"));
+            TrackItem Track(int n = 0) => vm.CommandTracks.FirstOrDefault(t => t.Id == Arg(n)) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.TrackNotFound"));
             Playlist Playlist(int n = 0) => vm.Playlists.FirstOrDefault(p => p.Id == Arg(n)) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PlaylistNotFound"));
             PluginManifest Plugin() => vm.Plugins.Installed.FirstOrDefault(p => p.Id == Arg(0)) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PluginNotFound"));
             JsonNode? data = null;
@@ -86,7 +86,7 @@ public sealed partial class MainWindow
                     case "player.play":
                         if (command.Arguments.Count == 0) await vm.SetPlayingAsync(true);
                         else if (File.Exists(Arg(0))) await vm.PlayTemporaryFilesAsync([Arg(0)]);
-                        else await vm.PlayTrackAsync(Track(), vm.State.Tracks);
+                        else await vm.PlayTrackAsync(Track(), Track().ProviderId?.StartsWith("lan:", StringComparison.Ordinal) == true ? [Track()] : vm.State.Tracks);
                         if (!vm.IsPlaying) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PlaybackStartFailed")); break;
                     case "player.pause": await vm.SetPlayingAsync(false); break;
                     case "player.resume": await vm.SetPlayingAsync(true); break;
@@ -110,11 +110,11 @@ public sealed partial class MainWindow
                     case "playlist.delete": if (Playlist().IsSystem) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.LikedDeleteDenied")); vm.DeletePlaylist(Playlist()); break;
                     case "playlist.add":
                         var target = Playlist(); var input = command.Arguments.Skip(1).ToArray(); if (input.Length == 0) throw new FormatException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.ProvideInputs"));
-                        var known = input.Where(id => vm.State.Tracks.Concat(vm.State.RecentTemporaryTracks).Any(t => t.Id == id)).ToArray();
+                        var known = input.Where(id => vm.CommandTracks.Any(t => t.Id == id)).ToArray();
                         var paths = input.Except(known).ToArray();
                         if (paths.Length > 0 && paths.Any(path => !File.Exists(path) && !Directory.Exists(path))) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.InputMissing"));
                         if (paths.Length > 0) await vm.ImportAsync(paths, playlist: target);
-                        if (known.Length > 0) vm.AddToPlaylist(target, known.Select(id => vm.State.Tracks.Concat(vm.State.RecentTemporaryTracks).First(t => t.Id == id))); break;
+                        if (known.Length > 0) vm.AddToPlaylist(target, known.Select(id => vm.CommandTracks.First(t => t.Id == id))); break;
                     case "playlist.remove": vm.RemovePlaylistTracks(Playlist(), command.Arguments.Skip(1).Select(id => vm.State.Tracks.First(t => t.Id == id))); break;
                     case "playlist.move":
                         var ordered = Playlist(); var movingId = Arg(1); var old = ordered.TrackIds.IndexOf(movingId); if (old < 0) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.NotInPlaylist"));

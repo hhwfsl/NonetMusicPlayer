@@ -11,14 +11,18 @@ Add-Type -AssemblyName System.IO.Compression
 [IO.Compression.ZipFile]::ExtractToDirectory([IO.Path]::GetFullPath($Zip), $taskPackage)
 $taskProcess = Start-Process -FilePath (Join-Path $taskPackage 'Nonet.exe') -WorkingDirectory $taskPackage -Environment @{NONET_DATA_DIR=$taskData} -WindowStyle Hidden -PassThru
 try {
-    # 空音乐库不会立即创建数据库；布局文件与窗口显示日志才是首次启动完成的标记。
-    $taskLayout = Join-Path $taskData 'Layouts/active.layout.json'
+    # 空音乐库不立即创建数据库，用户布局 JSON 已移除；以真实窗口日志和存活状态判断启动完成。
+    $taskLogs = Join-Path $taskData 'Logs'
+    $taskWindowShown = $null
     $taskDeadline = [DateTimeOffset]::UtcNow.AddSeconds(10)
-    while ([DateTimeOffset]::UtcNow -lt $taskDeadline -and -not $taskProcess.HasExited -and -not (Test-Path -LiteralPath $taskLayout)) { Start-Sleep -Milliseconds 100 }
+    while ([DateTimeOffset]::UtcNow -lt $taskDeadline -and -not $taskProcess.HasExited -and -not $taskWindowShown) {
+        if (Test-Path -LiteralPath $taskLogs) { $taskWindowShown = Get-ChildItem -LiteralPath $taskLogs -File | Select-String -SimpleMatch 'nonet window show' }
+        if (-not $taskWindowShown) { Start-Sleep -Milliseconds 100 }
+    }
     Start-Sleep -Milliseconds 800
-    $taskWindowShown = Get-ChildItem -LiteralPath (Join-Path $taskData 'Logs') -File | Select-String -SimpleMatch 'nonet window show'
-    if ($taskProcess.HasExited -or -not (Test-Path -LiteralPath $taskLayout) -or -not $taskWindowShown) { throw 'ZIP 内发行程序未能完成首次启动。' }
-    Write-Host 'PASS actual ZIP executable: starts with fresh isolated data, initializes layout, shows its window and remains alive.'
+    $taskStartupErrors = if (Test-Path -LiteralPath $taskLogs) { Get-ChildItem -LiteralPath $taskLogs -File | Select-String -SimpleMatch '[ERROR]' }
+    if ($taskProcess.HasExited -or -not $taskWindowShown -or $taskStartupErrors) { throw 'ZIP 内发行程序未能完成首次启动或记录了启动错误。' }
+    Write-Host 'PASS actual ZIP executable: starts with fresh isolated data, shows its window, remains alive and logs no startup errors.'
 } finally {
     # 只结束本夹具创建并持有句柄的进程，不通过名称关闭任何用户实例。
     if (-not $taskProcess.HasExited) { $taskProcess.Kill(); $taskProcess.WaitForExit(5000) | Out-Null }
