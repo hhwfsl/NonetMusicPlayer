@@ -189,13 +189,15 @@ public sealed partial class ExtensionSession
         try { _gesture = userGesture; token.ThrowIfCancellationRequested(); _lifetime.Token.ThrowIfCancellationRequested(); return await ServiceAsync(request); }
         finally { _gesture = false; _gate.Release(); }
     }
-    internal async Task<INonetNativeView> CreateNativeViewAsync(string slot)
+    internal async Task<INonetNativeView> CreateNativeViewAsync(string slot, string? target = null, string? placement = null)
     {
         if (Manifest.Runtime != "managed" || !Manifest.ManagedExecutionConsent || !Manifest.Permissions.Contains("native-ui") || !Manifest.Permissions.Contains("ui-extend"))
             throw new InvalidDataException("Native view permission denied.");
         await StartAsync();
         if (_managed?.Instance is not INonetNativeViewExtension factory) throw new InvalidDataException("Native view factory is missing.");
-        return await Dispatcher.UIThread.InvokeAsync(() => factory.CreateView(new(slot, Manifest.Permissions.Contains("music-read") ? HostState() : new JsonObject { ["page"] = _manager.ExtensionViewModel.Page },
+        var context = Manifest.Permissions.Contains("music-read") ? HostState() : new JsonObject { ["page"] = _manager.ExtensionViewModel.Page };
+        if (!string.IsNullOrEmpty(target)) { context["target"] = target; context["placement"] = placement; }
+        return await Dispatcher.UIThread.InvokeAsync(() => factory.CreateView(new(slot, context,
             RequestNativeServiceAsync,
             (action, values) => InvokeAsync(action, values, userGesture: true))));
     }

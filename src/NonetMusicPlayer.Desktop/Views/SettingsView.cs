@@ -39,13 +39,13 @@ public sealed class SettingsView : UserControl, IDisposable
         InputCommitService.Bind(accent, ApplyAccent);
         var apply = Ui.Button(L10n.T("Common.Apply"), () => { ApplyAccent(accent.Text ?? ""); owner.FocusManager?.Focus(null); }); Grid.SetColumn(apply, 2); hexRow.Children.Add(apply);
         var accentEditor = Ui.Stack(hexRow, Ui.AsyncButton(L10n.T("Settings.ColorWheelAndRGB"), async () => { var selected = await ColorPickerDialog.Show(owner, s.Accent); if (selected is null) return; accent.Text = s.Accent = selected; Changed(); }));
-        var backgroundPath = new ContentControl { Content = string.IsNullOrWhiteSpace(s.BackgroundImagePath) ? Ui.Text(L10n.T("Settings.NoBackgroundImage"), 12, true) : Ui.PathLink(L10n.T("Settings.BackgroundImage"), s.BackgroundImagePath) };
+        var backgroundPath = new ContentControl { Content = string.IsNullOrWhiteSpace(s.BackgroundImagePath) ? Ui.Text(L10n.T("Settings.NoBackgroundImage"), 12, true) : Ui.DataPathLink(L10n.T("Settings.BackgroundImage"), s.BackgroundImagePath, vm.Storage.Root) };
         var backgroundButtons = new WrapPanel { Orientation = Avalonia.Layout.Orientation.Horizontal };
         var selectBackground = Ui.AsyncButton(L10n.T("Settings.ChooseBackgroundImage"), async () =>
         {
             var files = await owner.OpenFilesAsync(L10n.T("Settings.ChooseBackgroundImage"), AppBackgroundService.MediaPatterns, false); if (files.Length == 0) return;
             var stored = await CoverCropDialog.ShowBackground(owner, vm.Storage, files[0]); if (stored is null) return;
-            s.BackgroundImagePath = stored; Changed(); backgroundPath.Content = Ui.PathLink(L10n.T("Settings.BackgroundImage"), stored);
+            s.BackgroundImagePath = stored; Changed(); backgroundPath.Content = Ui.DataPathLink(L10n.T("Settings.BackgroundImage"), stored, vm.Storage.Root);
         }); selectBackground.Margin = new(0, 0, 8, 4); backgroundButtons.Children.Add(selectBackground);
         backgroundButtons.Children.Add(Ui.Button(L10n.T("Settings.RemoveBackgroundImage"), () => { s.BackgroundImagePath = null; Changed(); backgroundPath.Content = Ui.Text(L10n.T("Settings.NoBackgroundImage"), 12, true); }));
         var advancedAppearance = Ui.Stack(
@@ -113,14 +113,6 @@ public sealed class SettingsView : UserControl, IDisposable
             Ui.Row(L10n.T("Lyrics.LyricsTimingOffset"), L10n.T("Lyrics.PositiveValuesShowLyricsEarlierNegativeValuesLaterUnit"), Ui.Range(-10, 10, s.LyricOffset, v => { s.LyricOffset = v; Changed(); }, " s")),
             Ui.Text(L10n.T("Lyrics.MatchingLRCTXTFilesNextToMusicFilesAre"), 12, true));
         var pendingDataPath = new ContentControl();
-        var projectPath = new ContentControl { Content = string.IsNullOrEmpty(s.PluginDevelopmentFolder) ? Ui.Text(L10n.T("Extensions.ProjectFolderNotSelected"), 12, true) : Ui.PathLink(L10n.T("Extensions.ProjectFolder"), s.PluginDevelopmentFolder) };
-        var projectChoose = Ui.AsyncButton(L10n.T("Extensions.SelectProjectFolder"), async () =>
-        {
-            var folders = await owner.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = L10n.T("Extensions.SelectProjectFolder") });
-            var path = folders.FirstOrDefault()?.TryGetLocalPath(); if (string.IsNullOrWhiteSpace(path)) return;
-            s.PluginDevelopmentFolder = Path.GetFullPath(path); Changed(); projectPath.Content = Ui.PathLink(L10n.T("Extensions.ProjectFolder"), s.PluginDevelopmentFolder);
-        });
-        var projectRow = Ui.Row(L10n.T("Extensions.ProjectFolder"), L10n.T("Extensions.ProjectFolderHint"), Ui.Stack(projectPath, projectChoose));
         var data = Ui.Card(L10n.T("Common.DataAndRecovery"),
             Ui.AsyncButton(L10n.T("Common.ResetSettings"), async () =>
             {
@@ -164,12 +156,11 @@ public sealed class SettingsView : UserControl, IDisposable
             Ui.Row(L10n.T("Terminal.FontSize"), L10n.T("Terminal.FontSizeHint"), Ui.Range(10, 32, s.TerminalFontSize, v => { s.TerminalFontSize = v; Changed(); }, " px")),
             Ui.Row(L10n.T("Terminal.MinimumLevel"), L10n.T("Terminal.MinimumLevelHint"), Ui.Choice(["INFO", "WARN", "ERROR"], s.TerminalMinimumLogLevel, v => { s.TerminalMinimumLogLevel = v; Changed(); })));
         AddSection(sections, appearance, L10n.T("Common.Appearance"), "语言 language 日本語 theme 主题 色轮 RGB 背景 background opacity 透明度 图片 字体 font 字号 圆角 窗口按钮", true);
-        AddSection(sections, layout, L10n.T("Common.CustomizeUI"), "布局 layout JSON 导航 播放栏 宽度 高度 配置 文件", false);
+        AddSection(sections, layout, L10n.T("Layout.Title"), "布局 layout 导航 播放栏 位置 position", false);
         AddSection(sections, playback, L10n.T("Playback.PlaybackAndAudio"), "输出 设备 device 定时 sleep 拖入 关闭 历史 history 最近", false);
         AddSection(sections, terminal, L10n.T("Terminal.Title"), "terminal cli 终端 ターミナル log 日志 字体 font 历史 scrollback 透明度 opacity", false);
         AddSection(sections, lyrics, L10n.T("Lyrics.Lyrics"), "lyrics 歌词 文件夹 路径 时间 微调 offset", false);
         AddSection(sections, ShortcutSettings.Create(vm), L10n.T("Settings.KeyboardShortcuts"), "shortcut keyboard 快捷键 按键 hotkey", false);
-        ((StackPanel)data.Child!).Children.Add(projectRow);
         AddSection(sections, data, L10n.T("Common.DataAndRecovery"), "data 数据 目录 路径 backup 恢复 备份 undo 撤销", false);
         foreach (var (card, title) in owner.ExtensionSettingsSections())
         {
@@ -226,59 +217,21 @@ public sealed class SettingsView : UserControl, IDisposable
         var location = _layoutCard.TranslatePoint(default, (Visual)_scroll.Content!); _scroll.Offset = new Avalonia.Vector(0, location?.Y ?? 0);
     }, Avalonia.Threading.DispatcherPriority.Loaded);
 
+    // 布局定制由插件承担；设置仅保留两个常用位置偏好，不再提供 JSON 文件编辑入口。
     private static Border LayoutCard(MainWindow owner, MainViewModel vm)
     {
-        var service = owner.LayoutConfiguration;
-        var result = Ui.Text(L10n.T("Common.EditTheConfigurationInAnExternalEditorThenReload"), 12, true);
-        void Success(string message) { result.Text = L10n.T(message); result.Foreground = Ui.Brush("AccentTextBrush"); }
-        void Attempt(Action action)
-        {
-            try { action(); }
-            catch (Exception error) { result.Text = L10n.T(error.Message); result.Foreground = Ui.Brush("ErrorBrush"); vm.ReportError(L10n.T("Settings.LayoutNotAppliedCurrentInterfaceKept"), error); }
-        }
-        string ReadLayoutFile(string path)
-        {
-            if (new FileInfo(path).Length > UiLayoutService.MaximumBytes) throw new InvalidDataException(L10n.T("Settings.LayoutConfigurationCannotExceedKB"));
-            return File.ReadAllText(path);
-        }
-        var actions = new WrapPanel { Orientation = Avalonia.Layout.Orientation.Horizontal };
-        void Add(Control button) { button.Margin = new Avalonia.Thickness(0, 0, 8, 8); actions.Children.Add(button); }
-        Add(Ui.Button(L10n.T("Common.ValidateConfigurationFile"), () => Attempt(() => { service.Read(ReadLayoutFile(service.Path)); Success(L10n.T("Common.StructureValidatedReloadingAlsoChecksTheActualControlSizes")); })));
-        Add(Ui.Button(L10n.T("Common.ReloadFile"), () => Attempt(() => { owner.ReloadLayoutConfiguration(); Success(L10n.T("Common.ExternalConfigurationReloadedAndApplied")); })));
-        Add(Ui.Button(L10n.T("Common.OpenConfigurationFile"), () => MainWindow.OpenPath(service.Path)));
-        Add(Ui.AsyncButton(L10n.T("Common.ImportLayout"), async () =>
-        {
-            var paths = await owner.OpenFilesAsync(L10n.T("Settings.ImportJSONLayout"), ["*.json"], false);
-            if (paths.Length == 0) return;
-            Attempt(() => { owner.ApplyLayoutConfiguration(ReadLayoutFile(paths[0])); Success(L10n.T("Common.ConfigurationImportedAndApplied")); });
-        }));
-        Add(Ui.AsyncButton(L10n.T("Common.ExportLayout"), async () =>
-        {
-            try
-            {
-                var path = await owner.SaveFileAsync(L10n.T("Settings.ExportJSONLayout"), "my.layout.json", "json");
-                if (path is null) return; AppStorage.AtomicWrite(path, service.AppliedJson); Success(L10n.T("Plugins.ConfigurationExportedItExcludesTheLibraryPlaybackPositionPlugins"));
-            }
-            catch (Exception error) { Attempt(() => throw error); }
-        }));
-        Add(Ui.AsyncButton(L10n.T("Common.RestorePreviousConfiguration"), async () =>
-        {
-            if (!await PlayerDialog.Confirm(owner, L10n.T("Common.RestorePreviousValidConfiguration"), L10n.T("Settings.ReplacesTheConfigurationFileAndCurrentLayoutMusicAnd"), L10n.T("Common.Restore"))) return;
-            Attempt(() => { if (!service.HasBackup) throw new InvalidDataException(L10n.T("Settings.NoPreviousConfigurationExistsApplyALayoutOrRestore")); owner.ApplyLayoutConfiguration(ReadLayoutFile(service.BackupPath)); Success(L10n.T("Common.PreviousValidConfigurationRestored")); });
-        }));
-        Add(Ui.AsyncButton(L10n.T("Settings.ResetLayout"), async () =>
-        {
-            if (!await PlayerDialog.Confirm(owner, L10n.T("Settings.RestoreDefaultLayout"), L10n.T("Plugins.ResetsOnlyInterfacePositionsSizesAndTheLayoutFile"), L10n.T("Common.RestoreDefaults"))) return;
-            Attempt(() => { owner.RestoreDefaultLayout(); Success(L10n.T("Settings.DefaultLayoutRestoredThePreviousConfigurationIsAvailableIn")); });
-        }));
         var s = vm.Settings;
-        return Ui.Card(L10n.T("Settings.CustomUIJSONLayout"),
-            Ui.Text(L10n.T("Settings.UseJSONToCustomizeNavigationContentAndPlayerControls"), 12, true),
-            Ui.PathLink(L10n.T("Common.ConfigurationFile"), service.Path),
-            Ui.Text(L10n.T("Common.RequiredControlsCannotBeRemovedSeeTheUserManual"), 12, true),
-            actions, result,
-            Ui.Row(L10n.T("Common.NavigationOnTheRight"), L10n.T("Common.AppliesWhenWorkspaceIsEmptyExplicitCoordinatesTakePrecedence"), Ui.Toggle(s.NavigationRight, value => { s.NavigationRight = value; vm.ApplySettings(); })),
-            Ui.Row(L10n.T("Playback.PlayerAtTheTop"), L10n.T("Common.BottomByDefaultAvailableWhenWorkspaceIsEmpty"), Ui.Toggle(s.PlayerTop, value => { s.PlayerTop = value; vm.ApplySettings(); })));
+        var navigation = Ui.Choice([L10n.T("Layout.Left"), L10n.T("Layout.Right")],
+            L10n.T(s.NavigationRight ? "Layout.Right" : "Layout.Left"),
+            value => { s.NavigationRight = value == L10n.T("Layout.Right"); vm.ApplySettings(); });
+        navigation.Name = "NavigationPosition";
+        var player = Ui.Choice([L10n.T("Layout.Bottom"), L10n.T("Layout.Top")],
+            L10n.T(s.PlayerTop ? "Layout.Top" : "Layout.Bottom"),
+            value => { s.PlayerTop = value == L10n.T("Layout.Top"); vm.ApplySettings(); });
+        player.Name = "PlayerPosition";
+        return Ui.Card(L10n.T("Layout.Title"),
+            Ui.Row(L10n.T("Layout.NavigationPosition"), "", navigation),
+            Ui.Row(L10n.T("Layout.PlayerPosition"), "", player));
     }
     private void RefreshDevices(object? sender, EventArgs e)
     {
@@ -291,7 +244,7 @@ public sealed class SettingsView : UserControl, IDisposable
     {
         var settings = vm.Settings;
         var status = new ContentControl();
-        void RefreshStatus() => status.Content = settings.FontFilePath is { } path ? Ui.PathLink(L10n.T("Settings.FontFile"), AppFontService.FilePath(vm.Storage, path)) : null;
+        void RefreshStatus() => status.Content = settings.FontFilePath is { } path ? Ui.DataPathLink(L10n.T("Settings.FontFile"), AppFontService.FilePath(vm.Storage, path), vm.Storage.Root) : null;
         try { RefreshStatus(); } catch (InvalidDataException) { settings.FontFilePath = null; }
         var combo = FontSelector(settings, () => { settings.FontFilePath = null; RefreshStatus(); changed(); }); combo.Name = "SystemFontSelector";
         var import = Ui.AsyncButton(L10n.T("Settings.ChooseFontFile"), async () =>

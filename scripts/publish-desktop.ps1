@@ -1,5 +1,8 @@
 param([string]$Configuration = "Release", [string[]]$Platforms = @("windows", "macos", "linux"), [switch]$SkipInstaller, [switch]$CleanOnly)
 $ErrorActionPreference = "Stop"
+# 普通 Windows 发布必须同步安装器；纯 ZIP 专项构建仍允许显式跳过。
+if ('windows' -in $Platforms -and $SkipInstaller -and -not $CleanOnly) { throw 'Windows 发布不能跳过安装器。仅生成独立 ZIP 时使用 -CleanOnly -SkipInstaller。' }
+if ('windows' -in $Platforms -and -not $SkipInstaller) { & (Join-Path $PSScriptRoot 'build-windows-installer.ps1') -CheckCompilerOnly }
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $projectPath = Join-Path $repositoryRoot "src/NonetMusicPlayer.Desktop/NonetMusicPlayer.Desktop.csproj"
 $desktopPublishRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot "publish/desktop"))
@@ -20,11 +23,11 @@ function Assert-ChildPath([string]$Candidate, [string]$Parent) {
     return $resolved
 }
 function Write-MacIcon([string]$Destination) {
-    # Native images are generated from assets/icons/app-icon.svg, not a stale ICO export cache.
+    # Native images are generated from assets/icons/app-icon-source.png by IconBuilder.
     $chunks = [Collections.Generic.List[byte[]]]::new()
     foreach ($entry in @(@{Size=256; Type='ic08'}, @{Size=512; Type='ic09'}, @{Size=1024; Type='ic10'})) {
         $pngPath = Join-Path $repositoryRoot "assets/icons/native/app-icon-$($entry.Size).png"
-        if (-not (Test-Path -LiteralPath $pngPath)) { throw "Missing SVG-derived icon representation: $pngPath" }
+        if (-not (Test-Path -LiteralPath $pngPath)) { throw "Missing generated icon representation: $pngPath" }
         $png = [IO.File]::ReadAllBytes($pngPath)
         $chunkSize = [BitConverter]::GetBytes([int]($png.Length + 8)); [Array]::Reverse($chunkSize)
         $chunks.Add([byte[]]([Text.Encoding]::ASCII.GetBytes($entry.Type) + $chunkSize + $png))
@@ -94,6 +97,7 @@ foreach ($target in $targets) {
     if ($CleanOnly) {
         # 独立输出干净 ZIP；既不读取现有发布目录，也不复制或覆盖用户数据。
         & (Join-Path $PSScriptRoot 'package-desktop-update.ps1') -PackageDirectory $package -Rid $target.Rid -Version $version -OutputDirectory (Join-Path $desktopPublishRoot 'archives')
+        if ($target.Name -eq 'windows' -and -not $SkipInstaller) { & (Join-Path $PSScriptRoot 'build-windows-installer.ps1') -PackageDirectory $package -Version $version }
         Write-Host "Clean staging retained: $package"
         continue
     }
@@ -145,7 +149,8 @@ foreach ($target in $targets) {
     $files = Get-ChildItem -LiteralPath $output -File -Recurse
     $size = ($files | Measure-Object Length -Sum).Sum
     Write-Host "$($target.Name): $($files.Count) required files, $([math]::Round($size / 1MB, 2)) MiB"
+    # Windows 发布完成即同步安装器，避免后续其他平台失败导致安装器版本滞后。
+    if ($target.Name -eq 'windows') { & (Join-Path $PSScriptRoot 'build-windows-installer.ps1') -Version $version }
 }
-if ('windows' -in $Platforms -and -not $SkipInstaller -and -not $CleanOnly) { & (Join-Path $PSScriptRoot 'build-windows-installer.ps1') -Version $version }
 Write-Host "Release $version available in $desktopPublishRoot"
 

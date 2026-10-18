@@ -500,3 +500,7 @@ Contract v2 扩展可声明 `"hasPage": false`、`"pageEntry": ""`，并将 `ui.
 ```
 
 此片段不是完整安装清单，必须另行声明身份、运行形态、入口及所需权限。纯后台/浮层扩展不必创建无意义的空页面。
+
+## 控件级界面定制
+
+从 SDK 4.11 起，可通过 `ui.elements.v1` 查询控件目录、覆盖布局、移动现有 Panel 子项，并使用 `ui.element` 贡献在稳定命名锚点加入控件。接口与恢复语义见 [UNIVERSAL_EXTENSIONS](UNIVERSAL_EXTENSIONS.md) 和 [UI_LAYOUT](UI_LAYOUT.md)。模板依然直接引用主项目 SDK，不复制宿主界面源码，不依赖任何具体插件。

@@ -10,7 +10,7 @@ public static class ShortcutService
         new("playPause", "Playback.PlayPause", "Space"), new("previous", "Common.Previous", "Ctrl+Left"), new("next", "Common.Next", "Ctrl+Right"),
         new("seekBack", "Common.SeekBackwardSeconds", "Left"), new("seekForward", "Common.SeekForwardSeconds", "Right"),
         new("favorite", "Common.LikeUnlikeCurrentTrack", "Ctrl+D"), new("addMusic", "Library.AddMusic", "Ctrl+O"),
-        new("search", "Library.SearchMusicLibrary", "Ctrl+L"), new("layout", "Settings.SettingsLayoutConfiguration", "Ctrl+E"),
+        new("search", "Library.SearchMusicLibrary", "Ctrl+L"), new("layout", "Layout.Title", "Ctrl+E"),
         new("batch", "Playlists.EnterExitTrackSelection", "Ctrl+B"), new("selectAll", "Playlists.TrackSelectionSelectAll", "Ctrl+A"),
         new("clearSelection", "Playlists.TrackSelectionClearSelection", "Ctrl+Shift+A"), new("undo", "Common.UndoLastAction", "Ctrl+Z"),
         new("moveUp", "Playlists.TrackSelectionMoveUp", "Alt+Up"), new("moveDown", "Playlists.TrackSelectionMoveDown", "Alt+Down"),

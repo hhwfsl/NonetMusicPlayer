@@ -137,6 +137,9 @@ public sealed record ExtensionContribution(string Slot, string Label, string Act
     public ExtensionNode? View { get; init; }
     /// <summary>可信托管插件可选原生视图；旧贡献省略时仍使用控件树。</summary>
     public bool Native { get; init; }
+    /// <summary>ui.element 的目标控件 ID 与插入方式；旧插槽不需要填写。</summary>
+    public string Target { get; init; } = "";
+    public string Placement { get; init; } = "append";
     public ExtensionOverlayOptions? Overlay { get; init; }
 }
 /// <summary>独立浮层的可选窗口表现；不授予主窗口或 OS 内部访问。</summary>

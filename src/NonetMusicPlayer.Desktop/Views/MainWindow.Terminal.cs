@@ -156,8 +156,6 @@ public sealed partial class MainWindow
                     case "plugins.config": if (command.Arguments.Count > 1) vm.Plugins.Configure(Plugin(), Arg(1)); else data = JsonNode.Parse(Plugin().Configuration); break;
                     case "plugins.schema": data = vm.Plugins.ReadConfigurationSchema(Plugin()); break;
                     case "plugins.refresh": await vm.RefreshProviderAsync(Plugin()); break;
-                    case "layout.show": data = JsonNode.Parse(window.LayoutConfiguration.AppliedJson); break;
-                    case "layout.apply": if (new FileInfo(Arg(0)).Length > UiLayoutService.MaximumBytes) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.LayoutTooLarge")); window.ApplyLayoutConfiguration(File.ReadAllText(Arg(0))); break;
                     case "layout.reset": window.RestoreDefaultLayout(); break;
                     case "window.show": window.RestoreFromTray(); break;
                     case "window.hide": window.Hide(); break;

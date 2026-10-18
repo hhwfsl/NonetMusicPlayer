@@ -28,6 +28,7 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        InterfaceMotion.InstallTransport(PlayerPrevious, PlayerPlay, PlayerNext);
         InputCommitService.Install(this);
         InputCommitService.Bind(LibrarySearch, text => { if (_vm is not null) _vm.SearchText = text; });
         InitializeTrayLifecycle();
@@ -35,7 +36,7 @@ public sealed partial class MainWindow : Window
         InitializeWindowPlacement();
         DataContextChanged += (_, _) => AttachViewModel();
         SizeChanged += (_, _) => Responsive();
-        PropertyChanged += (_, e) => { if (e.Property == WindowStateProperty) { WindowSurface.CornerRadius = WindowState == WindowState.Maximized ? new(0) : new(12); WindowSurface.BorderThickness = WindowState == WindowState.Maximized ? new(0) : new(1); RefreshResizeBorders(); } };
+        PropertyChanged += (_, e) => { if (e.Property == WindowStateProperty) { if (WindowState == WindowState.Minimized) { _pageMotion.Cancel(); _lyricsMotion.Cancel(); } WindowSurface.CornerRadius = WindowState == WindowState.Maximized ? new(0) : new(12); WindowSurface.BorderThickness = WindowState == WindowState.Maximized ? new(0) : new(1); RefreshResizeBorders(); } };
         DragDrop.SetAllowDrop(this, true);
         AddHandler(DragDrop.DragOverEvent, DragOver);
         AddHandler(DragDrop.DropEvent, Library_Drop);
@@ -64,10 +65,11 @@ public sealed partial class MainWindow : Window
         L10n.LanguageChanged += LanguageChanged;
         PropertyChanged += (_, e) => { if (e.Property == ActualThemeVariantProperty && !_applyingAppearance) ApplyAppearance(); };
         Closing += ConfirmClosing;
-        Closed += (_, _) => { foreach (var bitmap in _pluginNavigationAssets) bitmap.Dispose(); _pluginNavigationAssets.Clear(); foreach (var overlay in _extensionOverlays.Values.ToArray()) overlay.Close(); _extensionOverlays.Clear(); L10n.LanguageChanged -= LanguageChanged; _cachedSettings?.Dispose(); _desktopLyrics?.Dispose(); _taskbar?.Dispose(); _notificationTimer.Stop(); _locateTimer.Stop(); DisposePage(); if (_vm is not null) { DetachPlayerCommands(); _vm.Plugins.DetachHost(this); _vm.MusicSearchChanged -= MusicSearchStateChanged; _vm.ViewChanged -= ViewChanged; _vm.NavigationRequested -= ResetSongPagePosition; _vm.SettingsChanged -= SettingsChanged; _vm.LocatePlayingTrack -= LocatePlayingTrack; _vm.UserNotification -= UserNotification; _vm.Save(); } };
+        Closed += (_, _) => { _elementExtensionsClosed = true; _dynamicElements.Clear(); _lyricsMotion.Dispose(); _pageMotion.Dispose(); SuspendElementExtensions(); _elementLayouts?.Dispose(); foreach (var bitmap in _pluginNavigationAssets) bitmap.Dispose(); _pluginNavigationAssets.Clear(); foreach (var overlay in _extensionOverlays.Values.ToArray()) overlay.Close(); _extensionOverlays.Clear(); L10n.LanguageChanged -= LanguageChanged; _cachedSettings?.Dispose(); _desktopLyrics?.Dispose(); _taskbar?.Dispose(); _notificationTimer.Stop(); _locateTimer.Stop(); DisposePage(); if (_vm is not null) { DetachPlayerCommands(); _vm.Plugins.LifecycleChanged -= ElementLifecycleChanged; _vm.Plugins.UiPluginUnavailable -= ElementPluginUnavailable; _vm.Plugins.DetachHost(this); _vm.MusicSearchChanged -= MusicSearchStateChanged; _vm.ViewChanged -= ViewChanged; _vm.NavigationRequested -= ResetSongPagePosition; _vm.SettingsChanged -= SettingsChanged; _vm.LocatePlayingTrack -= LocatePlayingTrack; _vm.UserNotification -= UserNotification; _vm.Save(); } };
     }
     private void AttachViewModel()
     {
+        DetachElementExtensions();
         if (_vm is not null) { DetachPlayerCommands(); _vm.Plugins.DetachHost(this); _vm.MusicSearchChanged -= MusicSearchStateChanged; _vm.ViewChanged -= ViewChanged; _vm.NavigationRequested -= ResetSongPagePosition; _vm.SettingsChanged -= SettingsChanged; _vm.LocatePlayingTrack -= LocatePlayingTrack; _vm.UserNotification -= UserNotification; }
         _desktopLyrics?.Dispose(); _taskbar?.Dispose();
         _vm = DataContext as MainViewModel; if (_vm is null) return;
@@ -78,18 +80,21 @@ public sealed partial class MainWindow : Window
         L10n.SetLanguage(_vm.Settings.Language);
         _desktopLyrics = new DesktopLyricsWindow(this, _vm); _desktopLyrics.StateChanged += (_, _) => { RefreshDesktopLyricsButton(); DesktopLyricsOperationChanged(); }; RefreshDesktopLyricsButton(); _taskbar = WindowsTaskbarService.Attach(this, _vm);
         _vm.Plugins.AttachHost(this, _vm);
+        InitializeElementExtensions();
         InitializePlayerCommands();
         InitializeLayoutConfiguration(); ApplyAppearance(); ShowPage(); ResetSongPagePosition(this, EventArgs.Empty);
     }
+    private readonly InterfaceMotion _pageMotion = new();
+    private readonly LyricsPageMotion _lyricsMotion = new();
     private string? _displayedPage;
     private void ViewChanged(object? sender, EventArgs e)
     {
         // 普通状态变化保留页面；插件被关闭后其资源已释放，重新打开时必须新建页面。
         if (_vm is not null && _displayedPage == _vm.Page && (_vm.Page is "terminal" or "settings" or "lyrics" || _vm.Page.StartsWith("plugin:") && AlternatePage.Content is PluginPageView { IsDisposed: false }))
-        { BuildPlaylists(); BuildPluginNavigation(); return; }
+        { _elementLayouts?.Suspend(); BuildPlaylists(); BuildPluginNavigation(); _elementLayouts?.Refresh(); return; }
         ShowPage();
     }
-    private void SettingsChanged(object? sender, EventArgs e) { Terminal?.Configure(GetTerminalOptions()); ApplyAppearance(); BuildPluginNavigation(); BuildExtensionSlots(); BuildMusicSearchHeader(); }
+    private void SettingsChanged(object? sender, EventArgs e) { SuspendElementExtensions(); Terminal?.Configure(GetTerminalOptions()); ApplyAppearance(); BuildPluginNavigation(); BuildExtensionSlots(); BuildMusicSearchHeader(); RefreshElementExtensions(); }
     private void ApplyAppearance()
     {
         if (_vm is null || _applyingAppearance) return; var s = _vm.Settings; _applyingAppearance = true;
@@ -182,6 +187,13 @@ public sealed partial class MainWindow : Window
     public void ShowPage()
     {
         if (_vm is null) return;
+        var navigated = _displayedPage != _vm.Page;
+        var lyricsTransition = navigated && (_displayedPage == "lyrics" || _vm.Page == "lyrics") && IsVisible && WindowState != WindowState.Minimized;
+        _lyricsMotion.Cancel();
+        var transitionLayer = (Grid)WindowSurface.Child!;
+        var lyricsRegion = LyricsTransitionRegion();
+        var lyricsSnapshot = lyricsTransition && _displayedPage == "lyrics" ? LyricsPageMotion.Capture(WindowSurface, lyricsRegion) : null;
+        SuspendElementExtensions();
         _displayedPage = _vm.Page;
         _activeMenu?.Close();
         if (_selectionPage != _vm.Page) { _selectionPage = _vm.Page; SetBatchMode(false); }
@@ -210,6 +222,21 @@ public sealed partial class MainWindow : Window
         { nav.Classes.Set("selected", nav.Tag?.ToString() == _vm.Page); }
         Dispatcher.UIThread.Post(Responsive, Avalonia.Threading.DispatcherPriority.Loaded);
         LocatePlayingTrack(this, EventArgs.Empty);
+        RefreshElementExtensions();
+        if (lyricsTransition && lyrics)
+        {
+            UpdateLayout(); lyricsRegion = LyricsTransitionRegion();
+            lyricsSnapshot = LyricsPageMotion.Capture(WindowSurface, lyricsRegion);
+        }
+        if (lyricsSnapshot is not null)
+        {
+            _pageMotion.Cancel();
+            try { var origin = transitionLayer.TranslatePoint(default, WindowSurface) ?? default;
+                _lyricsMotion.Begin(transitionLayer, FullLyricsHost, lyricsSnapshot, lyricsRegion, new Vector(origin.X, origin.Y), lyrics, _vm.Settings.PlayerTop); }
+            catch (Exception error) { AppLog.Warning("UI", "Lyrics transition skipped", error); }
+        }
+        else if (navigated && IsVisible && WindowState != WindowState.Minimized)
+            _pageMotion.Enter(lyrics ? FullLyricsHost : alternate ? AlternatePage : LibraryPage);
     }
     private void BuildPlaylists()
     {

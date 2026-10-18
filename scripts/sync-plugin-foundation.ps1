@@ -6,7 +6,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $taskFoundation 'NonetMusicPlayerPlu
 $taskProps = Get-Content -Raw -LiteralPath (Join-Path $taskFoundation 'Directory.Build.props')
 if ($taskProps -notmatch 'NonetPlayerRoot' -or $taskProps -notmatch 'src/NonetMusicPlayer.PluginSdk' -or (Test-Path -LiteralPath (Join-Path $taskFoundation 'sdk'))) { throw '模板必须直接引用主项目 SDK，不能保留 vendored SDK。' }
 # 仅同步接口文档，SDK 和打包器始终从当前主项目引用，不再维护代码快照。
-foreach ($taskName in @('PLUGIN_DEVELOPMENT.md','UNIVERSAL_EXTENSIONS.md')) {
+foreach ($taskName in @('PLUGIN_DEVELOPMENT.md','UNIVERSAL_EXTENSIONS.md','UI_LAYOUT.md')) {
     $taskDocument = Join-Path $taskPlayer ('docs/' + $taskName)
     $taskReference = Join-Path $taskFoundation ('docs/' + $taskName)
     if ($Update) { Copy-Item -LiteralPath $taskDocument -Destination $taskReference -Force }

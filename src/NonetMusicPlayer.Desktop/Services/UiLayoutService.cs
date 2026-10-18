@@ -5,7 +5,7 @@ using NonetMusicPlayer.Desktop.Models;
 
 namespace NonetMusicPlayer.Desktop.Services;
 
-/// <summary>先验证用户 JSON 布局，再替换当前可用布局；失败时保留可恢复版本。</summary>
+/// <summary>旧插件布局协议的兼容适配器；桌面默认布局不再从用户 JSON 文件加载。</summary>
 public sealed class UiLayoutService
 {
     public const int MaximumBytes = 100 * 1024;
@@ -23,10 +23,15 @@ public sealed class UiLayoutService
     public bool HasBackup => File.Exists(BackupPath);
     public bool HasLegacyBackup => File.Exists(LegacyBackupPath);
 
-    public UiLayoutService(AppStorage storage)
+    private readonly bool _persist;
+    public UiLayoutService(AppStorage storage) : this(storage, true) { }
+    public UiLayoutService(AppStorage storage, bool loadSavedLayout)
     {
         Path = System.IO.Path.Combine(storage.Root, "Layouts", "active.layout.json");
         _backupFolder = storage.BackupFolder;
+        _persist = loadSavedLayout;
+        Current = Read(DefaultJson);
+        if (!loadSavedLayout) return;
         ImportOldBackup(Path + ".bak", BackupPath); ImportOldBackup(Path + ".schema1.bak", LegacyBackupPath);
         Current = Read(DefaultJson);
         if (!File.Exists(Path))
@@ -85,6 +90,7 @@ public sealed class UiLayoutService
     {
         var candidate = Parse(json, out var sourceVersion);
         var normalized = sourceVersion == CurrentSchemaVersion ? json : WriteDocument(candidate);
+        if (!_persist) { Current = candidate; AppliedJson = normalized; LastError = null; return; }
         if (previousUsableJson is not null)
         {
             // 磁盘语法合法不等于布局可用；备份最后实际可用的布局，不覆盖为外部编辑的不可用文件。

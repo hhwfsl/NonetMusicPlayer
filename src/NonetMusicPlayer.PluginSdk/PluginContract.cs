@@ -88,6 +88,8 @@ public sealed class PluginManifest
             if (Hooks.Count > 8 || Hooks.Distinct().Count() != Hooks.Count || Hooks.Any(h => !UniversalExtensionContract.Hooks.Contains(h)) || Hooks.Count > 0 && (!Permissions.Contains("workflow") || !RequiredCapabilities.Contains("workflow.v1"))) throw new InvalidDataException("Invalid workflow hooks.");
             if (Permissions.Contains("audio-processing") && (Runtime != "managed" || !RequiredCapabilities.Contains("audio.pcm.v1"))) throw new InvalidDataException("PCM processing requires trusted managed runtime.");
             if (Permissions.Contains("native-ui") && (Runtime != "managed" || !RequiredCapabilities.Contains("ui.native.v1"))) throw new InvalidDataException("Native UI requires trusted managed runtime.");
+            if (Contributions.Any(c => c.Slot == "ui.element" && (!Permissions.Contains("ui-extend") || !RequiredCapabilities.Contains(ElementLayoutContract.Capability) || string.IsNullOrWhiteSpace(c.Target) || c.Target.Length > 240 || c.Placement is not ("append" or "prepend" or "before" or "after" or "replace"))))
+                throw new InvalidDataException("Invalid element contribution target or placement.");
             if (Contributions.Any(c => c.Native) && (Runtime != "managed" || !Permissions.Contains("native-ui") || !Permissions.Contains("ui-extend"))) throw new InvalidDataException("Native contribution permission required.");
             if (ProvidedServices.Count > 16 || ProvidedServices.Any(n => !System.Text.RegularExpressions.Regex.IsMatch(n, "^[a-z][a-z0-9.-]{1,80}$"))) throw new InvalidDataException("Invalid extension service.");
             foreach (var contribution in Contributions.Where(c => c.View is not null))

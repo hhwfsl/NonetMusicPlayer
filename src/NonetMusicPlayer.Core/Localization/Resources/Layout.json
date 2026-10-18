@@ -1,0 +1,9 @@
+{
+  "Layout.Title": { "zh-CN": "布局", "en-US": "Layout", "ja-JP": "レイアウト" },
+  "Layout.NavigationPosition": { "zh-CN": "导航栏位置", "en-US": "Navigation position", "ja-JP": "ナビゲーションの位置" },
+  "Layout.PlayerPosition": { "zh-CN": "播放栏位置", "en-US": "Player position", "ja-JP": "プレーヤーの位置" },
+  "Layout.Left": { "zh-CN": "左侧", "en-US": "Left", "ja-JP": "左" },
+  "Layout.Right": { "zh-CN": "右侧", "en-US": "Right", "ja-JP": "右" },
+  "Layout.Top": { "zh-CN": "顶部", "en-US": "Top", "ja-JP": "上" },
+  "Layout.Bottom": { "zh-CN": "底部", "en-US": "Bottom", "ja-JP": "下" }
+}

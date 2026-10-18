@@ -19,12 +19,17 @@ internal static class Ui
     public static TextBlock RawText(string text, double size = 13, bool muted = false) { var result = Text("", size, muted); result.Text = text; return result; }
     public static IBrush Brush(string key) => (IBrush)Application.Current!.Resources[key]!;
     public static Button PathLink(string label, string path)
+        => PathLink(label, path, path);
+    /// <summary>显示路径与打开目标分离，避免相对显示导致打开了进程工作目录中的同名文件。</summary>
+    public static Button PathLink(string label, string path, string displayedPath)
     {
         var button = Button("", () => MainWindow.OpenPath(path)); button.Classes.Add("quiet");
-        var text = Text("", 12, true); text.Text = L10n.T(label) + ": " + path; text.TextWrapping = TextWrapping.Wrap;
+        var text = Text("", 12, true); text.Text = L10n.T(label) + ": " + displayedPath; text.TextWrapping = TextWrapping.Wrap;
         button.Content = text; button.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch; button.HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left;
         ToolTip.SetTip(button, L10n.T("Common.OpenLocation")); return button;
     }
+    public static Button DataPathLink(string label, string path, string dataRoot)
+        => PathLink(label, path, Path.GetRelativePath(dataRoot, path));
     public static Button Button(string text, Action action, bool primary = false)
     {
         var button = new Button { Content = L10n.T(text) }; if (primary) button.Classes.Add("primary"); button.Click += (_, _) => { try { action(); } catch (Exception e) { Report(button, e); } }; return button;

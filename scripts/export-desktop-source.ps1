@@ -22,7 +22,7 @@ function Copy-TaskTree([string]$Source, [string]$Target) {
 foreach ($taskFile in @('NonetMusicPlayer.slnx','Directory.Build.props','global.json','NuGet.Config','.editorconfig','.gitignore','.gitattributes','README.md','CHANGELOG.md','LICENSE','AGENTS.md')) {
     Copy-Item -LiteralPath (Join-Path $taskSource $taskFile) -Destination (Join-Path $taskDestination $taskFile)
 }
-foreach ($taskFolder in @('src/NonetMusicPlayer.Desktop','src/NonetMusicPlayer.Core','src/NonetMusicPlayerCli','src/NonetMusicPlayer.PluginSdk','tools/NonetMusicPlayer.PluginPackager','tests','assets/icons','scripts/macos','scripts/windows-installer')) {
+foreach ($taskFolder in @('src/NonetMusicPlayer.Desktop','src/NonetMusicPlayer.Core','src/NonetMusicPlayerCli','src/NonetMusicPlayer.PluginSdk','tools/NonetMusicPlayer.PluginPackager','tools/NonetMusicPlayer.IconBuilder','tests','assets/icons','scripts/macos','scripts/windows-installer')) {
     Copy-TaskTree (Join-Path $taskSource $taskFolder) (Join-Path $taskDestination $taskFolder)
 }
 foreach ($taskScript in @('publish-desktop.ps1','publish-cli.ps1','package-desktop-update.ps1','verify-clean-desktop.ps1','build-windows-installer.ps1','sync-plugin-foundation.ps1','pack-plugin.ps1','export-desktop-source.ps1')) {

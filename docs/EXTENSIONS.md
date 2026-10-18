@@ -13,7 +13,7 @@
 
 ## 可选布局、审批与项目能力（SDK 4.3）
 
-ui.workspace.v1 提供 ui 服务：read 返回当前与默认布局；apply 接收布局 JSON 字符串；reset 恢复默认。可重排 Navigation/Content/Player 和播放器必要控件；新增 page.songs/page.history/page.albums/page.artists/page.playlist/page.statistics 替换插槽。设置与终端保留恢复入口，不开放任意 XAML 注入。
+ui.elements.v1 提供控件查询、可撤销布局覆盖和自定义控件锚点，详见 [UI_LAYOUT](UI_LAYOUT.md)。旧 ui.workspace.v1 的 read/apply/reset 作为内存兼容适配器保留，不再从用户配置文件加载。可重排 Navigation/Content/Player 和播放器必要控件；新增 page.songs/page.history/page.albums/page.artists/page.playlist/page.statistics 替换插槽。设置与终端保留恢复入口，不开放任意 XAML 注入。
 
 development.v1 的 development 服务需 ui-extend、plugins-control、plugin-development。package 生成并安装无程序的声明式插件；source 只生成新 C# 项目，不编译执行。目录由用户选择，ID 为 custom.<小写名称>，不覆盖旧项目。首次生成须选择工作区，设置中的数据与恢复可更改目录。
 

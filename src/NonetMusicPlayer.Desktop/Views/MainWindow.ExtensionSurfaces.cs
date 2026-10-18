@@ -27,14 +27,14 @@ public sealed partial class MainWindow
     }
     private Control ContributionView(PluginManifest plugin, ExtensionContribution contribution)
     {
-        var view = contribution.Native ? (Control)new NativeExtensionView(_vm!.Plugins, plugin, contribution.Slot)
+        var view = contribution.Native ? (Control)new NativeExtensionView(_vm!.Plugins, plugin, contribution.Slot, contribution.Target, contribution.Placement)
             : new ExtensionPageView(_vm!.Plugins, plugin, contribution.View);
         void Unavailable()
         {
             if (contribution.Slot.StartsWith("page.", StringComparison.Ordinal))
                 Dispatcher.UIThread.Post(() => { if (IsVisible && _vm is not null) ShowPage(); });
         }
-        void Failed() { _failedSurfaces.Add(plugin.Id + ":" + contribution.Slot); Unavailable(); }
+        void Failed() { _failedSurfaces.Add(plugin.Id + ":" + contribution.Slot + (contribution.Slot == "ui.element" ? ":" + contribution.Target : "")); Unavailable(); }
         if (view is NativeExtensionView native) { native.Failed += Failed; native.UnavailableView += Unavailable; }
         if (view is ExtensionPageView data) { data.Failed += Failed; data.UnavailableView += Unavailable; }
         return view;

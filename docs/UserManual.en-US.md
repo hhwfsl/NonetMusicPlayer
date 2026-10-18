@@ -70,7 +70,7 @@ On Windows, macOS and Linux, Settings → Appearance can place window buttons on
 
 Language changes apply immediately. The default theme follows the system; Light and Dark are also available. The theme color applies to selection and interaction states. Select a color with the wheel, RGB fields or hexadecimal input. Background image and available control styles provide further customization.
 
-JSON layouts can adjust supported regions and necessary player controls. Export a working layout first, edit it in your own external editor, save, then validate and reload in Settings. Settings does not display the JSON contents. Invalid layouts preserve the current layout. Reset defaults or restore a valid backup if needed. Layouts cannot run scripts or remove required playback controls; see UI_LAYOUT.md for the schema.
+Choose navigation and player positions from dropdowns in Settings → Layout; drag region handles to resize. Plugins provide deeper layout customization and custom controls. User JSON layout files are no longer loaded. Disable the plugin to restore the original interface; Ctrl+Shift+Esc disables UI extensions and opens the plugin manager. See UI_LAYOUT.md for the extension API.
 
 On Windows, window dots can be left or right. macOS defaults to left; Windows/Linux default to right, with existing preferences retained. Right order: minimize, maximize/restore, close. Left order: close, minimize, maximize/restore, with the logo, app name and version centered. Colors continue to identify the same functions. My Music and Plugins sections can collapse; playlists can also collapse with the button next to New Playlist; the state is saved. Plugins is hidden when no plugin pages are available.
 
@@ -127,7 +127,7 @@ Back up the full Data folder separately from original music and external lyric f
 - Missing or unplayable music: check paths, permissions, devices, network and provider settings.
 - Missing artwork: the file may have no embedded/adjacent artwork; customize playlist, album or artist covers.
 - Unsynchronized lyrics: import timed LRC and check the timing offset.
-- Invalid layout: restore a valid layout or defaults without clearing the library.
+- Invalid layout: disable the layout plugin, or press Ctrl+Shift+Esc to recover the plugin manager without clearing the library.
 - Plugin failures: check the package version, platform entry, permissions and configuration.
 - Diagnostics: bounded, rotating logs are in Data/Logs. Common credential fields are redacted; review logs for private information before sharing.
 

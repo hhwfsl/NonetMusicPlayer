@@ -31,7 +31,7 @@ public sealed class PlayerCommandRouter(IPlayerCommandBackend backend)
         new("plugins.list", "plugins.list"), new("plugins.install", "plugins.install <impp-file|github-release-url>", true),
         new("plugins.enable", "plugins.enable <id>", true), new("plugins.disable", "plugins.disable <id>"), new("plugins.uninstall", "plugins.uninstall <id> [keep-files|delete-files]", true),
         new("plugins.config", "plugins.config <id> [json]"), new("plugins.schema", "plugins.schema <id>"), new("plugins.refresh", "plugins.refresh <id>"),
-        new("layout.show", "layout.show", DesktopOnly:true), new("layout.apply", "layout.apply <json-file>", DesktopOnly:true), new("layout.reset", "layout.reset", true, true),
+        new("layout.reset", "layout.reset", true, true),
         new("window.show", "window.show", DesktopOnly:true), new("window.hide", "window.hide", DesktopOnly:true), new("window.minimize", "window.minimize", DesktopOnly:true), new("window.maximize", "window.maximize", DesktopOnly:true), new("window.restore", "window.restore", DesktopOnly:true), new("window.close", "window.close", DesktopOnly:true),
         new("desktop-lyrics.toggle", "desktop-lyrics.toggle", DesktopOnly:true), new("desktop-lyrics.lock", "desktop-lyrics.lock <true|false>", DesktopOnly:true),
         new("album.cover", "album.cover <name> <file|auto|default>", DesktopOnly:true), new("artist.cover", "artist.cover <name> <file|auto|default>", DesktopOnly:true),

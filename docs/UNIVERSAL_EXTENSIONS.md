@@ -309,3 +309,13 @@ public Task RefreshAsync() => _runtime!.RunAsync(async token =>
 
 宿主保存显式原文/译文段标识。可导入原生网易云 API JSON 的 lrc/yrc/tlyric/ytlrc 字段以及双段 LRC；普通时间戳重复与旧双语 LRC仍按既有规则处理。旧云端自动歌词可刷新为显式轨道，手动关联歌词不被覆盖。
 
+## 控件级布局（SDK 4.11）
+
+新增可选 `ui.elements.v1`：`ui` 服务的 `elements` 分页查询已实现控件，`update-elements` 提交有限布局属性及 Panel 父级/顺序，`reset-elements` 撤销当前插件覆盖。清单 `ui.element` 贡献可按命名 target 插入数据控件树或原生自定义控件，placement 支持 append/prepend/before/after/replace。C# 使用 `ElementLayoutContract.Update` 和 `ElementLayoutPatch`；原生工厂 context 带 target/placement。
+
+控件属性覆盖保留原绑定；停用、故障、卸载和退出均撤销，导航后按稳定名称重新定位。运行时 ID 仅适用于当前控件实例，不强制实现虚拟列表。窗口核心和紧急恢复快捷键不开放；模板子节点不可任意脱离模板，可替换上层表现区域。完整限制、属性清单、代码参数与生命周期见 [UI_LAYOUT](UI_LAYOUT.md)。不再提供用户 JSON 布局入口；旧插件协议保留，不要求旧包重打包。
+
+## 生成项目的存放位置
+
+宿主 development/source 与 development/package 服务统一使用数据目录下的 PluginProjects，不再显示项目父目录设置或要求用户选取目录。仍需开发权限、正常审批及新项目 ID，不覆盖已有项目，也不编译或执行生成的源码。既有服务请求字段不变。
+

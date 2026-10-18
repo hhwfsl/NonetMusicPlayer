@@ -1,5 +1,7 @@
 # 项目维护要求
 
+- 每次更新 Windows 发布版时同步构建 installer，不得用 -SkipInstaller 省略；仅纯 ZIP 专项构建可显式跳过。publish/desktop/windows_installer 只保留最新成功构建的安装器，旧安装器移至 artifacts/releases/installers 归档。纯净 Release 默认也构建安装器，安装器必须与当前程序版本一致。
+
 - 使用单一 `NonetMusicPlayer` 工程目录开发、构建和发布；本地测试版本放在 `publish/desktop` 与 `publish/cli`。不再维护两个主工程目录。
 - GitHub 暂仅提交桌面、CLI、共享核心、主项目 SDK/打包器与必要测试；移动端仅本地保留。插件模板仅在用户明确要求时单独公开；具体私人插件不上传。禁止上传使用数据、凭据、缓存、旧开发历史和本地归档。
 - 正式发布前检查暂存区文件范围并扫描敏感内容；纯净 ZIP 从全新暂存构建，作为 Release 资产上传，不提交进源码 Git。更新测试版时保留数据及旧包备份。

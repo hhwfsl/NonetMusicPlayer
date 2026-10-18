@@ -29,7 +29,7 @@ public sealed partial class MainWindow
             ["more"] = PlayerMore, ["volume"] = PlayerVolume,
             ["progress"] = PlaybackSlider
         };
-        LayoutConfiguration = new(_vm.Storage);
+        LayoutConfiguration = new(_vm.Storage, loadSavedLayout: false);
         RenderLayout(LayoutConfiguration.Current);
         if (LayoutConfiguration.LastError is { } error) _vm.ReportWarning(error);
         SizeChanged += (_, _) => RequestLayoutCheck();
@@ -53,14 +53,6 @@ public sealed partial class MainWindow
         {
             RenderLayout(previous); UpdateLayout(); CheckResponsiveLayout(); throw;
         }
-    }
-
-    public void ReloadLayoutConfiguration()
-    {
-        if (!File.Exists(LayoutConfiguration.Path)) throw new InvalidDataException(L10n.T("Settings.LayoutFileNotFoundApplyAConfigurationOrRestore"));
-        var info = new FileInfo(LayoutConfiguration.Path);
-        if (info.Length > UiLayoutService.MaximumBytes) throw new InvalidDataException(L10n.T("Settings.LayoutConfigurationCannotExceedKB"));
-        ApplyLayoutConfiguration(File.ReadAllText(info.FullName));
     }
 
     public void RestoreDefaultLayout()
@@ -132,7 +124,7 @@ public sealed partial class MainWindow
         {
             SidebarWidth = s.SidebarWidth, PlayerHeight = s.PlayerHeight, TouchMode = s.TouchMode,
             NavigationRight = s.NavigationRight, PlayerTop = s.PlayerTop,
-            Layout = document.Workspace.Count > 0 ? document.Workspace.ToDictionary(p => p.Key, p => p.Value) : new(s.Layout)
+            Layout = document.Workspace.ToDictionary(p => p.Key, p => p.Value)
         };
         Workspace.InvalidateMeasure();
     }
@@ -194,6 +186,7 @@ public sealed partial class MainWindow
     {
         if (_checkingLayout || _playerControls is null || !IsVisible) return;
         _checkingLayout = true;
+        SuspendElementExtensions();
         try
         {
             RenderLayout(LayoutConfiguration.Current);
@@ -206,7 +199,7 @@ public sealed partial class MainWindow
             if (!_safeLayout) _vm!.ReportWarning(L10n.T("Settings.TheCustomLayoutDoesNotFitThisWindowUsing") + exception.Message);
             _safeLayout = true;
         }
-        finally { _checkingLayout = false; }
+        finally { _checkingLayout = false; RefreshElementExtensions(); }
     }
 
     private void ValidateVisibleLayout()

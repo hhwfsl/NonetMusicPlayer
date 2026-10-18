@@ -96,6 +96,7 @@ public sealed class AppSettings
     public Dictionary<string, string> KeyBindings { get; set; } = [];
     public string BackupFolder { get; set; } = "";
     /// <summary>仅用户选择的插件开发目录；模型不接受任意目录参数。</summary>
+    // 仅兼容已有设置文件；新项目由宿主管理在数据目录的 PluginProjects 下。
     public string PluginDevelopmentFolder { get; set; } = "";
     [JsonIgnore] public string? ValidationWarning { get; private set; }
     public double Volume { get; set; } = 80;

@@ -2,9 +2,9 @@
 
 本项目由 AI 完成，尚未经过人工代码 review。测试仅在 Windows 环境进行；macOS 和 Linux 只生成了交叉构建产物，未进行对应系统的实机测试。当前为预发布版本，使用或继续开发前请自行审查代码并备份数据。
 
-软件名称：**Nonet**。当前桌面版与 CLI 源码版本：**0.4.0-beta.22**。公开仓库仅包含桌面端、独立 CLI、共享核心、插件 SDK、主项目打包器和必要测试；不包含具体插件、移动端源码或构建产物。插件模板单独发布在 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)。
+软件名称：**Nonet**。当前桌面版与 CLI 源码版本：**0.4.0-beta.24**。公开仓库仅包含桌面端、独立 CLI、共享核心、插件 SDK、主项目打包器和必要测试；不包含具体插件、移动端源码或构建产物。插件模板单独发布在 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)。
 
-当前预发布版本：[Nonet 0.4.0-beta.22](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.22)。包含三个桌面平台的便携包、独立 CLI 及 Windows 安装器。此链接指向明确版本，避免 GitHub 对预发布版本的显示顺序造成混淆。
+预发布版本：[Nonet 0.4.0-beta.24](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.24)。包含三个桌面平台的便携包、独立 CLI 及 Windows 安装器。此链接指向明确版本，避免 GitHub 对预发布版本的显示顺序造成混淆。
 
 ## 技术栈
 
@@ -17,7 +17,7 @@
 | 媒体标签 | TagLibSharp 2.3.0 |
 | 桌面持久化 | SQLite，Microsoft.Data.Sqlite 10.0.12 |
 | CLI 与共用 JSON | System.Text.Json，持久化模型使用 Source Generation |
-| 插件开发 SDK | NonetMusicPlayer.PluginSdk 4.10.0，Contract v1/v2、页面 Schema v1/v2 |
+| 插件开发 SDK | NonetMusicPlayer.PluginSdk 4.11.0，Contract v1/v2、页面 Schema v1/v2 |
 
 CLI 不引用 Avalonia，通过系统终端运行。插件 SDK 无图形、音频或外部 NuGet 依赖。实际依赖以各项目的 `.csproj` 为准；第三方许可见 [docs/licenses](docs/licenses)。
 
@@ -78,7 +78,7 @@ NonetMusicPlayer.Desktop-0.4.0-beta.12-linux-x64.zip
 
 macOS ZIP 从 `Contents/` 开始组织，解压到 `Nonet.app/` 内；Linux/macOS 的 ZIP 保存可执行权限。未进行代码签名或 macOS 公证。更新清单与校验规则见 [UPDATES.md](docs/UPDATES.md)。
 
-不带 `-CleanOnly` 的发布脚本会更新对应发布目录，并保留旧包和便携数据；已在使用的软件请优先采用纯净构建模式。Windows 安装器另外需要 Inno Setup 6，通过 `scripts/build-windows-installer.ps1` 构建；不属于上述纯净 ZIP 流程。
+不带 `-CleanOnly` 的发布脚本会更新对应发布目录，并保留旧包和便携数据；已在使用的软件请优先采用纯净构建模式。普通 Windows 发布会同步构建安装器，不能使用 `-SkipInstaller`。安装器另需 Inno Setup 6，也可通过 `scripts/build-windows-installer.ps1` 单独构建；`windows_installer` 目录只保留最新成功版本。上述 `-CleanOnly -SkipInstaller` 命令仅构建 ZIP，不更新便携目录或安装器；移除 `-SkipInstaller` 则会同时从纯净暂存包构建 Windows 安装器。
 
 ## 项目组织
 

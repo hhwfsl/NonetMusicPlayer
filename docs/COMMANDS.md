@@ -47,7 +47,7 @@ nonet playlist delete <id> -y
 | `navigation` | `open <page>` |
 | `documentation` | `open` |
 | `music` | `search <query>`、`undo` |
-| `layout` | `show`、`apply <json-file>`、`reset` |
+| `layout` | `reset` |
 | `desktop-lyrics` | `toggle`、`lock <true或false>` |
 | `album` / `artist` | `cover <name> <file或auto或default>` |
 | `import` | `cancel` |

@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="tools/NonetMusicPlayer.IconBuilder/NonetMusicPlayer.IconBuilder.csproj" />
   <Project Path="tools/NonetMusicPlayer.PluginPackager/NonetMusicPlayer.PluginPackager.csproj" />
   <Project Path="src/NonetMusicPlayer.PluginSdk/NonetMusicPlayer.PluginSdk.csproj" />
   <Project Path="src/NonetMusicPlayer.Core/NonetMusicPlayer.Core.csproj" />

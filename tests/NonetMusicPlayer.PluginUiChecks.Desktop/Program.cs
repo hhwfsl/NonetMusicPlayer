@@ -6,6 +6,8 @@ internal static class Program
         try
         {
             var output = args.FirstOrDefault() ?? "artifacts/plugin-ui-checks";
+            if (args.Contains("--lyrics-transition")) { LyricsTransitionChecks.Run(output); return 0; }
+            if (args.Contains("--element-layout")) { ElementLayoutChecks.Run(output); return 0; }
             if (args.Contains("--runtime-faults")) { RuntimeFaultChecks.Run(output); return 0; }
             if (args.Contains("--music-search")) { MusicSearchChecks.Run(output); return 0; }
             if (args.Contains("--background-folders")) { BackgroundAndFolderChecks.Run(output); return 0; }

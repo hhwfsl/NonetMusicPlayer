@@ -15,7 +15,8 @@ public sealed class NativeExtensionView : UserControl, IDisposable, NonetMusicPl
     private bool _disposed, _starting;
     public event Action? Failed;
     public event Action? UnavailableView;
-    public NativeExtensionView(PluginManager manager, PluginManifest manifest, string slot)
+    public NativeExtensionView(PluginManager manager, PluginManifest manifest, string slot) : this(manager, manifest, slot, null, null) { }
+    public NativeExtensionView(PluginManager manager, PluginManifest manifest, string slot, string? target, string? placement)
     {
         _manager = manager; _slot = slot; _session = manager.Extension(manifest);
         _session.Changed += Refresh; manager.UiPluginUnavailable += Unavailable;
@@ -24,7 +25,7 @@ public sealed class NativeExtensionView : UserControl, IDisposable, NonetMusicPl
             if (_starting || _disposed) return; _starting = true;
             try
             {
-                var view = await _session.CreateNativeViewAsync(_slot);
+                var view = await _session.CreateNativeViewAsync(_slot, target, placement);
                 if (_disposed) { await view.DisposeAsync(); return; }
                 _view = view;
                 if (view.View is not Control control || control.Parent is not null) throw new InvalidDataException("Native view must be a new Avalonia Control.");
