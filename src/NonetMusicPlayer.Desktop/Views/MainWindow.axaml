@@ -158,6 +158,12 @@
                                                             Text="{ui:Loc Key='Statistics.ListeningStatistics'}" />
                                                     </Grid>
                                                 </Button>
+                                                <Button Classes="nav" Click="Navigate_Click" Tag="devices">
+                                                    <Grid ColumnDefinitions="32,*">
+                                                        <ui:VectorIcon HorizontalAlignment="Left" Kind="Devices" />
+                                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{ui:Loc Key='Lan.Title'}" />
+                                                    </Grid>
+                                                </Button>
                                             </StackPanel>
                                             <Border
                                                 Height="1"
@@ -211,15 +217,6 @@
                                             Height="1"
                                             Margin="10,0,10,10"
                                             Background="{DynamicResource DividerBrush}" />
-                                        <Button
-                                            Classes="nav"
-                                            Click="Navigate_Click"
-                                            Tag="devices">
-                                            <Grid ColumnDefinitions="32,*">
-                                                <ui:VectorIcon HorizontalAlignment="Left" Kind="Devices" />
-                                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{ui:Loc Key='Lan.Title'}" />
-                                            </Grid>
-                                        </Button>
                                         <Button Classes="nav" Click="Navigate_Click" Tag="plugins">
                                             <Grid ColumnDefinitions="32,*">
                                                 <ui:VectorIcon HorizontalAlignment="Left" Kind="Plugins" />

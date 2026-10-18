@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Headless;
+using Avalonia.Controls;
 using Avalonia.Threading;
 using NonetMusicPlayer.Core.Audio;
 using NonetMusicPlayer.Core.Network;
@@ -21,6 +22,9 @@ internal static class LanHostChecks
         var storage = new AppStorage(Path.Combine(root, "data")); using var audio = new FakeAudio(); using var vm = new MainViewModel(new MusicLibraryScanner(storage), audio);
         vm.Settings.CloseToTray = false; vm.Settings.ConfirmClose = false;
         var window = new MainWindow { DataContext = vm }; window.Show(); Pump();
+        // 设备互听属于“我的音乐”，与统计相邻；折叠该分组及插件导航扩展仍沿用原机制。
+        var navigation=window.FindControl<StackPanel>("MyMusicNavigation")!.Children.OfType<Button>().ToArray();
+        Check(navigation.Select(b=>b.Tag as string).SequenceEqual(["library","history","statistics","devices"]), "Devices must follow statistics inside My Music navigation.");
         vm.Navigate("devices"); Pump(); Check(!vm.LanSharing, "Opening devices must not start sharing.");
         vm.Navigate("terminal"); Wait(vm.ConnectLanAsync(phone.Invitation("127.0.0.1"))); Pump();
         Check(vm.Page == "terminal" && vm.LanPeers.Count == 1, "Pairing preserves the current page.");

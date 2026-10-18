@@ -2,9 +2,9 @@
 
 本项目由 AI 完成，尚未经过人工代码 review。测试仅在 Windows 环境进行；macOS 和 Linux 只生成了交叉构建产物，未进行对应系统的实机测试。当前为预发布版本，使用或继续开发前请自行审查代码并备份数据。
 
-软件名称：**Nonet**。当前桌面版与 CLI 源码版本：**0.4.0-beta.27**。公开仓库仅包含桌面端、独立 CLI、共享核心、插件 SDK、主项目打包器和必要测试；不包含具体插件、移动端源码或构建产物。插件模板单独发布在 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)。
+软件名称：**Nonet**。当前桌面版与 CLI 源码版本：**0.4.0-beta.28**。公开仓库仅包含桌面端、独立 CLI、共享核心、插件 SDK、主项目打包器和必要测试；不包含具体插件、移动端源码或构建产物。插件模板单独发布在 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)。
 
-最近公开发行版：[Nonet 0.4.0-beta.27](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.27)。本地开发版本可能领先于 GitHub Release。
+最近公开发行版：[Nonet 0.4.0-beta.28](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.28)。本地开发版本可能领先于 GitHub Release。
 
 ## 技术栈
 
