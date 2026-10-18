@@ -2,6 +2,8 @@
   "Layout.Title": { "zh-CN": "布局", "en-US": "Layout", "ja-JP": "レイアウト" },
   "Layout.NavigationPosition": { "zh-CN": "导航栏位置", "en-US": "Navigation position", "ja-JP": "ナビゲーションの位置" },
   "Layout.PlayerPosition": { "zh-CN": "播放栏位置", "en-US": "Player position", "ja-JP": "プレーヤーの位置" },
+  "Layout.NavigationPositionHint": { "zh-CN": "将导航栏放在左侧或右侧；拖动栏边缘可调整宽度。", "en-US": "Place navigation on the left or right; drag its edge to resize.", "ja-JP": "ナビゲーションを左右に配置します。端をドラッグすると幅を調整できます。" },
+  "Layout.PlayerPositionHint": { "zh-CN": "将播放栏放在顶部或底部；拖动播放按钮附近的调节线可调整高度。", "en-US": "Place the player at the top or bottom; drag the grip near the playback buttons to resize.", "ja-JP": "プレーヤーを上下に配置します。再生ボタン付近のハンドルで高さを調整できます。" },
   "Layout.Left": { "zh-CN": "左侧", "en-US": "Left", "ja-JP": "左" },
   "Layout.Right": { "zh-CN": "右侧", "en-US": "Right", "ja-JP": "右" },
   "Layout.Top": { "zh-CN": "顶部", "en-US": "Top", "ja-JP": "上" },

@@ -319,3 +319,15 @@ public Task RefreshAsync() => _runtime!.RunAsync(async token =>
 
 宿主 development/source 与 development/package 服务统一使用数据目录下的 PluginProjects，不再显示项目父目录设置或要求用户选取目录。仍需开发权限、正常审批及新项目 ID，不覆盖已有项目，也不编译或执行生成的源码。既有服务请求字段不变。
 
+## 背景取色与外观（SDK 4.12）
+
+可选能力 `appearance.background-accent.v1`，服务名 `appearance`。通过 `host` 的 services/capabilities 发现后再调用；不要求旧插件重新构建，SDK AssemblyVersion 仍为 4.0.0.0。
+
+| operation | 参数 | 返回与约束 |
+| --- | --- | --- |
+| `read` | 无 | `accent`、`automatic`、`hasBackground`、`pending`、`motionEnabled`、`lyricsTransition`；需要 `ui-extend` |
+| `extract-background-accent` | 无 | `found`、`color`（无可用颜色时为 null）；只分析用户当前背景，不修改主题，不接受文件路径 |
+| `set-auto-accent` | `enabled: boolean` | 需要 `ui-extend` 和 `settings-write`，沿用设置审批；等待本次取色完成后返回外观状态 |
+
+例如：`context.RequestAsync("appearance", new JsonObject { ["operation"] = "set-auto-accent", ["enabled"] = true })`。也可通过既有命令服务使用 `settings.set accentFromBackground true`；颜色仍由同一个宿主设置模型持久化，`host` 状态带 `accentFromBackground`。默认关闭；开启或背景变化时异步提取，关闭/移除背景后保留最后颜色。没有背景或透明背景时不虚构颜色，失败保留原主题并报告错误。只分析有界缩略图，不创建持续采样任务。
+

@@ -19,7 +19,7 @@ public sealed class SongInfoDialog : Window
         Icon = owner.Icon;
         var heading = Ui.Text(L10n.T("Common.TrackInformation412578"), 20); heading.FontWeight = FontWeight.SemiBold;
         heading.PointerPressed += (_, e) => { if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) BeginMoveDrag(e); };
-        var cover = new Border { Width = 96, Height = 96, CornerRadius = new CornerRadius(15), ClipToBounds = true, Background = Ui.Brush("SurfaceRaisedBrush"), Child = new Grid { Children = { new VectorIcon { Kind = IconKind.Music, Width = 40, Height = 40 }, new Image { Source = track.Artwork, Stretch = Stretch.UniformToFill } } } };
+        var cover = new Border { Name = "SongInfoCover", Width = 96, Height = 96, HorizontalAlignment = HorizontalAlignment.Left, CornerRadius = new CornerRadius(15), ClipToBounds = true, Background = Ui.Brush("SurfaceRaisedBrush"), Child = new Grid { Children = { new VectorIcon { Kind = IconKind.Music, Width = 40, Height = 40 }, new Image { Source = track.Artwork, Stretch = Stretch.UniformToFill } } } };
         var title = Selectable(track.Title, 18); title.FontWeight = FontWeight.SemiBold;
         var summary = Ui.Stack(title, Selectable(track.Artist, 14, true)); summary.VerticalAlignment = VerticalAlignment.Center;
         var header = new Grid { ColumnDefinitions = new ColumnDefinitions("116,*") }; header.Children.Add(cover); Grid.SetColumn(summary, 1); header.Children.Add(summary);

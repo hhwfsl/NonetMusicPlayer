@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 
@@ -16,26 +17,32 @@ public sealed class LyricsPageMotion : IDisposable
     public const int MaximumSnapshotPixels = 2_000_000;
     private Action? _cancel;
     public bool IsRunning { get; private set; }
-    public static CroppedBitmap? Capture(Control source, Rect region)
+    public static Bitmap? Capture(Control source, Rect region, double? renderScaling = null)
     {
         if (!InterfaceMotion.IsEnabled || source.Bounds.Width < 1 || source.Bounds.Height < 1 || region.Width < 1 || region.Height < 1) return null;
         try
         {
-            var scale = Math.Min(TopLevel.GetTopLevel(source)?.RenderScaling ?? 1, Math.Sqrt(MaximumSnapshotPixels / (source.Bounds.Width * source.Bounds.Height)));
+            var scale = Math.Min(renderScaling ?? TopLevel.GetTopLevel(source)?.RenderScaling ?? 1, Math.Sqrt(MaximumSnapshotPixels / (source.Bounds.Width * source.Bounds.Height)));
             var size = new PixelSize(Math.Max(1, (int)(source.Bounds.Width * scale)), Math.Max(1, (int)(source.Bounds.Height * scale)));
-            var bitmap = new RenderTargetBitmap(size, new Vector(96 * scale, 96 * scale));
+            using var bitmap = new RenderTargetBitmap(size, new Vector(96 * scale, 96 * scale));
+            bitmap.Render(source);
+            var x = Math.Clamp((int)Math.Round(region.X * scale), 0, size.Width - 1);
+            var y = Math.Clamp((int)Math.Round(region.Y * scale), 0, size.Height - 1);
+            var pixels = new PixelRect(x, y, Math.Clamp((int)Math.Round(region.Width * scale), 1, size.Width - x), Math.Clamp((int)Math.Round(region.Height * scale), 1, size.Height - y));
+            // 裁剪使用物理像素，输出统一为 96 DPI。避免 CroppedBitmap 将非 96 DPI 源矩形
+            // 再按逻辑单位传入绘制后端，造成高 DPI 或降采样快照出现先放大的画面跳变。
+            var cropped = new WriteableBitmap(pixels.Size, new Vector(96, 96), bitmap.Format ?? PixelFormat.Bgra8888, bitmap.AlphaFormat ?? AlphaFormat.Premul);
             try
             {
-                bitmap.Render(source);
-                var x = Math.Clamp((int)(region.X * scale), 0, size.Width - 1);
-                var y = Math.Clamp((int)(region.Y * scale), 0, size.Height - 1);
-                return new CroppedBitmap(bitmap, new PixelRect(x, y, Math.Clamp((int)(region.Width * scale), 1, size.Width - x), Math.Clamp((int)(region.Height * scale), 1, size.Height - y)));
+                using var buffer = cropped.Lock();
+                bitmap.CopyPixels(pixels, buffer.Address, checked(buffer.RowBytes * buffer.Size.Height), buffer.RowBytes);
+                return cropped;
             }
-            catch { bitmap.Dispose(); throw; }
+            catch { cropped.Dispose(); throw; }
         }
         catch (Exception error) { AppLog.Warning("UI", "Lyrics transition snapshot skipped", error); return null; }
     }
-    public void Begin(Grid layer, ContentControl host, CroppedBitmap snapshot, Rect region, Vector layerOffset, bool opening, bool playerTop)
+    public void Begin(Grid layer, ContentControl host, Bitmap snapshot, Rect region, Vector layerOffset, bool opening, bool playerTop)
     {
         Cancel();
         if (!InterfaceMotion.IsEnabled) { snapshot.Dispose(); return; }

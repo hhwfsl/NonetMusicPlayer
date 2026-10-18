@@ -6,8 +6,8 @@ namespace NonetMusicPlayer.Core.Plugins;
 /// <summary>扩展目录独立于应用版本；新增域采用可选能力，不修改已冻结的 v2 接口。</summary>
 public static class UniversalExtensionContract
 {
-    public static readonly string[] Capabilities = ["host.catalog.v1", "host.query.v1", "storage.v1", "logging.v1", "events.publish.v1", "workflow.v1", "ui.surfaces.v1", "ui.native.v1", "files.transactions.v1", "audio.pcm.v1", "metadata.v1", "artwork.v1", "maintenance.v1", "media.search.v1", "media.import.v1", "ui.image-data.v1", "media.artwork-batch.v1", "runtime.supervised.v1", "lyrics.tracks.v1", "ui.elements.v1"];
-    public static readonly string[] Services = ["host", "query", "storage", "log", "events", "files", "metadata", "artwork", "maintenance", "media"];
+    public static readonly string[] Capabilities = ["host.catalog.v1", "host.query.v1", "storage.v1", "logging.v1", "events.publish.v1", "workflow.v1", "ui.surfaces.v1", "ui.native.v1", "files.transactions.v1", "audio.pcm.v1", "metadata.v1", "artwork.v1", "maintenance.v1", "media.search.v1", "media.import.v1", "ui.image-data.v1", "media.artwork-batch.v1", "runtime.supervised.v1", "lyrics.tracks.v1", "ui.elements.v1", "appearance.background-accent.v1"];
+    public static readonly string[] Services = ["host", "query", "storage", "log", "events", "files", "metadata", "artwork", "maintenance", "media", "appearance"];
     public static readonly string[] Slots = ["shell.workspace", "shell.navigation", "shell.player", "shell.titlebar", "settings.sections", "navigation.items", "tray.actions", "album.more", "artist.more", "history.more", "selection.more", "library.more", "ui.element"];
     public static readonly string[] Hooks = ["command.before", "playback.before", "navigation.before", "import.before"];
     public static bool IsService(string name) => Services.Contains(name, StringComparer.Ordinal);

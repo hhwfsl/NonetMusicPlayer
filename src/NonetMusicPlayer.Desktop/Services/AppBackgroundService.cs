@@ -44,6 +44,34 @@ public static class AppBackgroundService
     }
     /// <summary>静态背景入口统一校验，避免动态 WebP/APNG 经裁剪弹窗绕过限制。</summary>
     public static void ValidateSource(string path) { using var input = OpenValidated(path, out _, out _); }
+    /// <summary>最多分析 96×96 像素，不缓存原图；过滤透明像素，弱化大片纯白/纯黑对代表色的干扰。</summary>
+    public static string? ExtractAccent(string path, CancellationToken token = default)
+    {
+        using var input = OpenValidated(path, out var width, out var height);
+        using var thumbnail = width >= height ? Bitmap.DecodeToWidth(input, Math.Min(width, 96)) : Bitmap.DecodeToHeight(input, Math.Min(height, 96));
+        using var readable = new WriteableBitmap(thumbnail.PixelSize, new Vector(96, 96), Avalonia.Platform.PixelFormat.Rgba8888, Avalonia.Platform.AlphaFormat.Unpremul);
+        using var buffer = readable.Lock(); thumbnail.CopyPixels(buffer);
+        var bytes = new byte[checked(buffer.RowBytes * buffer.Size.Height)];
+        System.Runtime.InteropServices.Marshal.Copy(buffer.Address, bytes, 0, bytes.Length);
+        var weights = new double[4096]; var reds = new double[4096]; var greens = new double[4096]; var blues = new double[4096];
+        for (var y = 0; y < buffer.Size.Height; y++)
+        {
+            token.ThrowIfCancellationRequested();
+            for (var x = 0; x < buffer.Size.Width; x++)
+            {
+                var at = y * buffer.RowBytes + x * 4; var r = bytes[at]; var g = bytes[at + 1]; var b = bytes[at + 2]; var alpha = bytes[at + 3];
+                if (alpha < 128) continue;
+                var max = Math.Max(r, Math.Max(g, b)); var min = Math.Min(r, Math.Min(g, b));
+                var weight = alpha / 255d * (.04 + Math.Sqrt((max - min) / 255d));
+                if (min > 235) weight *= .08; else if (max < 25) weight *= .2;
+                var bin = (r >> 4) * 256 + (g >> 4) * 16 + (b >> 4);
+                weights[bin] += weight; reds[bin] += r * weight; greens[bin] += g * weight; blues[bin] += b * weight;
+            }
+        }
+        var best = Array.IndexOf(weights, weights.Max());
+        if (weights[best] == 0) return null;
+        return $"#{(int)Math.Round(reds[best] / weights[best]):X2}{(int)Math.Round(greens[best] / weights[best]):X2}{(int)Math.Round(blues[best] / weights[best]):X2}";
+    }
     public static bool IsRetiredMedia(string? path)
     {
         if (string.IsNullOrWhiteSpace(path)) return false;

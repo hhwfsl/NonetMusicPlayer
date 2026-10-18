@@ -56,6 +56,8 @@ public sealed class AppSettings
     public string Language { get; set; } = "zh-CN";
     public string Theme { get; set; } = "System";
     public string Accent { get; set; } = "#A895FF";
+    /// <summary>显式启用后，背景变化时异步提取主题色；缺少该字段的旧配置默认关闭。</summary>
+    public bool AccentFromBackground { get; set; }
     public string? BackgroundImagePath { get; set; }
     public double BackgroundImageOpacity { get; set; } = .5;
     public double TitleBarOpacity { get; set; } = .15;

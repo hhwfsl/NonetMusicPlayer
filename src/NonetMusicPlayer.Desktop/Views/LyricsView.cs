@@ -43,9 +43,12 @@ public sealed class LyricsView : UserControl, IDisposable
     private ScrollViewer? _scroll;
     private ContextMenu? _menu;
     private bool _disposed, _previewing, _touchScrolling, _lyricsRefreshPending, _initialCenter = true;
+    private bool _preparingEntrance, _entrancePrepared;
+    private int _centerRequest;
     private int _previewIndex;
     private int _activeIndex = -1;
     private double _spacerHeight = 120;
+    private double _trailingSpacerHeight = 120;
     private LyricLine? _previewLine;
     private Point? _lastTouch;
     public LyricsView(MainWindow owner, MainViewModel vm)
@@ -69,7 +72,7 @@ public sealed class LyricsView : UserControl, IDisposable
         {
             Name = "LyricLines", ItemsSource = _displayLines, AutoScrollToSelectedItem = false, Background = Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(0),
             // 歌词按测量后的行高呈现，换行仍属于同一时间戳；首尾居中通过面板边距实现，不添加伪歌词。
-            ItemsPanel = new FuncTemplate<Panel?>(() => new VirtualizingStackPanel { Margin = new Thickness(0, _spacerHeight, 0, _spacerHeight) }),
+            ItemsPanel = new FuncTemplate<Panel?>(() => new VirtualizingStackPanel { Margin = new Thickness(0, _spacerHeight, 0, _trailingSpacerHeight) }),
             ItemTemplate = new FuncDataTemplate<LyricLine>((line, _) => LyricContent(line))
         };
         ScrollViewer.SetVerticalScrollBarVisibility(_list, ScrollBarVisibility.Hidden);
@@ -113,7 +116,13 @@ public sealed class LyricsView : UserControl, IDisposable
         _resumeFollow = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _resumeFollow.Tick += (_, _) => ResumeFollow();
         SizeChanged += (_, _) => ResizeLayout();
-        AttachedToVisualTree += (_, _) => Dispatcher.UIThread.Post(() => { if (!_disposed) { AttachScroll(); ResizeLayout(); _activeIndex = -1; FollowPosition(); } }, DispatcherPriority.Loaded);
+        AttachedToVisualTree += (_, _) => Dispatcher.UIThread.Post(() =>
+        {
+            if (_disposed) return;
+            // 主窗口已准备好首帧时不重新排队定位，否则会在转场后再次滚动。
+            if (!_entrancePrepared) PrepareEntrance();
+            else FollowPosition();
+        }, DispatcherPriority.Loaded);
         _list.PointerCaptureLost += (_, _) => { if (_lastTouch is null) return; _lastTouch = null; _touchScrolling = false; if (_previewing) FindPreviewLine(); };
         vm.PropertyChanged += Changed; vm.LyricLines.CollectionChanged += LyricsChanged;
         vm.SettingsChanged += SettingsChanged;
@@ -200,7 +209,7 @@ public sealed class LyricsView : UserControl, IDisposable
     {
         MeasureLines(true); _displayLines.ReplaceAll(_vm.LyricLines);
         _empty.IsVisible = _vm.LyricLines.Count == 0;
-        _initialCenter = true; _activeIndex = -1; ResumeFollow();
+        _entrancePrepared = false; _initialCenter = true; _activeIndex = -1; ResumeFollow();
     }
     private void Changed(object? sender, PropertyChangedEventArgs e)
     {
@@ -221,7 +230,9 @@ public sealed class LyricsView : UserControl, IDisposable
         _layout.ColumnDefinitions[0].Width = new GridLength(narrow ? .36 : .43, GridUnitType.Star);
         _layout.ColumnDefinitions[1].Width = new GridLength(narrow ? .64 : .57, GridUnitType.Star);
         MeasureLines(false);
-        _spacerHeight = Math.Max(0, (_scroll?.Viewport.Height > 0 ? _scroll.Viewport.Height : _right.Bounds.Height) / 2 - RowHeight(0) / 2);
+        var viewport = _scroll?.Viewport.Height > 0 ? _scroll.Viewport.Height : _right.Bounds.Height;
+        _spacerHeight = Math.Max(0, viewport / 2 - RowHeight(0) / 2);
+        _trailingSpacerHeight = Math.Max(0, viewport / 2 - RowHeight(_vm.LyricLines.Count - 1) / 2);
         UpdateSpacing();
         AttachScroll(); if (!_previewing) CenterActiveLine();
     }
@@ -237,7 +248,8 @@ public sealed class LyricsView : UserControl, IDisposable
         if (e.ViewportDelta.Y != 0 || e.ExtentDelta.Y != 0)
         {
             var next = Math.Max(0, _scroll!.Viewport.Height / 2 - RowHeight(0) / 2);
-            if (Math.Abs(next - _spacerHeight) > .5) { _spacerHeight = next; UpdateSpacing(); }
+            var tail = Math.Max(0, _scroll.Viewport.Height / 2 - RowHeight(_vm.LyricLines.Count - 1) / 2);
+            if (Math.Abs(next - _spacerHeight) > .5 || Math.Abs(tail - _trailingSpacerHeight) > .5) { _spacerHeight = next; _trailingSpacerHeight = tail; UpdateSpacing(); }
             if (!_previewing) CenterActiveLine();
         }
     }
@@ -253,18 +265,52 @@ public sealed class LyricsView : UserControl, IDisposable
     }
     private void CenterActiveLine()
     {
-        if (_activeIndex < 0 || _disposed || _previewing) return;
+        if (_activeIndex < 0 || _disposed || _previewing || _preparingEntrance) return;
         var index = _activeIndex;
+        var request = ++_centerRequest;
         Dispatcher.UIThread.Post(() =>
         {
-            if (_disposed || _previewing || _activeIndex != index) return;
+            if (_disposed || _previewing || _preparingEntrance || request != _centerRequest || _activeIndex != index) return;
             AttachScroll();
             if (_scroll is null) return;
             if (_scroll.Viewport.Height <= 0 || _scroll.Extent.Height <= 0) return;
-            var y = CenterOffset(_activeIndex);
-            if (_initialCenter) { _smoothScroll.Stop(); _scroll.Offset = new Vector(0, y); _initialCenter = false; }
-            else StartScroll(y);
+            if (_initialCenter)
+            {
+                _smoothScroll.Stop(); _list.ScrollIntoView(index); _list.UpdateLayout();
+                _scroll.Offset = new Vector(0, ActiveCenterOffset(index)); _initialCenter = false;
+            }
+            else StartScroll(ActiveCenterOffset(index));
         }, DispatcherPriority.Render);
+    }
+    /// <summary>在首帧或转场快照之前同步实现当前行并居中；只进行有界布局，不推进消息循环或等待动画。</summary>
+    internal bool PrepareEntrance()
+    {
+        if (_disposed || _preparingEntrance) return false;
+        _preparingEntrance = true; ++_centerRequest; _smoothScroll.Stop();
+        try
+        {
+            AttachScroll(); FollowPosition();
+            if (_activeIndex < 0) return _entrancePrepared = true;
+            // ScrollIntoView 先实现目标容器，随后按实际位置居中，不能依赖未实现行的高度估计。
+            for (var pass = 0; pass < 3; pass++)
+            {
+                ResizeLayout(); _list.UpdateLayout(); AttachScroll();
+                if (_scroll is null || _scroll.Viewport.Height <= 0) return false;
+                _list.ScrollIntoView(_activeIndex); _list.UpdateLayout();
+                if (_list.ContainerFromIndex(_activeIndex) is null) continue;
+                _scroll.Offset = new Vector(0, ActiveCenterOffset(_activeIndex)); _list.UpdateLayout();
+            }
+            _entrancePrepared = _list.ContainerFromIndex(_activeIndex) is not null;
+            if (_entrancePrepared) _initialCenter = false;
+            RefreshWordColors();
+            return _entrancePrepared;
+        }
+        finally { ++_centerRequest; _preparingEntrance = false; }
+    }
+    private double ActiveCenterOffset(int index)
+    {
+        if (_scroll is null || _list.ContainerFromIndex(index) is not { } row || row.TranslatePoint(new Point(0, row.Bounds.Height / 2), _scroll) is not { } center) return CenterOffset(index);
+        return Math.Clamp(_scroll.Offset.Y + center.Y - _scroll.Viewport.Height / 2, 0, Math.Max(0, _scroll.Extent.Height - _scroll.Viewport.Height));
     }
     /// <summary>恢复焦点立即定位真实当前行，取消失焦前的歌词预览等待。</summary>
     public void RestorePlaybackFocus()
@@ -359,7 +405,7 @@ public sealed class LyricsView : UserControl, IDisposable
     }
     private void UpdateSpacing()
     {
-        foreach (var panel in _list.GetVisualDescendants().OfType<VirtualizingStackPanel>()) panel.Margin = new Thickness(0, _spacerHeight, 0, _spacerHeight);
+        foreach (var panel in _list.GetVisualDescendants().OfType<VirtualizingStackPanel>()) panel.Margin = new Thickness(0, _spacerHeight, 0, _trailingSpacerHeight);
     }
     private void ResumeFollow()
     {

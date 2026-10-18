@@ -1,0 +1,17 @@
+{
+  "Background.AutomaticAccent": {
+    "zh-CN": "从背景图片自动设置主题色",
+    "en-US": "Use a theme color from the background",
+    "ja-JP": "背景画像からテーマカラーを設定"
+  },
+  "Background.AutomaticAccentHint": {
+    "zh-CN": "默认关闭。开启后，从当前背景取色，更换背景时自动更新。关闭或移除背景后保留最后使用的颜色。",
+    "en-US": "Off by default. Extracts a color from the current background and updates when it changes. Turning this off or removing the background keeps the last color.",
+    "ja-JP": "既定ではオフ。現在の背景から色を抽出し、背景の変更時に更新します。オフまたは背景の削除後も最後の色を保持します。"
+  },
+  "Background.AccentFailed": {
+    "zh-CN": "无法从背景提取主题色，已保留当前颜色。",
+    "en-US": "Unable to extract a background color. The current theme color was kept.",
+    "ja-JP": "背景から色を抽出できませんでした。現在のテーマカラーを保持しました。"
+  }
+}

@@ -223,9 +223,17 @@ public sealed partial class MainWindow : Window
         Dispatcher.UIThread.Post(Responsive, Avalonia.Threading.DispatcherPriority.Loaded);
         LocatePlayingTrack(this, EventArgs.Empty);
         RefreshElementExtensions();
-        if (lyricsTransition && lyrics)
+        var lyricsReady = true;
+        if (lyrics)
         {
-            UpdateLayout(); lyricsRegion = LyricsTransitionRegion();
+            UpdateLayout();
+            // 首次定位不能留给 Loaded/Render 回调，否则快照会冻结尚未居中的歌词。
+            if (FullLyricsHost.Content is LyricsView view) lyricsReady = view.PrepareEntrance();
+            UpdateLayout();
+        }
+        if (lyricsTransition && lyrics && lyricsReady)
+        {
+            lyricsRegion = LyricsTransitionRegion();
             lyricsSnapshot = LyricsPageMotion.Capture(WindowSurface, lyricsRegion);
         }
         if (lyricsSnapshot is not null)

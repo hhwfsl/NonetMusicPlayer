@@ -7,7 +7,7 @@ namespace NonetMusicPlayer.Core.Commands;
 public static class UniversalPluginCommandPolicy
 {
     private static readonly string[] Additional = ["window.hide", "undo", "import.cancel", "selection.begin", "selection.end", "selection.all", "selection.clear", "selection.select", "selection.list", "help.open", "plugins.uninstall", "plugins.refresh"];
-    private static readonly string[] Settings = ["fontFamily", "backgroundImageStretch", "myMusicExpanded", "pluginsExpanded", "playlistsExpanded", "desktopLyricsVisible", "desktopLyricsLocked", "desktopLyricsWidth", "desktopLyricsHeight", "optimizeMemoryWhenMinimized", "sidebarWidth", "playerHeight", "navigationRight", "playerTop", "titleButtonsOnLeft"];
+    private static readonly string[] Settings = ["fontFamily", "backgroundImageStretch", "accentFromBackground", "myMusicExpanded", "pluginsExpanded", "playlistsExpanded", "desktopLyricsVisible", "desktopLyricsLocked", "desktopLyricsWidth", "desktopLyricsHeight", "optimizeMemoryWhenMinimized", "sidebarWidth", "playerHeight", "navigationRight", "playerTop", "titleButtonsOnLeft"];
     public static JsonObject CatalogFor(IReadOnlyCollection<string> permissions)
     {
         var catalog = JsonNode.Parse(PluginCommandPolicy.CatalogFor(permissions))!.AsObject();

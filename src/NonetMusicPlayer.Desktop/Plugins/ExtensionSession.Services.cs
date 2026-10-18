@@ -59,6 +59,7 @@ public sealed partial class ExtensionSession
                 return new() { ["success"] = true, ["playlistId"] = playlist.Id, ["count"] = imported.Count };
             }
             case "artwork": return await ArtworkServiceAsync(args);
+            case "appearance": return await AppearanceServiceAsync(args);
             case "maintenance":
                 var action = args["operation"]?.GetValue<string>() ?? "";
                 if (action == "software-check" && Manifest.Permissions.Contains("settings-write")) await Owner.CheckUpdatesAsync(_gesture);
@@ -133,6 +134,7 @@ public sealed partial class ExtensionSession
             ["volume"] = vm.Volume, ["mode"] = vm.Settings.PlayMode.ToString(), ["page"] = vm.Page,
             ["source"] = vm.PlayingSourcePage, ["favorite"] = vm.CurrentTrack?.IsFavorite,
             ["language"] = vm.Settings.Language, ["theme"] = vm.Settings.Theme, ["accent"] = vm.Settings.Accent,
+            ["accentFromBackground"] = vm.Settings.AccentFromBackground,
             ["effectiveTheme"] = Owner.ActualThemeVariant.ToString(), ["windowWidth"] = Owner.Bounds.Width, ["windowHeight"] = Owner.Bounds.Height, ["renderScaling"] = Owner.RenderScaling,
             ["windowState"] = Owner.WindowState.ToString(), ["visible"] = Owner.IsVisible };
     }

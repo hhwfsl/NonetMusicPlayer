@@ -14,6 +14,7 @@ public static class SettingsContract
     };
     public static void Validate(string key, JsonNode? value)
     {
+        if (key.Equals("accentFromBackground", StringComparison.OrdinalIgnoreCase) && value?.GetValueKind() is not (System.Text.Json.JsonValueKind.True or System.Text.Json.JsonValueKind.False)) throw new InvalidDataException("Boolean setting required.");
         if (Ranges.TryGetValue(key, out var range))
         {
             if (value is not JsonValue number || number.GetValueKind() != System.Text.Json.JsonValueKind.Number || !double.TryParse(number.ToJsonString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed) || !double.IsFinite(parsed) || parsed < range.Min || parsed > range.Max) throw new InvalidDataException(Localization.LocalizationCatalog.Format("Commands.SettingRange", key, range.Min, range.Max));

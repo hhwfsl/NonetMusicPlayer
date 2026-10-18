@@ -1,6 +1,10 @@
 # Nonet User Manual
 
-Desktop version 0.4.0-beta.1. Chinese, Japanese and English interfaces provide the same features.
+Desktop version 0.4.0-beta.25. Chinese, Japanese and English interfaces provide the same features.
+
+## Background-based theme color
+
+Settings → Appearance → Use a theme color from the background is off by default. Enable it to extract a representative color now and whenever the background changes, without restarting. No background means no color change. Disabling the option or removing the background keeps the last color for manual adjustment. Analysis runs in the background, not continuously.
 
 Hover over a button to see its full name and any existing action guidance. Hints follow the current language and button state. Ellipsized text, read-only paths and selections also show their full content; long hints wrap without requiring a wider window.
 

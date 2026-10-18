@@ -50,6 +50,13 @@ internal static class UniversalExtensionChecks
         var session = vm.Plugins.Extension(installed); Wait(session.StartAsync());
         Wait(session.InvokeAsync("query", new())); Check(session.Frame.State["result"]!["total"]!.GetValue<int>() == 205 && session.Frame.State["result"]!["data"]!.AsArray().Count == 5, "Paged host query is actual library data.");
         Wait(session.InvokeAsync("host", new())); Check(session.Frame.State["result"]!["slots"]!.AsArray().Any(n => n!.GetValue<string>() == "shell.workspace"), "Discover real surface catalog.");
+        Check(session.Frame.State["result"]!["services"]!.AsArray().Any(n => n!.GetValue<string>() == "appearance"), "New optional appearance service is discoverable.");
+        Wait(session.InvokeAsync("appearance", new() { ["operation"] = "read" })); Check(!session.Frame.State["result"]!["automatic"]!.GetValue<bool>(), "Plugin reads the real background-color preference.");
+        Wait(session.InvokeAsync("appearance", new() { ["operation"] = "extract-background-accent" })); Check(!session.Frame.State["result"]!["found"]!.GetValue<bool>(), "Extraction without a background has no invented color.");
+        installed.Permissions.Add("settings-write"); installed.ApprovalMode = "assist";
+        Wait(session.InvokeAsync("appearance", new() { ["operation"] = "set-auto-accent", ["enabled"] = true }));
+        Check(vm.Settings.AccentFromBackground && session.Frame.State["result"]!["automatic"]!.GetValue<bool>(), "Authorized plugin uses the same automatic-color setting.");
+        Check(UniversalPluginCommandPolicy.ValidateFor(new("auto-color", "settings.set", ["accentFromBackground", "false"]), ["settings-write"]).Contains("accentFromBackground"), "Existing command interface exposes the new preference.");
         Wait(session.InvokeAsync("store", new())); Check(session.Frame.State["result"]!["success"]!.GetValue<bool>(), "Runtime storage service.");
         Wait(session.InvokeAsync("lyrics", new())); Check(session.Frame.State["result"]!["lines"]!.AsArray()[0]!["words"]!.AsArray().Count == 2, "Enhanced lyrics serialize absent word end times without NaN.");
         var catalog = Wait(vm.Plugins.LoadCatalogAsync(installed, vm.Lyrics)); Check(catalog.Count == 1 && catalog[0].ProviderId == installed.Id, "Composite extension supplies a validated media catalog.");

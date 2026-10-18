@@ -99,6 +99,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         if (Settings.ValidationWarning is { } settingsWarning) ReportWarning(settingsWarning);
         StatusText = Storage.RecoveryMessage ?? _startupNotifications.LastOrDefault()?.Message ?? L10n.T("Library.ReadyDragSongsIntoAPlaylistOrAddA");
         ApplyFilter();
+        ScheduleBackgroundAccent();
     }
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private string _statusText = "";
@@ -391,6 +392,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
             if (!_loadingAudio && _audio.DeviceName != Settings.DeviceName) _ = SwitchOutputAsync(Settings.DeviceName);
             TrimHistory();
             ApplyLyricsDirectory();
+            ScheduleBackgroundAccent();
             Save(); SettingsChanged?.Invoke(this, EventArgs.Empty); CompleteOperation("settings.set");
             var backgroundKey = Storage.Root + "\0" + Settings.BackgroundImagePath;
             if (_maintainedBackground != backgroundKey && !Storage.IsMigrating)
@@ -569,6 +571,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         if (_disposed) return; _lyricsPlaybackLease?.Dispose(); UpdateListeningStatistics(); _disposed = true; _lyricsSearchLifetime.Cancel(); Interlocked.Increment(ref _playRequest); _scanCancellation?.Cancel(); _timer.Stop(); Save();
+        _backgroundAccentCancellation?.Cancel(); _backgroundAccentCancellation?.Dispose();
         _audio.PlaybackStopped -= PlaybackEnded; _audio.PlaybackFailed -= PlaybackFailed;
         if (_audio is Core.Audio.IExtensionAudioHost extensible) extensible.ProcessorBypassed -= ExtensionAudioBypassed;
         _audio.OutputDeviceChanged -= OutputChanged; _audio.OutputDevicesChanged -= DevicesChanged;

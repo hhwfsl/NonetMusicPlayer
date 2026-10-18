@@ -39,6 +39,15 @@ public sealed class SettingsView : UserControl, IDisposable
         InputCommitService.Bind(accent, ApplyAccent);
         var apply = Ui.Button(L10n.T("Common.Apply"), () => { ApplyAccent(accent.Text ?? ""); owner.FocusManager?.Focus(null); }); Grid.SetColumn(apply, 2); hexRow.Children.Add(apply);
         var accentEditor = Ui.Stack(hexRow, Ui.AsyncButton(L10n.T("Settings.ColorWheelAndRGB"), async () => { var selected = await ColorPickerDialog.Show(owner, s.Accent); if (selected is null) return; accent.Text = s.Accent = selected; Changed(); }));
+        void RefreshAccent(object? sender, EventArgs e)
+        {
+            if (!accent.IsKeyboardFocusWithin) accent.Text = vm.Settings.Accent;
+            accentEditor.IsEnabled = !vm.Settings.AccentFromBackground || string.IsNullOrWhiteSpace(vm.Settings.BackgroundImagePath);
+        }
+        vm.SettingsChanged += RefreshAccent;
+        _extensionViews.Add(new ElementLayoutService.ActionLease(() => vm.SettingsChanged -= RefreshAccent));
+        RefreshAccent(null, EventArgs.Empty);
+        var automaticAccent = Ui.Toggle(s.AccentFromBackground, value => { s.AccentFromBackground = value; Changed(); }); automaticAccent.Name = "AccentFromBackground";
         var backgroundPath = new ContentControl { Content = string.IsNullOrWhiteSpace(s.BackgroundImagePath) ? Ui.Text(L10n.T("Settings.NoBackgroundImage"), 12, true) : Ui.DataPathLink(L10n.T("Settings.BackgroundImage"), s.BackgroundImagePath, vm.Storage.Root) };
         var backgroundButtons = new WrapPanel { Orientation = Avalonia.Layout.Orientation.Horizontal };
         var selectBackground = Ui.AsyncButton(L10n.T("Settings.ChooseBackgroundImage"), async () =>
@@ -62,6 +71,7 @@ public sealed class SettingsView : UserControl, IDisposable
             Ui.Row(L10n.T("Common.DisplayLanguage"), L10n.T("Common.ChangesTakeEffectImmediately"), language),
             Ui.Row(L10n.T("Settings.Theme"), L10n.T("Common.UseSystemLightOrDarkAppearance"), theme),
             Ui.Row(L10n.T("Settings.ThemeColor"), L10n.T("Settings.OneThemeColorForHoverSelectionButtonsAndPlayback"), accentEditor),
+            Ui.Row(L10n.T("Background.AutomaticAccent"), L10n.T("Background.AutomaticAccentHint"), automaticAccent),
             Ui.Row(L10n.T("Settings.InterfaceFont"), L10n.T("Settings.ChooseASystemFontOrImportAFontFile"), FontControls(owner, vm, Changed)),
             Ui.Row(L10n.T("Common.TextSize"), L10n.T("Common.AdjustBodyTextSize"), Ui.Range(11, 18, s.FontSize, v => { s.FontSize = v; Changed(); }, " px")),
             advancedAppearance);
@@ -230,8 +240,8 @@ public sealed class SettingsView : UserControl, IDisposable
             value => { s.PlayerTop = value == L10n.T("Layout.Top"); vm.ApplySettings(); });
         player.Name = "PlayerPosition";
         return Ui.Card(L10n.T("Layout.Title"),
-            Ui.Row(L10n.T("Layout.NavigationPosition"), "", navigation),
-            Ui.Row(L10n.T("Layout.PlayerPosition"), "", player));
+            Ui.Row(L10n.T("Layout.NavigationPosition"), L10n.T("Layout.NavigationPositionHint"), navigation),
+            Ui.Row(L10n.T("Layout.PlayerPosition"), L10n.T("Layout.PlayerPositionHint"), player));
     }
     private void RefreshDevices(object? sender, EventArgs e)
     {
