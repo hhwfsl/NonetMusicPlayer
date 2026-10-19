@@ -129,6 +129,8 @@ public sealed class LanLibraryServer : IDisposable
                     await Respond(tls, accepted ? 200 : 409, [], "application/json", false, deadline.Token); return;
                 }
                 if (first[0] == "POST") { await Respond(tls, 405, [], "text/plain", false, deadline.Token); return; }
+                // 凭据和实际来源均已验证；不向插件或日志交付任何认证信息。
+                if (route is "/v1/info" or "/v1/catalog") LanLibraryClient.ObserveAuthenticatedPeer(session.DeviceId);
                 if (route == "/v1/info") { var c = _catalog(); await Respond(tls, 200, JsonSerializer.SerializeToUtf8Bytes(new LanInfo(_deviceId, _name, c.Revision), LanJson.Default.LanInfo), "application/json", head, deadline.Token); return; }
                 if (route == "/v1/catalog")
                 {

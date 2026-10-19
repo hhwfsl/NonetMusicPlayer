@@ -46,8 +46,9 @@ internal static class LanChecks
         var wrongCertificate = invitation.Replace(server.Fingerprint, new string('0', 64));
         try { using var ignored = await LanLibraryClient.ConnectAsync(wrongCertificate, Guid.NewGuid().ToString("N"), "Reject"); throw new Exception("Wrong certificate accepted."); } catch (HttpRequestException) { }
         var serialized = JsonSerializer.Serialize(peer.Catalog, LanJson.Default.LanCatalog); Check(!serialized.Contains(root, StringComparison.Ordinal) && !serialized.Contains("token", StringComparison.OrdinalIgnoreCase), "Catalog contains neither filesystem paths nor credentials.");
-        server.Dispose(); await disconnected.Task.WaitAsync(TimeSpan.FromSeconds(12)); Check(!peer.Connected, "Heartbeat disconnects dead peer.");
+        server.Dispose(); await disconnected.Task.WaitAsync(TimeSpan.FromSeconds(40)); Check(!peer.Connected, "Sustained heartbeat failure disconnects a dead peer, not a single delayed probe.");
         await DuplexAsync(root);
+        await IdleDuplexAsync(root);
         Console.WriteLine("PASS LAN HTTPS pinning, private invitation validation, 501-item paging, Unicode, HEAD/Range/seek, bounded audio, refresh, privacy and disconnection.");
     }
     private static async Task DuplexAsync(string root)
@@ -79,6 +80,39 @@ internal static class LanChecks
         Check(CommandSyntax.IsPrivate("nonet network connect 'nonet://connect?key=private'"), "Invitation is excluded from command history.");
         Check(!NonetMusicPlayer.Core.Diagnostics.AppLog.Redact("nonet://connect?key=private").Contains("private"), "Invitation cannot enter disk logs.");
         Console.WriteLine("PASS desktop↔desktop, mobile↔mobile and cross-kind duplex negotiation, one-use reverse grants, explicit disconnect, revocation and invitation secrecy.");
+    }
+    /// <summary>单向响应持续延迟时，反向认证心跳仍证明对端在线；空闲不应撤销整个配对。</summary>
+    private static async Task IdleDuplexAsync(string root)
+    {
+        var firstId = Guid.NewGuid().ToString("N"); var secondId = Guid.NewGuid().ToString("N"); var slow = 0;
+        using var cert = LanLibraryServer.Certificate(Path.Combine(root, "idle-" + Guid.NewGuid() + ".pfx"));
+        LanCatalog Catalog(string id) => new(id, "Idle fixture", "one", [], [], 0, "desktop");
+        LanLibraryClient? reverse = null;
+        using var first = new LanLibraryServer(cert, firstId, "First", () => { if (Volatile.Read(ref slow) != 0) Thread.Sleep(5500); return Catalog(firstId); },
+            (_, _) => Task.FromResult<LanFile?>(null), (_, _) => Task.FromResult(true));
+        using var second = new LanLibraryServer(cert, secondId, "Second", () => Catalog(secondId), (_, _) => Task.FromResult<LanFile?>(null));
+        first.AcceptReverse = async (access, token) => { reverse = await LanLibraryClient.FromApprovedAccessAsync(access, token); return true; };
+        first.Start(); second.Start();
+        using var peer = await LanLibraryClient.ConnectDuplexAsync(first.Invitation("127.0.0.1"), secondId, "Second", true);
+        await peer.EstablishReverseAsync(new(second.Port, second.Fingerprint, second.GrantAccess(firstId, "First")));
+        try
+        {
+            Volatile.Write(ref slow, 1);
+            for (var i = 0; i < 35; i++)
+            {
+                await Task.Delay(1000);
+                Check(peer.Connected && reverse is { Connected: true }, "Authenticated reverse traffic must retain an idle pair beyond the single-direction timeout.");
+            }
+            Volatile.Write(ref slow, 0);
+            await peer.RefreshAsync(); Check(peer.Connected, "Delayed peer recovers without a new invitation or pairing.");
+            var revoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            peer.Disconnected += (_, _) => revoked.TrySetResult();
+            first.RevokeDevice(secondId);
+            await revoked.Task.WaitAsync(TimeSpan.FromSeconds(8));
+            Check(!peer.Connected, "Explicit credential revocation is not delayed by reverse liveness.");
+            Console.WriteLine("PASS idle duplex: sustained one-direction latency, authenticated reverse liveness, same-session recovery and immediate revocation.");
+        }
+        finally { Volatile.Write(ref slow, 0); reverse?.Dispose(); }
     }
     private static void Check(bool value, string message) { if (!value) throw new InvalidDataException(message); }
 }

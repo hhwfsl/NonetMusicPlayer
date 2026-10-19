@@ -5,7 +5,9 @@ $taskRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $taskStage = Join-Path $taskRoot ('artifacts/installer-check-' + [guid]::NewGuid().ToString('N'))
 $taskAllowed = [IO.Path]::GetFullPath((Join-Path $taskRoot 'artifacts')).TrimEnd('\') + '\'
 if (-not [IO.Path]::GetFullPath($taskStage).StartsWith($taskAllowed, [StringComparison]::OrdinalIgnoreCase)) { throw '夹具目录越界。' }
-if (Get-Process -Name Nonet -ErrorAction SilentlyContinue) { throw '先关闭 Nonet，再执行隔离安装器检查。' }
+# QA 安装使用独立标识和随机目录；不阻止或关闭其他目录中的用户实例。
+$taskStagePrefix = [IO.Path]::GetFullPath($taskStage).TrimEnd('\') + '\'
+if (Get-Process -Name Nonet -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($taskStagePrefix, [StringComparison]::OrdinalIgnoreCase) }) { throw '隔离目录中的程序仍在运行。' }
 # 模拟 beta.16 的解码器残留，只删除已知发行文件，未知用户文件应当保留。
 $taskRetired = Join-Path $taskStage 'VideoDecoder'
 [IO.Directory]::CreateDirectory($taskRetired) | Out-Null

@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text.Json;
 using NonetMusicPlayer.Core.Streaming;
+using NonetMusicPlayer.Core.Diagnostics;
 
 namespace NonetMusicPlayer.Core.Network;
 
@@ -15,6 +16,10 @@ public sealed class LanLibraryClient : IDisposable
     private readonly HttpClientHandler _handler;
     private readonly CancellationTokenSource _lifetime = new();
     private static readonly ConcurrentDictionary<string, LanLibraryClient> Active = new(StringComparer.Ordinal);
+    private long _lastContact = Environment.TickCount64;
+    /// <summary>只由同进程服务端在校验会话及来源后调用；双向通信任一方向正常都证明设备仍在线。</summary>
+    internal static void ObserveAuthenticatedPeer(string deviceId)
+    { if (Active.TryGetValue(deviceId, out var peer) && peer.Connected) Interlocked.Exchange(ref peer._lastContact, Environment.TickCount64); }
     public string DeviceId { get; private set; } = "";
     public string Name { get; private set; } = "";
     public LanCatalog Catalog { get; private set; } = new("", "", "", [], [], 0);
@@ -76,11 +81,14 @@ public sealed class LanLibraryClient : IDisposable
         var tracks = new List<LanSong>(); LanCatalog? first = null;
         do
         {
-            using var response = await _http.GetAsync($"v1/catalog?offset={tracks.Count}", HttpCompletionOption.ResponseHeadersRead, token); response.EnsureSuccessStatusCode();
-            var page = JsonSerializer.Deserialize(await ReadLimited(response, 4 * 1024 * 1024, token), LanJson.Default.LanCatalog) ?? throw new InvalidDataException();
+            // 每页独立限制响应头与正文的时间；大曲库不共用心跳期限，也不允许正文无限挂起。
+            using var pageTimeout = CancellationTokenSource.CreateLinkedTokenSource(token, _lifetime.Token); pageTimeout.CancelAfter(20_000);
+            using var response = await _http.GetAsync($"v1/catalog?offset={tracks.Count}", HttpCompletionOption.ResponseHeadersRead, pageTimeout.Token); response.EnsureSuccessStatusCode();
+            var page = JsonSerializer.Deserialize(await ReadLimited(response, 4 * 1024 * 1024, pageTimeout.Token), LanJson.Default.LanCatalog) ?? throw new InvalidDataException();
             first ??= page;
             if (page.DeviceId != DeviceId || page.Revision != first.Revision || page.Total is < 0 or > 20000 || page.Tracks.Length > 200 || page.Playlists.Length > 2000) throw new InvalidDataException("Peer catalog changed or exceeded its limit.");
             if (page.Tracks.Length == 0 && tracks.Count < page.Total) throw new InvalidDataException();
+            Interlocked.Exchange(ref _lastContact, Environment.TickCount64);
             tracks.AddRange(page.Tracks);
         } while (tracks.Count < first.Total);
         if (tracks.Select(t => t.Id).Distinct(StringComparer.Ordinal).Count() != tracks.Count || tracks.Any(t => t.Id.Length is 0 or > 256 || t.Title.Length > 2000)) throw new InvalidDataException();
@@ -88,19 +96,33 @@ public sealed class LanLibraryClient : IDisposable
     }
     private async Task WatchAsync()
     {
-        try
+        var failures = 0;
+        while (!_lifetime.IsCancellationRequested)
         {
-            while (!_lifetime.IsCancellationRequested)
+            try
             {
-                await Task.Delay(5000, _lifetime.Token);
+                await Task.Delay(failures == 0 ? 5000 : 2000, _lifetime.Token);
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token); timeout.CancelAfter(4000);
-                using var response = await _http.GetAsync("v1/info", HttpCompletionOption.ResponseHeadersRead, timeout.Token); response.EnsureSuccessStatusCode();
+                using var response = await _http.GetAsync("v1/info", HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+                if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+                { AppLog.Info("LAN", "Paired session was revoked by peer"); Dispose(); return; }
+                response.EnsureSuccessStatusCode();
                 var info = JsonSerializer.Deserialize(await ReadLimited(response, 8192, timeout.Token), LanJson.Default.LanInfo);
-                if (info?.DeviceId != DeviceId || info.Protocol != 1) throw new InvalidDataException();
-                if (info.Revision != Catalog.Revision) await RefreshAsync(timeout.Token);
+                if (info?.DeviceId != DeviceId || info.Protocol != 1) { Dispose(); return; }
+                Interlocked.Exchange(ref _lastContact, Environment.TickCount64); failures = 0;
+                // 目录分页不共用心跳的四秒期限，避免较大曲库在后台刷新时被误断开。
+                if (info.Revision != Catalog.Revision) await RefreshAsync(_lifetime.Token);
+            }
+            catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { return; }
+            catch (Exception e) when (e is HttpRequestException or IOException or JsonException or OperationCanceledException or ObjectDisposedException)
+            {
+                if (_lifetime.IsCancellationRequested) return;
+                if (++failures == 1) AppLog.Warning("LAN", "Peer probe delayed; retaining the paired session and retrying");
+                // 不以一次单向探测超时覆盖反向已认证活动；确实双向失联才结束会话。
+                if (failures >= 3 && Environment.TickCount64 - Interlocked.Read(ref _lastContact) >= 30_000)
+                { AppLog.Warning("LAN", "Peer connection ended after sustained bidirectional inactivity"); Dispose(); return; }
             }
         }
-        catch (Exception e) when (e is HttpRequestException or IOException or JsonException or OperationCanceledException or ObjectDisposedException) { Dispose(); }
     }
     public string TrackUri(string id) => $"nonet-lan://{DeviceId}/{Uri.EscapeDataString(id)}";
     public static Stream OpenAudio(Uri uri)
