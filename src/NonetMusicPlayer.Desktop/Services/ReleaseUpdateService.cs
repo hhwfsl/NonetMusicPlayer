@@ -94,6 +94,35 @@ public sealed class ReleaseUpdateService(HttpClient? client = null)
         DataDirectoryService.RejectLinkedAncestors(stage);
         if (Directory.Exists(stage)) Directory.Delete(stage, true);
     }
+    /// <summary>只回收成功完成的 GUID 更新暂存；失败、下载中和正在运行的助手均保持原状。</summary>
+    public static void CleanupCompleted(string dataRoot)
+    {
+        var folder = Path.Combine(Path.GetFullPath(dataRoot), "Updates");
+        DataDirectoryService.RejectLinkedAncestors(folder);
+        if (!Directory.Exists(folder)) return;
+        foreach (var stage in Directory.EnumerateDirectories(folder))
+        {
+            if (!Guid.TryParseExact(Path.GetFileName(stage), "N", out _)) continue;
+            try
+            {
+                DataDirectoryService.RejectLinkedAncestors(stage);
+                var result = Path.Combine(stage, "result.txt"); DataDirectoryService.RejectLinkedAncestors(result);
+                if (!File.Exists(result) || new FileInfo(result).Length > 100 || File.ReadAllText(result) != "success") continue;
+                // 助手仍在退出时不能清除其载荷或旧文件；新进程稍后重试。
+                var running = Path.Combine(stage, "helper.lock"); DataDirectoryService.RejectLinkedAncestors(running);
+                using (new FileStream(running, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None)) { }
+                var directories = new Stack<string>(); directories.Push(stage);
+                while (directories.TryPop(out var directory)) foreach (var path in Directory.EnumerateFileSystemEntries(directory))
+                {
+                    DataDirectoryService.RejectLinkedAncestors(path);
+                    if (Directory.Exists(path)) directories.Push(path);
+                }
+                Directory.Delete(stage, true);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException) { AppLog.Warning("Update", "Completed update cleanup deferred", e); }
+        }
+        if (!Directory.EnumerateFileSystemEntries(folder).Any()) Directory.Delete(folder);
+    }
     /// <summary>校验安全相对路径、平台清单和逐文件摘要，不允许更新包携带用户数据。</summary>
     public static PreparedUpdate ExtractVerified(string archivePath, string stageRoot, string version, string rid, CancellationToken cancellationToken = default)
     {

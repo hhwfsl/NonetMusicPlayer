@@ -66,6 +66,7 @@ public sealed class AppSettings
     public double PlayerOpacity { get; set; } = .15;
     public double TerminalOpacity { get; set; } = .85;
     public int TerminalScrollbackLines { get; set; } = 1000;
+    public int LanApprovalWaitSeconds { get; set; } = 30;
     public double TerminalFontSize { get; set; } = 14;
     public string TerminalMinimumLogLevel { get; set; } = "INFO";
     public double UiOpacity { get; set; } = 1;
@@ -139,6 +140,7 @@ public sealed class AppSettings
         ContentOpacity = RegionOpacity(ContentOpacity); PlayerOpacity = RegionOpacity(PlayerOpacity);
         TerminalOpacity = double.IsFinite(TerminalOpacity) ? Math.Clamp(TerminalOpacity, 0, 1) : .85;
         TerminalScrollbackLines = Math.Clamp(TerminalScrollbackLines, 1, 10000);
+        LanApprovalWaitSeconds = Math.Clamp(LanApprovalWaitSeconds, 10, 120);
         TerminalFontSize = double.IsFinite(TerminalFontSize) ? Math.Clamp(TerminalFontSize, 10, 32) : 14;
         if (TerminalMinimumLogLevel is not ("INFO" or "WARN" or "ERROR")) TerminalMinimumLogLevel = "INFO";
         if (!double.IsFinite(ControlCornerRadius)) ControlCornerRadius = 9;

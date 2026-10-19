@@ -65,7 +65,7 @@ public static class AppLog
         {
             var value = Regex.Replace(text, @"\\+/", "/", RegexOptions.CultureInvariant, RegexTimeout);
             value = Regex.Replace(value, @"(?im)^[^\r\n]*\\[\""'](?:access[_-]?token|refresh[_-]?token|token|authorization|password|secret|session[_-]?(?:secret|key|token)|api[_-]?key|cookie)\\[\""']\s*[:=][^\r\n]*$", "[sensitive escaped payload redacted]", RegexOptions.CultureInvariant, RegexTimeout);
-            value = Regex.Replace(value, @"(?i)\b(?:https?|ftp|file)://[^\s<>\""']+", "[URL redacted]", RegexOptions.CultureInvariant, RegexTimeout);
+            value = Regex.Replace(value, @"(?i)\b(?:https?|ftp|file|nonet)://[^\s<>\""']+", "[URL redacted]", RegexOptions.CultureInvariant, RegexTimeout);
             value = Regex.Replace(value, @"(?im)^(\s*(?:Authorization|Cookie|Set-Cookie)\s*:\s*).*$", "$1[redacted]", RegexOptions.CultureInvariant, RegexTimeout);
             value = Regex.Replace(value, @"(?i)\b(?:Bearer|Basic)\s+[^\s,;]+", "[authorization redacted]", RegexOptions.CultureInvariant, RegexTimeout);
             value = Regex.Replace(value, """(?i)(["']?(?:access[_-]?token|refresh[_-]?token|id[_-]?token|token|authorization|password|passwd|secret|session[_-]?(?:secret|key|token|id)|client[_-]?secret|private[_-]?key|api[_-]?key|cookie|set-cookie)["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\\r\n])*"|'(?:\\.|[^'\\\r\n])*'|[^\s,;\r\n}]+)""", "$1[redacted]", RegexOptions.CultureInvariant, RegexTimeout);

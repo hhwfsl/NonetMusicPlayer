@@ -50,6 +50,21 @@ internal static class DesktopRevisionChecks
             vm.LyricLines.Clear(); vm.LyricLines.Add(new(0, new string('光', 200), new string('译', 200))); vm.RefreshPlaybackState(); Pump(overlay);
             Require(Math.Abs(overlay.Width - size.Width) < 1 && Math.Abs(overlay.Height - size.Height) < 1, "Long lyrics never resize desktop overlay");
             Require(overlay.GetVisualDescendants().OfType<KaraokeLine>().All(t => !t.Wrap && t.TextSize <= vm.Settings.DesktopLyricsFontSize), "Desktop lines use fixed-size clipped marquee");
+            var rendered = overlay.GetVisualDescendants().OfType<KaraokeLine>().First(t => t.Name == "DesktopCurrentLyric");
+            var text = new string('光', 200); var previousOffset = -1d;
+            for (var step = 0; step <= 20; step++)
+            {
+                rendered.UpdateTimedWithScroll(text, [], step, scrollProgress: step / 20d);
+                Require(rendered.ScrollOffset >= previousOffset, "Line lyrics move forward only with reading progress"); previousOffset = rendered.ScrollOffset;
+            }
+            Require(previousOffset > 0, "Overflow reaches the end of the fixed viewport");
+            rendered.UpdateTimedWithScroll(text, [], 100, scrollProgress: 1); Require(Math.Abs(rendered.ScrollOffset - previousOffset) < .01, "Completed line stays at end, never bounces");
+            var words = new[] { new LyricWord(0, text[..100], 5), new LyricWord(5, text[100..], 10) };
+            rendered.UpdateTimed(text, words, 5); var middle = rendered.ScrollOffset;
+            rendered.UpdateTimed(text, words, 8); Require(rendered.ScrollOffset > middle, "Word timing drives the visible position");
+            var pausedOffset = rendered.ScrollOffset; Thread.Sleep(80); rendered.UpdateTimed(text, words, 8);
+            Require(Math.Abs(rendered.ScrollOffset - pausedOffset) < .01, "Paused word position does not scroll with wall-clock time");
+            rendered.UpdateTimed(text, words, 0); Require(rendered.ScrollOffset == 0, "Explicit seek to beginning resets horizontal viewport");
             overlay.HideLyrics();
         }
         vm.Navigate("terminal"); Pump(owner); var terminal = owner.GetVisualDescendants().OfType<TerminalView>().Single();
@@ -142,6 +157,15 @@ internal static class DesktopRevisionChecks
         Reject(() => ReleaseUpdateService.ValidateRelative("../outside"), "Zip slip rejected"); Reject(() => ReleaseUpdateService.ValidateRelative("Data/state.json"), "User data in package rejected"); Reject(() => ReleaseUpdateService.ValidateRelative("Nonet.bootstrap.json"), "Bootstrap in package rejected");
         File.WriteAllText(Path.Combine(prepared.Payload, "notes.txt"), "tampered"); Reject(() => UpdateInstaller.Apply(plan, Path.Combine(prepared.StageRoot, "rollback-2")), "Staged tampering rejected before replacement");
         Require(File.ReadAllText(oldExe) == "new executable", "Rejected update leaves installed executable untouched");
+        // 成功暂存会清理，失败记录和未完成下载必须保留；活动助手锁保护正在更新的文件。
+        File.WriteAllText(Path.Combine(prepared.StageRoot, "result.txt"), "success");
+        var pendingStage = Path.Combine(root, "update-data", "Updates", Guid.NewGuid().ToString("N")); Directory.CreateDirectory(pendingStage);
+        File.WriteAllText(Path.Combine(pendingStage, "download.zip"), "partial");
+        var helperLock = Path.Combine(prepared.StageRoot, "helper.lock");
+        using (var activeHelper = new FileStream(helperLock, FileMode.Create, FileAccess.Write, FileShare.None))
+        { ReleaseUpdateService.CleanupCompleted(Path.Combine(root, "update-data")); Require(Directory.Exists(prepared.StageRoot), "Active update helper is not removed"); }
+        ReleaseUpdateService.CleanupCompleted(Path.Combine(root, "update-data"));
+        Require(!Directory.Exists(prepared.StageRoot) && File.Exists(Path.Combine(pendingStage, "download.zip")), "Only completed update staging is removed");
         Require(ReleaseUpdateService.CompareVersions("0.3.0-beta.10", "0.3.0-beta.9") > 0 && ReleaseUpdateService.CompareVersions("0.3.0", "0.3.0-beta.99") > 0, "Semantic prerelease version order");
         Require(ReleaseUpdateService.CompareVersions("999999999999.0.0", "0.3.0") == 0, "Untrusted overflowing release tag ignored");
         Console.WriteLine("PASS offline GitHub update simulation: selection, progress, SHA, manifest, apply and rejection; no upload");

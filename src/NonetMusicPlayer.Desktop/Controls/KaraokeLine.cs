@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using System.Globalization;
-using System.Diagnostics;
 using NonetMusicPlayer.Desktop.Services;
 
 namespace NonetMusicPlayer.Desktop.Controls;
@@ -24,7 +23,8 @@ public sealed class KaraokeLine : Control
     private Color? _pendingColor;
     public Color? PendingColor { get => _pendingColor; set { if (_pendingColor == value) return; _pendingColor = value; VisualRevision++; InvalidateVisual(); } }
     private double _characters, _marquee;
-    private long _textStarted = Stopwatch.GetTimestamp();
+    /// <summary>只由歌词播放位置决定；暂停后保持不变，不使用循环动画计时。</summary>
+    public double ScrollOffset => _marquee;
     public long VisualRevision { get; private set; }
     public Color TextColor
     {
@@ -66,10 +66,13 @@ public sealed class KaraokeLine : Control
     public void Update(string text, double progress)
     {
         if (_text == text && Progress == Math.Clamp(progress, 0, 1)) return;
-        if (_text != text) { _text = text; _elements = StringInfo.ParseCombiningCharacters(text); _textStarted = Stopwatch.GetTimestamp(); ResetLayout(); InvalidateMeasure(); }
+        if (_text != text) { _text = text; _elements = StringInfo.ParseCombiningCharacters(text); _marquee = 0; ResetLayout(); InvalidateMeasure(); }
         Progress = Math.Clamp(progress, 0, 1); _characters = _text.Length; VisualRevision++; InvalidateVisual();
     }
+    // 保留既有五参数方法的程序集签名，已编译插件无需重新构建。
     public void UpdateTimed(string text, IReadOnlyList<LyricWord> words, double time, bool active = true, double? characterProgress = null)
+        => UpdateTimedWithScroll(text, words, time, active, characterProgress);
+    public void UpdateTimedWithScroll(string text, IReadOnlyList<LyricWord> words, double time, bool active = true, double? characterProgress = null, double? scrollProgress = null)
     {
         Update(text, 0);
         var characters = !active ? 0 : characterProgress ?? (words.Count > 0 ? LyricsService.CharacterProgress(words, time) : text.Length);
@@ -78,12 +81,24 @@ public sealed class KaraokeLine : Control
         if (!Wrap)
         {
             var excess = Math.Max(0, GetTextLayout(Bounds.Width).Text.Width + Inset * 2 - Bounds.Width);
-            var travel = excess / 36;
-            var elapsed = Stopwatch.GetElapsedTime(_textStarted).TotalSeconds;
-            var cycle = travel > 0 ? elapsed % (travel * 2 + 3) : 0;
-            var offset = cycle < 1.5 ? 0 : cycle < 1.5 + travel ? (cycle - 1.5) * 36 : cycle < 3 + travel ? excess : Math.Max(0, excess - (cycle - 3 - travel) * 36);
+            var position = words.Count > 0 || characterProgress.HasValue ? CharacterPosition(characters) :
+                GetTextLayout(Bounds.Width).Text.Width * Math.Clamp(scrollProgress ?? 0, 0, 1);
+            // 当前唱到的位置留在视口中部，开头和末尾分别停留，不反向滚动；主动回退进度时允许跟随回退。
+            var offset = !active ? 0 : Math.Clamp(position - Math.Max(0, Bounds.Width - Inset * 2) * .48, 0, excess);
             if (Math.Abs(offset - _marquee) > .1) { _marquee = offset; VisualRevision++; InvalidateVisual(); }
         }
+    }
+    private double CharacterPosition(double characters)
+    {
+        var text = GetTextLayout(Bounds.Width).Text;
+        if (characters <= 0 || _elements.Length == 0) return 0;
+        if (characters >= _text.Length) return text.Width;
+        var index = Array.BinarySearch(_elements, (int)Math.Floor(characters));
+        index = index >= 0 ? index : Math.Max(0, ~index - 1);
+        var start = _elements[index]; var end = index + 1 < _elements.Length ? _elements[index + 1] : _text.Length;
+        if (!_elementBounds.TryGetValue(start, out var region))
+            _elementBounds[start] = region = text.BuildHighlightGeometry(default, start, end - start)?.Bounds ?? default;
+        return region.X + region.Width * Math.Clamp((characters - start) / (end - start), 0, 1);
     }
     private (FormattedText Text, Point Origin, Rect Region) GetTextLayout(double width)
     {

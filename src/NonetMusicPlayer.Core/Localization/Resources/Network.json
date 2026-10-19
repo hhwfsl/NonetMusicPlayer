@@ -9,8 +9,19 @@
   "Lan.InvitationHint": { "zh-CN": "邀请五分钟内有效，仅发给自己的设备。", "en-US": "Valid for five minutes. Share only with your own devices.", "ja-JP": "招待は5分間有効です。自分のデバイスにのみ渡してください。" },
   "Lan.RenewInvitation": { "zh-CN": "刷新连接邀请", "en-US": "Renew invitation", "ja-JP": "招待を更新" },
   "Lan.Disconnect": { "zh-CN": "断开连接", "en-US": "Disconnect", "ja-JP": "切断" },
-  "Lan.Disconnected": { "zh-CN": "设备已断开。已保存的移动歌曲引用仍保留，重新连接后可播放。", "en-US": "Device disconnected. Saved device references remain for reconnection.", "ja-JP": "切断しました。保存した曲は再接続後に再生できます。" },
+  "Lan.Disconnected": { "zh-CN": "设备连接已断开。已保存的歌曲引用仍保留，重新连接后可播放。", "en-US": "Device disconnected. Saved device references remain for reconnection.", "ja-JP": "切断しました。保存した曲は再接続後に再生できます。" },
   "Lan.StartFailed": { "zh-CN": "无法启动局域网共享", "en-US": "Could not start LAN sharing", "ja-JP": "共有を開始できません" },
   "Lan.ConnectFailed": { "zh-CN": "无法连接，请检查邀请、网络和防火墙", "en-US": "Could not connect; check the invitation, network and firewall", "ja-JP": "招待、ネットワーク、ファイアウォールを確認してください" },
-  "Lan.TrackCount": { "zh-CN": "{0} 首歌曲 · 两端独立播放", "en-US": "{0} tracks · independent playback", "ja-JP": "{0} 曲・独立した再生" }
+  "Lan.TrackCount": { "zh-CN": "{0} 首歌曲 · 两端独立播放", "en-US": "{0} tracks · independent playback", "ja-JP": "{0} 曲・独立した再生" },
+  "Lan.SourceDesktop": { "zh-CN": "桌面", "en-US": "Desktop", "ja-JP": "デスクトップ" },
+  "Lan.SourceMobile": { "zh-CN": "移动", "en-US": "Mobile", "ja-JP": "モバイル" },
+  "Lan.SourceDevice": { "zh-CN": "设备", "en-US": "Device", "ja-JP": "端末" },
+  "Lan.PairTitle": { "zh-CN": "设备连接请求", "en-US": "Device connection request", "ja-JP": "端末からの接続リクエスト" },
+  "Lan.PairBody": { "zh-CN": "是否允许“{0}”（{1}）连接并互相访问共享歌单和音乐？两端独立播放。请求将在 {2} 秒后失效。", "en-US": "Allow “{0}” ({1}) to connect and exchange access to shared playlists and music? Playback remains independent. The request expires after {2} seconds.", "ja-JP": "「{0}」（{1}）と接続し、共有プレイリストと音楽に相互アクセスしますか？再生は独立しています。{2} 秒で期限切れになります。" },
+  "Lan.ApprovalWait": { "zh-CN": "连接确认等待时间（秒）", "en-US": "Connection approval timeout (seconds)", "ja-JP": "接続確認の待ち時間（秒）" },
+  "Lan.ApprovalWaitHint": { "zh-CN": "默认 30 秒，可设置 10–120 秒。后台收到请求时显示系统通知；超时自动拒绝。", "en-US": "Default: 30 seconds; range: 10–120. Background requests show a system notification. Expired requests are rejected.", "ja-JP": "既定は30秒、10～120秒で設定できます。バックグラウンドでは通知を表示し、期限切れは拒否します。" },
+  "Lan.RequestExpired": { "zh-CN": "请求已结束或过期，请重新连接。", "en-US": "This request has ended or expired. Connect again.", "ja-JP": "リクエストは終了または期限切れです。再接続してください。" },
+  "Lan.PeerUpgradeRequired": { "zh-CN": "请将另一端 Nonet 更新到支持双向互听的版本。", "en-US": "Update Nonet on the other device to support bidirectional sharing.", "ja-JP": "相手側の Nonet を双方向共有対応版に更新してください。" },
+  "Lan.Accept": { "zh-CN": "接受连接", "en-US": "Accept", "ja-JP": "許可" },
+  "Lan.Reject": { "zh-CN": "拒绝", "en-US": "Reject", "ja-JP": "拒否" }
 }

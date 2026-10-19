@@ -41,7 +41,13 @@ public sealed class PlayerCommandRouter(IPlayerCommandBackend backend)
         new("data.directory", "data.directory <folder>", true, true), new("help.open", "help.open", DesktopOnly:true),
         new("selection.begin", "selection.begin", DesktopOnly:true), new("selection.end", "selection.end", DesktopOnly:true),
         new("selection.all", "selection.all", DesktopOnly:true), new("selection.clear", "selection.clear", DesktopOnly:true),
-        new("selection.select", "selection.select <track-id...>", DesktopOnly:true), new("selection.list", "selection.list", DesktopOnly:true)
+        new("selection.select", "selection.select <track-id...>", DesktopOnly:true), new("selection.list", "selection.list", DesktopOnly:true),
+        new("network.status", "network.status", DesktopOnly:true), new("network.sharing", "network.sharing <on|off>", DesktopOnly:true),
+        new("network.connect", "network.connect <invitation>", DesktopOnly:true), new("network.peers", "network.peers", DesktopOnly:true),
+        new("network.requests", "network.requests", DesktopOnly:true), new("network.accept", "network.accept <request-id>", DesktopOnly:true),
+        new("network.reject", "network.reject <request-id>", DesktopOnly:true), new("network.disconnect", "network.disconnect <peer-id|all>", DesktopOnly:true),
+        new("network.renew", "network.renew", DesktopOnly:true), new("network.invitation", "network.invitation", DesktopOnly:true),
+        new("network.playlists", "network.playlists <peer-id>", DesktopOnly:true), new("network.tracks", "network.tracks <peer-id>", DesktopOnly:true)
     ];
 
     public async Task<CommandResult> ExecuteAsync(string input, Func<CommandDefinition, Task<bool>>? confirm = null, CancellationToken cancellationToken = default)

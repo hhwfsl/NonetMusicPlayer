@@ -26,7 +26,9 @@ public sealed partial class TrackItem : ObservableObject
     public bool LyricsDisabled { get; set; }
     public string? ProviderId { get; set; }
     public string? ProviderTrackId { get; set; }
-    [JsonIgnore] public string SourceText => L10n.T(ProviderId is null ? "Common.Local" : ProviderId.StartsWith("lan:", StringComparison.Ordinal) ? "Lan.Mobile" : "MusicSearch.Cloud");
+    private string _sourceDeviceKind = "unknown";
+    public string SourceDeviceKind { get => _sourceDeviceKind; set { if (SetProperty(ref _sourceDeviceKind, value)) OnPropertyChanged(nameof(SourceText)); } }
+    [JsonIgnore] public string SourceText => L10n.T(ProviderId is null ? "Common.Local" : ProviderId.StartsWith("lan:", StringComparison.Ordinal) ? SourceDeviceKind == "desktop" ? "Lan.SourceDesktop" : SourceDeviceKind == "mobile" ? "Lan.SourceMobile" : "Lan.SourceDevice" : "MusicSearch.Cloud");
     [JsonIgnore] public bool IsCloud => ProviderId is not null;
     private bool _isFavorite;
     // 显式持久化属性同时供 JSON 与 MVVM 生成器使用；生成器无法读取彼此生成的成员。

@@ -18,9 +18,23 @@ public sealed class LanLibraryServer : IDisposable
     private readonly string _deviceId, _name;
     private readonly Func<LanCatalog> _catalog;
     private readonly Func<string, string, Task<LanFile?>> _open;
+    private readonly Func<LanConnectionRequest, CancellationToken, Task<bool>>? _approve;
+    private readonly SemaphoreSlim _pairSlots = new(1);
     private readonly CancellationTokenSource _lifetime = new();
     private readonly SemaphoreSlim _slots = new(12);
-    private readonly ConcurrentDictionary<string, DateTimeOffset> _sessions = new();
+    private sealed record Session(string DeviceId, string Name, string Address, DateTimeOffset Seen, bool Duplex);
+    private readonly ConcurrentDictionary<string, Session> _sessions = new();
+    public Func<LanReverseAccess, CancellationToken, Task<bool>>? AcceptReverse { get; set; }
+    public Func<int>? ApprovalWaitSeconds { get; set; }
+    public event Action<string>? PeerDisconnected;
+    /// <summary>仅在用户发起双向连接且对端接受后授权反向读取。</summary>
+    public string GrantAccess(string deviceId, string name)
+    {
+        if (!LanAddress.IsHex(deviceId, 32) || deviceId == _deviceId || _lifetime.IsCancellationRequested) throw new InvalidDataException("Invalid peer");
+        if (_sessions.Count >= 16) throw new InvalidOperationException("Session limit reached");
+        var token = LanAddress.RandomKey(); _sessions[token] = new(deviceId, name, "", DateTimeOffset.UtcNow, false); return token;
+    }
+    public void RevokeDevice(string deviceId) { foreach (var entry in _sessions.Where(p => p.Value.DeviceId == deviceId)) _sessions.TryRemove(entry.Key, out _); }
     private readonly ConcurrentDictionary<string, (DateTimeOffset At, int Count)> _attempts = new();
     private TcpListener? _listener;
     private string _pairKey = LanAddress.RandomKey();
@@ -28,7 +42,10 @@ public sealed class LanLibraryServer : IDisposable
     public int Port { get; private set; }
     public string Fingerprint => Convert.ToHexStringLower(SHA256.HashData(_certificate.RawData));
     public LanLibraryServer(X509Certificate2 certificate, string deviceId, string name, Func<LanCatalog> catalog, Func<string, string, Task<LanFile?>> open)
-    { _certificate = certificate; _deviceId = deviceId; _name = name; _catalog = catalog; _open = open; }
+        : this(certificate, deviceId, name, catalog, open, null) { }
+    public LanLibraryServer(X509Certificate2 certificate, string deviceId, string name, Func<LanCatalog> catalog, Func<string, string, Task<LanFile?>> open,
+        Func<LanConnectionRequest, CancellationToken, Task<bool>>? approve = null)
+    { _certificate = certificate; _deviceId = deviceId; _name = name; _catalog = catalog; _open = open; _approve = approve; }
     public void Start(int port = 0) { _listener = new TcpListener(IPAddress.Any, port); _listener.Start(12); Port = ((IPEndPoint)_listener.LocalEndpoint).Port; _ = AcceptAsync(); }
     public string Invitation(string address) => $"nonet://connect?host={Uri.EscapeDataString(address)}&port={Port}&cert={Fingerprint}&key={_pairKey}";
     public void RenewInvitation() { _pairKey = LanAddress.RandomKey(); _pairExpires = DateTimeOffset.UtcNow.AddMinutes(5); }
@@ -66,19 +83,51 @@ public sealed class LanLibraryServer : IDisposable
                 {
                     // 清理过期会话与计数，避免长期共享耗尽配对名额或累积无界状态。
                     var now = DateTimeOffset.UtcNow;
-                    foreach (var item in _sessions.Where(s => s.Value < now.AddMinutes(-30))) _sessions.TryRemove(item.Key, out _);
+                    foreach (var item in _sessions.Where(s => s.Value.Seen < now.AddMinutes(-30))) _sessions.TryRemove(item.Key, out _);
                     foreach (var item in _attempts.Where(s => s.Value.At < now.AddMinutes(-1))) _attempts.TryRemove(item.Key, out _);
                     if (_attempts.Count >= 256 && !_attempts.ContainsKey(remote)) { await Respond(tls, 429, [], "text/plain", false, deadline.Token); return; }
                     var attempt = _attempts.AddOrUpdate(remote, (DateTimeOffset.UtcNow, 1), (_, old) => old.At < DateTimeOffset.UtcNow.AddMinutes(-1) ? (DateTimeOffset.UtcNow, 1) : (old.At, old.Count + 1));
                     if (attempt.Count > 6 || !int.TryParse(fields.GetValueOrDefault("Content-Length"), out var length) || length is < 1 or > 2048 || fields.ContainsKey("Transfer-Encoding")) { await Respond(tls, 429, [], "text/plain", false, deadline.Token); return; }
                     var body = new byte[length]; await tls.ReadExactlyAsync(body, deadline.Token); var request = JsonSerializer.Deserialize(body, LanJson.Default.LanPairRequest);
-                    if (_sessions.Count >= 16 || request is null || _pairExpires < DateTimeOffset.UtcNow || !FixedEquals(request.Key, _pairKey)) { await Respond(tls, 403, [], "text/plain", false, deadline.Token); return; }
-                    var token = LanAddress.RandomKey(); _sessions[token] = DateTimeOffset.UtcNow;
-                    await Respond(tls, 200, JsonSerializer.SerializeToUtf8Bytes(new LanPairResult(_deviceId, _name, token), LanJson.Default.LanPairResult), "application/json", false, deadline.Token); return;
+                    if (_sessions.Count >= 16 || request is null || !LanAddress.IsHex(request.DeviceId ?? "", 32) || request.DeviceId == _deviceId ||
+                        string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 100 || request.Name.Any(char.IsControl) ||
+                        _pairExpires < DateTimeOffset.UtcNow || !FixedEquals(request.Key ?? "", _pairKey)) { await Respond(tls, 403, [], "text/plain", false, deadline.Token); return; }
+                    // 有效邀请不等于读取授权。默认拒绝；等待审批不占满音频连接名额，停止共享会取消审批。
+                    if (_approve is null || !_pairSlots.Wait(0)) { await Respond(tls, 403, [], "text/plain", false, deadline.Token); return; }
+                    var accepted = false;
+                    try
+                    {
+                        var wait = Math.Clamp(ApprovalWaitSeconds?.Invoke() ?? 30, 10, 120);
+                        deadline.CancelAfter(TimeSpan.FromSeconds(wait + 5));
+                        using var approval = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token); approval.CancelAfter(TimeSpan.FromSeconds(wait));
+                        try { accepted = await _approve(new(request.DeviceId!, request.Name, remote) { WaitSeconds = wait, Duplex = request.Duplex }, approval.Token).WaitAsync(approval.Token); }
+                        catch (OperationCanceledException) when (!_lifetime.IsCancellationRequested) { }
+                    }
+                    finally { _pairSlots.Release(); }
+                    if (!accepted || _lifetime.IsCancellationRequested || !FixedEquals(request.Key!, _pairKey))
+                    { await Respond(tls, 403, [], "text/plain", false, deadline.Token); return; }
+                    var duplex = request.Duplex && AcceptReverse is not null;
+                    var token = LanAddress.RandomKey(); _sessions[token] = new(request.DeviceId!, request.Name, remote, DateTimeOffset.UtcNow, duplex);
+                    await Respond(tls, 200, JsonSerializer.SerializeToUtf8Bytes(new LanPairResult(_deviceId, _name, token) { Duplex = duplex }, LanJson.Default.LanPairResult), "application/json", false, deadline.Token); return;
                 }
                 var auth = fields.GetValueOrDefault("Authorization", ""); var bearer = auth.StartsWith("Bearer ", StringComparison.Ordinal) ? auth[7..] : "";
-                if (!_sessions.TryGetValue(bearer, out var last) || last < DateTimeOffset.UtcNow.AddMinutes(-30)) { _sessions.TryRemove(bearer, out _); await Respond(tls, 401, [], "text/plain", head, deadline.Token); return; }
-                _sessions[bearer] = DateTimeOffset.UtcNow;
+                if (!_sessions.TryGetValue(bearer, out var session) || session.Seen < DateTimeOffset.UtcNow.AddMinutes(-30) || session.Address.Length > 0 && session.Address != remote) { _sessions.TryRemove(bearer, out _); await Respond(tls, 401, [], "text/plain", head, deadline.Token); return; }
+                var refreshed = session with { Seen = DateTimeOffset.UtcNow }; _sessions.TryUpdate(bearer, refreshed, session); session = refreshed;
+                if (route == "/v1/disconnect" && first[0] == "POST")
+                { RevokeDevice(session.DeviceId); PeerDisconnected?.Invoke(session.DeviceId); await Respond(tls, 200, [], "application/json", false, deadline.Token); return; }
+                if (route == "/v1/duplex" && first[0] == "POST")
+                {
+                    if (!session.Duplex || AcceptReverse is null || !int.TryParse(fields.GetValueOrDefault("Content-Length"), out var length) || length is < 1 or > 2048 || fields.ContainsKey("Transfer-Encoding"))
+                    { await Respond(tls, 403, [], "text/plain", false, deadline.Token); return; }
+                    var bytes = new byte[length]; await tls.ReadExactlyAsync(bytes, deadline.Token);
+                    var grant = JsonSerializer.Deserialize(bytes, LanJson.Default.LanDuplexGrant);
+                    if (grant is null || grant.Port is < 1024 or > 65535 || !LanAddress.IsHex(grant.Fingerprint ?? "", 64) || !LanAddress.IsHex(grant.Token ?? "", 64) || !_sessions.TryUpdate(bearer, session with { Duplex = false }, session))
+                    { await Respond(tls, 400, [], "text/plain", false, deadline.Token); return; }
+                    // 回连地址只能是实际建立配对的私网来源，不接受请求体里的任意 URL。
+                    var accepted = await AcceptReverse(new(session.DeviceId, session.Name, new UriBuilder("https", remote, grant.Port).Uri, grant.Fingerprint!, grant.Token!), deadline.Token);
+                    if (!accepted) RevokeDevice(session.DeviceId);
+                    await Respond(tls, accepted ? 200 : 409, [], "application/json", false, deadline.Token); return;
+                }
                 if (first[0] == "POST") { await Respond(tls, 405, [], "text/plain", false, deadline.Token); return; }
                 if (route == "/v1/info") { var c = _catalog(); await Respond(tls, 200, JsonSerializer.SerializeToUtf8Bytes(new LanInfo(_deviceId, _name, c.Revision), LanJson.Default.LanInfo), "application/json", head, deadline.Token); return; }
                 if (route == "/v1/catalog")

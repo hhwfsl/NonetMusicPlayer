@@ -23,7 +23,7 @@ public sealed class LibraryDatabase(string path)
         for (var i = 0; !playbackOnly && i < state.Tracks.Count; i++)
         {
             var t = state.Tracks[i];
-            var value = (t.Title, t.Artist, t.Album, t.FilePath, t.Extension, t.FileSize, t.DurationSeconds, t.CoverPath, t.IsFavorite, t.ProviderId, t.ProviderTrackId, t.LyricsSourcePath);
+            var value = (t.Title, t.Artist, t.Album, t.FilePath, t.Extension, t.FileSize, t.DurationSeconds, t.CoverPath, t.IsFavorite, t.ProviderId, t.ProviderTrackId, t.LyricsSourcePath, t.SourceDeviceKind);
             yield return new("track", t.Id, i, value, () => JsonSerializer.Serialize(t, AppStorage.Json));
         }
         for (var i = 0; !playbackOnly && i < state.Playlists.Count; i++)

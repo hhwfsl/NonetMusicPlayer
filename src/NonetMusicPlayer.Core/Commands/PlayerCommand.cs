@@ -26,8 +26,8 @@ public static class CommandSyntax
     };
     public static bool IsPrivate(string input)
     {
-        try { return CommandLineParser.Parse(input).Name == "plugins.config"; }
-        catch (FormatException) { return input.Contains("plugins", StringComparison.OrdinalIgnoreCase) && input.Contains("config", StringComparison.OrdinalIgnoreCase); }
+        try { return CommandLineParser.Parse(input).Name is "plugins.config" or "network.connect"; }
+        catch (FormatException) { return input.Contains("nonet://", StringComparison.OrdinalIgnoreCase) || input.Contains("plugins", StringComparison.OrdinalIgnoreCase) && input.Contains("config", StringComparison.OrdinalIgnoreCase); }
     }
 }
 

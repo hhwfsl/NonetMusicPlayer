@@ -41,6 +41,7 @@ public static class UpdateInstaller
         {
             planPath = Path.GetFullPath(planPath); DataDirectoryService.RejectLinkedAncestors(planPath);
             var stage = Path.GetDirectoryName(planPath)!;
+            using var running = new FileStream(Path.Combine(stage, "helper.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             if (new FileInfo(planPath).Length > 512 * 1024) throw new InvalidDataException("Update plan too large");
             plan = JsonSerializer.Deserialize(File.ReadAllText(planPath), UpdateJsonContext.Default.UpdateApplyPlan) ?? throw new InvalidDataException("Invalid update plan");
             var helper = Path.GetDirectoryName(Environment.ProcessPath)!;
@@ -51,11 +52,11 @@ public static class UpdateInstaller
             }
             // 另一个实例若在旧实例退出后启动，Windows 文件锁会阻止替换并触发回滚。
             Apply(plan, Path.Combine(stage, "rollback"));
-            // 只删除已验证更新暂存中的下载包；回滚副本/结果记录另有诊断用途。
+            // 失败还原仅保护本次替换事务，成功后的下载、助手和旧副本由新进程统一回收。
             var downloaded = Path.Combine(stage, "download.zip");
             DataDirectoryService.RejectLinkedAncestors(downloaded);
             if (File.Exists(downloaded)) File.Delete(downloaded);
-            StartApplication(plan); File.WriteAllText(Path.Combine(stage, "result.txt"), "success"); return 0;
+            File.WriteAllText(Path.Combine(stage, "result.txt"), "success"); StartApplication(plan); return 0;
         }
         catch (Exception error)
         {

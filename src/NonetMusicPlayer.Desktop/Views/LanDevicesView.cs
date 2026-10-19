@@ -29,14 +29,15 @@ public sealed class LanDevicesView : UserControl, IDisposable
             contents.Children.Add(Ui.Button(L10n.T("Lan.RenewInvitation"), _vm.RenewLanInvitation));
         }
         _body.Children.Add(card);
+        foreach (var request in _vm.LanPendingRequests)
+            _body.Children.Add(Ui.Card(L10n.T("Lan.PairTitle"), Ui.Text(request.Name + " · " + request.Address), Ui.Actions(
+                Ui.Button(L10n.T("Lan.Reject"), () => _vm.AnswerLanRequest(request.Id, false)), Ui.Button(L10n.T("Lan.Accept"), () => _vm.AnswerLanRequest(request.Id, true)))));
         var input = new TextBox { Text = _draft, PlaceholderText = "nonet://connect?…", AcceptsReturn = true, MinHeight = 72, MaxHeight = 140, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
         input.TextChanged += (_, _) => _draft = input.Text ?? "";
         _body.Children.Add(Ui.Card(L10n.T("Lan.Connect"), Ui.Text(L10n.T("Lan.ConnectHint"), 13, true), input, Ui.AsyncButton(L10n.T("Lan.Connect"), async () => { var invitation = _draft; _draft = ""; await _vm.ConnectLanAsync(invitation); })));
         foreach (var peer in _vm.LanPeers)
         {
             var lists = Ui.Stack(Ui.Row(peer.Name, L10n.Format("Lan.TrackCount", peer.Catalog.Total), Ui.Button(L10n.T("Lan.Disconnect"), () => _vm.DisconnectLan(peer))));
-            foreach (var list in peer.Catalog.Playlists)
-                lists.Children.Add(Ui.Button($"{list.Name}  ·  {list.TrackIds.Length}", () => _vm.Navigate($"lan:{peer.DeviceId}:{list.Id}", list.Name)));
             _body.Children.Add(Ui.Card(peer.Name, lists));
         }
     }

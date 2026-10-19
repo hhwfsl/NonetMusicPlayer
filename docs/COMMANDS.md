@@ -15,6 +15,29 @@ nonet playlist delete <id> -y
 
 ## 共享命令
 
+### 桌面设备互听
+
+仅桌面宿主提供下列命令，CLI 帮助不列出。界面按钮和命令使用同一会话与结果流。
+
+```text
+network status
+network sharing on
+network invitation
+network connect "nonet://connect?..."
+network requests
+network accept <request-id>
+network reject <request-id>
+network peers
+network playlists <peer-id>
+network tracks <peer-id>
+network disconnect <peer-id|all>
+network sharing off
+network renew
+settings set lanApprovalWaitSeconds 30
+```
+
+`invitation` 将本机邀请复制到系统剪贴板，不将密钥打印或保存到终端历史；`connect` 的邀请参数也不回显或保存。邀请应只交给同一可信局域网中的自己的设备。`accept/reject` 只处理当前未过期请求，不能重复使用。连接会主动开启本机共享以建立双向会话。通过 `network playlists` 返回的 page 使用 `navigation open <page>` 进入歌单；播放、收藏与添加到本地歌单沿用既有歌曲 ID 命令。`renew` 轮换尚未使用的邀请，不解除已建立的连接。
+
 下表每项都以 `nonet` 开头：
 
 | 分类 | 命令与参数 |
@@ -37,7 +60,7 @@ nonet playlist delete <id> -y
 
 位置从 1 开始。“我喜欢”ID 为 `liked`，不能删除或改名。歌曲、歌单 ID 从列表结果获取。文件 `nonet player play` 是临时播放；添加歌曲需指定歌单。系统默认输出设备标识为 `Playback.SystemDefault`。
 
-`history remove` 只移除最近播放记录，不改变歌单。桌面歌曲浏览的 `music remove` 需要确认，会移除所有歌单引用及应用生成的数据，但不删除导入的源音乐或源歌词。专辑与艺术家只是分类，不提供删除歌曲功能。`plugins uninstall` 默认使用 `keep-files`，停用后将插件目录保留到 `Plugins/Retained`；`delete-files` 明确删除插件本体，仍需确认或 `-y`。
+`history remove` 只移除最近播放记录，不改变歌单。桌面歌曲浏览的 `music remove` 需要确认，会移除所有歌单引用及应用生成的数据，但不删除导入的源音乐或源歌词。专辑与艺术家只是分类，不提供删除歌曲功能。`plugins uninstall` 默认使用 `keep-files`，停用并解除安装记录，插件文件保留原位；`delete-files` 不可撤销地删除插件本体，仍需确认或 `-y`。
 
 ## 桌面命令
 
@@ -55,7 +78,7 @@ nonet playlist delete <id> -y
 | `data` | `directory <folder>` |
 | `selection` | `begin`、`end`、`all`、`clear`、`select <track-id...>`、`list` |
 
-页面 ID：`library`（音乐主页）、`songs`、`albums`、`artists`、`history`、`statistics`、`plugins`、`terminal`、`settings`、`lyrics`。歌单使用 `playlist:<id>`，分类使用 `album:<name>` 和 `artist:<name>`。
+页面 ID：`library`（音乐主页）、`songs`、`albums`、`artists`、`history`、`statistics`、`network`（设备互听）、`plugins`、`terminal`、`settings`、`lyrics`。歌单使用 `playlist:<id>`，分类使用 `album:<name>` 和 `artist:<name>`。
 
 `auto` 恢复解析封面，`default` 使用软件默认封面。`window close` 遵循托盘设置。裁剪等视觉编辑不模拟系统键鼠，命令操作其保存结果。
 

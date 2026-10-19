@@ -300,11 +300,16 @@ public sealed class DesktopLyricsWindow : Window, IDisposable
         if (index < 0) index = 0;
         if (_vm.LyricLines.Count == 0) { _line.Update(L10n.T("Lyrics.NoLyricsAvailable0245E1"), 0); _next.Update("", 0); _next.IsVisible = false; ResizeLyricText(); return; }
         var line = _vm.LyricLines[index];
-        _line.UpdateTimed(line.Text, line.Words, time);
+        // 逐行歌词按当前句到下一句的时间估算阅读进度，末句使用歌曲结尾；未知总时长才用保守阅读速度。
+        var end = _vm.LyricLines.Skip(index + 1).FirstOrDefault(l => l.Timed && l.Seconds > line.Seconds)?.Seconds
+            ?? (_vm.PlaybackDuration > line.Seconds ? _vm.PlaybackDuration : line.Seconds + Math.Max(3, line.Text.Length / 5d));
+        var progress = line.Timed ? Math.Clamp((time - line.Seconds) / Math.Max(.1, end - line.Seconds), 0, 1) : 0;
+        _line.UpdateTimedWithScroll(line.Text, line.Words, time, scrollProgress: progress);
         // 第二行仅呈现当前句的翻译；无翻译时折叠，不以后一条原文填充。
         _next.IsVisible = !string.IsNullOrWhiteSpace(line.Translation);
-        _next.UpdateTimed(line.Translation.Replace('\n', ' '), [], time,
-            characterProgress: _next.IsVisible ? LyricsService.LineCharacterProgress(line, time, true) : null);
+        _next.UpdateTimedWithScroll(line.Translation.Replace('\n', ' '), [], time,
+            characterProgress: _next.IsVisible && (line.Words.Count > 0 || line.TranslationWords.Count > 0) ? LyricsService.LineCharacterProgress(line, time, true) : null,
+            scrollProgress: progress);
         ResizeLyricText();
     }
     private void ResizeLyricText()

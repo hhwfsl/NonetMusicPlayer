@@ -169,6 +169,9 @@ public sealed class SettingsView : UserControl, IDisposable
         AddSection(sections, layout, L10n.T("Layout.Title"), "布局 layout 导航 播放栏 位置 position", false);
         AddSection(sections, playback, L10n.T("Playback.PlaybackAndAudio"), "输出 设备 device 定时 sleep 拖入 关闭 历史 history 最近", false);
         AddSection(sections, terminal, L10n.T("Terminal.Title"), "terminal cli 终端 ターミナル log 日志 字体 font 历史 scrollback 透明度 opacity", false);
+        var pairingWait = new NumericUpDown { Name = "LanApprovalWaitSeconds", Value = s.LanApprovalWaitSeconds, Minimum = 10, Maximum = 120, Increment = 5, FormatString = "0", TextAlignment = TextAlignment.Center, VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center };
+        InputCommitService.Bind(pairingWait, value => { if (value != decimal.Truncate(value)) throw new InvalidDataException(L10n.T("Commands.IntegerRequired")); s.LanApprovalWaitSeconds = (int)value; Changed(); });
+        AddSection(sections, Ui.Card(L10n.T("Lan.Title"), Ui.Row(L10n.T("Lan.ApprovalWait"), L10n.T("Lan.ApprovalWaitHint"), pairingWait)), L10n.T("Lan.Title"), "network lan pair 设备 互听 配对 等待 timeout 通知", false);
         AddSection(sections, lyrics, L10n.T("Lyrics.Lyrics"), "lyrics 歌词 文件夹 路径 时间 微调 offset", false);
         AddSection(sections, ShortcutSettings.Create(vm), L10n.T("Settings.KeyboardShortcuts"), "shortcut keyboard 快捷键 按键 hotkey", false);
         AddSection(sections, data, L10n.T("Common.DataAndRecovery"), "data 数据 目录 路径 backup 恢复 备份 undo 撤销", false);

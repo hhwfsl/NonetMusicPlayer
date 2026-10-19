@@ -29,6 +29,12 @@ public sealed partial class MainWindow
             // 测试宿主和设计器不访问网络。离线检查只记录日志，不打断启动。
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime)
             {
+                if (_vm is not null)
+                {
+                    var dataRoot = _vm.Storage.Root;
+                    // Windows 正在退出的更新助手仍可能占用自身文件，后台有限重试，不阻塞首屏。
+                    _ = Task.Run(async () => { for (var i = 0; i < 10 && !_updateStop.IsCancellationRequested; i++) { try { ReleaseUpdateService.CleanupCompleted(dataRoot); } catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException) { AppLog.Warning("Update", "Update cleanup deferred", error); } await Task.Delay(1000); } });
+                }
                 // 两类检查独立进行，软件 Release 的慢请求不会阻塞插件检查或首屏。
                 await Task.WhenAll(CheckUpdatesAsync(false), CheckPluginUpdatesAsync());
             }

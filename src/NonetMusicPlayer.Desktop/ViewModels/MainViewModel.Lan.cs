@@ -19,7 +19,19 @@ public sealed partial class MainViewModel
     private readonly Dictionary<string, LanLibraryClient> _lanPeers = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<TrackItem>> _lanTracks = new(StringComparer.Ordinal);
     private bool _lanArtworkBusy;
+    private sealed record PendingApproval(string Id, LanConnectionRequest Request, long Deadline, TaskCompletionSource<bool> Completion);
+    private readonly Dictionary<string, PendingApproval> _lanApprovals = new(StringComparer.Ordinal);
+    /// <summary>只公开请求标识、设备与剩余时间；终端和确认框共同完成同一个审批。</summary>
+    public IEnumerable<(string Id, string Name, string Address, int Seconds)> LanPendingRequests => _lanApprovals.Values
+        .Where(p => p.Deadline > Environment.TickCount64 && !p.Completion.Task.IsCompleted)
+        .Select(p => (p.Id, p.Request.Name, p.Request.Address, (int)Math.Max(0, (p.Deadline - Environment.TickCount64 + 999) / 1000)));
     public event EventHandler? LanChanged;
+    public event Action<string>? LanDisconnectNotice;
+    public Func<LanConnectionRequest, CancellationToken, Task<bool>>? ConfirmLanConnection { get; set; }
+    /// <summary>远端歌单是连接期间的只读导航投影，不写入本地歌单，也不会被再次共享。</summary>
+    public IEnumerable<(string Page, string Name, string Source)> LanPlaylistNavigation => _lanPeers.Values.Where(p => p.Connected).SelectMany(peer =>
+        peer.Catalog.Playlists.Select(list => ($"lan:{peer.DeviceId}:{list.Id}", list.Name,
+            L10n.T(peer.Catalog.DeviceKind == "desktop" ? "Lan.SourceDesktop" : peer.Catalog.DeviceKind == "mobile" ? "Lan.SourceMobile" : "Lan.SourceDevice") + " · " + peer.Name)));
     public IReadOnlyCollection<LanLibraryClient> LanPeers => _lanPeers.Values;
     public bool LanSharing => _lanServer is not null;
     /// <summary>通用扩展仅获得歌曲引用，不获得配对邀请、会话令牌或媒体 URL。</summary>
@@ -46,21 +58,58 @@ public sealed partial class MainViewModel
             if (enabled && _lanServer is null)
             {
                 RefreshLocalLanCatalog(); var cert = LanLibraryServer.Certificate(Path.Combine(Storage.Root, "Network", "identity.pfx"));
-                _lanServer = new(cert, LanDeviceId, Environment.MachineName, () => Volatile.Read(ref _lanCatalog), OpenLocalLanFileAsync); _lanServer.Start();
+                _lanServer = new(cert, LanDeviceId, Environment.MachineName, () => Volatile.Read(ref _lanCatalog), OpenLocalLanFileAsync,
+                    AwaitLanApprovalAsync);
+                _lanServer.ApprovalWaitSeconds = () => Settings.LanApprovalWaitSeconds;
+                _lanServer.AcceptReverse = async (access, token) =>
+                {
+                    var peer = await LanLibraryClient.FromApprovedAccessAsync(access, token);
+                    await Dispatcher.UIThread.InvokeAsync(() => AttachLanPeer(peer)); return true;
+                };
+                _lanServer.PeerDisconnected += id => Dispatcher.UIThread.Post(() => { if (_lanPeers.TryGetValue(id, out var peer)) DisconnectLan(peer); });
+                _lanServer.Start();
             }
-            else if (!enabled) { _lanServer?.Dispose(); _lanServer = null; }
+            else if (!enabled) { foreach (var peer in _lanPeers.Values.ToArray()) DisconnectLan(peer); _lanServer?.Dispose(); _lanServer = null; }
             LanChanged?.Invoke(this, EventArgs.Empty);
+            CompleteOperation("network.sharing", data: new System.Text.Json.Nodes.JsonObject { ["sharing"] = LanSharing });
         }
         catch (Exception e) { _lanServer?.Dispose(); _lanServer = null; ReportError(L10n.T("Lan.StartFailed"), e); LanChanged?.Invoke(this, EventArgs.Empty); }
     }
-    public void RenewLanInvitation() { _lanServer?.RenewInvitation(); LanChanged?.Invoke(this, EventArgs.Empty); }
+    public void RenewLanInvitation() { _lanServer?.RenewInvitation(); LanChanged?.Invoke(this, EventArgs.Empty); CompleteOperation("network.renew"); }
+    private async Task<bool> AwaitLanApprovalAsync(LanConnectionRequest request, CancellationToken token)
+        => await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            var pending = new PendingApproval(Guid.NewGuid().ToString("N"), request, Environment.TickCount64 + request.WaitSeconds * 1000L,
+                new(TaskCreationOptions.RunContinuationsAsynchronously));
+            _lanApprovals.Add(pending.Id, pending); LanChanged?.Invoke(this, EventArgs.Empty);
+            using var prompt = CancellationTokenSource.CreateLinkedTokenSource(token);
+            using var cancel = token.Register(() => pending.Completion.TrySetResult(false));
+            async Task ShowPrompt()
+            {
+                try { if (ConfirmLanConnection is not null) pending.Completion.TrySetResult(await ConfirmLanConnection(request, prompt.Token)); }
+                catch (OperationCanceledException) { pending.Completion.TrySetResult(false); }
+                catch (Exception error) { AppLog.Warning("LAN", "Connection prompt failed", error); pending.Completion.TrySetResult(false); }
+            }
+            _ = ShowPrompt();
+            try
+            {
+                var accepted = await pending.Completion.Task && !token.IsCancellationRequested && Environment.TickCount64 <= pending.Deadline;
+                CompleteOperation(accepted ? "network.accept" : "network.reject"); return accepted;
+            }
+            finally { prompt.Cancel(); _lanApprovals.Remove(pending.Id); LanChanged?.Invoke(this, EventArgs.Empty); }
+        });
+    public bool AnswerLanRequest(string id, bool accept)
+    {
+        if (!_lanApprovals.TryGetValue(id, out var pending) || pending.Deadline < Environment.TickCount64 || !pending.Completion.TrySetResult(accept)) return false;
+        return true;
+    }
     private void RefreshLocalLanCatalog()
     {
         var referenced = State.Playlists.SelectMany(p => p.TrackIds).ToHashSet(StringComparer.Ordinal);
         var local = State.Tracks.Where(t => t.ProviderId is null && referenced.Contains(t.Id) && File.Exists(t.FilePath)).Take(20000).ToDictionary(t => t.Id, StringComparer.Ordinal);
         var songs = local.Values.Select(t => new LanSong(t.Id, t.Title, t.Artist, t.Album, (long)(t.DurationSeconds * 1000), File.Exists(t.CoverPath), !t.LyricsDisabled)).ToArray();
         var lists = State.Playlists.Take(2000).Select(p => new LanPlaylist(p.Id, p.IsSystem ? L10n.T("Playlists.LikedSongs") : p.Name, p.Description, p.TrackIds.Where(local.ContainsKey).ToArray())).ToArray();
-        var catalog = new LanCatalog(LanDeviceId, Environment.MachineName, "", songs, lists, songs.Length);
+        var catalog = new LanCatalog(LanDeviceId, Environment.MachineName, "", songs, lists, songs.Length, "desktop");
         catalog = catalog with { Revision = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(catalog, LanJson.Default.LanCatalog))) };
         Volatile.Write(ref _lanLocal, local); Volatile.Write(ref _lanCatalog, catalog);
     }
@@ -82,14 +131,28 @@ public sealed partial class MainViewModel
     {
         try
         {
-            var peer = await LanLibraryClient.ConnectAsync(invitation, LanDeviceId, Environment.MachineName);
-            if (_lanPeers.TryGetValue(peer.DeviceId, out var previous)) previous.Dispose();
-            _lanPeers[peer.DeviceId] = peer;
-            peer.Changed += (_, _) => Dispatcher.UIThread.Post(() => RefreshLanPeer(peer));
-            peer.Disconnected += (_, _) => Dispatcher.UIThread.Post(() => DisconnectLan(peer));
-            RefreshLanPeer(peer);
+            SetLanSharing(true); var local = _lanServer ?? throw new IOException("Local sharing unavailable");
+            var peer = await LanLibraryClient.ConnectDuplexAsync(invitation, LanDeviceId, Environment.MachineName, true);
+            try
+            {
+                if (!peer.DuplexSupported) throw new IOException(L10n.T("Lan.PeerUpgradeRequired"));
+                var reverseToken = local.GrantAccess(peer.DeviceId, peer.Name);
+                await peer.EstablishReverseAsync(new(local.Port, local.Fingerprint, reverseToken));
+                AttachLanPeer(peer);
+                CompleteOperation("network.connect");
+            }
+            catch { local.RevokeDevice(peer.DeviceId); await peer.NotifyDisconnectAsync(); peer.Dispose(); throw; }
         }
         catch (Exception e) { ReportError(L10n.T("Lan.ConnectFailed"), new IOException("Pairing or connection failed.", e)); }
+    }
+    private void AttachLanPeer(LanLibraryClient peer)
+    {
+        if (_disposed || !peer.Connected) { peer.Dispose(); return; }
+        if (_lanPeers.TryGetValue(peer.DeviceId, out var previous)) previous.Dispose();
+        _lanPeers[peer.DeviceId] = peer;
+        peer.Changed += (_, _) => Dispatcher.UIThread.Post(() => RefreshLanPeer(peer));
+        peer.Disconnected += (_, _) => Dispatcher.UIThread.Post(() => DisconnectLan(peer));
+        RefreshLanPeer(peer);
     }
     private void RefreshLanPeer(LanLibraryClient peer)
     {
@@ -98,22 +161,25 @@ public sealed partial class MainViewModel
         _lanTracks[peer.DeviceId] = peer.Catalog.Tracks.Select(t =>
         {
             var id = "lan_" + MusicLibraryScanner.StableId(peer.DeviceId + ":" + t.Id);
-            return stored.GetValueOrDefault(id) ?? new TrackItem(id, t.Title, t.Artist, t.Album, peer.TrackUri(t.Id), ".lan", 0)
+            var track = stored.GetValueOrDefault(id) ?? new TrackItem(id, t.Title, t.Artist, t.Album, peer.TrackUri(t.Id), ".lan", 0)
             { DurationSeconds = t.DurationMs / 1000d, ProviderId = "lan:" + peer.DeviceId, ProviderTrackId = t.Id, CoverPath = File.Exists(LanArtworkPath(id)) ? LanArtworkPath(id) : null };
+            track.SourceDeviceKind = peer.Catalog.DeviceKind; return track;
         }).ToList();
         ApplyFilter(); LanChanged?.Invoke(this, EventArgs.Empty);
     }
     public void DisconnectLan(LanLibraryClient peer)
     {
         if (_disposed || !_lanPeers.TryGetValue(peer.DeviceId, out var active) || !ReferenceEquals(active, peer)) return;
-        _lanPeers.Remove(peer.DeviceId); _lanTracks.Remove(peer.DeviceId); peer.Dispose();
+        _lanPeers.Remove(peer.DeviceId); _lanTracks.Remove(peer.DeviceId); _lanServer?.RevokeDevice(peer.DeviceId);
+        _ = Task.Run(async () => { await peer.NotifyDisconnectAsync(); peer.Dispose(); });
         var provider = "lan:" + peer.DeviceId;
         if (CurrentTrack?.ProviderId == provider) { _audio.Pause(); IsPlaying = false; _audioLoaded = false; _resumePending = true; }
         var retained = State.Playlists.SelectMany(p => p.TrackIds).ToHashSet(StringComparer.Ordinal);
         var removed = State.RecentTemporaryTracks.Where(t => t.ProviderId == provider && !retained.Contains(t.Id)).Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
         State.RecentTemporaryTracks.RemoveAll(t => removed.Contains(t.Id)); State.History.RemoveAll(removed.Contains);
         _playingList.RemoveAll(t => t.ProviderId == provider && !retained.Contains(t.Id));
-        ApplyFilter(); Save(); LanChanged?.Invoke(this, EventArgs.Empty); ReportWarning(L10n.T("Lan.Disconnected"));
+        ApplyFilter(); Save(); LanChanged?.Invoke(this, EventArgs.Empty); ReportWarning(peer.Name + " · " + L10n.T("Lan.Disconnected")); CompleteOperation("network.disconnect");
+        LanDisconnectNotice?.Invoke(peer.Name + " · " + L10n.T("Lan.Disconnected"));
     }
     private IEnumerable<TrackItem> LanSourceTracks(string page)
     {
@@ -146,6 +212,9 @@ public sealed partial class MainViewModel
     }
     private void CloseLan()
     {
-        _lanServer?.Dispose(); _lanServer = null; foreach (var peer in _lanPeers.Values.ToArray()) peer.Dispose(); _lanPeers.Clear(); _lanTracks.Clear();
+        var peers = _lanPeers.Values.ToArray();
+        // 正常退出最多等待短暂发送窗口；异常断电由对端五秒心跳检测，不阻塞无限退出。
+        try { Task.WhenAll(peers.Select(p => p.NotifyDisconnectAsync())).Wait(TimeSpan.FromMilliseconds(1400)); } catch (Exception) { }
+        _lanServer?.Dispose(); _lanServer = null; foreach (var peer in peers) peer.Dispose(); _lanPeers.Clear(); _lanTracks.Clear();
     }
 }

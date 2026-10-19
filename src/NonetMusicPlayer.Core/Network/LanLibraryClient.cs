@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -11,6 +12,7 @@ namespace NonetMusicPlayer.Core.Network;
 public sealed class LanLibraryClient : IDisposable
 {
     private readonly HttpClient _http;
+    private readonly HttpClientHandler _handler;
     private readonly CancellationTokenSource _lifetime = new();
     private static readonly ConcurrentDictionary<string, LanLibraryClient> Active = new(StringComparer.Ordinal);
     public string DeviceId { get; private set; } = "";
@@ -19,29 +21,55 @@ public sealed class LanLibraryClient : IDisposable
     public event EventHandler? Changed;
     public event EventHandler? Disconnected;
     public bool Connected => !_lifetime.IsCancellationRequested;
+    public bool DuplexSupported { get; private set; }
     private LanLibraryClient(Uri origin, string fingerprint)
     {
-        var handler = new HttpClientHandler { AllowAutoRedirect = false, UseProxy = false };
+        var handler = _handler = new HttpClientHandler { AllowAutoRedirect = false, UseProxy = false };
         handler.ServerCertificateCustomValidationCallback = (message, cert, _, _) => message.RequestUri?.GetLeftPart(UriPartial.Authority) == origin.GetLeftPart(UriPartial.Authority) && cert is not null && Convert.ToHexStringLower(SHA256.HashData(cert.RawData)) == fingerprint;
         _http = new HttpClient(handler) { BaseAddress = origin, Timeout = TimeSpan.FromSeconds(20) };
     }
     public static async Task<LanLibraryClient> ConnectAsync(string invitation, string ownId, string ownName, CancellationToken token = default)
+        => await ConnectDuplexAsync(invitation, ownId, ownName, false, token);
+    public static async Task<LanLibraryClient> ConnectDuplexAsync(string invitation, string ownId, string ownName, bool duplex, CancellationToken token = default)
     {
         var (origin, fingerprint, key) = LanAddress.ParseInvitation(invitation); var client = new LanLibraryClient(origin, fingerprint);
         try
         {
             // 已知长度请求避免 Chunked；服务端只接受有界 Content-Length，防止无限请求体。
-            using var content = new ByteArrayContent(JsonSerializer.SerializeToUtf8Bytes(new LanPairRequest(key, ownId, ownName), LanJson.Default.LanPairRequest));
+            using var content = new ByteArrayContent(JsonSerializer.SerializeToUtf8Bytes(new LanPairRequest(key, ownId, ownName) { Duplex = duplex }, LanJson.Default.LanPairRequest));
             content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-            using var response = await client._http.PostAsync("v1/pair", content, token); response.EnsureSuccessStatusCode();
+            // 配对的人工确认超时与日常媒体请求分离；HttpClient 启动请求后不能修改 Timeout。
+            using var pairing = new HttpClient(client._handler, false) { BaseAddress = origin, Timeout = TimeSpan.FromSeconds(135) };
+            using var response = await pairing.PostAsync("v1/pair", content, token); response.EnsureSuccessStatusCode();
             var pair = JsonSerializer.Deserialize(await ReadLimited(response, 4096, token), LanJson.Default.LanPairResult) ?? throw new InvalidDataException();
             if (pair.Protocol != 1 || !LanAddress.IsHex(pair.DeviceId, 32) || !LanAddress.IsHex(pair.Token, 64) || pair.DeviceId == ownId) throw new InvalidDataException("Invalid peer identity.");
             client.DeviceId = pair.DeviceId; client.Name = pair.Name[..Math.Min(pair.Name.Length, 100)]; client._http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", pair.Token);
+            client.DuplexSupported = pair.Duplex;
             await client.RefreshAsync(token);
             if (Active.TryGetValue(pair.DeviceId, out var old)) old.Dispose(); Active[pair.DeviceId] = client;
             _ = client.WatchAsync(); return client;
         }
         catch { client.Dispose(); throw; }
+    }
+    public static async Task<LanLibraryClient> FromApprovedAccessAsync(LanReverseAccess access, CancellationToken token = default)
+    {
+        if (!IPAddress.TryParse(access.Origin.Host, out var ip) || !LanAddress.IsPrivate(ip) || access.Origin.Scheme != "https" || !LanAddress.IsHex(access.DeviceId, 32) || !LanAddress.IsHex(access.Fingerprint, 64) || !LanAddress.IsHex(access.Token, 64)) throw new InvalidDataException("Invalid approved access");
+        var client = new LanLibraryClient(access.Origin, access.Fingerprint) { DeviceId = access.DeviceId, Name = access.Name, DuplexSupported = true };
+        client._http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", access.Token);
+        try { await client.RefreshAsync(token); if (Active.TryGetValue(client.DeviceId, out var old)) old.Dispose(); Active[client.DeviceId] = client; _ = client.WatchAsync(); return client; }
+        catch { client.Dispose(); throw; }
+    }
+    public async Task EstablishReverseAsync(LanDuplexGrant grant, CancellationToken token = default)
+    {
+        if (!DuplexSupported) throw new InvalidDataException("Peer does not support bidirectional pairing");
+        using var content = new ByteArrayContent(JsonSerializer.SerializeToUtf8Bytes(grant, LanJson.Default.LanDuplexGrant)); content.Headers.ContentType = new("application/json");
+        using var response = await _http.PostAsync("v1/duplex", content, token); response.EnsureSuccessStatusCode();
+    }
+    public async Task NotifyDisconnectAsync()
+    {
+        if (!Connected) return;
+        try { using var stop = new CancellationTokenSource(1000); using var response = await _http.PostAsync("v1/disconnect", new ByteArrayContent([]), stop.Token); }
+        catch (Exception e) when (e is HttpRequestException or IOException or OperationCanceledException or ObjectDisposedException) { }
     }
     public async Task RefreshAsync(CancellationToken token = default)
     {

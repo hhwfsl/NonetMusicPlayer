@@ -8,7 +8,7 @@ public static class SettingsContract
     private static readonly IReadOnlyDictionary<string, (double Min, double Max)> Ranges = new Dictionary<string, (double, double)>(StringComparer.OrdinalIgnoreCase)
     {
         ["volume"] = (0, 100), ["historyLimit"] = (0, 100000), ["fontSize"] = (11, 18), ["sidebarWidth"] = (170, 320), ["playerHeight"] = (96, 180),
-        ["terminalScrollbackLines"] = (1, 10000), ["terminalFontSize"] = (10, 32),
+        ["terminalScrollbackLines"] = (1, 10000), ["terminalFontSize"] = (10, 32), ["lanApprovalWaitSeconds"] = (10, 120),
         ["backgroundImageOpacity"] = (0, 1), ["titleBarOpacity"] = (0, 1), ["navigationOpacity"] = (0, 1), ["contentOpacity"] = (0, 1), ["playerOpacity"] = (0, 1), ["terminalOpacity"] = (0, 1), ["uiOpacity"] = (.35, 1),
         ["controlCornerRadius"] = (0, 22), ["desktopLyricsFontSize"] = (14, 48), ["desktopLyricsWidth"] = (360, 2000), ["desktopLyricsHeight"] = (120, 2000), ["lyricOffset"] = (-60, 60)
     };
@@ -18,7 +18,7 @@ public static class SettingsContract
         if (Ranges.TryGetValue(key, out var range))
         {
             if (value is not JsonValue number || number.GetValueKind() != System.Text.Json.JsonValueKind.Number || !double.TryParse(number.ToJsonString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed) || !double.IsFinite(parsed) || parsed < range.Min || parsed > range.Max) throw new InvalidDataException(Localization.LocalizationCatalog.Format("Commands.SettingRange", key, range.Min, range.Max));
-            if ((key.Equals("historyLimit", StringComparison.OrdinalIgnoreCase) || key.Equals("terminalScrollbackLines", StringComparison.OrdinalIgnoreCase)) && parsed != Math.Truncate(parsed)) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.IntegerRequired"));
+            if ((key.Equals("historyLimit", StringComparison.OrdinalIgnoreCase) || key.Equals("terminalScrollbackLines", StringComparison.OrdinalIgnoreCase) || key.Equals("lanApprovalWaitSeconds", StringComparison.OrdinalIgnoreCase)) && parsed != Math.Truncate(parsed)) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.IntegerRequired"));
         }
         if (new[] { "myMusicExpanded", "pluginsExpanded", "playlistsExpanded", "desktopLyricsVisible", "desktopLyricsLocked", "optimizeMemoryWhenMinimized", "navigationRight", "playerTop", "titleButtonsOnLeft", "closeToTray" }.Contains(key, StringComparer.OrdinalIgnoreCase) && value?.GetValueKind() is not (System.Text.Json.JsonValueKind.True or System.Text.Json.JsonValueKind.False)) throw new InvalidDataException("Boolean setting required.");
         if (key.Equals("fontFamily", StringComparison.OrdinalIgnoreCase) && (value?.GetValue<string>() is not { } font || font.Length > 200 || font.Any(char.IsControl))) throw new InvalidDataException("Invalid font family.");

@@ -6,15 +6,18 @@
 
 | operation | 参数 | 返回/行为 |
 | --- | --- | --- |
-| `status` | 无 | sharing、connectedDevices |
-| `peers` | offset、limit | id、name、trackCount、playlistCount |
+| `status` | 无 | sharing、connectedDevices；新增可选 bidirectional、approvalWaitSeconds、pendingRequests |
+| `peers` | offset、limit | id、name、trackCount、playlistCount、可选 deviceKind（desktop/mobile/unknown） |
 | `playlists` | peerId、offset、limit | id、name、description、count、可用于 navigate 的 page |
-| `tracks` | peerId、offset、limit | id、title、artist、album、duration、source=device |
+| `tracks` | peerId、offset、limit | id、title、artist、album、duration、source=device、可选 deviceKind |
 | `open` | 无 | 进入宿主设备配对页，需要 network、navigation 及直接用户手势 |
 | `set-sharing` | enabled（布尔） | 启停本机只读共享，需要 network、直接用户手势与宿主审批 |
 | `disconnect` | peerId | 断开已配对设备，需要 network、直接用户手势与宿主审批 |
+| `set-approval-wait` | seconds（10–120 的整数） | 修改后续接入请求的确认时限，需要 network、直接用户手势与宿主审批 |
 
 结果沿用 `{success,data,total,offset,limit}`。通过 `commands` 的 `player.play`、`music.info`、`favorite.add`、`playlist.add` 操作返回的歌曲 ID，权限与审批沿用原规则。插件不能替换 TLS 验证器、打开任意路径或操纵对方播放器。配对邀请只在宿主页面处理。共享每次启动默认关闭，认证仅保存在内存。
+
+远端歌单在宿主歌单栏中以临时只读导航显示，断开后消失；不写入或再次共享为本地歌单。新客户端一次配对建立双向读取，播放仍独立。接入请求必须由共享端用户接受，默认 30 秒，可设置 10–120 秒。此安全确认不作为插件可批准或可自动化的操作公开；插件可以读取已配对设备的公开元数据，但不能代替用户接受外部连接。宿主终端的 network accept/reject 直接完成真实用户的待处理审批，不向插件公开这些命令。
 
 订阅 `network.changed` 获取 `{sharing,connectedDevices}`，再分页查询最新数据。此事件不含秘密。既有 Contract v1/v2、已编译 SDK 程序集身份 4.0.0.0 和旧默认行为不变。
 

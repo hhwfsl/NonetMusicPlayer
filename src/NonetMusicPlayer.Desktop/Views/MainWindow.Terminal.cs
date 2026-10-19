@@ -182,6 +182,24 @@ public sealed partial class MainWindow
                         var selected = command.Arguments.Select(id => vm.VisibleTracks.FirstOrDefault(t => t.Id == id) ?? throw new InvalidDataException(L10n.T("Commands.TrackNotFound"))).ToArray();
                         window.SetBatchMode(true); window.TracksList.SelectedItems?.Clear(); foreach (var item in selected) window.TracksList.SelectedItems?.Add(item); break;
                     case "selection.list": data = Tracks(window.SelectedTracks); break;
+                    case "network.status": data = new JsonObject { ["sharing"] = vm.LanSharing, ["connectedDevices"] = vm.LanPeers.Count, ["pendingRequests"] = vm.LanPendingRequests.Count(), ["approvalWaitSeconds"] = vm.Settings.LanApprovalWaitSeconds }; break;
+                    case "network.sharing": if (Arg(0) is not ("on" or "off")) throw new FormatException("on | off"); vm.SetLanSharing(Arg(0) == "on"); break;
+                    case "network.connect": await vm.ConnectLanAsync(Arg(0)); break;
+                    case "network.peers": data = new JsonArray(vm.LanPeers.Select(p => (JsonNode)new JsonObject { ["id"] = p.DeviceId, ["name"] = p.Name, ["deviceKind"] = p.Catalog.DeviceKind, ["tracks"] = p.Catalog.Total, ["playlists"] = p.Catalog.Playlists.Length }).ToArray()); break;
+                    case "network.requests": data = new JsonArray(vm.LanPendingRequests.Select(p => (JsonNode)new JsonObject { ["id"] = p.Id, ["name"] = p.Name, ["address"] = p.Address, ["secondsRemaining"] = p.Seconds }).ToArray()); break;
+                    case "network.accept": case "network.reject": if (!vm.AnswerLanRequest(Arg(0), command.Name == "network.accept")) throw new InvalidOperationException(L10n.T("Lan.RequestExpired")); break;
+                    case "network.disconnect":
+                        var peers = vm.LanPeers.Where(p => Arg(0) == "all" || p.DeviceId == Arg(0)).ToArray();
+                        if (peers.Length == 0) throw new InvalidDataException(L10n.T("Lan.Disconnected")); foreach (var peer in peers) vm.DisconnectLan(peer); break;
+                    case "network.renew": vm.RenewLanInvitation(); break;
+                    case "network.invitation":
+                        var invitation = vm.LanInvitations.FirstOrDefault() ?? throw new InvalidOperationException(L10n.T("Lan.StartFailed"));
+                        if (window.Clipboard is not { } clipboard) throw new IOException("Clipboard unavailable");
+                        var transfer = new Avalonia.Input.DataTransfer(); transfer.Add(Avalonia.Input.DataTransferItem.CreateText(invitation)); await clipboard.SetDataAsync(transfer); break;
+                    case "network.playlists":
+                        var remote = vm.LanPeers.FirstOrDefault(p => p.DeviceId == Arg(0)) ?? throw new InvalidDataException(L10n.T("Lan.Disconnected"));
+                        data = new JsonArray(remote.Catalog.Playlists.Select(p => (JsonNode)new JsonObject { ["id"] = p.Id, ["name"] = p.Name, ["page"] = "lan:" + remote.DeviceId + ":" + p.Id, ["count"] = p.TrackIds.Length }).ToArray()); break;
+                    case "network.tracks": data = new JsonArray(vm.LanPeerTracks(Arg(0)).Select(t => (JsonNode)new JsonObject { ["id"] = t.Id, ["title"] = t.Title, ["artist"] = t.Artist, ["source"] = t.SourceDeviceKind }).ToArray()); break;
                     case "app.exit": Dispatcher.UIThread.Post(window.ExitApplication); break;
                     case "terminal.exit": vm.Navigate("library"); break;
                     default: throw new InvalidOperationException("Command is not implemented by the desktop host.");

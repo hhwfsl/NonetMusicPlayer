@@ -70,9 +70,14 @@ public sealed partial class MainWindow : Window
     private void AttachViewModel()
     {
         DetachElementExtensions();
+        if (_vm is not null) { _vm.LanChanged -= LanNavigationChanged; _vm.LanDisconnectNotice -= LanDisconnectedNotification; _vm.ConfirmLanConnection = null; }
         if (_vm is not null) { DetachPlayerCommands(); _vm.Plugins.DetachHost(this); _vm.MusicSearchChanged -= MusicSearchStateChanged; _vm.ViewChanged -= ViewChanged; _vm.NavigationRequested -= ResetSongPagePosition; _vm.SettingsChanged -= SettingsChanged; _vm.LocatePlayingTrack -= LocatePlayingTrack; _vm.UserNotification -= UserNotification; }
         _desktopLyrics?.Dispose(); _taskbar?.Dispose();
         _vm = DataContext as MainViewModel; if (_vm is null) return;
+        _vm.ConfirmLanConnection = ConfirmLanConnectionAsync;
+        _vm.LanChanged += LanNavigationChanged;
+        _vm.LanDisconnectNotice += LanDisconnectedNotification;
+        Closed += (_, _) => { _lanDisconnectNotification?.Dispose(); if (_vm is not null) { _vm.LanChanged -= LanNavigationChanged; _vm.LanDisconnectNotice -= LanDisconnectedNotification; _vm.ConfirmLanConnection = null; } };
         _vm.MusicSearchChanged += MusicSearchStateChanged;
         _vm.ViewChanged += ViewChanged; _vm.SettingsChanged += SettingsChanged; Workspace.Profile = _vm.Settings;
         _vm.NavigationRequested += ResetSongPagePosition;
@@ -258,6 +263,19 @@ public sealed partial class MainWindow : Window
             button.Click += (_, _) => _vm.Navigate("playlist:" + playlist.Id, playlist.Name);
             AttachPlaylistDrag(button, playlist);
             button.PointerPressed += (_, e) => { if (!e.GetCurrentPoint(button).Properties.IsRightButtonPressed) return; OpenPlaylistMenu(button, playlist); e.Handled = true; };
+            PlaylistNavigation.Children.Add(button);
+        }
+        foreach (var remote in _vm.LanPlaylistNavigation)
+        {
+            var text = new StackPanel { Spacing = 2 };
+            text.Children.Add(new TextBlock { Text = remote.Name, TextTrimming = TextTrimming.CharacterEllipsis });
+            text.Children.Add(Ui.Text(remote.Source, 11, true));
+            var content = new Grid { ColumnDefinitions = new ColumnDefinitions("34,*") };
+            content.Children.Add(new VectorIcon { Kind = IconKind.Playlist, Width = 22, Height = 22, Brush = Ui.Brush("TextSecondaryBrush") });
+            Grid.SetColumn(text, 1); content.Children.Add(text);
+            var button = new Button { Content = content, Tag = remote.Page, Padding = new Thickness(10, 4), MinHeight = 52 };
+            button.Classes.Add("nav"); ToolTip.SetTip(button, remote.Name + "\n" + remote.Source);
+            button.Click += (_, _) => _vm.Navigate(remote.Page, remote.Name);
             PlaylistNavigation.Children.Add(button);
         }
     }
