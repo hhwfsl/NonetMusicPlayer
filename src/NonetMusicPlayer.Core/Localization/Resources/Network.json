@@ -1,4 +1,6 @@
 {
+  "Lan.Available": { "zh-CN": "设备可用", "en-US": "Device available", "ja-JP": "接続先は利用可能です" },
+  "Lan.Reconnecting": { "zh-CN": "暂时无法访问，正在自动恢复；配对与歌单已保留", "en-US": "Temporarily unavailable; retrying automatically. Pairing and playlists are retained.", "ja-JP": "一時的にアクセスできません。ペアリングとプレイリストを保持して自動復旧します。" },
   "Lan.Title": { "zh-CN": "设备互听", "en-US": "Nearby libraries", "ja-JP": "デバイス共有" },
   "Lan.Mobile": { "zh-CN": "移动", "en-US": "Device", "ja-JP": "デバイス" },
   "Lan.Share": { "zh-CN": "共享本机音乐", "en-US": "Share this library", "ja-JP": "このライブラリを共有" },

@@ -15,7 +15,9 @@ internal static class Program
             var root = Path.GetFullPath(args.FirstOrDefault() ?? "artifacts/core-command-checks"); Directory.CreateDirectory(root);
             NonetMusicPlayer.Core.Diagnostics.AppLog.Initialize(Path.Combine(root, "initial-logs-" + Guid.NewGuid().ToString("N")));
             if (args.Contains("--streaming-audio-only")) { await StreamingAudioChecks.RunAsync(); return 0; }
+            if (args.Contains("--remote-startup")) { await RemoteStartupChecks.RunAsync(); return 0; }
             if (args.Contains("--lan")) {await LanChecks.RunAsync(root); return 0;}
+            if (args.Contains("--lan-resume")) {await LanChecks.ResumeAsync(root); return 0;}
             if (args.Contains("--lan-bridge")) {await LanBridgeChecks.ServeAsync(root); return 0;}
             if (args.Contains("--lan-reverse")) {await LanBridgeChecks.ReverseAsync(root); return 0;}
             AgentPolicyChecks.Run();

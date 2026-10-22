@@ -81,9 +81,8 @@ public sealed class LanLibraryServer : IDisposable
                 var route = first[1].Split('?')[0]; var head = first[0] == "HEAD";
                 if (route == "/v1/pair" && first[0] == "POST")
                 {
-                    // 清理过期会话与计数，避免长期共享耗尽配对名额或累积无界状态。
+                    // 仅清理过期的配对频率计数；已批准会话不能因系统休眠自动失效。
                     var now = DateTimeOffset.UtcNow;
-                    foreach (var item in _sessions.Where(s => s.Value.Seen < now.AddMinutes(-30))) _sessions.TryRemove(item.Key, out _);
                     foreach (var item in _attempts.Where(s => s.Value.At < now.AddMinutes(-1))) _attempts.TryRemove(item.Key, out _);
                     if (_attempts.Count >= 256 && !_attempts.ContainsKey(remote)) { await Respond(tls, 429, [], "text/plain", false, deadline.Token); return; }
                     var attempt = _attempts.AddOrUpdate(remote, (DateTimeOffset.UtcNow, 1), (_, old) => old.At < DateTimeOffset.UtcNow.AddMinutes(-1) ? (DateTimeOffset.UtcNow, 1) : (old.At, old.Count + 1));
@@ -111,7 +110,8 @@ public sealed class LanLibraryServer : IDisposable
                     await Respond(tls, 200, JsonSerializer.SerializeToUtf8Bytes(new LanPairResult(_deviceId, _name, token) { Duplex = duplex }, LanJson.Default.LanPairResult), "application/json", false, deadline.Token); return;
                 }
                 var auth = fields.GetValueOrDefault("Authorization", ""); var bearer = auth.StartsWith("Bearer ", StringComparison.Ordinal) ? auth[7..] : "";
-                if (!_sessions.TryGetValue(bearer, out var session) || session.Seen < DateTimeOffset.UtcNow.AddMinutes(-30) || session.Address.Length > 0 && session.Address != remote) { _sessions.TryRemove(bearer, out _); await Respond(tls, 401, [], "text/plain", head, deadline.Token); return; }
+                // 已批准的内存会话不因休眠或闲置到期；仍严格校验 Bearer、来源及显式撤销。
+                if (!_sessions.TryGetValue(bearer, out var session) || session.Address.Length > 0 && session.Address != remote) { await Respond(tls, 401, [], "text/plain", head, deadline.Token); return; }
                 var refreshed = session with { Seen = DateTimeOffset.UtcNow }; _sessions.TryUpdate(bearer, refreshed, session); session = refreshed;
                 if (route == "/v1/disconnect" && first[0] == "POST")
                 { RevokeDevice(session.DeviceId); PeerDisconnected?.Invoke(session.DeviceId); await Respond(tls, 200, [], "application/json", false, deadline.Token); return; }

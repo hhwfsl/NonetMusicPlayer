@@ -46,7 +46,7 @@ public sealed partial class ExtensionSession
         var offset = args["offset"]?.GetValue<int>() ?? 0; var limit = args["limit"]?.GetValue<int>() ?? 100;
         if (offset < 0 || limit is < 1 or > 100) throw new InvalidDataException("Invalid query page.");
         IEnumerable<JsonNode?> rows; int total;
-        if (operation == "peers") { total = vm.LanPeers.Count; rows = vm.LanPeers.Skip(offset).Take(limit).Select(p => (JsonNode?)new JsonObject { ["id"] = p.DeviceId, ["name"] = p.Name, ["deviceKind"] = p.Catalog.DeviceKind, ["trackCount"] = p.Catalog.Total, ["playlistCount"] = p.Catalog.Playlists.Length }); }
+        if (operation == "peers") { total = vm.LanPeers.Count; rows = vm.LanPeers.Skip(offset).Take(limit).Select(p => (JsonNode?)new JsonObject { ["id"] = p.DeviceId, ["name"] = p.Name, ["deviceKind"] = p.Catalog.DeviceKind, ["reachable"] = p.Reachable, ["connectionState"] = p.Reachable ? "available" : "reconnecting", ["trackCount"] = p.Catalog.Total, ["playlistCount"] = p.Catalog.Playlists.Length }); }
         else
         {
             var peer = vm.LanPeers.FirstOrDefault(p => p.DeviceId == args["peerId"]?.GetValue<string>()) ?? throw new InvalidDataException("Unknown paired device.");

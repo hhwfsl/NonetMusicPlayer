@@ -86,12 +86,15 @@ public sealed partial class PluginManager
     }
     /// <summary>按稳定 ID 读取封面和歌词，不保存过期播放 URL。</summary>
     public async Task EnrichSourceTrackAsync(TrackItem track, LyricsService lyrics)
+        => await EnrichSourceTrackAsync(track, lyrics, CancellationToken.None);
+    public async Task EnrichSourceTrackAsync(TrackItem track, LyricsService lyrics, CancellationToken token)
     {
         var plugin = MusicSearchSources.FirstOrDefault(p => p.Id == track.ProviderId);
         if (plugin is null) return;
         try
         {
-            var answer = await CallMediaAsync(plugin, "music.describe", new() { ["trackId"] = track.ProviderTrackId! }, default);
+            var answer = await CallMediaAsync(plugin, "music.describe", new() { ["trackId"] = track.ProviderTrackId! }, token);
+            token.ThrowIfCancellationRequested();
             var item = answer.Deserialize(MusicSourceJson.Default.ProviderTrack) ?? throw new InvalidDataException("Empty music metadata.");
             MusicSearchContract.ValidateTrack(item); if (item.Id != track.ProviderTrackId) throw new InvalidDataException("Music identity changed.");
             var path = Path.Combine(_storage.ArtworkFolder, MusicLibraryScanner.StableId(track.Id) + ".image");
@@ -108,12 +111,13 @@ public sealed partial class PluginManager
                 PluginPathPolicy.RejectLinkedAncestors(path);
                 using var image = BoundedPluginImage.Decode(cover, 512);
                 using var output = new MemoryStream(); image.Save(output, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
-                await File.WriteAllBytesAsync(path, output.ToArray()); track.CoverPath = path; track.HasSearchCover = false; track.RefreshArtwork();
+                await File.WriteAllBytesAsync(path, output.ToArray(), token); track.CoverPath = path; track.HasSearchCover = false; track.RefreshArtwork();
             }
             if (!track.LyricsDisabled && item.Lyrics is { Length: > 0 } text && (lyrics.ExistingPath(track.Id) is null
                 || track.LyricsSourcePath is null && item.LyricsTranslation is { Length: > 0 } && !lyrics.Read(track.Id).Contains("[nonet:translation]", StringComparison.Ordinal)))
                 lyrics.SaveProvider(track.Id, text, item.LyricsTranslation);
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception error) { AppLog.Warning("MusicSource", "Optional metadata unavailable: " + plugin.Id, error); }
         PersistSearchCover(track);
     }

@@ -185,7 +185,7 @@ public sealed partial class MainWindow
                     case "network.status": data = new JsonObject { ["sharing"] = vm.LanSharing, ["connectedDevices"] = vm.LanPeers.Count, ["pendingRequests"] = vm.LanPendingRequests.Count(), ["approvalWaitSeconds"] = vm.Settings.LanApprovalWaitSeconds }; break;
                     case "network.sharing": if (Arg(0) is not ("on" or "off")) throw new FormatException("on | off"); vm.SetLanSharing(Arg(0) == "on"); break;
                     case "network.connect": await vm.ConnectLanAsync(Arg(0)); break;
-                    case "network.peers": data = new JsonArray(vm.LanPeers.Select(p => (JsonNode)new JsonObject { ["id"] = p.DeviceId, ["name"] = p.Name, ["deviceKind"] = p.Catalog.DeviceKind, ["tracks"] = p.Catalog.Total, ["playlists"] = p.Catalog.Playlists.Length }).ToArray()); break;
+                    case "network.peers": data = new JsonArray(vm.LanPeers.Select(p => (JsonNode)new JsonObject { ["id"] = p.DeviceId, ["name"] = p.Name, ["deviceKind"] = p.Catalog.DeviceKind, ["reachable"] = p.Reachable, ["connectionState"] = p.Reachable ? "available" : "reconnecting", ["tracks"] = p.Catalog.Total, ["playlists"] = p.Catalog.Playlists.Length }).ToArray()); break;
                     case "network.requests": data = new JsonArray(vm.LanPendingRequests.Select(p => (JsonNode)new JsonObject { ["id"] = p.Id, ["name"] = p.Name, ["address"] = p.Address, ["secondsRemaining"] = p.Seconds }).ToArray()); break;
                     case "network.accept": case "network.reject": if (!vm.AnswerLanRequest(Arg(0), command.Name == "network.accept")) throw new InvalidOperationException(L10n.T("Lan.RequestExpired")); break;
                     case "network.disconnect":

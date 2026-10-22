@@ -39,16 +39,26 @@ public sealed class ProviderClient : IDisposable
         if (!_process.Start()) throw new IOException(Localization.LocalizationCatalog.Get("Plugins.ProcessStartFailed"));
         _process.BeginErrorReadLine();
     }
-    public async Task<JsonElement> CallAsync(string method, Dictionary<string, string>? parameters = null, CancellationToken cancellationToken = default, TimeSpan? requestTimeout = null)
+    public Task<JsonElement> CallAsync(string method, Dictionary<string, string>? parameters = null, CancellationToken cancellationToken = default, TimeSpan? requestTimeout = null)
+    {
+        var operation = CallSerializedAsync(method, parameters, cancellationToken, requestTimeout);
+        if (!cancellationToken.CanBeCanceled) return operation;
+        // 旧进程协议没有取消帧。调用者立即离开，但已发送的回复仍由原任务有界排空，不能污染下一次 RPC。
+        _ = operation.ContinueWith(task => { _ = task.Exception; }, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+        return operation.WaitAsync(cancellationToken);
+    }
+    private async Task<JsonElement> CallSerializedAsync(string method, Dictionary<string, string>? parameters, CancellationToken cancellationToken, TimeSpan? requestTimeout)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_managed is not null ? cancellationToken : CancellationToken.None, _lifetime.Token);
         // 零时限仅由宿主显式传入；取消、停用和响应大小限制仍然有效。
         var limit = requestTimeout ?? TimeSpan.FromSeconds(method.StartsWith("agent.", StringComparison.Ordinal) ? 150 : method.StartsWith("lyrics.", StringComparison.Ordinal) ? 50 : 20);
         if (limit > TimeSpan.Zero) timeout.CancelAfter(limit);
-        await _rpcGate.WaitAsync(timeout.Token);
+        using var entering = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+        await _rpcGate.WaitAsync(entering.Token);
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (_managed is not null)
             {
                 var reply = await Task.Run(async () => await ((INonetManagedRpcPlugin)_managed.Instance).CallAsync(method, parameters ?? [], timeout.Token), timeout.Token).WaitAsync(timeout.Token);
@@ -76,7 +86,8 @@ public sealed class ProviderClient : IDisposable
         }
         catch (ProviderRemoteException) { throw; } // 有效 RPC 错误不破坏消息边界，账号/权限错误后允许再次操作。
         catch (PluginOperationException error) { throw new ProviderRemoteException(error.Message); }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested || _lifetime.IsCancellationRequested) { throw; }
+        // 进程回复排空若再次超时，消息边界已不可恢复，不能因原调用者已取消而继续复用进程。
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested || _managed is not null && cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception error) { _fault?.Invoke(error); Dispose(); throw; }
         finally { _rpcGate.Release(); }
     }

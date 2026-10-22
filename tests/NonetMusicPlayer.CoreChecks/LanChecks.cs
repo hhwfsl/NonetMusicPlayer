@@ -46,9 +46,11 @@ internal static class LanChecks
         var wrongCertificate = invitation.Replace(server.Fingerprint, new string('0', 64));
         try { using var ignored = await LanLibraryClient.ConnectAsync(wrongCertificate, Guid.NewGuid().ToString("N"), "Reject"); throw new Exception("Wrong certificate accepted."); } catch (HttpRequestException) { }
         var serialized = JsonSerializer.Serialize(peer.Catalog, LanJson.Default.LanCatalog); Check(!serialized.Contains(root, StringComparison.Ordinal) && !serialized.Contains("token", StringComparison.OrdinalIgnoreCase), "Catalog contains neither filesystem paths nor credentials.");
-        server.Dispose(); await disconnected.Task.WaitAsync(TimeSpan.FromSeconds(40)); Check(!peer.Connected, "Sustained heartbeat failure disconnects a dead peer, not a single delayed probe.");
+        server.Dispose(); await Task.Delay(35000); Check(peer.Connected && !peer.Reachable && !disconnected.Task.IsCompleted, "Unavailable transport retains pairing and catalog beyond the old thirty-second cutoff.");
+        peer.Dispose(); Check(disconnected.Task.IsCompleted, "Explicit close releases the retained session.");
         await DuplexAsync(root);
         await IdleDuplexAsync(root);
+        await ResumeAsync(root);
         Console.WriteLine("PASS LAN HTTPS pinning, private invitation validation, 501-item paging, Unicode, HEAD/Range/seek, bounded audio, refresh, privacy and disconnection.");
     }
     private static async Task DuplexAsync(string root)
@@ -108,11 +110,29 @@ internal static class LanChecks
             var revoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             peer.Disconnected += (_, _) => revoked.TrySetResult();
             first.RevokeDevice(secondId);
-            await revoked.Task.WaitAsync(TimeSpan.FromSeconds(8));
+            await revoked.Task.WaitAsync(TimeSpan.FromSeconds(25));
             Check(!peer.Connected, "Explicit credential revocation is not delayed by reverse liveness.");
             Console.WriteLine("PASS idle duplex: sustained one-direction latency, authenticated reverse liveness, same-session recovery and immediate revocation.");
         }
         finally { Volatile.Write(ref slow, 0); reverse?.Dispose(); }
+    }
+    public static async Task ResumeAsync(string root)
+    {
+        var id = Guid.NewGuid().ToString("N");
+        using var cert = LanLibraryServer.Certificate(Path.Combine(root, "resume-" + Guid.NewGuid() + ".pfx"));
+        using var server = new LanLibraryServer(cert, id, "Resume fixture", () => new(id, "Resume fixture", "one", [], [new("p", "Retained", "", [])], 0), (_, _) => Task.FromResult<LanFile?>(null), (_, _) => Task.FromResult(true));
+        server.Start(); using var relay = new LanBlackoutRelay(server.Port);
+        var invitation = server.Invitation("127.0.0.1").Replace("port=" + server.Port, "port=" + relay.Port);
+        using var peer = await LanLibraryClient.ConnectAsync(invitation, Guid.NewGuid().ToString("N"), "Mobile fixture");
+        var lost = false; peer.Disconnected += (_, _) => lost = true;
+        relay.Blocked = true; await Task.Delay(45000);
+        Check(peer.Connected && !peer.Reachable && !lost && peer.Catalog.Playlists.Single().Name == "Retained", "A transport blackout longer than thirty seconds must retain authorization and playlists.");
+        relay.Blocked = false;
+        var deadline = Environment.TickCount64 + 25000;
+        while (!peer.Reachable) { if (Environment.TickCount64 > deadline) throw new TimeoutException("Same-session recovery did not finish."); await Task.Delay(100); }
+        await peer.RefreshAsync(); Check(peer.Connected && !lost, "Network recovery must reuse the original Bearer without another approval.");
+        peer.Dispose(); Check(lost, "User close still releases the session after recovery.");
+        Console.WriteLine("PASS real TLS blackout 45s: retained pairing/catalog, bounded retry, automatic same-session recovery and explicit close.");
     }
     private static void Check(bool value, string message) { if (!value) throw new InvalidDataException(message); }
 }

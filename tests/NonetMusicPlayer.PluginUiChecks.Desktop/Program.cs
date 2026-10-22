@@ -7,6 +7,8 @@ internal static class Program
         {
             var output = args.FirstOrDefault() ?? "artifacts/plugin-ui-checks";
             if (args.Contains("--lan")) { LanHostChecks.Run(output); return 0; }
+            if (args.Contains("--switching")) { PlaybackSwitchChecks.Run(output); return 0; }
+            if (args.Contains("--rpc-cancellation")) { RpcCancellationChecks.Run(output).GetAwaiter().GetResult(); return 0; }
             if (args.Contains("--appearance")) { AppearanceChecks.Run(output); return 0; }
             if (args.Contains("--lyrics-transition")) { LyricsTransitionChecks.Run(output); return 0; }
             if (args.Contains("--element-layout")) { ElementLayoutChecks.Run(output); return 0; }

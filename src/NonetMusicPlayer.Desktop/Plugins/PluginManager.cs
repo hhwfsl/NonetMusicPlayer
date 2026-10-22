@@ -231,6 +231,9 @@ public sealed partial class PluginManager : IDisposable
         catch { if (_clients.Remove(manifest.Id, out var client)) client.Dispose(); throw; }
     }
     public async Task<string> ResolveAsync(TrackItem track)
+        => await ResolveAsync(track, CancellationToken.None);
+    /// <summary>保留旧调用签名；新播放请求可中止被替代的解析，不把取消误报为插件故障。</summary>
+    public async Task<string> ResolveAsync(TrackItem track, CancellationToken token)
     {
         var manifest = Installed.FirstOrDefault(p => p.Id == track.ProviderId) ?? throw new InvalidOperationException("音源插件已卸载。");
         try
@@ -238,19 +241,20 @@ public sealed partial class PluginManager : IDisposable
             if (manifest.Type == "extension")
             {
                 if (!manifest.Enabled || !HasMediaSource(manifest) || !manifest.Permissions.Contains("network")) throw new InvalidDataException("Media source is unavailable.");
-                var answer = await Extension(manifest).InvokeProvidedServiceAsync("media-source", new() { ["method"] = "playback.resolve", ["trackId"] = track.ProviderTrackId }, default);
+                var answer = await Extension(manifest).InvokeProvidedServiceAsync("media-source", new() { ["method"] = "playback.resolve", ["trackId"] = track.ProviderTrackId }, token);
                 var media = answer.Deserialize<PlaybackSource>(AppStorage.Json) ?? throw new InvalidDataException("Empty media source.");
                 if (media.Kind != "loopback-http") throw new InvalidDataException("Unsupported media source kind.");
                 LoopbackRangeStream.Validate(new Uri(media.Url)); return media.Url;
             }
-            var client = await GetClientAsync(manifest);
+            var client = await GetClientAsync(manifest, token);
             // 旧曲库来自前一进程；新的音源进程需先建立自己的曲目映射。
-            if (!client.CatalogInitialized) await client.ReadCatalogAsync();
-            var response = await client.CallAsync("playback.resolve", new() { ["trackId"] = track.ProviderTrackId! });
+            if (!client.CatalogInitialized) await client.ReadCatalogAsync(token);
+            var response = await client.CallAsync("playback.resolve", new() { ["trackId"] = track.ProviderTrackId! }, token);
             var source = response.Deserialize<PlaybackSource>(AppStorage.Json) ?? throw new InvalidDataException("插件没有提供播放源。");
             if (source.Kind != "loopback-http") throw new InvalidDataException("本版 Contract 支持 loopback-http，不接受服务器 URL。");
             LoopbackRangeStream.Validate(new Uri(source.Url)); return source.Url;
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch { if (_clients.Remove(manifest.Id, out var client)) client.Dispose(); throw; }
     }
     public void Save()

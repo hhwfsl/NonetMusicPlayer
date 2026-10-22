@@ -33,6 +33,7 @@ public sealed partial class MainViewModel
 
     public async Task SetPlayingAsync(bool playing)
     {
+        if (!playing) _lanPlaybackResume = null;
         if (_loadingAudio || _switchingOutput) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PreparingAudio"));
         if (playing && !_audioLoaded)
         {

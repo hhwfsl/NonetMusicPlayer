@@ -17,9 +17,15 @@ public sealed class LanLibraryClient : IDisposable
     private readonly CancellationTokenSource _lifetime = new();
     private static readonly ConcurrentDictionary<string, LanLibraryClient> Active = new(StringComparer.Ordinal);
     private long _lastContact = Environment.TickCount64;
+    private int _reachable = 1;
+    /// <summary>配对关系与当前可达性分离；暂时离线不撤销授权或丢弃远端目录。</summary>
+    public bool Reachable => Connected && Volatile.Read(ref _reachable) != 0;
+    public event EventHandler? ReachabilityChanged;
+    private void SetReachable(bool value)
+    { if (Interlocked.Exchange(ref _reachable, value ? 1 : 0) != (value ? 1 : 0)) ReachabilityChanged?.Invoke(this, EventArgs.Empty); }
     /// <summary>只由同进程服务端在校验会话及来源后调用；双向通信任一方向正常都证明设备仍在线。</summary>
     internal static void ObserveAuthenticatedPeer(string deviceId)
-    { if (Active.TryGetValue(deviceId, out var peer) && peer.Connected) Interlocked.Exchange(ref peer._lastContact, Environment.TickCount64); }
+    { if (Active.TryGetValue(deviceId, out var peer) && peer.Connected) { Interlocked.Exchange(ref peer._lastContact, Environment.TickCount64); peer.SetReachable(true); } }
     public string DeviceId { get; private set; } = "";
     public string Name { get; private set; } = "";
     public LanCatalog Catalog { get; private set; } = new("", "", "", [], [], 0);
@@ -101,7 +107,7 @@ public sealed class LanLibraryClient : IDisposable
         {
             try
             {
-                await Task.Delay(failures == 0 ? 5000 : 2000, _lifetime.Token);
+                await Task.Delay(failures == 0 ? 5000 : Math.Min(15_000, 1000 << Math.Min(failures, 4)), _lifetime.Token);
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token); timeout.CancelAfter(4000);
                 using var response = await _http.GetAsync("v1/info", HttpCompletionOption.ResponseHeadersRead, timeout.Token);
                 if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
@@ -109,7 +115,7 @@ public sealed class LanLibraryClient : IDisposable
                 response.EnsureSuccessStatusCode();
                 var info = JsonSerializer.Deserialize(await ReadLimited(response, 8192, timeout.Token), LanJson.Default.LanInfo);
                 if (info?.DeviceId != DeviceId || info.Protocol != 1) { Dispose(); return; }
-                Interlocked.Exchange(ref _lastContact, Environment.TickCount64); failures = 0;
+                Interlocked.Exchange(ref _lastContact, Environment.TickCount64); failures = 0; SetReachable(true);
                 // 目录分页不共用心跳的四秒期限，避免较大曲库在后台刷新时被误断开。
                 if (info.Revision != Catalog.Revision) await RefreshAsync(_lifetime.Token);
             }
@@ -117,19 +123,22 @@ public sealed class LanLibraryClient : IDisposable
             catch (Exception e) when (e is HttpRequestException or IOException or JsonException or OperationCanceledException or ObjectDisposedException)
             {
                 if (_lifetime.IsCancellationRequested) return;
-                if (++failures == 1) AppLog.Warning("LAN", "Peer probe delayed; retaining the paired session and retrying");
-                // 不以一次单向探测超时覆盖反向已认证活动；确实双向失联才结束会话。
-                if (failures >= 3 && Environment.TickCount64 - Interlocked.Read(ref _lastContact) >= 30_000)
-                { AppLog.Warning("LAN", "Peer connection ended after sustained bidirectional inactivity"); Dispose(); return; }
+                failures = Math.Min(8, failures + 1);
+                if (failures == 1) AppLog.Warning("LAN", "Peer probe delayed; retaining the paired session and retrying");
+                // Android 休眠、Wi-Fi 暂停和路由切换只改变可达性，绝不因静默时长解除配对。
+                if (failures >= 2 && Environment.TickCount64 - Interlocked.Read(ref _lastContact) >= 10_000) SetReachable(false);
             }
         }
     }
     public string TrackUri(string id) => $"nonet-lan://{DeviceId}/{Uri.EscapeDataString(id)}";
     public static Stream OpenAudio(Uri uri)
+        => OpenAudio(uri, CancellationToken.None);
+    /// <summary>切歌取消贯穿音频探测及网络读取，不等待旧歌曲的网络超时。</summary>
+    public static Stream OpenAudio(Uri uri, CancellationToken token)
     {
         if (uri.Scheme != "nonet-lan" || !Active.TryGetValue(uri.Host, out var peer) || !peer.Connected) throw new IOException("LAN device is disconnected.");
         var id = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/')); if (!peer.Catalog.Tracks.Any(t => t.Id == id)) throw new IOException("LAN track is unavailable.");
-        return new LoopbackRangeStream(new Uri(peer._http.BaseAddress!, "v1/audio/" + Uri.EscapeDataString(id)), peer._http);
+        return new LoopbackRangeStream(new Uri(peer._http.BaseAddress!, "v1/audio/" + Uri.EscapeDataString(id)), peer._http, token);
     }
     public async Task<byte[]> ReadAssetAsync(string kind, string id, CancellationToken token = default)
     {

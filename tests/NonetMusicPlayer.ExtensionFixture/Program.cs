@@ -9,6 +9,10 @@ while (Console.ReadLine() is { } line)
     JsonNode result;
     switch (rpc.Method)
     {
+        case "fixture.delay":
+            File.WriteAllText(rpc.Params["started"], "started");
+            await Task.Delay(int.Parse(rpc.Params["milliseconds"]));
+            result = new JsonObject { ["reply"] = "delayed" }; break;
         case "initialize":
             await extension.InitializeAsync(new(2, "{}", rpc.Params.GetValueOrDefault("storageDirectory") ?? "", ExtensionContract.Capabilities), default);
             result = new JsonObject { ["contractVersion"] = 2, ["capabilities"] = new JsonArray(ExtensionContract.Capabilities.Select(c => (JsonNode?)JsonValue.Create(c)).ToArray()) }; break;

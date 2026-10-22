@@ -17,6 +17,7 @@ public sealed partial class MainViewModel
     private LanCatalog _lanCatalog = new("", "", "", [], [], 0);
     private Dictionary<string, TrackItem> _lanLocal = new(StringComparer.Ordinal);
     private readonly Dictionary<string, LanLibraryClient> _lanPeers = new(StringComparer.Ordinal);
+    private (string Track, long Request, double Position)? _lanPlaybackResume;
     private readonly Dictionary<string, List<TrackItem>> _lanTracks = new(StringComparer.Ordinal);
     private bool _lanArtworkBusy;
     private sealed record PendingApproval(string Id, LanConnectionRequest Request, long Deadline, TaskCompletionSource<bool> Completion);
@@ -152,7 +153,30 @@ public sealed partial class MainViewModel
         _lanPeers[peer.DeviceId] = peer;
         peer.Changed += (_, _) => Dispatcher.UIThread.Post(() => RefreshLanPeer(peer));
         peer.Disconnected += (_, _) => Dispatcher.UIThread.Post(() => DisconnectLan(peer));
+        peer.ReachabilityChanged += (_, _) => Dispatcher.UIThread.Post(() =>
+        {
+            if (_disposed || !_lanPeers.TryGetValue(peer.DeviceId, out var current) || !ReferenceEquals(current, peer)) return;
+            ObserveLanPlaybackReachability(peer);
+            LanChanged?.Invoke(this, EventArgs.Empty);
+        });
         RefreshLanPeer(peer);
+    }
+    /// <summary>网络暂停与坏音频分开：不跳过远端队列，恢复后续播；用户暂停/切歌可取消自动继续。</summary>
+    private void ObserveLanPlaybackReachability(LanLibraryClient peer)
+    {
+        if (_loadingAudio || CurrentTrack?.ProviderId != "lan:" + peer.DeviceId) return;
+        if (!peer.Reachable && IsPlaying && _audioLoaded)
+        {
+            UpdateListeningStatistics(); _lanPlaybackResume = (CurrentTrack.Id, Interlocked.Read(ref _playRequest), PlaybackPosition);
+            _audio.Pause(); IsPlaying = false; _audioLoaded = false; _resumePending = true; Save();
+        }
+        else if (peer.Reachable && _lanPlaybackResume is { } pending && pending.Track == CurrentTrack.Id && pending.Request == Interlocked.Read(ref _playRequest))
+        { _lanPlaybackResume = null; _ = ResumeLanPlaybackAsync(pending.Position); }
+    }
+    private async Task ResumeLanPlaybackAsync(double position)
+    {
+        try { await StartTrackAsync(CurrentTrack, _playingList.ToArray(), PlayingSourcePage, position, true); }
+        catch (Exception error) { ReportError(L10n.T("Playback.UnableToChangePlaybackState"), error); }
     }
     private void RefreshLanPeer(LanLibraryClient peer)
     {
@@ -171,6 +195,7 @@ public sealed partial class MainViewModel
     {
         if (_disposed || !_lanPeers.TryGetValue(peer.DeviceId, out var active) || !ReferenceEquals(active, peer)) return;
         _lanPeers.Remove(peer.DeviceId); _lanTracks.Remove(peer.DeviceId); _lanServer?.RevokeDevice(peer.DeviceId);
+        if (CurrentTrack?.ProviderId == "lan:" + peer.DeviceId) _lanPlaybackResume = null;
         _ = Task.Run(async () => { await peer.NotifyDisconnectAsync(); peer.Dispose(); });
         var provider = "lan:" + peer.DeviceId;
         if (CurrentTrack?.ProviderId == provider) { _audio.Pause(); IsPlaying = false; _audioLoaded = false; _resumePending = true; }
@@ -189,17 +214,18 @@ public sealed partial class MainViewModel
         var byRemoteId = tracks.ToDictionary(t => t.ProviderTrackId!, StringComparer.Ordinal); return list.TrackIds.Select(id => byRemoteId.GetValueOrDefault(id)).OfType<TrackItem>();
     }
     private string LanArtworkPath(string id) => Path.Combine(Storage.Root, "Artwork", "lan", MusicLibraryScanner.StableId(id) + ".jpg");
-    private async Task PrepareLanTrackAsync(TrackItem track, bool lyrics = true)
+    private async Task PrepareLanTrackAsync(TrackItem track, bool lyrics = true, CancellationToken token = default)
     {
         if (track.ProviderId is null || !_lanPeers.TryGetValue(track.ProviderId[4..], out var peer)) throw new IOException(L10n.T("Lan.Disconnected"));
-        if (track.CoverPath is null)
+        var description = peer.Catalog.Tracks.FirstOrDefault(t => t.Id == track.ProviderTrackId);
+        if (track.CoverPath is null && description?.Artwork == true)
         {
-            try { var image = await peer.ReadAssetAsync("artwork", track.ProviderTrackId!); var path = LanArtworkPath(track.Id); Directory.CreateDirectory(Path.GetDirectoryName(path)!); await File.WriteAllBytesAsync(path, image); track.CoverPath = path; track.RefreshArtwork(); }
+            try { var image = await peer.ReadAssetAsync("artwork", track.ProviderTrackId!, token); var path = LanArtworkPath(track.Id); Directory.CreateDirectory(Path.GetDirectoryName(path)!); await File.WriteAllBytesAsync(path, image, token); track.CoverPath = path; track.RefreshArtwork(); }
             catch (Exception e) when (e is HttpRequestException or IOException) { }
         }
-        if (lyrics && !track.LyricsDisabled && Lyrics.ExistingPath(track.Id) is null)
+        if (lyrics && !track.LyricsDisabled && description?.Lyrics == true && Lyrics.ExistingPath(track.Id) is null)
         {
-            try { var text = Encoding.UTF8.GetString(await peer.ReadAssetAsync("lyrics", track.ProviderTrackId!)); Directory.CreateDirectory(Lyrics.Folder); await File.WriteAllTextAsync(Lyrics.PathFor(track.Id), text); }
+            try { var text = Encoding.UTF8.GetString(await peer.ReadAssetAsync("lyrics", track.ProviderTrackId!, token)); Directory.CreateDirectory(Lyrics.Folder); await File.WriteAllTextAsync(Lyrics.PathFor(track.Id), text, token); }
             catch (Exception e) when (e is HttpRequestException or IOException) { }
         }
     }
@@ -213,7 +239,7 @@ public sealed partial class MainViewModel
     private void CloseLan()
     {
         var peers = _lanPeers.Values.ToArray();
-        // 正常退出最多等待短暂发送窗口；异常断电由对端五秒心跳检测，不阻塞无限退出。
+        // 正常退出有界通知对端；异常断电只能进入不可达状态，不能与系统暂停网络混为一谈。
         try { Task.WhenAll(peers.Select(p => p.NotifyDisconnectAsync())).Wait(TimeSpan.FromMilliseconds(1400)); } catch (Exception) { }
         _lanServer?.Dispose(); _lanServer = null; foreach (var peer in peers) peer.Dispose(); _lanPeers.Clear(); _lanTracks.Clear();
     }

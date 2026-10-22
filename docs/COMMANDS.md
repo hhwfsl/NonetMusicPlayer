@@ -40,6 +40,8 @@ settings set lanApprovalWaitSeconds 30
 
 下表每项都以 `nonet` 开头：
 
+`network peers` 保留已配对但暂不可达的设备，并提供 `reachable` 布尔值及 `connectionState`（`available` / `reconnecting`）；暂时停网不撤销配对或移除歌单。主动 `network disconnect`、关闭共享和正常退出仍结束会话。
+
 | 分类 | 命令与参数 |
 | --- | --- |
 | 无 | `help [category] [command]`、`clear`、`exit` |

@@ -38,6 +38,7 @@ public sealed class LanDevicesView : UserControl, IDisposable
         foreach (var peer in _vm.LanPeers)
         {
             var lists = Ui.Stack(Ui.Row(peer.Name, L10n.Format("Lan.TrackCount", peer.Catalog.Total), Ui.Button(L10n.T("Lan.Disconnect"), () => _vm.DisconnectLan(peer))));
+            lists.Children.Add(Ui.Text(L10n.T(peer.Reachable ? "Lan.Available" : "Lan.Reconnecting"), 13, true));
             _body.Children.Add(Ui.Card(peer.Name, lists));
         }
     }

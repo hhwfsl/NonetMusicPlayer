@@ -304,11 +304,12 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     [RelayCommand] private void StopPlayback()
     {
         Interlocked.Increment(ref _playRequest);
+        _playCancellation?.Cancel(); _requestedTrack = null; _lanPlaybackResume = null;
         _failedPlaybackIds.Clear();
         UpdateListeningStatistics();
-        try { if (!_loadingAudio) _audio.Stop(); }
+        try { if (!_loadingAudio) _audio.Pause(); }
         catch (Exception e) { ReportError(L10n.T("Playback.UnableToStopPlayback"), e); }
-        IsPlaying = false; _resumePending = false;
+        IsPlaying = false; _audioLoaded = false; _resumePending = false;
         ResetListeningAnchor();
         _updatingPosition = true; PlaybackPosition = 0; _updatingPosition = false;
         Save(); StatusText = L10n.T("Playback.PlaybackStopped");
@@ -346,7 +347,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
             else if (VisibleTracks.FirstOrDefault() is { } first) await PlayTrackAsync(first);
             return;
         }
-        var index = _playingList.FindIndex(t => t.Id == CurrentTrack?.Id);
+        var index = _playingList.FindIndex(t => t.Id == (_requestedTrack ?? CurrentTrack)?.Id);
         if (automatic && Settings.PlayMode == PlayMode.RepeatOne) { await StartTrackAsync(CurrentTrack, _playingList.ToArray(), PlayingSourcePage, 0, true); return; }
         var target = index < 0 ? direction > 0 ? 0 : _playingList.Count - 1 : index + direction;
         if (Settings.PlayMode == PlayMode.Shuffle)
@@ -493,7 +494,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         var request = Interlocked.Read(ref _playRequest);
         Dispatcher.UIThread.Post(() =>
         {
-            if (_disposed || _loadingAudio || !_audioLoaded || request != Interlocked.Read(ref _playRequest)) return;
+            if (_disposed || _loadingAudio || _requestedTrack is not null || !_audioLoaded || request != Interlocked.Read(ref _playRequest)) return;
             if (e is AudioPlaybackEndedEventArgs ended && ended.PlaybackGeneration != 0 && ended.PlaybackGeneration != _audio.PlaybackGeneration) return;
             try { if (_audio.IsPlaying) return; UpdateListeningStatistics(); IsPlaying = false; _failedPlaybackIds.Clear(); PlayRelative(1, true); }
             catch (Exception error) { ReportError(L10n.T("Playback.UnableToAdvanceToTheNextSong"), error); }
@@ -504,7 +505,8 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         var request = Interlocked.Read(ref _playRequest);
         Dispatcher.UIThread.Post(() =>
         {
-            if (_disposed || _loadingAudio || request != Interlocked.Read(ref _playRequest)) return;
+            if (_disposed || _loadingAudio || _requestedTrack is not null || request != Interlocked.Read(ref _playRequest)) return;
+            if (_lanPlaybackResume is { } network && network.Track == CurrentTrack?.Id) return;
             if (e.PlaybackGeneration != 0 && e.PlaybackGeneration != _audio.PlaybackGeneration) return;
             try { if (_audio.IsPlaying) return; }
             catch (Exception error) { AppLog.Warning("Audio", "旧错误事件校验失败", error); }
@@ -575,7 +577,10 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     private static string FormatTime(double seconds) => TimeSpan.FromSeconds(double.IsFinite(seconds) ? Math.Max(0, seconds) : 0).ToString(seconds >= 3600 ? @"h\:mm\:ss" : @"m\:ss");
     public void Dispose()
     {
-        if (_disposed) return; _lyricsPlaybackLease?.Dispose(); UpdateListeningStatistics(); _disposed = true; _lyricsSearchLifetime.Cancel(); Interlocked.Increment(ref _playRequest); _scanCancellation?.Cancel(); _timer.Stop(); Save();
+        if (_disposed) return;
+        // 先取消可能持有音频锁的网络载入，再读取统计时钟，避免退出等待旧音源超时。
+        Interlocked.Increment(ref _playRequest); _playCancellation?.Cancel();
+        _lyricsPlaybackLease?.Dispose(); UpdateListeningStatistics(); _disposed = true; _lyricsSearchLifetime.Cancel(); _playCancellation?.Dispose(); _scanCancellation?.Cancel(); _timer.Stop(); Save();
         _backgroundAccentCancellation?.Cancel(); _backgroundAccentCancellation?.Dispose(); CloseLan();
         _audio.PlaybackStopped -= PlaybackEnded; _audio.PlaybackFailed -= PlaybackFailed;
         if (_audio is Core.Audio.IExtensionAudioHost extensible) extensible.ProcessorBypassed -= ExtensionAudioBypassed;

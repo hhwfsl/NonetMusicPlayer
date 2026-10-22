@@ -12,7 +12,7 @@ public sealed class BufferedPcmDataProvider : ISoundDataProvider
     private readonly Action _abortReads;
     private readonly object _bufferGate = new(), _decoderGate = new();
     private readonly float[] _ring;
-    private readonly int _channels, _resumeSamples, _length;
+    private readonly int _channels, _resumeSamples, _initialSamples, _length;
     private readonly CancellationTokenSource _stop = new();
     private readonly SemaphoreSlim _work = new(0, 1);
     private readonly Task _producer;
@@ -27,6 +27,8 @@ public sealed class BufferedPcmDataProvider : ISoundDataProvider
         var samples = Math.Min(Math.Max(4096L * channels, 4L * source.SampleRate * channels), MaximumBufferBytes / sizeof(float));
         _ring = new float[(int)(samples / channels * channels)];
         _resumeSamples = (int)Math.Min(_ring.Length, (long)source.SampleRate * channels);
+        // 首播只需四分之一秒 PCM；中途饥饿仍等待一秒，兼顾响应速度与连续播放稳定性。
+        _initialSamples = Math.Max(channels, _resumeSamples / 4 / channels * channels);
         _producer = Task.Run(ProduceAsync);
     }
     public int BufferBytes => _ring.Length * sizeof(float);
@@ -100,7 +102,7 @@ public sealed class BufferedPcmDataProvider : ISoundDataProvider
                                 chunk.AsSpan(first, read - first).CopyTo(_ring);
                                 _writeIndex = (_writeIndex + read) % _ring.Length; _count += read;
                             }
-                            if (_eof || _count >= _resumeSamples) { _buffering = false; _ready.TrySetResult(); }
+                            if (_eof || _count >= _resumeSamples || !_ready.Task.IsCompleted && _count >= _initialSamples) { _buffering = false; _ready.TrySetResult(); }
                         }
                     }
                 }

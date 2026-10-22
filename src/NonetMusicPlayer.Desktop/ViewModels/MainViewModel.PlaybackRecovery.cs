@@ -7,24 +7,32 @@ public sealed partial class MainViewModel
 {
     private readonly HashSet<string> _failedPlaybackIds = new(StringComparer.Ordinal);
     private double _recoveryStartPosition;
+    private CancellationTokenSource? _playCancellation;
+    private TrackItem? _requestedTrack;
 
     /// <summary>单次播放恢复请求对每首不同歌曲最多尝试一次。</summary>
     private async Task StartTrackWithRecoveryAsync(TrackItem? track, IEnumerable<TrackItem>? list, string sourcePage,
         double resumePosition, bool preserveQueueScope, bool preserveFailures)
     {
         if (track is null || _disposed) return;
-        if (Plugins.HasHook("playback.before"))
-        {
-            var decision = await Plugins.EvaluateHooksAsync("playback.before", new() { ["trackId"] = track.Id, ["source"] = sourcePage });
-            if (decision.Cancel) return;
-            if (decision.Data["trackId"]?.GetValue<string>() is { } selected && selected != track.Id)
-                track = (list ?? SourceTracks(sourcePage)).FirstOrDefault(t => t.Id == selected) ?? track;
-        }
         if (_lyricsPlaybackLease is { } restriction && (restriction.Track.Id != track.Id || !restriction.Starting && !preserveQueueScope)) { RejectLyricsPlaybackChange(); return; }
         var request = Interlocked.Increment(ref _playRequest);
-        await _playGate.WaitAsync();
+        _lanPlaybackResume = null;
+        var cancellation = new CancellationTokenSource(); var previous = _playCancellation;
+        _playCancellation = cancellation; _requestedTrack = track;
+        previous?.Cancel(); previous?.Dispose();
+        var token = cancellation.Token; var entered = false;
         try
         {
+            if (Plugins.HasHook("playback.before"))
+            {
+                var decision = await Plugins.EvaluateHooksAsync("playback.before", new() { ["trackId"] = track.Id, ["source"] = sourcePage }, token);
+                if (decision.Cancel) return;
+                if (decision.Data["trackId"]?.GetValue<string>() is { } selected && selected != track.Id)
+                    track = (list ?? SourceTracks(sourcePage)).FirstOrDefault(t => t.Id == selected) ?? track;
+                _requestedTrack = track;
+            }
+            await _playGate.WaitAsync(token); entered = true;
             if (request != Interlocked.Read(ref _playRequest) || _disposed) return;
             if (_lyricsPlaybackLease is { } active && active.Track.Id != track.Id) { RejectLyricsPlaybackChange(); return; }
             UpdateListeningStatistics();
@@ -38,6 +46,7 @@ public sealed partial class MainViewModel
             _explicitQueueIds?.Add(track.Id);
             PlayingSourcePage = NormalizeSourcePage(sourcePage);
             _loadingAudio = true; _audioLoaded = false; IsPlaying = false;
+            _audio.Pause();
             TrackItem? candidate = track;
             while (candidate is not null)
             {
@@ -46,11 +55,14 @@ public sealed partial class MainViewModel
                 {
                     StatusText = L10n.Format("Playback.Loading", candidate.Title);
                     var lan = candidate.ProviderId?.StartsWith("lan:", StringComparison.Ordinal) == true;
-                    if (lan) await PrepareLanTrackAsync(candidate);
-                    else if (candidate.ProviderId is not null) await Plugins.EnrichSourceTrackAsync(candidate, Lyrics);
-                    var source = candidate.ProviderId is null || lan ? candidate.FilePath : await Plugins.ResolveAsync(candidate);
+                    // 先反馈用户选中的歌曲；封面、歌词等可选资料不进入音频的首播关键路径。
+                    CurrentTrack = candidate; _requestedTrack = candidate;
+                    _updatingPosition = true;
+                    try { PlaybackDuration = Math.Max(1, candidate.DurationSeconds); PlaybackPosition = resumePosition; }
+                    finally { _updatingPosition = false; }
+                    var source = candidate.ProviderId is null || lan ? candidate.FilePath : await Plugins.ResolveAsync(candidate, token);
                     if (request != Interlocked.Read(ref _playRequest) || _disposed) return;
-                    await _audio.LoadAsync(source);
+                    await _audio.LoadAsync(source, token);
                     if (request != Interlocked.Read(ref _playRequest) || _disposed) { _audio.Stop(); return; }
                     _audio.Volume = (float)(Volume / 100);
                     CurrentTrack = candidate;
@@ -73,8 +85,10 @@ public sealed partial class MainViewModel
                     TrimHistory();
                     StatusText = L10n.Format("Playback.Playing0CA729", candidate.FormatText, ModeDescription); Save();
                     RefreshPlayingRows(); RequestPlayingTrackLocation();
+                    if (candidate.ProviderId is not null) _ = CompletePlaybackMetadataAsync(candidate, request, token);
                     return;
                 }
+                catch (OperationCanceledException) when (token.IsCancellationRequested) { return; }
                 catch (AudioOutputUnavailableException error)
                 {
                     CurrentTrack = candidate; _audioLoaded = false; IsPlaying = false; _resumePending = true;
@@ -85,6 +99,8 @@ public sealed partial class MainViewModel
                 {
                     if (request != Interlocked.Read(ref _playRequest) || _disposed) return;
                     _audioLoaded = false; IsPlaying = false;
+                    if (candidate.ProviderId?.StartsWith("lan:", StringComparison.Ordinal) == true && _lanPeers.TryGetValue(candidate.ProviderId[4..], out var peer) && !peer.Reachable)
+                    { _resumePending = true; _lanPlaybackResume = (candidate.Id, request, resumePosition); ReportWarning(L10n.T("Lan.Reconnecting")); Save(); return; }
                     _failedPlaybackIds.Add(candidate.Id);
                     try { _audio.Stop(); } catch (Exception stopError) { AppLog.Warning("Audio", "跳过故障音频时停止资源失败", stopError); }
                     ReportError(L10n.Format("Playback.UnableToPlaySkipped", candidate.Title), error);
@@ -94,7 +110,27 @@ public sealed partial class MainViewModel
             }
             StopUnavailableQueue();
         }
-        finally { _loadingAudio = false; _playGate.Release(); }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        finally
+        {
+            if (entered) { _loadingAudio = false; _playGate.Release(); }
+            if (ReferenceEquals(_playCancellation, cancellation)) _requestedTrack = null;
+        }
+    }
+
+    /// <summary>资料补全随当前播放请求取消，迟到结果不能覆盖另一首歌的歌词或播放状态。</summary>
+    private async Task CompletePlaybackMetadataAsync(TrackItem track, long request, CancellationToken token)
+    {
+        try
+        {
+            await Task.Yield(); token.ThrowIfCancellationRequested();
+            if (track.ProviderId?.StartsWith("lan:", StringComparison.Ordinal) == true) await PrepareLanTrackAsync(track, token: token);
+            else await Plugins.EnrichSourceTrackAsync(track, Lyrics, token);
+            if (!token.IsCancellationRequested && !_disposed && request == Interlocked.Read(ref _playRequest) && CurrentTrack?.Id == track.Id)
+            { ReloadLyrics(); OnPropertyChanged(nameof(CurrentArtwork)); OnPropertyChanged(nameof(HasCurrentArtwork)); Save(); }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) { AppLog.Warning("Playback.Metadata", "可选播放资料补全失败", error); }
     }
 
     private TrackItem? NextRecoveryTrack(TrackItem? failed)
