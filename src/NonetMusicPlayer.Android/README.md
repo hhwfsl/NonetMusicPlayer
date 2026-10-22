@@ -18,7 +18,7 @@
 | compile / target / min SDK | 36 / 36 / 28 |
 | 数据库 | Android SQLite（外键、事务、WAL） |
 
-安装 Android SDK 36、Build Tools 35.0.0，在未提交的 local.properties 填写 sdk.dir，或设置 ANDROID_HOME。不要同时设置相互冲突的 ANDROID_SDK_HOME 和 ANDROID_USER_HOME。
+安装 Android SDK 36、Build Tools 35.0.0，在本地 local.properties 填写 sdk.dir，或设置 ANDROID_HOME。不要同时设置相互冲突的 ANDROID_SDK_HOME 和 ANDROID_USER_HOME。
 
 ```powershell
 ./gradlew.bat :app:assembleDebug

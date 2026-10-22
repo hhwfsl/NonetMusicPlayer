@@ -20,15 +20,15 @@
   <a href="CHANGELOG.md">变更日志</a>
 </p>
 
-让编译器忙一点，让耳朵轻松一点。下面只讲实际技术与构建方式，不替尚未完成的测试打包票。
+让编译器忙一点，让耳朵轻松一点。本文介绍技术栈、源码结构和构建方式。
 
 | 产品 | 当前版本 | 发行说明 |
 | --- | --- | --- |
 | 桌面 | [0.4.0-beta.33](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.33) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
-| CLI | [0.4.0-beta.32](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.32) | Windows、Linux、macOS x64；本次未新增 CLI 架构 |
+| CLI | [0.4.0-beta.32](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.32) | Windows、Linux、macOS x64 |
 | Android | [0.3.0-beta.9](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/android-v0.3.0-beta.9) | API 28+；通用 APK；沿用既有测试签名 |
 
-本仓库包含桌面、CLI、共享核心、Android、插件 SDK、打包器和必要测试。**不包含私人插件、用户数据、签名私钥、缓存或插件模板源码。** 插件模板独立维护在 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)；iOS 暂不公开。
+本仓库包含桌面、CLI、共享核心、Android、插件 SDK、打包器和测试。插件模板独立维护在 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)。
 
 ## 🧰 技术栈
 
@@ -87,7 +87,7 @@ dotnet run --project src/NonetMusicPlayerCli -c Release
 
 ## 📱 构建 Android
 
-安装 JDK 17–21、Android SDK Platform 36 和 Build Tools 35.0.0。配置 `ANDROID_HOME`，或在 Android 目录创建不提交的 `local.properties`：`sdk.dir=/path/to/android/sdk`。Android Studio 可直接打开该目录，也可完全使用命令行。
+安装 JDK 17–21、Android SDK Platform 36 和 Build Tools 35.0.0。配置 `ANDROID_HOME`，或在 Android 目录创建本地 `local.properties`：`sdk.dir=/path/to/android/sdk`。Android Studio 可直接打开该目录，也可完全使用命令行。
 
 ```sh
 cd src/NonetMusicPlayer.Android
@@ -101,7 +101,7 @@ cd src/NonetMusicPlayer.Android
 
 Debug APK 位于 `app/build/outputs/apk/debug/app-debug.apk`，裁剪后的 Release APK 位于 `app/build/outputs/apk/release/app-release.apk`。仪器测试需要设备或模拟器，详见 [Android 测试](src/NonetMusicPlayer.Android/docs/TESTING.md)。Android 不要求安装 .NET。
 
-当前预发布沿用既有调试签名，不适合直接作为商店正式发行。使用 `-PnonetSigningStore=/path/to/original/debug.keystore` 可指定原测试证书；**私钥不提交仓库**。自行构建的签名若不同，不能覆盖安装官方 APK，应用内更新同样拒绝不同签名。先导出数据，不要直接卸载。
+当前预发布使用调试签名，不适合直接作为商店正式发行。使用 `-PnonetSigningStore=/path/to/original/debug.keystore` 可指定测试证书；签名私钥应安全保管。自行构建的签名若不同，不能覆盖安装官方 APK，应用内更新同样拒绝不同签名。更换签名前请先导出数据，不要直接卸载。
 
 本地发布可运行 `pwsh -File scripts/publish.ps1 -SigningStore /path/to/original/debug.keystore`，APK 输出到主项目 `publish/android`，复制校验成功后只保留最新 APK。GitHub 使用独立 `android-v<版本>` 标签和 `Nonet-<版本>.apk`，规则见 [Android 更新协议](src/NonetMusicPlayer.Android/docs/UPDATES.md)。
 
@@ -142,7 +142,7 @@ macOS ZIP 从 `Contents/` 开始组织，解压到 `Nonet.app/` 内；Linux/macO
 
 ## 🗂️ 项目组织
 
-本地开发与发布使用同一个 `NonetMusicPlayer` 目录。Android 是同仓库中的普通源码目录，不是子模块；原本的私人开发历史不公开。`publish`、`artifacts` 和 NuGet 缓存均不提交；使用数据与本地归档不得合入公开 Git 历史。
+桌面、CLI、Android 与共享代码位于同一仓库；Android 是普通源码目录，不是子模块。`publish` 存放发行产物，`artifacts` 存放构建暂存和测试结果。
 
 ```text
 src/NonetMusicPlayer.Desktop/           Avalonia 桌面宿主
@@ -157,9 +157,9 @@ docs/                                 开发文档、使用手册、第三方许
 assets/icons/                         图标源文件及跨平台表示
 ```
 
-插件模板是独立仓库 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)，可克隆到同级目录 `../NonetMusicPlayerPlugin`。插件源码与播放器分开，但开发通过 `ProjectReference` 引用本仓库 `src/NonetMusicPlayer.PluginSdk`，打包使用 `tools/NonetMusicPlayer.PluginPackager`，调试运行本仓库桌面宿主。没有播放器源码不能构建新模板；不再复制 SDK。
+插件模板是独立仓库 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)，可克隆到同级目录 `../NonetMusicPlayerPlugin`。插件通过 `ProjectReference` 引用本仓库 `src/NonetMusicPlayer.PluginSdk`，打包使用 `tools/NonetMusicPlayer.PluginPackager`，调试运行桌面宿主。构建模板需要本仓库源码，模板不包含 SDK 副本。
 
-具体插件是独立项目，不放在播放器源码仓库内；本地统一放在 `../MyNonetMusicPlayerPlugin/<插件项目>/`，由各项目自己的脚本生成包。主解决方案、默认测试及公开源码导出不依赖这些目录，`samples/` 不参与 Git 跟踪或 GitHub 提交。
+插件以独立项目维护，由各项目的构建脚本生成 `.impp` 包。主解决方案和默认测试不依赖具体插件项目；开发步骤见[插件开发文档](docs/PLUGIN_DEVELOPMENT.md)。
 
 ## ✅ 验证与参与开发
 
@@ -173,7 +173,7 @@ dotnet run --project tools/NonetMusicPlayer.PluginPackager -c Release -- help
 
 UI 夹具使用 Avalonia.Headless 与隔离测试数据，不等同于跨平台实际交互、音频设备及安装验证。系统相关测试须在对应平台继续执行。
 
-本版执行范围与平台限制见 [RELEASE_VALIDATION.md](docs/RELEASE_VALIDATION.md) 与 [Android 测试记录](src/NonetMusicPlayer.Android/docs/TESTING.md)。提交前运行受影响模块的构建、测试及 `git diff --check`，同步变更日志，不提交凭据、签名、使用数据或生成包。没有神奇的“全平台测试通过”徽章：测试过哪里，就写哪里。
+各版本的验证范围与平台限制见 [RELEASE_VALIDATION.md](docs/RELEASE_VALIDATION.md) 和 [Android 测试记录](src/NonetMusicPlayer.Android/docs/TESTING.md)。提交前请运行受影响模块的构建、测试及 `git diff --check`，同步变更日志，并注明测试环境和未验证的平台。
 
 构建、变更和接口资料：[CHANGELOG](CHANGELOG.md)、[CLI 构建与使用](src/NonetMusicPlayerCli/README.md)、[插件开发与依赖](docs/PLUGIN_DEVELOPMENT.md)、[插件 Contract](docs/PLUGIN_DEVELOPMENT.md)、[存储](docs/STORAGE.md)、[本地化](docs/LOCALIZATION.md)。
 

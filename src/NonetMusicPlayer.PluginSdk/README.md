@@ -18,7 +18,7 @@ var manifest = PluginPackageInspector.Inspect(path);
 
 `PluginMessages.Translate` 是可选的资源查询委托，播放器注入其本地化目录；独立工具使用英文后备提示。运行时网络、进程、页面创建及生命周期调度由宿主完成，SDK 只定义和验证 Contract，不执行插件。
 
-独立模板通过 ProjectReference 依赖主项目本目录，不复制 SDK 或维护摘要快照。打包使用主项目 tools/NonetMusicPlayer.PluginPackager；开发时先取得主项目源码，并在真实宿主中验证插件。模板本次不提交 GitHub。
+独立模板通过 ProjectReference 依赖主项目本目录，不复制 SDK 或维护摘要快照。打包使用主项目 tools/NonetMusicPlayer.PluginPackager；开发时先取得主项目源码，并在真实宿主中验证插件。
 
 SDK 3.1 新增 `lyrics` 独立进程插件、`lyrics-search` 页面部件与 `lyrics.more / match-lyrics` 菜单动作。歌词进程只接收歌曲元数据，不接收源音频路径。`audio-tags` 是宿主写标签能力声明，不是进程沙箱；安装包无法预先授予 `AudioTagWriteConsent`。详见插件参考文档。
 

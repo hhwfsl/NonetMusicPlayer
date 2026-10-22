@@ -77,7 +77,7 @@ initialize(contractVersion=2, configuration, storageDirectory, capabilities)
 
 帧包括 revision、busy、state 和 requests。busy=false 无闲置轮询，插件事件/用户动作可再次唤醒；busy=true 时同步。服务请求为唯一 id/service/arguments，宿主完成后回传结果。不得重用请求 ID；取消任务须移除未完成请求，避免取消后仍执行事务。
 
-托管接口 INonetExtension 使用相同 DTO 的 InitializeAsync/InvokeAsync/SyncAsync/CompleteAsync/EventAsync/DisposeAsync，不依赖 Avalonia。业务代码不持有 UI 对象，使用状态渲染。源码夹具 tests/NonetMusicPlayer.ExtensionFixture 可用于阅读协议，不含任何私人插件。
+托管接口 INonetExtension 使用相同 DTO 的 InitializeAsync/InvokeAsync/SyncAsync/CompleteAsync/EventAsync/DisposeAsync，不依赖 Avalonia。业务代码不持有 UI 对象，使用状态渲染。源码夹具 tests/NonetMusicPlayer.ExtensionFixture 提供协议实现示例。
 
 ## 服务与安全
 
