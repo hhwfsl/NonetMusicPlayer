@@ -1,0 +1,30 @@
+<resources>
+    <string name="lan_title">デバイス共有</string>
+    <string name="lan_sharing">Nonet の音楽を共有中</string>
+    <string name="lan_notification">接続したデバイスで独立して再生できます。</string>
+    <string name="lan_stop">共有を停止</string>
+    <string name="lan_connect_failed">招待、ネットワーク、ファイアウォールを確認してください。</string>
+    <string name="lan_disconnected">切断しました。保存した曲は再接続後に再生できます。</string>
+    <string name="lan_start_failed">共有を開始できません。</string>
+    <string name="lan_privacy">ローカルのプレイリスト、音声、画像、歌詞のみ共有します。設定、履歴、再生操作は共有しません。終了時に停止します。</string>
+    <string name="lan_connect">デバイスに接続</string>
+    <string name="lan_invitation">接続招待</string>
+    <string name="lan_invitation_hint">同じ信頼できる LAN にある、自分の Nonet の接続招待を貼り付けてください。招待は5分間有効です。</string>
+    <string name="lan_copy">招待をコピー</string>
+    <string name="lan_renew">招待を更新</string>
+    <string name="lan_disconnect">切断</string>
+    <string name="lan_empty">接続中のデバイスはありません</string>
+    <string name="lan_share">このライブラリを共有</string>
+    <string name="device_song">デバイス</string>
+    <string name="cloud_song">クラウド</string>
+    <string name="open_navigation">ナビゲーションを開く</string>
+    <string name="close_navigation">ナビゲーションを閉じる</string>
+    <string name="folders">フォルダー</string>
+    <string name="scan_music">音楽をスキャン</string>
+    <string name="device_music">デバイスの音楽</string>
+    <string name="create_from_folder">フォルダーから作成</string>
+    <string name="queue_empty">再生キューは空です</string>
+    <string name="unlink_lyrics">歌詞の関連付けを解除</string>
+    <string name="device_offline">オフライン</string>
+    <string name="search_settings">設定を検索</string>
+</resources>

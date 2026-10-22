@@ -1,0 +1,138 @@
+<resources>
+    <string name="update_title">Nonet 更新</string>
+    <string name="update_check">检查更新</string>
+    <string name="update_view">查看更新</string>
+    <string name="update_checking">正在检查 GitHub…</string>
+    <string name="update_current">当前已是最新版本。</string>
+    <string name="update_download">下载更新</string>
+    <string name="update_download_background">后台下载</string>
+    <string name="update_to_background">转到后台下载</string>
+    <string name="update_cancel_download">取消下载</string>
+    <string name="update_progress">正在下载 · %1$d%%</string>
+    <string name="update_verifying">正在校验更新包及签名…</string>
+    <string name="update_cancelling">正在取消并清理临时文件…</string>
+    <string name="update_cancelled">已取消更新并清理临时文件。</string>
+    <string name="update_ready">下载完成，点击安装更新。</string>
+    <string name="update_install">安装更新</string>
+    <string name="update_install_hint">下载完成后由 Android 确认安装；如有提示，请允许 Nonet 安装未知应用。音乐库数据会保留。</string>
+    <string name="update_install_permission">尚未允许安装。请为 Nonet 开启“安装未知应用”，然后重试。</string>
+    <string name="update_install_failed">无法打开系统安装器。已保留校验通过的更新包，可点击安装重试。</string>
+    <string name="update_invalid_package">更新包的摘要、应用身份、版本、签名或设备要求校验失败，未安装任何内容。</string>
+    <string name="update_check_failed">无法检查更新，请检查网络连接后重试。</string>
+    <string name="update_download_failed">下载失败，已清理临时文件，请重试。</string>
+    <string name="update_rate_limit">GitHub 暂时限制了检查请求，请稍后重试。</string>
+    <string name="update_notification_permission">允许通知后，才能在通知栏查看后台进度和取消下载；否则请保留下载弹窗。</string>
+    <string name="update_later">暂不更新</string>
+    <string name="update_retry">重试</string>
+    <string name="update_no_notes">此版本未提供更新说明。</string>
+    <string name="update_repository">仓库</string>
+    <string name="update_open_failed">没有可用于打开仓库的浏览器。</string>
+    <string name="lan_available">设备可用</string>
+    <string name="lan_reconnecting">暂时无法访问，正在自动恢复；配对与歌单已保留</string>
+    <string name="lan_background_settings">后台运行设置</string>
+    <string name="lan_background_hint">Android 省电策略可能暂停后台网络。可在系统设置中允许 Nonet 不受电池优化限制，这可能增加耗电。暂时停网不会解除配对；系统强行终止进程后仍需重新连接。</string>
+    <string name="music">音乐</string><string name="playlists">歌单</string><string name="sources">音源</string><string name="settings">设置</string>
+    <string name="overview">总览</string><string name="tracks_count">%1$d 首歌曲</string><string name="playlists_count">%1$d 个歌单</string>
+    <string name="albums">专辑</string><string name="artists">艺术家</string><string name="view_all">查看全部</string><string name="recent">最近播放</string>
+    <string name="statistics">听歌统计</string><string name="liked">我喜欢</string><string name="empty_music">让音乐成为日常的一部分</string>
+    <string name="empty_music_body">新建歌单并添加音频文件，开始聆听。</string><string name="empty_playlist">歌单中还没有歌曲</string><string name="no_results">没有匹配的歌曲</string>
+    <string name="create_playlist">新建歌单</string><string name="playlist_name">歌单名称</string><string name="description">简介</string>
+    <string name="add_files">添加音乐</string><string name="add_folder">添加文件夹</string><string name="importing">正在导入音乐…</string>
+    <string name="play">播放</string><string name="pause">暂停</string><string name="previous">上一首</string><string name="next">下一首</string><string name="now_playing">正在播放</string>
+    <string name="back">返回</string><string name="close">关闭</string><string name="cancel">取消</string><string name="save">保存</string><string name="delete">删除</string><string name="edit">编辑</string>
+    <string name="more">更多</string><string name="search">搜索音乐</string><string name="clear">清空</string><string name="remove">从歌单中移除</string>
+    <string name="add_to_playlist">添加到歌单</string><string name="add_liked">添加到我喜欢</string><string name="remove_liked">从我喜欢中移除</string>
+    <string name="move_up">上移</string><string name="move_down">下移</string><string name="track_info">歌曲信息</string><string name="unknown_artist">未知艺术家</string><string name="unknown_album">未知专辑</string>
+    <string name="lyrics">歌词</string><string name="artwork">封面</string><string name="no_lyrics">暂无歌词</string><string name="import_lyrics">导入歌词</string>
+    <string name="repeat_all">列表循环</string><string name="repeat_one">单曲循环</string><string name="shuffle">随机播放</string><string name="volume">音量</string>
+    <string name="appearance">外观</string><string name="theme">主题</string><string name="theme_system">跟随系统</string><string name="theme_light">浅色</string><string name="theme_dark">深色</string>
+    <string name="accent">主题色</string><string name="language">语言</string><string name="font_size">文字大小</string><string name="playback_settings">播放与历史</string>
+    <string name="history_limit">最近播放保留上限</string><string name="reset_settings">恢复默认设置</string><string name="reset_confirm">恢复默认设置？歌单和音频文件不会被删除。</string>
+    <string name="delete_confirm">删除此歌单？音频文件不会被删除。</string><string name="confirm">确认</string><string name="about">关于</string><string name="version">版本 %1$s</string>
+    <string name="provider_name">个人服务器</string><string name="provider_description">内置 JSON 流媒体连接器</string><string name="provider_enable">启用流媒体</string>
+    <string name="server_url">服务器地址（HTTPS）</string><string name="catalog_path">曲库接口路径</string><string name="playback_template">播放路径 · {id}</string><string name="items_path">歌曲数组路径</string>
+    <string name="token">Bearer 令牌</string><string name="token_hint">留空保留现有令牌</string><string name="refresh_catalog">刷新曲库</string>
+    <string name="import_connector">导入连接器 JSON</string><string name="provider_empty">连接自己的音乐服务器以浏览曲库。</string><string name="configuration">配置</string>
+    <string name="provider_disabled">流媒体已关闭</string><string name="invalid_settings">输入不合法，未更改设置</string><string name="settings_saved">设置已保存</string>
+    <string name="import_complete">已添加音乐到歌单</string><string name="import_partial">已添加音乐，部分文件无法导入</string><string name="import_failed">没有可导入的音频</string>
+    <string name="operation_failed">操作失败，请检查访问权限和配置。</string><string name="playback_failed">歌曲播放失败，正在尝试下一首</string>
+    <string name="no_playable_tracks">没有可正常播放的歌曲，已暂停</string><string name="output_changed">音频输出已改变，点击播放即可继续</string>
+    <string name="lyrics_imported">歌词已导入</string><string name="catalog_refreshed">服务器曲库已刷新</string><string name="hours">%1$.1f 小时</string>
+    <string name="total_time">听歌时长</string><string name="total_plays">播放次数</string><string name="tracks_heard">聆听歌曲</string><string name="active_days">活跃天数</string><string name="top_track">聆听最久的歌曲</string><string name="no_statistics">聆听记录将在这里显示</string>
+    <string name="privacy">音频保留在原位置。歌单、歌词、设置和日志存储在本设备的应用私有目录。</string>
+    <string name="home">主页</string>
+    <string name="invalid_lyrics">歌词导入失败，请选择非空的 LRC 或 TXT 文件（最大 2 MB）。</string>
+    <string name="player_connecting">正在连接播放器，请稍后重试。</string>
+    <string name="crop_image">裁剪图片</string>
+    <string name="crop_hint">拖动调整位置，双指或使用滑块缩放。</string>
+    <string name="invalid_image">无法使用图片，请选择不超过 20 MB、1 亿像素的图片。</string>
+    <string name="change_cover">更换封面</string>
+    <string name="restore_cover">恢复默认封面</string>
+    <string name="export_lyrics">导出歌词</string>
+    <string name="export_m3u">导出 M3U</string>
+    <string name="export_complete">导出完成</string>
+    <string name="playlist_file_prefix">歌单</string>
+    <string name="batch">批量操作</string>
+    <string name="exit_selection">退出批量操作</string>
+    <string name="selected_count">已选 %1$d 首</string>
+    <string name="selected_actions">操作所选歌曲</string>
+    <string name="reorder">长按拖动调整顺序</string>
+    <string name="browse_music">浏览歌曲</string>
+    <string name="remove_recent">移出最近播放</string>
+    <string name="remove_everywhere">从全部歌单移除</string>
+    <string name="remove_everywhere_confirm">将所选歌曲从全部歌单移除？不会删除原音频文件。</string>
+    <string name="background_image">背景图片</string>
+    <string name="background_opacity">背景不透明度</string>
+    <string name="remove_background">移除背景图片</string>
+    <string name="system_integration">Android 系统集成</string>
+    <string name="notification_settings">通知设置</string>
+    <string name="battery_settings">后台电池设置</string>
+    <string name="background_hint">若系统限制后台播放，请在 Android 设置中允许后台活动。</string>
+    <string name="backup">数据与备份</string>
+    <string name="backup_export">导出备份</string>
+    <string name="backup_import">恢复备份</string>
+    <string name="backup_confirm">使用此备份替换歌单、历史和设置？不会修改原音频文件。恢复后可能需要重新授予文件访问权限。</string>
+    <string name="backup_done">备份完成</string>
+    <string name="backup_restored">备份恢复完成</string>
+    <string name="help">使用手册</string>
+    <string name="clear_history">清空最近播放</string>
+    <string name="clear_history_confirm">清空最近播放？不会影响歌单。</string>
+    <string name="top_plays">播放次数最多的歌曲</string>
+    <string name="top_artist">聆听时间最长的艺术家</string>
+    <string name="day_stats">每日统计</string>
+    <string name="month_stats">每月统计</string>
+    <string name="year_stats">每年统计</string>
+    <string name="seek_lyric">从此句播放</string>
+    <string name="no_configuration">未配置</string>
+    <string name="service_running">Nonet 正在播放</string>
+    <string name="queue">播放队列</string>
+    <string name="user_guide_body">在歌单页新建歌单，通过添加音乐或文件夹导入歌曲。点击歌曲播放，点击底部迷你播放器打开封面与歌词。更多 → 导入歌词支持 2 MB 以内的 LRC 或 TXT。拖动圆形进度柄跳转；长按排序柄并上下拖动可调整顺序。批量操作模式提供多选操作。最近播放只移除历史，专辑和艺术家是分类汇总。备份包含歌单、设置、歌词和图片，不含原音频或密码；恢复后可能需要重新授予文件夹访问权限。后台媒体服务提供通知和锁屏控制，系统胶囊展示取决于设备支持。</string>
+    <string name="scan_settings">扫描设备歌曲</string>
+    <string name="scan_minimum">过滤短于以下时长的音频</string>
+    <string name="scan_unit">时长单位</string>
+    <string name="scan_seconds">秒</string>
+    <string name="scan_minutes">分钟</string>
+    <string name="scan_included">扫描文件夹</string>
+    <string name="scan_excluded">排除文件夹</string>
+    <string name="scan_all">Android 媒体库中的全部设备音乐</string>
+    <string name="scan_excluded_empty">未设置排除文件夹</string>
+    <string name="scan_rules_hint">时长设为 0 表示不过滤，最长可设为 7 天。请选择设备存储中的文件夹；设置扫描文件夹后只扫描这些目录，排除目录及其子目录始终优先排除。已导入的歌曲不会被删除。</string>
+    <string name="scan_confirm_body">将符合条件的歌曲添加到“设备音乐”歌单？此操作不会修改源文件，也不会移除已导入的歌曲。</string>
+    <string name="scan_threshold">最短时长：%1$d 秒</string>
+    <string name="scan_start">开始扫描</string>
+    <string name="scan_empty">没有符合扫描条件的音频</string>
+    <string name="scan_failed">扫描失败，请检查文件夹授权和扫描上限；本次扫描结果未添加</string>
+    <string name="scan_permission_denied">未获得音乐访问权限，没有执行扫描</string>
+    <string name="lan_source_desktop">桌面</string>
+    <string name="lan_source_mobile">移动</string>
+    <string name="lan_source_unknown">设备</string>
+    <string name="lan_playlist_source">%1$s · %2$s</string>
+    <string name="lan_pair_title">设备连接请求</string>
+    <string name="lan_pair_body">是否允许“%1$s”（%2$s）连接并互相访问共享歌单和音乐？两端独立播放。请求将在 %3$d 秒后失效。</string>
+    <string name="lan_approval_wait">连接确认等待时间（秒）</string>
+    <string name="lan_approval_wait_hint">默认 30 秒，可设置 10–120 秒。后台收到请求时显示系统通知；超时自动拒绝。</string>
+    <string name="lan_device_disconnected">%1$s 的连接已断开。已保存的歌曲引用保留，重新连接后可播放。</string>
+    <string name="lan_accept">接受连接</string>
+    <string name="lan_reject">拒绝</string>
+    <string name="lan_waiting">正在等待对方设备确认连接…</string>
+</resources>

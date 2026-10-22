@@ -1,0 +1,30 @@
+<resources>
+    <string name="lan_title">设备互听</string>
+    <string name="lan_sharing">正在共享 Nonet 音乐</string>
+    <string name="lan_notification">已配对设备可独立听歌，点击打开 Nonet。</string>
+    <string name="lan_stop">停止共享</string>
+    <string name="lan_connect_failed">无法连接，请检查邀请、网络和防火墙。</string>
+    <string name="lan_disconnected">设备已断开，已保存的移动歌曲引用保留，重新连接后可播放。</string>
+    <string name="lan_start_failed">无法启动局域网共享。</string>
+    <string name="lan_privacy">仅共享本地歌单、音频、封面和歌词，不共享设置、历史或播放控制。默认关闭，退出后停止共享。</string>
+    <string name="lan_connect">连接设备</string>
+    <string name="lan_invitation">连接邀请</string>
+    <string name="lan_invitation_hint">粘贴另一端 Nonet 的连接邀请，确认来自自己的设备，并在同一可信局域网中使用。邀请五分钟内有效。</string>
+    <string name="lan_copy">复制连接邀请</string>
+    <string name="lan_renew">刷新连接邀请</string>
+    <string name="lan_disconnect">断开连接</string>
+    <string name="lan_empty">尚未连接设备</string>
+    <string name="lan_share">共享本机音乐</string>
+    <string name="device_song">移动</string>
+    <string name="cloud_song">云端</string>
+    <string name="open_navigation">展开导航</string>
+    <string name="close_navigation">收起导航</string>
+    <string name="folders">文件夹</string>
+    <string name="scan_music">扫描设备音乐</string>
+    <string name="device_music">本机音乐</string>
+    <string name="create_from_folder">以文件夹新建</string>
+    <string name="queue_empty">播放队列为空</string>
+    <string name="unlink_lyrics">取消歌词关联</string>
+    <string name="device_offline">离线</string>
+    <string name="search_settings">搜索设置</string>
+</resources>

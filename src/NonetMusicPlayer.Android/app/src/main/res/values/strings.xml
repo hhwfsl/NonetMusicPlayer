@@ -1,0 +1,139 @@
+<resources>
+    <string name="update_title">Nonet update</string>
+    <string name="update_check">Check for updates</string>
+    <string name="update_view">View update</string>
+    <string name="update_checking">Checking GitHub…</string>
+    <string name="update_current">You are up to date.</string>
+    <string name="update_download">Download</string>
+    <string name="update_download_background">Download in background</string>
+    <string name="update_to_background">Continue in background</string>
+    <string name="update_cancel_download">Cancel download</string>
+    <string name="update_progress">Downloading · %1$d%%</string>
+    <string name="update_verifying">Verifying package and signature…</string>
+    <string name="update_cancelling">Cancelling and removing temporary files…</string>
+    <string name="update_cancelled">Update cancelled. Temporary files removed.</string>
+    <string name="update_ready">Download complete. Tap to install.</string>
+    <string name="update_install">Install update</string>
+    <string name="update_install_hint">Android will ask you to confirm installation. Allow installation from Nonet if requested. Your library will be preserved.</string>
+    <string name="update_install_permission">Installation was not allowed. Enable “Install unknown apps” for Nonet, then try again.</string>
+    <string name="update_install_failed">Could not open the system installer. The verified update is retained; tap Install to retry.</string>
+    <string name="update_invalid_package">Package verification failed: unexpected hash, app identity, version, signature, or device requirements. Nothing was installed.</string>
+    <string name="update_check_failed">Could not check for updates. Check your connection and try again.</string>
+    <string name="update_download_failed">Download failed. Temporary files were removed; try again.</string>
+    <string name="update_rate_limit">GitHub temporarily limited update requests. Try again later.</string>
+    <string name="update_notification_permission">Allow notifications to see background download progress and cancellation controls. Otherwise keep the download dialog open.</string>
+    <string name="update_later">Not now</string>
+    <string name="update_retry">Try again</string>
+    <string name="update_no_notes">No release notes were provided.</string>
+    <string name="update_repository">Repository</string>
+    <string name="update_open_failed">No browser is available to open the repository.</string>
+    <string name="lan_available">Device available</string>
+    <string name="lan_reconnecting">Temporarily unavailable; retrying automatically. Pairing and playlists are retained.</string>
+    <string name="lan_background_settings">Background activity settings</string>
+    <string name="lan_background_hint">Android power saving may suspend background networking. You can exclude Nonet from battery optimization in system settings; this may increase battery use. Temporary loss retains pairing; reconnect if the system terminates the process.</string>
+    <string name="app_name" translatable="false">Nonet</string>
+    <string name="music">Music</string><string name="playlists">Playlists</string><string name="sources">Sources</string><string name="settings">Settings</string>
+    <string name="overview">Overview</string><string name="tracks_count">Tracks · %1$d</string><string name="playlists_count">Playlists · %1$d</string>
+    <string name="albums">Albums</string><string name="artists">Artists</string><string name="view_all">View all</string><string name="recent">Recently played</string>
+    <string name="statistics">Listening statistics</string><string name="liked">Liked</string><string name="empty_music">Your music, your space</string>
+    <string name="empty_music_body">Create a playlist and add audio files to get started.</string><string name="empty_playlist">No tracks yet</string><string name="no_results">No matching tracks</string>
+    <string name="create_playlist">New playlist</string><string name="playlist_name">Playlist name</string><string name="description">Description</string>
+    <string name="add_files">Add audio files</string><string name="add_folder">Add folder</string><string name="importing">Importing audio…</string>
+    <string name="play">Play</string><string name="pause">Pause</string><string name="previous">Previous track</string><string name="next">Next track</string><string name="now_playing">Now playing</string>
+    <string name="back">Back</string><string name="close">Close</string><string name="cancel">Cancel</string><string name="save">Save</string><string name="delete">Delete</string><string name="edit">Edit</string>
+    <string name="more">More</string><string name="search">Search music</string><string name="clear">Clear</string><string name="remove">Remove from playlist</string>
+    <string name="add_to_playlist">Add to playlist</string><string name="add_liked">Add to Liked</string><string name="remove_liked">Remove from Liked</string>
+    <string name="move_up">Move up</string><string name="move_down">Move down</string><string name="track_info">Track information</string><string name="unknown_artist">Unknown artist</string><string name="unknown_album">Unknown album</string>
+    <string name="lyrics">Lyrics</string><string name="artwork">Artwork</string><string name="no_lyrics">No lyrics available</string><string name="import_lyrics">Import lyrics</string>
+    <string name="repeat_all">Repeat playlist</string><string name="repeat_one">Repeat track</string><string name="shuffle">Shuffle</string><string name="volume">Volume</string>
+    <string name="appearance">Appearance</string><string name="theme">Theme</string><string name="theme_system">Follow system</string><string name="theme_light">Light</string><string name="theme_dark">Dark</string>
+    <string name="accent">Theme color</string><string name="language">Language</string><string name="font_size">Text size</string><string name="playback_settings">Playback and history</string>
+    <string name="history_limit">History limit</string><string name="reset_settings">Restore default settings</string><string name="reset_confirm">Restore default settings? Playlists and audio files will not be deleted.</string>
+    <string name="delete_confirm">Delete this playlist? Audio files will not be deleted.</string><string name="confirm">Confirm</string><string name="about">About</string><string name="version">Version %1$s</string>
+    <string name="provider_name">Personal server</string><string name="provider_description">Built-in JSON streaming connector</string><string name="provider_enable">Enable streaming</string>
+    <string name="server_url">Server URL (HTTPS)</string><string name="catalog_path">Catalog path</string><string name="playback_template">Playback path · {id}</string><string name="items_path">Track array path</string>
+    <string name="token">Bearer token</string><string name="token_hint">Leave unchanged unless replacing the token</string><string name="refresh_catalog">Refresh catalog</string>
+    <string name="import_connector">Import connector JSON</string><string name="provider_empty">Connect your music server to browse its catalog.</string><string name="configuration">Configuration</string>
+    <string name="provider_disabled">Streaming is disabled</string><string name="invalid_settings">Invalid value; settings were not changed</string><string name="settings_saved">Settings saved</string>
+    <string name="import_complete">Audio added to playlist</string><string name="import_partial">Audio added; some files could not be imported</string><string name="import_failed">No supported audio could be imported</string>
+    <string name="operation_failed">Operation failed. Check access permissions and configuration.</string><string name="playback_failed">Unable to play this track; trying the next one</string>
+    <string name="no_playable_tracks">No playable tracks; playback paused</string><string name="output_changed">Audio output changed; tap Play to continue</string>
+    <string name="lyrics_imported">Lyrics imported</string><string name="catalog_refreshed">Server catalog refreshed</string><string name="hours">%1$.1f h</string>
+    <string name="total_time">Listening time</string><string name="total_plays">Plays</string><string name="tracks_heard">Tracks heard</string><string name="active_days">Active days</string><string name="top_track">Most listened track</string><string name="no_statistics">Listening history will appear here</string>
+    <string name="privacy">Audio stays in its original location. Playlists, lyrics, settings and logs are stored privately on this device.</string>
+    <string name="home">Home</string>
+    <string name="invalid_lyrics">Lyrics could not be imported. Select a non-empty LRC or TXT file (up to 2 MB).</string>
+    <string name="player_connecting">Connecting to the player. Try again shortly.</string>
+    <string name="crop_image">Crop image</string>
+    <string name="crop_hint">Drag to position; pinch or use the slider to zoom.</string>
+    <string name="invalid_image">Image unavailable. Choose an image up to 20 MB and 100 megapixels.</string>
+    <string name="change_cover">Change cover</string>
+    <string name="restore_cover">Restore default cover</string>
+    <string name="export_lyrics">Export lyrics</string>
+    <string name="export_m3u">Export M3U</string>
+    <string name="export_complete">Export completed</string>
+    <string name="playlist_file_prefix">Playlist</string>
+    <string name="batch">Select tracks</string>
+    <string name="exit_selection">Exit selection</string>
+    <string name="selected_count">%1$d selected</string>
+    <string name="selected_actions">Selected track actions</string>
+    <string name="reorder">Hold and drag to reorder</string>
+    <string name="browse_music">Browse tracks</string>
+    <string name="remove_recent">Remove from recently played</string>
+    <string name="remove_everywhere">Remove from all playlists</string>
+    <string name="remove_everywhere_confirm">Remove the selected tracks from all playlists? Original audio files will not be deleted.</string>
+    <string name="background_image">Background image</string>
+    <string name="background_opacity">Background opacity</string>
+    <string name="remove_background">Remove background</string>
+    <string name="system_integration">Android integration</string>
+    <string name="notification_settings">Notification settings</string>
+    <string name="battery_settings">Background battery settings</string>
+    <string name="background_hint">If the system restricts background audio, allow background activity in Android settings.</string>
+    <string name="backup">Data and backup</string>
+    <string name="backup_export">Export backup</string>
+    <string name="backup_import">Restore backup</string>
+    <string name="backup_confirm">Replace playlists, history and settings with this backup? Original audio files are not modified. File permissions may need to be granted again.</string>
+    <string name="backup_done">Backup completed</string>
+    <string name="backup_restored">Backup restored</string>
+    <string name="help">User guide</string>
+    <string name="clear_history">Clear listening history</string>
+    <string name="clear_history_confirm">Clear recently played? Playlists are not affected.</string>
+    <string name="top_plays">Most played track</string>
+    <string name="top_artist">Most listened artist</string>
+    <string name="day_stats">Daily</string>
+    <string name="month_stats">Monthly</string>
+    <string name="year_stats">Yearly</string>
+    <string name="seek_lyric">Play from this line</string>
+    <string name="no_configuration">Not configured</string>
+    <string name="service_running">Nonet is playing</string>
+    <string name="queue">Play queue</string>
+    <string name="user_guide_body">Create a playlist, then use Add audio files or Add folder. Tap a song to play. Tap the mini-player to open artwork and lyrics. More → Import lyrics accepts LRC or TXT files up to 2 MB. Drag the round progress thumb to seek. Hold a reorder handle and drag vertically to change order. Selection mode offers batch actions. Recently played removes history only. Album and artist views are classifications. Backup stores playlists, settings, lyrics and images, not original audio or passwords. Android may require renewed folder access after restoring. System media notifications and lock-screen controls work with the background service. OEM capsule display depends on device support.</string>
+    <string name="scan_settings">Device music scanning</string>
+    <string name="scan_minimum">Skip audio shorter than</string>
+    <string name="scan_unit">Duration unit</string>
+    <string name="scan_seconds">Seconds</string>
+    <string name="scan_minutes">Minutes</string>
+    <string name="scan_included">Included folders</string>
+    <string name="scan_excluded">Excluded folders</string>
+    <string name="scan_all">All device music indexed by Android</string>
+    <string name="scan_excluded_empty">No excluded folders</string>
+    <string name="scan_rules_hint">0 disables the duration filter. Select folders from device storage. Included folders limit the scan; excluded folders and their subfolders always take precedence. Existing imported songs are not removed. Maximum duration filter: 7 days.</string>
+    <string name="scan_confirm_body">Add matching songs to the Device music playlist? This does not modify source files or remove existing songs.</string>
+    <string name="scan_threshold">Minimum duration: %1$d seconds</string>
+    <string name="scan_start">Start scanning</string>
+    <string name="scan_empty">No audio matches the scan rules</string>
+    <string name="scan_failed">Scan failed. Check folder access and scan limits in settings. No scan results were added.</string>
+    <string name="scan_permission_denied">Music access was not granted. Nothing was scanned.</string>
+    <string name="lan_source_desktop">Desktop</string>
+    <string name="lan_source_mobile">Mobile</string>
+    <string name="lan_source_unknown">Device</string>
+    <string name="lan_playlist_source">%1$s · %2$s</string>
+    <string name="lan_pair_title">Device connection request</string>
+    <string name="lan_pair_body">Allow “%1$s” (%2$s) to connect and exchange access to shared playlists and music? Playback remains independent. The request expires after %3$d seconds.</string>
+    <string name="lan_approval_wait">Connection approval timeout (seconds)</string>
+    <string name="lan_approval_wait_hint">Default: 30 seconds; range: 10–120. Background requests show a notification. Expired requests are rejected.</string>
+    <string name="lan_device_disconnected">%1$s disconnected. Saved tracks remain available after reconnection.</string>
+    <string name="lan_accept">Accept</string>
+    <string name="lan_reject">Reject</string>
+    <string name="lan_waiting">Waiting for confirmation on the other device…</string>
+</resources>

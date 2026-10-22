@@ -1,0 +1,30 @@
+<resources>
+    <string name="lan_title">Nearby libraries</string>
+    <string name="lan_sharing">Sharing Nonet music</string>
+    <string name="lan_notification">Paired devices can listen independently. Tap to open Nonet.</string>
+    <string name="lan_stop">Stop sharing</string>
+    <string name="lan_connect_failed">Could not connect. Check the invitation, network and firewall.</string>
+    <string name="lan_disconnected">Device disconnected. Saved device songs remain for reconnection.</string>
+    <string name="lan_start_failed">Could not start local sharing.</string>
+    <string name="lan_privacy">Share local playlists, audio, covers and lyrics only. No settings, history or playback control. Off by default; stops on exit.</string>
+    <string name="lan_connect">Connect device</string>
+    <string name="lan_invitation">Connection invitation</string>
+    <string name="lan_invitation_hint">Paste an invitation from Nonet on your own device. Use the same trusted LAN. Invitations expire after five minutes.</string>
+    <string name="lan_copy">Copy invitation</string>
+    <string name="lan_renew">Renew invitation</string>
+    <string name="lan_disconnect">Disconnect</string>
+    <string name="lan_empty">No connected devices</string>
+    <string name="lan_share">Share this library</string>
+    <string name="device_song">Device</string>
+    <string name="cloud_song">Cloud</string>
+    <string name="open_navigation">Open navigation</string>
+    <string name="close_navigation">Close navigation</string>
+    <string name="folders">Folders</string>
+    <string name="scan_music">Scan device music</string>
+    <string name="device_music">Device music</string>
+    <string name="create_from_folder">Create from folder</string>
+    <string name="queue_empty">No tracks in the play queue</string>
+    <string name="unlink_lyrics">Unlink lyrics</string>
+    <string name="device_offline">Offline</string>
+    <string name="search_settings">Search settings</string>
+</resources>

@@ -1,0 +1,138 @@
+<resources>
+    <string name="update_title">Nonet の更新</string>
+    <string name="update_check">更新を確認</string>
+    <string name="update_view">更新を表示</string>
+    <string name="update_checking">GitHub を確認中…</string>
+    <string name="update_current">最新バージョンです。</string>
+    <string name="update_download">ダウンロード</string>
+    <string name="update_download_background">バックグラウンドで取得</string>
+    <string name="update_to_background">バックグラウンドへ</string>
+    <string name="update_cancel_download">ダウンロードを中止</string>
+    <string name="update_progress">ダウンロード中 · %1$d%%</string>
+    <string name="update_verifying">パッケージと署名を検証中…</string>
+    <string name="update_cancelling">中止して一時ファイルを削除中…</string>
+    <string name="update_cancelled">更新を中止し、一時ファイルを削除しました。</string>
+    <string name="update_ready">ダウンロード完了。タップしてインストール。</string>
+    <string name="update_install">更新をインストール</string>
+    <string name="update_install_hint">Android の確認画面でインストールします。必要に応じて Nonet に不明なアプリのインストールを許可してください。ライブラリは保持されます。</string>
+    <string name="update_install_permission">インストールが許可されていません。Nonet に不明なアプリのインストールを許可して再試行してください。</string>
+    <string name="update_install_failed">システムのインストーラを開けません。検証済みの更新を保持しています。再試行できます。</string>
+    <string name="update_invalid_package">ハッシュ、アプリ識別、バージョン、署名または端末要件の検証に失敗しました。何もインストールしていません。</string>
+    <string name="update_check_failed">更新を確認できません。接続を確認して再試行してください。</string>
+    <string name="update_download_failed">ダウンロードに失敗しました。一時ファイルを削除しました。再試行してください。</string>
+    <string name="update_rate_limit">GitHub のリクエスト制限に達しました。しばらくして再試行してください。</string>
+    <string name="update_notification_permission">通知を許可するとバックグラウンドの進捗と中止操作を表示できます。許可しない場合はダウンロード画面を開いたままにしてください。</string>
+    <string name="update_later">後で</string>
+    <string name="update_retry">再試行</string>
+    <string name="update_no_notes">更新内容は提供されていません。</string>
+    <string name="update_repository">リポジトリ</string>
+    <string name="update_open_failed">リポジトリを開くブラウザがありません。</string>
+    <string name="lan_available">接続先は利用可能です</string>
+    <string name="lan_reconnecting">一時的にアクセスできません。ペアリングとプレイリストを保持して自動復旧します。</string>
+    <string name="lan_background_settings">バックグラウンド動作設定</string>
+    <string name="lan_background_hint">Android の省電力機能はバックグラウンド通信を停止する場合があります。システム設定で Nonet を電池最適化の対象外にできますが、電池消費が増える場合があります。一時的な通信停止ではペアリングを保持します。プロセスが強制終了された場合は再接続してください。</string>
+    <string name="music">音楽</string><string name="playlists">プレイリスト</string><string name="sources">音源</string><string name="settings">設定</string>
+    <string name="overview">概要</string><string name="tracks_count">%1$d 曲</string><string name="playlists_count">%1$d プレイリスト</string>
+    <string name="albums">アルバム</string><string name="artists">アーティスト</string><string name="view_all">すべて表示</string><string name="recent">最近の再生</string>
+    <string name="statistics">再生統計</string><string name="liked">お気に入り</string><string name="empty_music">音楽を毎日の一部に</string>
+    <string name="empty_music_body">プレイリストを作成して音声ファイルを追加してください。</string><string name="empty_playlist">曲がありません</string><string name="no_results">一致する曲がありません</string>
+    <string name="create_playlist">新規プレイリスト</string><string name="playlist_name">プレイリスト名</string><string name="description">説明</string>
+    <string name="add_files">音楽を追加</string><string name="add_folder">フォルダーを追加</string><string name="importing">音楽を読み込み中…</string>
+    <string name="play">再生</string><string name="pause">一時停止</string><string name="previous">前の曲</string><string name="next">次の曲</string><string name="now_playing">再生中</string>
+    <string name="back">戻る</string><string name="close">閉じる</string><string name="cancel">キャンセル</string><string name="save">保存</string><string name="delete">削除</string><string name="edit">編集</string>
+    <string name="more">その他</string><string name="search">音楽を検索</string><string name="clear">クリア</string><string name="remove">プレイリストから削除</string>
+    <string name="add_to_playlist">プレイリストに追加</string><string name="add_liked">お気に入りに追加</string><string name="remove_liked">お気に入りから削除</string>
+    <string name="move_up">上へ</string><string name="move_down">下へ</string><string name="track_info">曲の情報</string><string name="unknown_artist">不明なアーティスト</string><string name="unknown_album">不明なアルバム</string>
+    <string name="lyrics">歌詞</string><string name="artwork">ジャケット</string><string name="no_lyrics">歌詞がありません</string><string name="import_lyrics">歌詞を読み込む</string>
+    <string name="repeat_all">リストをリピート</string><string name="repeat_one">1 曲をリピート</string><string name="shuffle">シャッフル</string><string name="volume">音量</string>
+    <string name="appearance">外観</string><string name="theme">テーマ</string><string name="theme_system">システムに従う</string><string name="theme_light">ライト</string><string name="theme_dark">ダーク</string>
+    <string name="accent">テーマカラー</string><string name="language">言語</string><string name="font_size">文字サイズ</string><string name="playback_settings">再生と履歴</string>
+    <string name="history_limit">再生履歴の上限</string><string name="reset_settings">初期設定に戻す</string><string name="reset_confirm">初期設定に戻しますか？曲とプレイリストは削除されません。</string>
+    <string name="delete_confirm">このプレイリストを削除しますか？音声ファイルは削除されません。</string><string name="confirm">確認</string><string name="about">アプリについて</string><string name="version">バージョン %1$s</string>
+    <string name="provider_name">個人サーバー</string><string name="provider_description">内蔵 JSON ストリーミング接続</string><string name="provider_enable">ストリーミングを有効にする</string>
+    <string name="server_url">サーバー URL（HTTPS）</string><string name="catalog_path">ライブラリのパス</string><string name="playback_template">再生パス · {id}</string><string name="items_path">曲の配列パス</string>
+    <string name="token">Bearer トークン</string><string name="token_hint">変更しない場合は空欄のまま</string><string name="refresh_catalog">ライブラリを更新</string>
+    <string name="import_connector">接続 JSON を読み込む</string><string name="provider_empty">音楽サーバーに接続してライブラリを閲覧します。</string><string name="configuration">設定</string>
+    <string name="provider_disabled">ストリーミングは無効です</string><string name="invalid_settings">無効な値です。設定は変更されませんでした</string><string name="settings_saved">設定を保存しました</string>
+    <string name="import_complete">プレイリストに曲を追加しました</string><string name="import_partial">一部のファイルを読み込めませんでした</string><string name="import_failed">読み込み可能な音声がありません</string>
+    <string name="operation_failed">操作に失敗しました。アクセス権限と設定を確認してください。</string><string name="playback_failed">再生できません。次の曲を試しています</string>
+    <string name="no_playable_tracks">再生可能な曲がないため一時停止しました</string><string name="output_changed">音声出力が変更されました。再生を押して続けてください</string>
+    <string name="lyrics_imported">歌詞を読み込みました</string><string name="catalog_refreshed">サーバーのライブラリを更新しました</string><string name="hours">%1$.1f 時間</string>
+    <string name="total_time">再生時間</string><string name="total_plays">再生回数</string><string name="tracks_heard">聴いた曲数</string><string name="active_days">利用日数</string><string name="top_track">最も長く聴いた曲</string><string name="no_statistics">再生記録がここに表示されます</string>
+    <string name="privacy">音声は元の場所に保存されます。プレイリスト、歌詞、設定、ログはこの端末のアプリ専用領域に保存されます。</string>
+    <string name="home">ホーム</string>
+    <string name="invalid_lyrics">歌詞を読み込めません。空でない LRC または TXT ファイル（最大 2 MB）を選択してください。</string>
+    <string name="player_connecting">プレーヤーに接続中です。しばらくしてから再試行してください。</string>
+    <string name="crop_image">画像を切り抜く</string>
+    <string name="crop_hint">ドラッグで移動、ピンチまたはスライダーで拡大。</string>
+    <string name="invalid_image">20 MB、1 億画素以下の画像を選択してください。</string>
+    <string name="change_cover">カバーを変更</string>
+    <string name="restore_cover">既定のカバーに戻す</string>
+    <string name="export_lyrics">歌詞をエクスポート</string>
+    <string name="export_m3u">M3U をエクスポート</string>
+    <string name="export_complete">エクスポート完了</string>
+    <string name="playlist_file_prefix">プレイリスト</string>
+    <string name="batch">曲を選択</string>
+    <string name="exit_selection">選択を終了</string>
+    <string name="selected_count">%1$d 曲選択</string>
+    <string name="selected_actions">選択した曲の操作</string>
+    <string name="reorder">長押しして並べ替え</string>
+    <string name="browse_music">曲を一覧表示</string>
+    <string name="remove_recent">再生履歴から削除</string>
+    <string name="remove_everywhere">すべてのプレイリストから削除</string>
+    <string name="remove_everywhere_confirm">選択した曲をすべてのプレイリストから削除しますか？元の音声ファイルは削除されません。</string>
+    <string name="background_image">背景画像</string>
+    <string name="background_opacity">背景の不透明度</string>
+    <string name="remove_background">背景を削除</string>
+    <string name="system_integration">Android との連携</string>
+    <string name="notification_settings">通知設定</string>
+    <string name="battery_settings">バックグラウンド電池設定</string>
+    <string name="background_hint">再生が制限される場合、Android 設定でバックグラウンド動作を許可してください。</string>
+    <string name="backup">データとバックアップ</string>
+    <string name="backup_export">バックアップを書き出す</string>
+    <string name="backup_import">バックアップを復元</string>
+    <string name="backup_confirm">プレイリスト、履歴、設定を置き換えますか？元の音声は変更しません。ファイルへのアクセス許可を再設定する場合があります。</string>
+    <string name="backup_done">バックアップ完了</string>
+    <string name="backup_restored">復元完了</string>
+    <string name="help">ユーザーガイド</string>
+    <string name="clear_history">再生履歴を消去</string>
+    <string name="clear_history_confirm">再生履歴を消去しますか？プレイリストには影響しません。</string>
+    <string name="top_plays">最も再生された曲</string>
+    <string name="top_artist">最も聴いたアーティスト</string>
+    <string name="day_stats">日別</string>
+    <string name="month_stats">月別</string>
+    <string name="year_stats">年別</string>
+    <string name="seek_lyric">この行から再生</string>
+    <string name="no_configuration">未設定</string>
+    <string name="service_running">Nonet で再生中</string>
+    <string name="queue">再生キュー</string>
+    <string name="user_guide_body">プレイリストを作成し、音声ファイルやフォルダーを追加します。曲をタップして再生し、ミニプレーヤーでカバーと歌詞を開きます。その他 → 歌詞を読み込むでは 2 MB 以下の LRC/TXT を使用できます。丸いスライダーで移動します。並べ替えハンドルを長押しして上下にドラッグします。選択モードで一括操作できます。再生履歴の削除はプレイリストに影響しません。バックアップは曲の参照、設定、歌詞、画像を保存し、元の音声とパスワードは含みません。復元後はファイルへのアクセスを再許可してください。通知とロック画面の再生操作に対応し、システムのカプセル表示は端末に依存します。</string>
+    <string name="scan_settings">端末の楽曲をスキャン</string>
+    <string name="scan_minimum">次の長さ未満の音声を除外</string>
+    <string name="scan_unit">時間の単位</string>
+    <string name="scan_seconds">秒</string>
+    <string name="scan_minutes">分</string>
+    <string name="scan_included">スキャンするフォルダー</string>
+    <string name="scan_excluded">除外フォルダー</string>
+    <string name="scan_all">Android のメディアライブラリ内の端末音楽</string>
+    <string name="scan_excluded_empty">除外フォルダーなし</string>
+    <string name="scan_rules_hint">0 は時間制限なし、上限は 7 日です。端末ストレージ内のフォルダーを選択してください。指定したフォルダーだけをスキャンし、除外フォルダーとその子フォルダーを優先して除外します。既存の楽曲は削除しません。</string>
+    <string name="scan_confirm_body">条件に合う楽曲を「端末の音楽」に追加しますか？元ファイルや既存の楽曲は変更しません。</string>
+    <string name="scan_threshold">最短時間：%1$d 秒</string>
+    <string name="scan_start">スキャン開始</string>
+    <string name="scan_empty">条件に合う音声がありません</string>
+    <string name="scan_failed">スキャンに失敗しました。フォルダー権限と上限を確認してください。今回の結果は追加していません。</string>
+    <string name="scan_permission_denied">音楽へのアクセスが許可されていないため、スキャンしませんでした</string>
+    <string name="lan_source_desktop">デスクトップ</string>
+    <string name="lan_source_mobile">モバイル</string>
+    <string name="lan_source_unknown">端末</string>
+    <string name="lan_playlist_source">%1$s · %2$s</string>
+    <string name="lan_pair_title">端末からの接続リクエスト</string>
+    <string name="lan_pair_body">「%1$s」（%2$s）と接続し、共有プレイリストと音楽に相互アクセスしますか？再生は独立しています。%3$d 秒で期限切れになります。</string>
+    <string name="lan_approval_wait">接続確認の待ち時間（秒）</string>
+    <string name="lan_approval_wait_hint">既定は30秒、10～120秒で設定できます。バックグラウンドでは通知を表示し、期限切れは拒否します。</string>
+    <string name="lan_device_disconnected">%1$s の接続が切れました。保存した曲は再接続後に利用できます。</string>
+    <string name="lan_accept">許可</string>
+    <string name="lan_reject">拒否</string>
+    <string name="lan_waiting">相手の端末の確認を待っています…</string>
+</resources>

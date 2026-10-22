@@ -21,8 +21,7 @@ NuGet.Offline.Config
 *.jks
 *.keystore
 
-# 移动端当前仅本地开发，不进入桌面公开仓库。
-/src/NonetMusicPlayer.Android/
+# Android 作为普通源码目录公开；iOS 暂不公开。
 /src/NonetMusicPlayer.IOS/
 
 # 运行数据、引导配置、凭据和生成包不得进入源码提交。
@@ -43,6 +42,9 @@ NuGet.Offline.Config
 *.sqlite3
 *.impp
 *.zip
+*.apk
+*.aab
+*.ipa
 .env
 .env.*
 *.key

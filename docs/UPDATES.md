@@ -1,5 +1,7 @@
 # 桌面软件更新
 
+Android 使用独立的 `android-v<版本>` 标签与单一 APK，不使用本文的桌面 ZIP。下载、签名、系统安装和取消清理规则见 [Android 更新协议](../src/NonetMusicPlayer.Android/docs/UPDATES.md)。两个产品分别筛选自身资产，不根据 Release 页面排列顺序判断版本。
+
 适用于 Nonet 0.4.0-beta.5 及后续版本。更新源为 [hhwfsl/NonetMusicPlayer](https://github.com/hhwfsl/NonetMusicPlayer)。只有 GitHub Release 中符合下述契约的桌面资产才会触发应用更新；上传源码不等同于发布更新。
 
 ## 使用
