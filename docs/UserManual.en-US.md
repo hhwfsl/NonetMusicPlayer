@@ -16,7 +16,7 @@ Hover over a button to see its full name and any existing action guidance. Hints
 
 ## Getting started
 
-Keep the complete platform folder. On Windows 10 22H2 or Windows 11 x64, run Nonet.exe. macOS and Linux builds are prereleases awaiting platform testing. The executable directory must be writable; generated data defaults to its Data folder.
+Keep the complete platform folder. Windows ZIPs and installers are available for x64, x86 and ARM64, with Windows 10 22H2 as the minimum. Linux supports x64/ARM64; macOS remains x64. Choose the matching package and never mix native libraries from different architectures. ARM64, macOS and Linux builds await testing on corresponding devices. The executable directory must be writable; generated data defaults to its Data folder. Native plugins also require matching architecture support.
 
 Select or create a playlist, then use its Add Music / Add Folder icons (with tooltips), or drop files into that playlist. Folder import includes subfolders. Dropping files on the player bar or opening audio through the OS starts temporary playback without importing it into playlists. Use Favorite or Add to Playlist to keep it. Original music stays in place. Tags and artwork are read during import; matching song.lrc / song.txt files are copied to the separate lyrics directory.
 

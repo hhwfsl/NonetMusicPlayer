@@ -127,6 +127,21 @@ internal static class DesktopRevisionChecks
     }
     private static void CheckUpdates(string root)
     {
+        // 同一 Release 混有多架构 ZIP、安装器与 Android APK 时，只选择当前进程的桌面 ZIP。
+        var targetRids = new[] { "win-x64", "win-x86", "win-arm64", "linux-x64", "linux-arm64", "osx-x64" };
+        var targetAssets = targetRids.Select(target => new { name = "NonetMusicPlayer.Desktop-0.4.0-beta.33-" + target + ".zip", browser_download_url = ReleaseUpdateService.Repository + "/releases/download/v0.4.0-beta.33/" + target + ".zip", size = 1234, digest = "sha256:" + new string('a', 64) })
+            .Concat([new { name = "NonetMusicPlayer-0.4.0-beta.33-windows-x86-setup.exe", browser_download_url = ReleaseUpdateService.Repository + "/releases/download/v0.4.0-beta.33/setup.exe", size = 1234, digest = "sha256:" + new string('a', 64) }, new { name = "Nonet-0.3.0-beta.9.apk", browser_download_url = ReleaseUpdateService.Repository + "/releases/download/android-v0.3.0-beta.9/app.apk", size = 1234, digest = "sha256:" + new string('a', 64) }]).ToArray();
+        var multiJson = JsonSerializer.Serialize(new[] { new { tag_name = "v0.4.0-beta.33", body = "multiarch", draft = false, assets = targetAssets } });
+        using (var multiHttp = new HttpClient(new FakeHttpHandler(multiJson, [])))
+        {
+            var multiService = new ReleaseUpdateService(multiHttp);
+            foreach (var target in targetRids)
+            {
+                var selected = ApplicationIntegrationChecks.Wait(multiService.CheckAsync("0.4.0-beta.32", target));
+                Require(selected?.Rid == target && selected.Asset?.Name == "NonetMusicPlayer.Desktop-0.4.0-beta.33-" + target + ".zip", "Exact architecture selection: " + target);
+            }
+            Require(ApplicationIntegrationChecks.Wait(multiService.CheckAsync("0.4.0-beta.32", "linux-arm")) is null, "Never substitute ARM64 for ARM32");
+        }
         const string version = "0.3.0-beta.99"; var rid = ReleaseUpdateService.PlatformRid;
         var executable = OperatingSystem.IsWindows() ? "Nonet.exe" : OperatingSystem.IsMacOS() ? "Contents/MacOS/Nonet" : "Nonet";
         var manifest = new UpdateManifest { Version = version, Rid = rid, Files = new() { ["notes.txt"] = Hash("new notes"), [executable] = Hash("new executable") } };

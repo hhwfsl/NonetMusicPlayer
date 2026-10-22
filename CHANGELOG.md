@@ -1,5 +1,13 @@
 # Changelog
 
+## 桌面 0.4.0-beta.33 · 2026-10-22
+
+- 新增 Windows x86、Windows ARM64 与 Linux ARM64 自包含桌面包，保留 Windows/Linux/macOS x64；Windows 三种架构分别提供 ZIP 和 installer。
+- 发布脚本支持按 RID 选择目标，打包前校验程序及原生依赖的 PE/ELF/Mach-O 架构，避免混入其他架构库。
+- 桌面歌词按进程位数选择 Win32 窗口样式入口，兼容 x86 下的透明、锁定与置顶操作。
+- Windows 安装器按架构限制安装环境并区分安装标识和默认目录；安装器目录每个架构仅保留最新成功版本。
+- 更新资产继续按进程 RID 精确匹配，不在不同架构间自动迁移；插件 Contract 和程序集兼容基线不变。CLI 仍为 beta.32，Android 仍为 beta.9。
+
 ## Android 0.3.0-beta.9 · 2026-10-22
 
 - 新增 GitHub 启动检查与设置页手动检查，使用 Android 独立发行标签，弹窗展示更新说明。

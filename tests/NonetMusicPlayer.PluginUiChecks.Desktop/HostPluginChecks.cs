@@ -32,13 +32,15 @@ internal static class HostPluginChecks
         var track = new TrackItem("host-music", "音乐保持播放", "测试", "测试", Path.Combine(folder, "fixture.wav"), ".wav", 0) { DurationSeconds = 100 };
         vm.State.Tracks.Add(track); vm.ApplyFilter(); vm.PlayTrackAsync(track).GetAwaiter().GetResult();
         Check(audio.IsPlaying && vm.IsPlaying, "Fake music begins before game");
+        // 切歌准备本身会暂停旧音源；这里只检查插件操作是否新增暂停，不能假定生命周期计数为零。
+        var pauseBaseline = audio.PauseCount;
         Click(window, button); Render(window);
         Check(vm.Page == "plugin:" + manifest.Id && window.FindControl<ContentControl>("AlternatePage")!.Content is PluginPageView, "Sidebar opens generic native plugin page");
         var game = window.GetVisualDescendants().OfType<SnakeGameControl>().Single();
         Click(window, game.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "SnakeToggle"));
-        Check(game.Game.Status == SnakeGameStatus.Running && vm.IsPlaying && audio.PauseCount == 0, "Actual start button starts game without pausing player");
+        Check(game.Game.Status == SnakeGameStatus.Running && vm.IsPlaying && audio.PauseCount == pauseBaseline, "Actual start button starts game without pausing player");
         Press(window, Key.Space, PhysicalKey.Space);
-        Check(game.Game.Status == SnakeGameStatus.Paused && vm.IsPlaying && audio.PauseCount == 0, "Game Space pauses only game");
+        Check(game.Game.Status == SnakeGameStatus.Paused && vm.IsPlaying && audio.PauseCount == pauseBaseline, "Game Space pauses only game");
         Press(window, Key.R, PhysicalKey.R); Check(game.Game.Status == SnakeGameStatus.Running, "Host R restarts game");
         Press(window, Key.Left, PhysicalKey.ArrowLeft); Check(audio.Position == TimeSpan.Zero, "Game direction does not seek music");
         using (var frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException("No plugin host frame"))

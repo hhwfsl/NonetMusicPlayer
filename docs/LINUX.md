@@ -1,12 +1,14 @@
 # Linux 运行指南
 
-发行目标为 Linux x86_64（`linux-x64`），不是 ARM64。桌面包自带 .NET 运行时，不需要另装 .NET SDK 或通过 Wine 启动。保留 ZIP 中全部文件；程序目录须可写，默认数据保存在该目录的 Data 中。不要以 root 运行。
+发行目标为 Linux x86_64（`linux-x64`）与 AArch64（`linux-arm64`），均为 glibc 环境，不是 ARM32 或 musl/Alpine 包。使用 `uname -m` 判断：`x86_64` 选择 x64，`aarch64` 选择 ARM64。桌面包自带 .NET 运行时，不需要另装 .NET SDK 或通过 Wine 启动。保留 ZIP 中全部文件；程序目录须可写，默认数据保存在该目录的 Data 中。不要以 root 运行。
 
 Linux 版本只进行了交叉构建及归档校验，尚未经 Linux/niri 实机验证。
 
 ## Arch Linux 与 niri
 
 当前 Nonet 使用 Avalonia 12.1.1 的默认 X11 后端，在 niri 下通过 XWayland 运行。它没有启用可选的 Avalonia.Wayland 后端。niri 25.08 及以上可按需启动 PATH 中的 xwayland-satellite（至少 0.7），无需手动写死 DISPLAY。
+
+下列 pacman 示例针对常规 x86_64 Arch Linux；ARM64 应采用所用发行版的对应包管理器及库，不将 x86_64 软件包复制过去。
 
 更新系统并补齐运行依赖；不要仅同步软件源而不升级系统：
 

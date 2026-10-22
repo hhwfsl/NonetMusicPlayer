@@ -1,9 +1,9 @@
-param([string]$Directory, [string]$Version = '0.4.0-beta.1')
+param([string]$Directory, [string]$Version = '0.4.0-beta.1', [ValidateSet('win-x64','win-x86','win-arm64','osx-x64','linux-x64','linux-arm64')][string[]]$Rids = @('win-x64','win-x86','win-arm64','osx-x64','linux-x64','linux-arm64'))
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 if (-not $Directory) { $Directory = Join-Path $taskRoot 'publish/desktop/archives' }
 Add-Type -AssemblyName System.IO.Compression
-foreach ($taskRid in @('win-x64','osx-x64','linux-x64')) {
+foreach ($taskRid in $Rids) {
     $taskPath = Join-Path $Directory "NonetMusicPlayer.Desktop-$Version-$taskRid.zip"
     $taskZip = [IO.Compression.ZipFile]::OpenRead($taskPath)
     try {
@@ -23,10 +23,10 @@ foreach ($taskRid in @('win-x64','osx-x64','linux-x64')) {
             if ($taskHash -ne $taskDeclared.Value) { throw "校验不一致：$($taskEntry.FullName)" }
         }
         if ($taskSeen.Count -ne @($taskManifest.files.PSObject.Properties).Count) { throw '清单文件缺失。' }
-        $taskExe = if ($taskRid -eq 'win-x64') { 'Nonet.exe' } elseif ($taskRid -eq 'osx-x64') { 'Contents/MacOS/Nonet' } else { 'Nonet' }
-        $taskLicense = if ($taskRid -eq 'osx-x64') { 'Contents/MacOS/LICENSE' } else { 'LICENSE' }
+        $taskExe = if ($taskRid.StartsWith('win-')) { 'Nonet.exe' } elseif ($taskRid.StartsWith('osx-')) { 'Contents/MacOS/Nonet' } else { 'Nonet' }
+        $taskLicense = if ($taskRid.StartsWith('osx-')) { 'Contents/MacOS/LICENSE' } else { 'LICENSE' }
         if (-not $taskSeen.Contains($taskExe) -or -not $taskSeen.Contains($taskLicense)) { throw '缺少 Nonet 可执行文件或 GPL 许可证。' }
-        if ($taskRid -ne 'win-x64' -and ($taskZip.GetEntry($taskExe).ExternalAttributes -shr 16 -band 0x1FF) -ne 0x1ED) { throw '缺少 POSIX 可执行权限。' }
+        if (-not $taskRid.StartsWith('win-') -and ($taskZip.GetEntry($taskExe).ExternalAttributes -shr 16 -band 0x1FF) -ne 0x1ED) { throw '缺少 POSIX 可执行权限。' }
         if ($taskSeen | Where-Object { $_ -match '(^|/)VideoDecoder/|(^|/)ffmpeg(\.exe)?$|BackgroundDecoder' }) { throw '发布包不应包含已移除的视频背景解码器。' }
         $taskReader = [IO.StreamReader]::new($taskZip.GetEntry($taskLicense).Open())
         try { if ($taskReader.ReadToEnd() -notmatch 'Version 3, 29 June 2007') { throw 'GPL 许可内容不完整。' } } finally { $taskReader.Dispose() }

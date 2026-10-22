@@ -180,7 +180,10 @@ internal static class NativeWindowLifecycleChecks
     [DllImport("user32.dll")] private static extern int GetWindowRgn(nint hwnd, nint region);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetLayeredWindowAttributes(nint hwnd, out uint key, out byte alpha, out uint flags);
     [DllImport("gdi32.dll")] private static extern bool DeleteObject(nint region);
-    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern nint GetWindowLongPtr(nint hwnd, int index);
+    // 同一原生夹具也在 WOW64 中执行，不能直接调用 64 位专用导出名。
+    private static nint GetWindowLongPtr(nint hwnd, int index) => IntPtr.Size == 8 ? GetWindowLong64(hwnd, index) : GetWindowLong32(hwnd, index);
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern nint GetWindowLong64(nint hwnd, int index);
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongW")] private static extern int GetWindowLong32(nint hwnd, int index);
     private sealed class SilentAudio : IAudioPlayer
     {
         public event EventHandler? PlaybackStopped { add { } remove { } }

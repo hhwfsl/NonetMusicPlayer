@@ -2,6 +2,8 @@
 
 Android 使用独立的 `android-v<版本>` 标签与单一 APK，不使用本文的桌面 ZIP。下载、签名、系统安装和取消清理规则见 [Android 更新协议](../src/NonetMusicPlayer.Android/docs/UPDATES.md)。两个产品分别筛选自身资产，不根据 Release 页面排列顺序判断版本。
 
+桌面资产支持 `win-x64`、`win-x86`、`win-arm64`、`linux-x64`、`linux-arm64`、`osx-x64`。客户端按**进程架构**匹配，不按操作系统可模拟运行的架构替换；例如 ARM64 Windows 上运行的 x86 进程仍下载 x86 更新。Windows installer 供手动安装，自动更新只选择对应 RID 的桌面 ZIP，不选择 installer、CLI 或 APK。原生插件也需要相应架构资产。
+
 适用于 Nonet 0.4.0-beta.5 及后续版本。更新源为 [hhwfsl/NonetMusicPlayer](https://github.com/hhwfsl/NonetMusicPlayer)。只有 GitHub Release 中符合下述契约的桌面资产才会触发应用更新；上传源码不等同于发布更新。
 
 ## 使用

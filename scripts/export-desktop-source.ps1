@@ -29,7 +29,7 @@ foreach ($taskFolder in @('src/NonetMusicPlayer.Desktop','src/NonetMusicPlayer.C
 if ($IncludeAndroid) {
     Copy-TaskTree (Join-Path $taskSource 'src/NonetMusicPlayer.Android') (Join-Path $taskDestination 'src/NonetMusicPlayer.Android')
 }
-foreach ($taskScript in @('publish-desktop.ps1','publish-cli.ps1','package-desktop-update.ps1','verify-clean-desktop.ps1','build-windows-installer.ps1','sync-plugin-foundation.ps1','pack-plugin.ps1','export-desktop-source.ps1')) {
+foreach ($taskScript in @('publish-desktop.ps1','publish-cli.ps1','package-desktop-update.ps1','verify-clean-desktop.ps1','verify-native-architecture.ps1','build-windows-installer.ps1','sync-plugin-foundation.ps1','pack-plugin.ps1','export-desktop-source.ps1')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $taskScript) -Destination (Join-Path $taskDestination 'scripts')
 }
 [IO.Directory]::CreateDirectory((Join-Path $taskDestination 'docs')) | Out-Null

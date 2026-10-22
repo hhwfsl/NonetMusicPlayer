@@ -1,6 +1,7 @@
 # 项目维护要求
 
-- 每次更新 Windows 发布版时同步构建 installer，不得用 -SkipInstaller 省略；仅纯 ZIP 专项构建可显式跳过。publish/desktop/windows_installer 只保留最新成功构建的安装器，旧安装器移至 artifacts/releases/installers 归档。纯净 Release 默认也构建安装器，安装器必须与当前程序版本一致。
+- 每次更新 Windows 发布版时同步构建 installer，不得用 -SkipInstaller 省略；仅纯 ZIP 专项构建可显式跳过。publish/desktop/windows_installer 每个架构只保留最新成功构建的安装器，旧安装器移至 artifacts/releases/installers 归档；不得删掉其他架构的最新安装器。纯净 Release 默认也构建安装器，安装器必须与当前程序版本一致。
+- 桌面发行 RID 为 win-x64、win-x86、win-arm64、linux-x64、linux-arm64、osx-x64。Windows 各架构同时提供 ZIP 和 installer；构建后必须运行 scripts/verify-native-architecture.ps1，不能将其他架构依赖混入包内。交叉构建与目标系统实机验证分开记录。CLI 与 Android 版本独立，不因桌面打包变更无故递增。
 
 - 使用单一 `NonetMusicPlayer` 工程目录开发、构建和发布；本地测试版本放在 `publish/desktop` 与 `publish/cli`。不再维护两个主工程目录。
 - GitHub 提交桌面、CLI、共享核心、Android、主项目 SDK/打包器与必要测试；Android 作为普通源码目录，不能是嵌套 Git 链接或子模块。iOS 暂不公开。插件模板仅在用户明确要求时单独公开；具体私人插件不上传。禁止上传使用数据、凭据、签名私钥、缓存、旧开发历史和本地归档。

@@ -24,7 +24,8 @@
 
 | 产品 | 当前版本 | 发行说明 |
 | --- | --- | --- |
-| 桌面 / CLI | [0.4.0-beta.32](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.32) | Windows、Linux、macOS x64；附 Windows 安装器 |
+| 桌面 | [0.4.0-beta.33](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.33) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
+| CLI | [0.4.0-beta.32](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.32) | Windows、Linux、macOS x64；本次未新增 CLI 架构 |
 | Android | [0.3.0-beta.9](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/android-v0.3.0-beta.9) | API 28+；通用 APK；沿用既有测试签名 |
 
 本仓库包含桌面、CLI、共享核心、Android、插件 SDK、打包器和必要测试。**不包含私人插件、用户数据、签名私钥、缓存或插件模板源码。** 插件模板独立维护在 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)；iOS 暂不公开。
@@ -57,7 +58,7 @@ CLI 不引用 Avalonia，通过系统终端运行。插件 SDK 无图形、音�
 - 安装 [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)。`global.json` 固定 10.0.401 并允许同一特性带的后续补丁；SDK 8/9 不能构建 net10.0。
 - 安装 Git；首次还原需要访问 nuget.org。无需复制开发机器的 NuGet 缓存。
 - 发布脚本使用 PowerShell；建议 PowerShell 7。普通构建和运行直接使用 dotnet，不需要 PowerShell。
-- Windows 发行目标为 Windows 10 22H2 / Windows 11 x64，不支持 Windows 7。macOS / Linux 目标为 x64，需要对应系统的音频及桌面原生依赖；当前未经实机验证。不提供 ARM64 发行包。
+- Windows 桌面提供 x64、x86 与 ARM64，最低 Windows 10 22H2，不支持 Windows 7 或 Windows ARM32。Linux 提供 x64、ARM64（glibc），macOS 保持 x64；各包只携带相应架构的原生依赖。ARM64 与 Linux/macOS 尚未经对应设备实机验证，不能将交叉构建成功视为真机通过。原生插件也需匹配宿主进程架构。
 
 ```text
 git clone https://github.com/hhwfsl/NonetMusicPlayer.git
@@ -113,14 +114,26 @@ pwsh -File scripts/publish-desktop.ps1 -CleanOnly -SkipInstaller
 pwsh -File scripts/publish-cli.ps1 -CleanOnly
 ```
 
+桌面默认生成六种 RID；仅构建新增目标可在 PowerShell 中执行：
+
+```powershell
+./scripts/publish-desktop.ps1 -CleanOnly -Rids win-x86,win-arm64,linux-arm64
+./scripts/verify-clean-desktop.ps1 -Version 0.4.0-beta.33
+```
+
+Windows 默认同步各架构安装器。`publish/desktop/windows_installer` 每个架构仅保留最新成功版本；纯净 ZIP 位于 `publish/desktop/archives`。`-CleanOnly` 不覆盖已有便携程序及用户数据。
+
 桌面版从新的 `artifacts/publish-stage-*` 构建，纯净 ZIP 输出到 `publish/desktop/archives`，不会读取或替换已有 `publish/desktop/windows`、`macos`、`linux`。CLI 的 `-CleanOnly` 输出新的 `artifacts/cli-stage-*`，不修改既有 CLI 发布目录。两者均自带 .NET 运行时，保留必要原生音频库、元数据库与许可文件，不附带个人数据、构建缓存或调试符号。
 
 桌面更新资产的文件名固定为：
 
 ```text
-NonetMusicPlayer.Desktop-0.4.0-beta.12-win-x64.zip
-NonetMusicPlayer.Desktop-0.4.0-beta.12-osx-x64.zip
-NonetMusicPlayer.Desktop-0.4.0-beta.12-linux-x64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.33-win-x64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.33-win-x86.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.33-win-arm64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.33-osx-x64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.33-linux-x64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.33-linux-arm64.zip
 ```
 
 macOS ZIP 从 `Contents/` 开始组织，解压到 `Nonet.app/` 内；Linux/macOS 的 ZIP 保存可执行权限。未进行代码签名或 macOS 公证。更新清单与校验规则见 [UPDATES.md](docs/UPDATES.md)。

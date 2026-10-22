@@ -1,8 +1,6 @@
-param([string]$Configuration = "Release", [string[]]$Platforms = @("windows", "macos", "linux"), [switch]$SkipInstaller, [switch]$CleanOnly)
+param([string]$Configuration = "Release", [ValidateSet('windows','macos','linux')][string[]]$Platforms = @("windows", "macos", "linux"), [ValidateSet('win-x64','win-x86','win-arm64','osx-x64','linux-x64','linux-arm64')][string[]]$Rids = @(), [switch]$SkipInstaller, [switch]$CleanOnly)
 $ErrorActionPreference = "Stop"
 # 普通 Windows 发布必须同步安装器；纯 ZIP 专项构建仍允许显式跳过。
-if ('windows' -in $Platforms -and $SkipInstaller -and -not $CleanOnly) { throw 'Windows 发布不能跳过安装器。仅生成独立 ZIP 时使用 -CleanOnly -SkipInstaller。' }
-if ('windows' -in $Platforms -and -not $SkipInstaller) { & (Join-Path $PSScriptRoot 'build-windows-installer.ps1') -CheckCompilerOnly }
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $projectPath = Join-Path $repositoryRoot "src/NonetMusicPlayer.Desktop/NonetMusicPlayer.Desktop.csproj"
 $desktopPublishRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot "publish/desktop"))
@@ -12,10 +10,18 @@ $version = ([xml](Get-Content -Raw -LiteralPath $projectPath)).Project.PropertyG
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $newline = [Environment]::NewLine
 $targets = @(
-    @{ Name = "windows"; Rid = "win-x64" },
-    @{ Name = "macos"; Rid = "osx-x64" },
-    @{ Name = "linux"; Rid = "linux-x64" }
-) | Where-Object { $_.Name -in $Platforms }
+    @{ Name = "windows"; Rid = "win-x64"; Folder = "windows" },
+    @{ Name = "windows"; Rid = "win-x86"; Folder = "windows-x86" },
+    @{ Name = "windows"; Rid = "win-arm64"; Folder = "windows-arm64" },
+    @{ Name = "macos"; Rid = "osx-x64"; Folder = "macos" },
+    @{ Name = "linux"; Rid = "linux-x64"; Folder = "linux" },
+    @{ Name = "linux"; Rid = "linux-arm64"; Folder = "linux-arm64" }
+) | Where-Object { $_.Name -in $Platforms -and ($Rids.Count -eq 0 -or $_.Rid -in $Rids) }
+if (-not $targets) { throw '没有匹配的桌面发布目标。' }
+if ($targets.Name -contains 'windows') {
+    if ($SkipInstaller -and -not $CleanOnly) { throw 'Windows 发布不能跳过安装器。仅生成独立 ZIP 时使用 -CleanOnly -SkipInstaller。' }
+    if (-not $SkipInstaller) { & (Join-Path $PSScriptRoot 'build-windows-installer.ps1') -CheckCompilerOnly }
+}
 function Assert-ChildPath([string]$Candidate, [string]$Parent) {
     $resolved = [IO.Path]::GetFullPath($Candidate)
     $prefix = [IO.Path]::GetFullPath($Parent).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
@@ -54,6 +60,8 @@ foreach ($target in $targets) {
         $unusedAngle = Assert-ChildPath (Join-Path $binary "av_libglesv2.dll") $stage
         if (Test-Path -LiteralPath $unusedAngle) { Remove-Item -LiteralPath $unusedAngle -Force }
     }
+    # 架构错配不能留给用户启动时才发现；检查主程序和必要原生依赖的二进制头。
+    & (Join-Path $PSScriptRoot 'verify-native-architecture.ps1') -Directory $binary -Rid $target.Rid
     $package = Join-Path $stage "package"
     [IO.Directory]::CreateDirectory($package) | Out-Null
     $runtime = Get-ChildItem -LiteralPath (Join-Path $env:NUGET_PACKAGES ("microsoft.netcore.app.runtime." + $target.Rid)) -Directory | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
@@ -97,12 +105,12 @@ foreach ($target in $targets) {
     if ($CleanOnly) {
         # 独立输出干净 ZIP；既不读取现有发布目录，也不复制或覆盖用户数据。
         & (Join-Path $PSScriptRoot 'package-desktop-update.ps1') -PackageDirectory $package -Rid $target.Rid -Version $version -OutputDirectory (Join-Path $desktopPublishRoot 'archives')
-        if ($target.Name -eq 'windows' -and -not $SkipInstaller) { & (Join-Path $PSScriptRoot 'build-windows-installer.ps1') -PackageDirectory $package -Version $version }
+        if ($target.Name -eq 'windows' -and -not $SkipInstaller) { & (Join-Path $PSScriptRoot 'build-windows-installer.ps1') -PackageDirectory $package -Version $version -Architecture $target.Rid.Substring(4) }
         Write-Host "Clean staging retained: $package"
         continue
     }
     & (Join-Path $PSScriptRoot 'package-desktop-update.ps1') -PackageDirectory $package -Rid $target.Rid -Version $version
-    $output = Assert-ChildPath (Join-Path $desktopPublishRoot $target.Name) $desktopPublishRoot
+    $output = Assert-ChildPath (Join-Path $desktopPublishRoot $target.Folder) $desktopPublishRoot
     [IO.Directory]::CreateDirectory($desktopPublishRoot) | Out-Null
     if (Test-Path -LiteralPath $output) {
         $outputPrefix = [IO.Path]::GetFullPath($output).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
@@ -140,7 +148,7 @@ foreach ($target in $targets) {
                 }
             } catch { throw "Portable data preservation failed; previous package is unchanged: $($_.Exception.Message)" }
         }
-        $backup = Assert-ChildPath (Join-Path $artifactRoot ("releases/previous-" + $timestamp + "/" + $target.Name)) $artifactRoot
+        $backup = Assert-ChildPath (Join-Path $artifactRoot ("releases/previous-" + $timestamp + "/" + $target.Folder)) $artifactRoot
         [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($backup)) | Out-Null
         Move-Item -LiteralPath $output -Destination $backup
     }
@@ -150,7 +158,7 @@ foreach ($target in $targets) {
     $size = ($files | Measure-Object Length -Sum).Sum
     Write-Host "$($target.Name): $($files.Count) required files, $([math]::Round($size / 1MB, 2)) MiB"
     # Windows 发布完成即同步安装器，避免后续其他平台失败导致安装器版本滞后。
-    if ($target.Name -eq 'windows') { & (Join-Path $PSScriptRoot 'build-windows-installer.ps1') -Version $version }
+    if ($target.Name -eq 'windows') { & (Join-Path $PSScriptRoot 'build-windows-installer.ps1') -PackageDirectory $output -Version $version -Architecture $target.Rid.Substring(4) }
 }
 Write-Host "Release $version available in $desktopPublishRoot"
 

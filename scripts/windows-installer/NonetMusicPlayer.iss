@@ -7,6 +7,24 @@
 #ifndef PackageDirectory
   #define PackageDirectory RepositoryRoot + "\publish\desktop\windows"
 #endif
+#ifndef AppArchitecture
+  #define AppArchitecture "x64"
+#endif
+#if AppArchitecture == "x64"
+  #define AllowedArchitectures "x64compatible"
+  #define InstallDirectory "NonetMusicPlayer"
+  #define InstallationSuffix ""
+#elif AppArchitecture == "arm64"
+  #define AllowedArchitectures "arm64"
+  #define InstallDirectory "NonetMusicPlayer-arm64"
+  #define InstallationSuffix ".arm64"
+#elif AppArchitecture == "x86"
+  #define AllowedArchitectures "x86compatible"
+  #define InstallDirectory "NonetMusicPlayer-x86"
+  #define InstallationSuffix ".x86"
+#else
+  #error Unsupported AppArchitecture
+#endif
 
 [Setup]
 AppId={code:InstallationId}
@@ -14,15 +32,17 @@ AppName=Nonet
 AppVersion={#AppVersion}
 AppPublisher=NonetMusicPlayer
 VersionInfoVersion={#AppFileVersion}
-DefaultDirName={userpf}\NonetMusicPlayer
+DefaultDirName={userpf}\{#InstallDirectory}
 DefaultGroupName=Nonet
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
+ArchitecturesAllowed={#AllowedArchitectures}
+#if AppArchitecture != "x86"
+ArchitecturesInstallIn64BitMode={#AllowedArchitectures}
+#endif
 MinVersion=10.0.19045
 OutputDir={#RepositoryRoot}\publish\desktop\windows_installer
-OutputBaseFilename=NonetMusicPlayer-{#AppVersion}-windows-x64-setup
+OutputBaseFilename=NonetMusicPlayer-{#AppVersion}-windows-{#AppArchitecture}-setup
 SetupIconFile={#RepositoryRoot}\src\NonetMusicPlayer.Desktop\Assets\icon.ico
 UninstallDisplayIcon={app}\Nonet.exe
 Compression=lzma2/ultra64
@@ -77,9 +97,9 @@ Filename: "{app}\Nonet.exe"; Description: "{cm:LaunchProgram,Nonet}"; Flags: now
 function InstallationId(Param: String): String;
 begin
   if ExpandConstant('{param:LMPQA|0}') = '1' then
-    Result := 'NonetMusicPlayer.InstallerQA'
+    Result := 'NonetMusicPlayer.InstallerQA{#InstallationSuffix}'
   else
-    Result := 'NonetMusicPlayer.Desktop';
+    Result := 'NonetMusicPlayer.Desktop{#InstallationSuffix}';
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;

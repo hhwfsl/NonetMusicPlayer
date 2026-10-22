@@ -1,4 +1,4 @@
-param([string]$CompilerPath, [string]$Version = '', [string]$PackageDirectory, [switch]$CheckCompilerOnly)
+param([string]$CompilerPath, [string]$Version = '', [string]$PackageDirectory, [ValidateSet('x64','x86','arm64')][string]$Architecture = 'x64', [switch]$CheckCompilerOnly)
 $ErrorActionPreference = 'Stop'
 $taskRepository = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $taskProject = ([xml](Get-Content -Raw -LiteralPath (Join-Path $taskRepository 'src/NonetMusicPlayer.Desktop/NonetMusicPlayer.Desktop.csproj'))).Project.PropertyGroup
@@ -14,10 +14,11 @@ if ([string]::IsNullOrWhiteSpace($CompilerPath)) {
 }
 if ([string]::IsNullOrWhiteSpace($CompilerPath) -or -not (Test-Path -LiteralPath $CompilerPath)) { throw 'Specify -CompilerPath pointing to the Inno Setup compiler.' }
 if ($CheckCompilerOnly) { Write-Host "Installer compiler: $CompilerPath"; return }
-if ([string]::IsNullOrWhiteSpace($PackageDirectory)) { $PackageDirectory = Join-Path $taskRepository 'publish/desktop/windows' }
+if ([string]::IsNullOrWhiteSpace($PackageDirectory)) { $PackageDirectory = Join-Path $taskRepository $(if ($Architecture -eq 'x64') {'publish/desktop/windows'} else {"publish/desktop/windows-$Architecture"}) }
 $taskPackage = [IO.Path]::GetFullPath($PackageDirectory)
 $taskExecutable = Join-Path $taskPackage 'Nonet.exe'
 if (-not (Test-Path -LiteralPath $taskExecutable -PathType Leaf)) { throw 'Publish the Windows application before building its installer.' }
+& (Join-Path $PSScriptRoot 'verify-native-architecture.ps1') -Directory $taskPackage -Rid "win-$Architecture"
 # 不允许把旧程序重标成新版本；纯净构建也可以直接指定其 package 目录。
 $taskBinaryVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($taskExecutable)
 if ($taskBinaryVersion.ProductVersion.Split('+')[0] -ne $Version -or [version]$taskBinaryVersion.FileVersion -ne [version]$taskProject.FileVersion) {
@@ -36,12 +37,13 @@ $taskLock = [IO.File]::Open((Join-Path $taskArtifacts 'installer-build.lock'), [
 try {
     [IO.Directory]::CreateDirectory($taskStage) | Out-Null
     [IO.Directory]::CreateDirectory($taskOutput) | Out-Null
-    & $CompilerPath "/O$taskStage" "/DAppVersion=$Version" "/DAppFileVersion=$($taskProject.FileVersion)" "/DRepositoryRoot=$taskRepository" "/DPackageDirectory=$taskPackage" (Join-Path $PSScriptRoot 'windows-installer/NonetMusicPlayer.iss')
+    & $CompilerPath "/O$taskStage" "/DAppVersion=$Version" "/DAppFileVersion=$($taskProject.FileVersion)" "/DAppArchitecture=$Architecture" "/DRepositoryRoot=$taskRepository" "/DPackageDirectory=$taskPackage" (Join-Path $PSScriptRoot 'windows-installer/NonetMusicPlayer.iss')
     if ($LASTEXITCODE -ne 0) { throw 'Windows installer build failed; existing installer preserved.' }
-    $taskCurrentName = "NonetMusicPlayer-$Version-windows-x64-setup.exe"
+    $taskCurrentName = "NonetMusicPlayer-$Version-windows-$Architecture-setup.exe"
     $taskBuilt = Join-Path $taskStage $taskCurrentName
     if (-not (Test-Path -LiteralPath $taskBuilt -PathType Leaf) -or (Get-Item -LiteralPath $taskBuilt).Length -eq 0 -or [version]([Diagnostics.FileVersionInfo]::GetVersionInfo($taskBuilt).FileVersion) -ne [version]$taskProject.FileVersion) { throw 'Installer output validation failed; existing installer preserved.' }
-    $taskOldFiles = @(Get-ChildItem -LiteralPath $taskOutput -File -Filter 'NonetMusicPlayer-*-windows-x64-setup.exe')
+    # 每个架构只保留最新安装器，不删除本次其他架构的成功产物。
+    $taskOldFiles = @(Get-ChildItem -LiteralPath $taskOutput -File -Filter "NonetMusicPlayer-*-windows-$Architecture-setup.exe")
     foreach ($taskOld in $taskOldFiles) {
         if (($taskOld.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [IO.Path]::GetFullPath($taskOld.DirectoryName) -ne $taskOutput) { throw 'Unsafe installer source path.' }
     }
