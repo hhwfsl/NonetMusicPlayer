@@ -65,7 +65,7 @@ public sealed partial class MainWindow : Window
         }, RoutingStrategies.Tunnel, true);
         Workspace.LayoutChanged += (_, _) => SaveRegionResize();
         L10n.LanguageChanged += LanguageChanged;
-        PropertyChanged += (_, e) => { if (e.Property == ActualThemeVariantProperty && !_applyingAppearance) ApplyAppearance(); };
+        PropertyChanged += (_, e) => { if (e.Property == ActualThemeVariantProperty && !_applyingAppearance) SettingsChanged(this, EventArgs.Empty); };
         Closing += ConfirmClosing;
         Closed += (_, _) => { _elementExtensionsClosed = true; _dynamicElements.Clear(); _lyricsMotion.Dispose(); _pageMotion.Dispose(); SuspendElementExtensions(); _elementLayouts?.Dispose(); foreach (var bitmap in _pluginNavigationAssets) bitmap.Dispose(); _pluginNavigationAssets.Clear(); foreach (var overlay in _extensionOverlays.Values.ToArray()) overlay.Close(); _extensionOverlays.Clear(); L10n.LanguageChanged -= LanguageChanged; _cachedSettings?.Dispose(); _desktopLyrics?.Dispose(); _taskbar?.Dispose(); _notificationTimer.Stop(); _locateTimer.Stop(); DisposePage(); if (_vm is not null) { DetachPlayerCommands(); _vm.Plugins.LifecycleChanged -= ElementLifecycleChanged; _vm.Plugins.UiPluginUnavailable -= ElementPluginUnavailable; _vm.Plugins.DetachHost(this); _vm.MusicSearchChanged -= MusicSearchStateChanged; _vm.ViewChanged -= ViewChanged; _vm.NavigationRequested -= ResetSongPagePosition; _vm.SettingsChanged -= SettingsChanged; _vm.LocatePlayingTrack -= LocatePlayingTrack; _vm.UserNotification -= UserNotification; _vm.Save(); } };
     }
@@ -107,8 +107,7 @@ public sealed partial class MainWindow : Window
         { _elementLayouts?.Suspend(); BuildPlaylists(); BuildPluginNavigation(); _elementLayouts?.Refresh(); return; }
         ShowPage();
     }
-    private void SettingsChanged(object? sender, EventArgs e) { SuspendElementExtensions(); Terminal?.Configure(GetTerminalOptions()); ApplyAppearance(); BuildPluginNavigation(); BuildExtensionSlots(); BuildMusicSearchHeader(); RefreshElementExtensions(); }
-    private void ApplyAppearance()
+    private void ApplyAppearance(bool preserveLayout = false)
     {
         if (_vm is null || _applyingAppearance) return; RebuildInterfaceSettings(); var s = InterfaceSettings; _applyingAppearance = true;
         try {
@@ -121,12 +120,15 @@ public sealed partial class MainWindow : Window
             _vm.ReportError(L10n.T("Settings.CustomFontCouldNotBeReadUsingTheDefault"), error);
         }
         Classes.Set("touch", s.TouchMode);
-        PlaybackSlider.Height = PlaybackSlider.MinHeight = s.TouchMode ? 40 : 24;
-        ((Grid)PlayerColumns.Parent!).RowDefinitions[0].Height = new GridLength(0);
-        PlaybackSlider.Margin = new Thickness(0, s.TouchMode ? -20 : -12, 0, 0);
-        PlaybackSlider.ThumbRadius = s.TouchMode ? 9 : 6; PlaybackSlider.InvalidateVisual();
-        // 跳转与调整高度的命中区域相邻且不得重叠；鼠标区域深入边界 12 DIP，触摸区域为 20 DIP。
-        PlayerResizeGrip.Height = s.TouchMode ? 16 : 12; PlayerResizeGrip.Margin = new(0, s.TouchMode ? 20 : 12, 0, 0);
+        if (!preserveLayout)
+        {
+            PlaybackSlider.Height = PlaybackSlider.MinHeight = s.TouchMode ? 40 : 24;
+            ((Grid)PlayerColumns.Parent!).RowDefinitions[0].Height = new GridLength(0);
+            PlaybackSlider.Margin = new Thickness(0, s.TouchMode ? -20 : -12, 0, 0);
+            PlaybackSlider.ThumbRadius = s.TouchMode ? 9 : 6; PlaybackSlider.InvalidateVisual();
+            // 跳转与调整高度的命中区域相邻且不得重叠；鼠标区域深入边界 12 DIP，触摸区域为 20 DIP。
+            PlayerResizeGrip.Height = s.TouchMode ? 16 : 12; PlayerResizeGrip.Margin = new(0, s.TouchMode ? 20 : 12, 0, 0);
+        }
         Opacity = s.UiOpacity;
         foreach (var widget in Workspace.Children.OfType<LayoutWidget>()) widget.Label = L10n.T(widget.Key switch { "Navigation" => L10n.T("Common.Navigation"), "Content" => L10n.T("Common.Content"), _ => L10n.T("Playback.Player") });
         var palette = new Dictionary<string, string>();
@@ -149,11 +151,14 @@ public sealed partial class MainWindow : Window
             var action = ShortcutService.Actions.Single(a => a.Id == id); var gesture = ShortcutService.Get(s.KeyBindings, action);
             ToolTip.SetTip(control, L10n.T(label) + (string.IsNullOrEmpty(gesture) ? "" : " (" + gesture + ")"));
         }
-        SetWorkspaceProfile(_safeLayout ? LayoutConfiguration.Read(UiLayoutService.DefaultJson) : LayoutConfiguration.Current);
-        SidebarPanel.BorderThickness = s.NavigationRight ? new Thickness(1, 0, 0, 0) : new Thickness(0, 0, 1, 0);
-        Responsive(); RequestLayoutCheck();
-        PositionPlayerResizeGrip();
-        _styleLayers?.Refresh();
+        if (!preserveLayout)
+        {
+            SetWorkspaceProfile(_safeLayout ? LayoutConfiguration.Read(UiLayoutService.DefaultJson) : LayoutConfiguration.Current);
+            SidebarPanel.BorderThickness = s.NavigationRight ? new Thickness(1, 0, 0, 0) : new Thickness(0, 0, 1, 0);
+            Responsive(); RequestLayoutCheck(); PositionPlayerResizeGrip();
+        }
+        if (preserveLayout) _styleLayers?.RefreshAppearance(); else _styleLayers?.Refresh();
+        _appearanceStructure = CurrentAppearanceStructure();
         } finally { _applyingAppearance = false; }
     }
     private void Responsive()

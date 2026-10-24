@@ -6,6 +6,7 @@ internal static class Program
         try
         {
             var output = args.FirstOrDefault() ?? "artifacts/plugin-ui-checks";
+            if (args.Contains("--settings-continuity")) { SettingsContinuityChecks.Run(output, Array.IndexOf(args, "--style-file") is var settingsStyle && settingsStyle >= 0 ? args[settingsStyle + 1] : null); return 0; }
             if (args.Contains("--statistics-charts")) { StatisticsChartChecks.Run(output, Array.IndexOf(args, "--style-file") is var chartStyle && chartStyle >= 0 ? args[chartStyle + 1] : null); return 0; }
             if (args.Contains("--interface-lifecycle")) { InterfaceLifecycleChecks.Run(output); return 0; }
             if (args.Contains("--composition")) { InterfaceCompositionChecks.Run(output, Array.IndexOf(args, "--style-file") is var compositionFile && compositionFile >= 0 ? args[compositionFile + 1] : null); return 0; }

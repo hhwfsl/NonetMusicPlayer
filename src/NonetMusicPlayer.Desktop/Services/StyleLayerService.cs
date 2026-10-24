@@ -86,6 +86,10 @@ public sealed class StyleLayerService : IDisposable
         foreach (var restore in _restorePalette) restore(); _restorePalette.Clear();
     }
     public void Refresh()
+        => RefreshCore(preserveEntries: false);
+    /// <summary>设置更新仅重算资源和现有属性通道，不撤销控件样式或重播入场效果。</summary>
+    internal void RefreshAppearance() => RefreshCore(preserveEntries: true);
+    private void RefreshCore(bool preserveEntries)
     {
         if (_disposed || _refreshing) return;
         _refreshing = true;
@@ -108,14 +112,21 @@ public sealed class StyleLayerService : IDisposable
                 foreach (var palette in Application.Current.Styles.OfType<FluentTheme>().SelectMany(t => t.Palettes.Values))
                 { var original = palette.Accent; _restorePalette.Add(() => palette.Accent = original); palette.Accent = accent.Color; }
             foreach (var control in _root.GetVisualDescendants().OfType<Control>()) control.InvalidateVisual();
-            foreach (var entry in _controls.Values.ToArray()) entry.Dispose();
-            _controls.Clear(); _animations.Clear(); _timer.Stop();
+            if (preserveEntries)
+            {
+                foreach (var entry in _controls.Values.ToArray()) entry.Update(initial: true);
+            }
+            else
+            {
+                foreach (var entry in _controls.Values.ToArray()) entry.Dispose();
+                _controls.Clear(); _animations.Clear(); _timer.Stop();
+            }
             if (_owners.Count == 0) return;
             foreach (var window in (Application.Current.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows.ToArray() ?? [])
                 foreach (var control in window.GetVisualDescendants().OfType<Control>().Prepend(window).ToArray()) Track(control);
             foreach (var control in _root.GetVisualDescendants().OfType<Control>().Concat(_root.GetLogicalDescendants().OfType<Control>()).Prepend(_root).Distinct().ToArray()) Track(control);
             // 只模糊背景图本身，绝不对承载文字的面板施加 BlurEffect。
-            if (_root.GetVisualDescendants().OfType<Image>().FirstOrDefault(i => i.Name == "AppBackgroundImage") is { } image && Sheets.Select(s => s.BackgroundBlur).LastOrDefault(b => b is not null) is { } blur)
+            if (!preserveEntries && _root.GetVisualDescendants().OfType<Image>().FirstOrDefault(i => i.Name == "AppBackgroundImage") is { } image && Sheets.Select(s => s.BackgroundBlur).LastOrDefault(b => b is not null) is { } blur)
             {
                 if (!_controls.TryGetValue(image, out var entry)) _controls[image] = entry = new(this, image);
                 entry.Extras.Add(image.Bind(Visual.EffectProperty, new Channel(new BlurEffect { Radius = blur }), BindingPriority.Animation));
