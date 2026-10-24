@@ -8,7 +8,7 @@ namespace NonetMusicPlayer.Core.Plugins;
 public static class ExtensionContract
 {
     public const int Version = 2;
-    public static readonly string[] Capabilities = ["ui.tree.v2", "lyrics.v1", "dialogs.v1", "state.v1", "actions.v1", "events.v1", "commands.v1", "services.v1", "files.pick.v1", "ui.layout-bind.v1", "ui.context-menu.v1", "ui.controls.v1", "dialogs.prompt.v1", "approvals.v1", "ui.workspace.v1", "runtime.declarative.v1", "development.v1", "ui.assets.v1", "ui.composer.v1", "config.approval.v1", "interaction.v1", "ui.overlay.v1", "ui.large-text.v1", "ui.page-optional.v1", UniversalExtensionContract.NetworkLibraryCapability, .. UniversalExtensionContract.Capabilities];
+    public static readonly string[] Capabilities = ["ui.tree.v2", "ui.select-options.v1", "statistics.charts.v1", "lyrics.v1", "dialogs.v1", "state.v1", "actions.v1", "events.v1", "commands.v1", "services.v1", "files.pick.v1", "ui.layout-bind.v1", "ui.context-menu.v1", "ui.controls.v1", "dialogs.prompt.v1", "approvals.v1", "ui.workspace.v1", "runtime.declarative.v1", "development.v1", "ui.assets.v1", "ui.composer.v1", "config.approval.v1", "interaction.v1", "ui.overlay.v1", "ui.large-text.v1", "ui.page-optional.v1", StyleSheetContract.Capability, InterfaceCompositionContract.Capability, InterfaceCompositionContract.PlaylistCardsCapability, UniversalExtensionContract.StartupCapability, UniversalExtensionContract.NetworkLibraryCapability, .. UniversalExtensionContract.Capabilities];
     public static readonly string[] Slots = ["lyrics.more", "song.more", "playlist.more", "player.actions", "titlebar.actions", "home.cards", "overlay", "page.music", "page.lyrics", "page.songs", "page.history", "page.albums", "page.artists", "page.playlist", "page.statistics", .. UniversalExtensionContract.Slots];
     public static readonly string[] Permissions = ["process", "network", "navigation", "player-control", "music-read", "library-write",
         "settings-write", "window-control", "plugins-control", "lyrics-write", "user-files", "in-process", "ui-extend", "plugin-services", "plugin-development", "workflow", "native-ui", "audio-tags", "audio-processing"];
@@ -45,6 +45,7 @@ public static class ExtensionContract
                 if (values.Length is not (1 or 2 or 4) || values.Any(value => !double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var size) || !double.IsFinite(size) || Math.Abs(size) > 512))
                     throw new InvalidDataException("Invalid layout spacing.");
             }
+            if (node.PopupPlacement is not ("auto" or "top" or "bottom")) throw new InvalidDataException("Invalid select popup placement.");
             if (node.Asset.Length > 0) PluginPathPolicy.ValidateRelativePath(node.Asset);
             if (node.ImageDataBind.Length > 200 || node.ImageDataBind.Length > 0 && node.Type != "image") throw new InvalidDataException("Invalid image data binding.");
             if (node.SelectedBind.Length > 200 || node.ColumnsBind.Length > 200 || node.ContextActions.Count > 16 || node.SelectedIf.Length > 200 || node.Variant is not ("" or "ghost" or "pill" or "row" or "accent")) throw new InvalidDataException("Invalid optional UI capability.");
@@ -72,7 +73,7 @@ public static class ExtensionContract
         if (frame.State.ToJsonString().Length > (frame.LargeTextState ? 30_000_000 : 2_000_000) || frame.Requests.Count > 16) throw new InvalidDataException("Extension state is too large.");
         foreach (var request in frame.Requests)
             if (request.Id.Length is 0 or > 100 || !UniversalExtensionContract.IsService(request.Service) && request.Service is not ("commands" or "catalog" or "config" or "interaction" or "files.pick" or "lyrics" or "dialogs.confirm" or "dialogs.notify" or "dialogs.prompt" or "ui" or "development") && !request.Service.StartsWith("plugin:", StringComparison.Ordinal)
-                || request.Arguments.ToJsonString().Length > (request.Service is "ui" or "development" or "lyrics" ? 128000 : 32000)) throw new InvalidDataException("Invalid service request.");
+                || request.Arguments.ToJsonString().Length > (request.Service == "styles" ? 2_000_000 : request.Service is "ui" or "development" or "lyrics" ? 128000 : 32000)) throw new InvalidDataException("Invalid service request.");
     }
 }
 public sealed class ExtensionPage
@@ -105,6 +106,9 @@ public sealed class ExtensionNode
     public string SelectedIf { get; set; } = "";
     /// <summary>可选绑定选项、圆角与高度限制，缺省值保持旧页面布局。</summary>
     public string SelectedBind { get; set; } = "";
+    /// <summary>选择器弹出方向和提示开关；省略时沿用宿主的默认行为。</summary>
+    public string PopupPlacement { get; set; } = "auto";
+    public bool SuppressTooltips { get; set; }
     public double CornerRadius { get; set; } = 12;
     public double MaxHeight { get; set; }
     public bool Borderless { get; set; }

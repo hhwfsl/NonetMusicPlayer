@@ -44,7 +44,7 @@ public sealed partial class PluginManager : IDisposable
     public PluginManifest Install(string package)
     {
         var prepared = PrepareInstall(package);
-        if (prepared.Manifest.Runtime == "managed") _uiVm?.ReportWarning(L10n.T("Extensions.ManagedWarning"));
+        // 安装只登记代码包；共享运行时风险在用户首次启用时集中确认，不重复发送通知。
         try { return CommitInstall(prepared.Manifest, prepared.Stage); }
         finally { RemoveInstallStage(prepared.Stage); }
     }
@@ -52,8 +52,6 @@ public sealed partial class PluginManager : IDisposable
     public async Task<PluginManifest> InstallAsync(string package, string? originRepository = null)
     {
         RequireWritable();
-        var inspected = Inspect(package);
-        if (inspected.Runtime == "managed") _uiVm?.ReportWarning(L10n.T("Extensions.ManagedWarning"));
         var prepared = await Task.Run(() => PrepareInstall(package));
         try
         {

@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using NonetMusicPlayer.Core.Plugins;
 using NonetMusicPlayer.Desktop;
 using NonetMusicPlayer.Desktop.Plugins;
+using NonetMusicPlayer.Desktop.Models;
 using NonetMusicPlayer.Desktop.Services;
 using NonetMusicPlayer.Desktop.ViewModels;
 using NonetMusicPlayer.Desktop.Views;
@@ -27,7 +28,16 @@ internal static class RuntimeFaultChecks
             var manifest = new PluginManifest { Id = "fixture.fault-" + action, Name = "Fault " + action, Type = "extension", Runtime = "managed", ContractVersion = 2,
                 ExtensionClass = "FaultExtension", Permissions = ["in-process"], PageEntry = "page.json", Events = ["fixture.failure"], EntryPoints = new() { [PluginPlatformPolicy.CurrentRid] = "fixture.dll" } };
             var package = Path.Combine(root, action + ".impp"); Package(package, manifest, fixture);
-            var plugin = vm.Plugins.Install(package); plugin.ManagedExecutionConsent = true;
+            var warnings = new List<string>();
+            EventHandler<UserNotificationEventArgs> onNotice = (_, notice) => warnings.Add(notice.Message);
+            vm.UserNotification += onNotice;
+            var plugin = action == "background" ? WaitResult(vm.Plugins.InstallAsync(package)) : vm.Plugins.Install(package);
+            vm.UserNotification -= onNotice;
+            Check(warnings.Count == 0, "Installing managed packages does not send a duplicate runtime warning.");
+            var denied = false;
+            try { vm.Plugins.SetEnabled(plugin, true); } catch (InvalidOperationException) { denied = true; }
+            Check(denied && !plugin.Enabled, "Enabling shared-runtime code still requires explicit consent.");
+            plugin.ManagedExecutionConsent = true;
             if (action == "initialize") plugin.Configuration = "{\"failInit\":true}";
             vm.Plugins.SetEnabled(plugin, true); var session = vm.Plugins.Extension(plugin);
             try
@@ -64,6 +74,7 @@ internal static class RuntimeFaultChecks
     }
     private static void Pump() => Dispatcher.UIThread.RunJobs();
     private static void Wait(Task task) { var deadline = DateTime.UtcNow.AddSeconds(10); while (!task.IsCompleted && DateTime.UtcNow < deadline) { Pump(); Thread.Sleep(5); } if (!task.IsCompleted) throw new TimeoutException(); task.GetAwaiter().GetResult(); }
+    private static T WaitResult<T>(Task<T> task) { Wait(task); return task.GetAwaiter().GetResult(); }
     private static void Check(bool value, string message) { if (!value) throw new InvalidDataException(message); }
     private sealed class FakeAudio : NonetMusicPlayer.Core.Audio.IAudioPlayer
     {

@@ -28,6 +28,7 @@ public sealed partial class MainWindow
         _vm.Plugins.UiPluginUnavailable -= ElementPluginUnavailable;
         _vm.Plugins.LifecycleChanged -= ElementLifecycleChanged;
         SuspendElementExtensions(); _elementLayouts?.Dispose(); _dynamicElements.Clear(); _legacyLayoutOwner = null;
+        _interfaceComposition?.Dispose(); _interfaceComposition = null; _interfaceLayers.Clear(); _effectiveInterfaceSettings = null; _ownedInterfaceSettings.Clear();
     }
     private bool _elementRefreshQueued;
     private void ElementLifecycleChanged(PluginManifest plugin, string stage)
@@ -40,6 +41,8 @@ public sealed partial class MainWindow
     {
         if (_elementExtensionsClosed) return;
         _dynamicElements.Remove(id);
+        RemoveInterfaceLayers(id);
+        _restoreExpandedStyleControl?.Invoke(); _styleMorph.Cancel(); _styleLayers?.Remove(id);
         ClearElementContributions(id); _elementLayouts?.Remove(id);
         if (_legacyLayoutOwner == id)
         {
@@ -91,6 +94,9 @@ public sealed partial class MainWindow
     }
     private void SuspendElementExtensions()
     {
+        // 重组根容器会移除快照层；必须先结束转场并释放透明度覆盖，避免歌词永久隐藏。
+        if (_interfaceComposition?.IsApplied == true) _lyricsMotion.Cancel();
+        _interfaceComposition?.Suspend();
         ClearElementContributions(); _elementLayouts?.Suspend();
     }
     private void RefreshElementExtensions()
@@ -149,6 +155,7 @@ public sealed partial class MainWindow
                 _failedSurfaces.Add(plugin.Id + ":" + contribution.Slot + ":" + contribution.Target); _vm.ReportError(plugin.Name, error);
             }
         }
+        RefreshInterfaceComposition();
     }
     private void ClearElementContributions(string? id = null)
     {

@@ -17,7 +17,8 @@ public sealed class LibraryDatabase(string path)
     {
         var metadata = new AppState { ManagedDataRoot = state.ManagedDataRoot, MusicFolders = state.MusicFolders, History = state.History, RecentTemporaryTracks = state.RecentTemporaryTracks,
             Settings = state.Settings, LastTrackId = state.LastTrackId, LastPosition = state.LastPosition, LastSourcePage = state.LastSourcePage, LastPlaylistId = state.LastPlaylistId,
-            LastTemporaryFile = state.LastTemporaryFile, LastTemporaryCounted = state.LastTemporaryCounted, GroupCovers = state.GroupCovers, SoftwareDefaultGroupCovers = state.SoftwareDefaultGroupCovers };
+            LastTemporaryFile = state.LastTemporaryFile, LastTemporaryCounted = state.LastTemporaryCounted, GroupCovers = state.GroupCovers, SoftwareDefaultGroupCovers = state.SoftwareDefaultGroupCovers,
+            HourlyListeningEntries = state.HourlyListeningEntries };
         var root = JsonSerializer.Serialize(metadata, AppStorage.Json);
         yield return new("state", "root", 0, root, () => root);
         for (var i = 0; !playbackOnly && i < state.Tracks.Count; i++)

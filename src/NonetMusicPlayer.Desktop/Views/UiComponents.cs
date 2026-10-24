@@ -54,7 +54,12 @@ internal static class Ui
     {
         var stack = Stack(); var heading = Text(title, 17); heading.FontWeight = FontWeight.SemiBold; stack.Children.Add(heading);
         foreach (var control in controls) stack.Children.Add(control);
-        return new Border { Background = Brush("SurfaceBrush"), BorderBrush = Brush("DividerBrush"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Padding = new Thickness(22), Child = stack };
+        var card = new Border { Background = Brush("SurfaceBrush"), BorderBrush = Brush("DividerBrush"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Padding = new Thickness(22), Child = stack };
+        card.Classes.Add("surface-card"); return card;
+    }
+    public static Grid SettingRow(string key, string label, string description, Control editor, string wideColumns = "*,240")
+    {
+        var row = (ResponsiveSettingsRow)Row(label, description, editor, wideColumns); row.InterfaceSettingKey = key; return row;
     }
     public static Grid Row(string label, string description, Control editor, string wideColumns = "*,240")
     {

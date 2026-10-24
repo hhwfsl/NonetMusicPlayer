@@ -1,5 +1,7 @@
 # 项目维护要求
 
+- 仅在实际发布 GitHub Release 时提升对应软件版本号；本地修复、构建或仅提交 GitHub 不递增版本。
+
 - 每次更新 Windows 发布版时同步构建 installer，不得用 -SkipInstaller 省略；仅纯 ZIP 专项构建可显式跳过。publish/desktop/windows_installer 每个架构只保留最新成功构建的安装器，旧安装器移至 artifacts/releases/installers 归档；不得删掉其他架构的最新安装器。纯净 Release 默认也构建安装器，安装器必须与当前程序版本一致。
 - 桌面发行 RID 为 win-x64、win-x86、win-arm64、linux-x64、linux-arm64、osx-x64。Windows 各架构同时提供 ZIP 和 installer；构建后必须运行 scripts/verify-native-architecture.ps1，不能将其他架构依赖混入包内。交叉构建与目标系统实机验证分开记录。CLI 与 Android 版本独立，不因桌面打包变更无故递增。
 

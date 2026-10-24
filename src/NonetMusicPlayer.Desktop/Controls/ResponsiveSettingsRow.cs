@@ -6,6 +6,7 @@ namespace NonetMusicPlayer.Desktop.Controls;
 /// <summary>窄视口下将标签和编辑器改为上下排列，避免固定宽度导致溢出。</summary>
 public sealed class ResponsiveSettingsRow : Grid
 {
+    public string InterfaceSettingKey { get; set; } = "";
     public string WideColumns { get; init; } = "*,240";
     private bool? _stacked;
     protected override Size MeasureOverride(Size availableSize)

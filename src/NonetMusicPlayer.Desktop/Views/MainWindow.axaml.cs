@@ -28,6 +28,8 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        PropertyChanged += (_, change) => { if (change.Property == WindowStateProperty && WindowState == WindowState.Minimized) { ++_windowMorphRequest; _styleMorph.Cancel(); } };
+        Closed += (_, _) => { _restoreExpandedStyleControl?.Invoke(); _styleMorph.Dispose(); _styleLayers?.Dispose(); };
         InterfaceMotion.InstallTransport(PlayerPrevious, PlayerPlay, PlayerNext);
         InputCommitService.Install(this);
         InputCommitService.Bind(LibrarySearch, text => { if (_vm is not null) _vm.SearchText = text; });
@@ -36,7 +38,7 @@ public sealed partial class MainWindow : Window
         InitializeWindowPlacement();
         DataContextChanged += (_, _) => AttachViewModel();
         SizeChanged += (_, _) => Responsive();
-        PropertyChanged += (_, e) => { if (e.Property == WindowStateProperty) { if (WindowState == WindowState.Minimized) { _pageMotion.Cancel(); _lyricsMotion.Cancel(); } WindowSurface.CornerRadius = WindowState == WindowState.Maximized ? new(0) : new(12); WindowSurface.BorderThickness = WindowState == WindowState.Maximized ? new(0) : new(1); RefreshResizeBorders(); } };
+        PropertyChanged += (_, e) => { if (e.Property == WindowStateProperty) { if (WindowState == WindowState.Minimized) { _pageMotion.Cancel(); _lyricsMotion.Cancel(); } RefreshWindowFrame(); RefreshResizeBorders(); } };
         DragDrop.SetAllowDrop(this, true);
         AddHandler(DragDrop.DragOverEvent, DragOver);
         AddHandler(DragDrop.DropEvent, Library_Drop);
@@ -73,6 +75,7 @@ public sealed partial class MainWindow : Window
         if (_vm is not null) { _vm.LanChanged -= LanNavigationChanged; _vm.LanDisconnectNotice -= LanDisconnectedNotification; _vm.ConfirmLanConnection = null; }
         if (_vm is not null) { DetachPlayerCommands(); _vm.Plugins.DetachHost(this); _vm.MusicSearchChanged -= MusicSearchStateChanged; _vm.ViewChanged -= ViewChanged; _vm.NavigationRequested -= ResetSongPagePosition; _vm.SettingsChanged -= SettingsChanged; _vm.LocatePlayingTrack -= LocatePlayingTrack; _vm.UserNotification -= UserNotification; }
         _desktopLyrics?.Dispose(); _taskbar?.Dispose();
+        _styleMorph.Cancel(); _styleLayers?.Dispose(); _styleLayers = null;
         _vm = DataContext as MainViewModel; if (_vm is null) return;
         _vm.ConfirmLanConnection = ConfirmLanConnectionAsync;
         _vm.LanChanged += LanNavigationChanged;
@@ -91,6 +94,11 @@ public sealed partial class MainWindow : Window
     }
     private readonly InterfaceMotion _pageMotion = new();
     private readonly LyricsPageMotion _lyricsMotion = new();
+    private void RefreshWindowFrame()
+    {
+        WindowSurface.CornerRadius = WindowState == WindowState.Maximized ? new(0) : new(12);
+        WindowSurface.BorderThickness = WindowState == WindowState.Maximized || _vm?.Page == "lyrics" && InterfaceLyricsProfile?.EdgeToEdge == true ? new(0) : new(1);
+    }
     private string? _displayedPage;
     private void ViewChanged(object? sender, EventArgs e)
     {
@@ -102,8 +110,9 @@ public sealed partial class MainWindow : Window
     private void SettingsChanged(object? sender, EventArgs e) { SuspendElementExtensions(); Terminal?.Configure(GetTerminalOptions()); ApplyAppearance(); BuildPluginNavigation(); BuildExtensionSlots(); BuildMusicSearchHeader(); RefreshElementExtensions(); }
     private void ApplyAppearance()
     {
-        if (_vm is null || _applyingAppearance) return; var s = _vm.Settings; _applyingAppearance = true;
+        if (_vm is null || _applyingAppearance) return; RebuildInterfaceSettings(); var s = InterfaceSettings; _applyingAppearance = true;
         try {
+        _styleLayers?.SuspendResources();
         L10n.SetLanguage(s.Language); FontSize = s.FontSize;
         try { Application.Current!.Resources["AppFontFamily"] = AppFontService.Resolve(_vm.Storage, s); }
         catch (Exception error)
@@ -144,11 +153,12 @@ public sealed partial class MainWindow : Window
         SidebarPanel.BorderThickness = s.NavigationRight ? new Thickness(1, 0, 0, 0) : new Thickness(0, 0, 1, 0);
         Responsive(); RequestLayoutCheck();
         PositionPlayerResizeGrip();
+        _styleLayers?.Refresh();
         } finally { _applyingAppearance = false; }
     }
     private void Responsive()
     {
-        var contentWidth = Workspace.Children.OfType<LayoutWidget>().FirstOrDefault(w => w.Key == "Content")?.Bounds.Width ?? Bounds.Width;
+        var contentWidth = Workspace.Children.OfType<LayoutWidget>().FirstOrDefault(w => w.Key == "Content")?.Bounds.Width ?? ViewportWidth;
         var narrow = contentWidth < 1000;
         SearchContainer.Width = Math.Min(300, Math.Max(125, contentWidth - (_vm?.CurrentPlaylist is null ? 150 : 260) - (TracksList.BatchMode ? 430 : 0)));
         var hideMetadata = contentWidth < 740;
@@ -162,9 +172,9 @@ public sealed partial class MainWindow : Window
         foreach (var label in TrackHeader.Children.OfType<TextBlock>().Where(c => Grid.GetColumn(c) is 2 or 6)) label.IsVisible = Grid.GetColumn(label) == 2 ? showArtwork : showDuration;
         foreach (var button in LibraryActionsFlow.Children.OfType<Button>()) button.Margin = new(6, 0, 0, 0);
         LibraryAddFiles.IsVisible = LibraryAddFolder.IsVisible = _vm?.CurrentPlaylist is not null;
-        PageContentGrid.Margin = Bounds.Height < 620 ? new(18, 12, 18, 6) : new(30, 24, 30, 12);
-        LibraryActions.Margin = Bounds.Height < 620 ? new(0, 8, 0, 0) : new(0, 18, 0, 0);
-        var profile = Bounds.Height < 620 ? 0 : Bounds.Width < 1000 || Bounds.Height < 650 ? 1 : 2;
+        PageContentGrid.Margin = ViewportHeight < 620 ? new(18, 12, 18, 6) : new(30, 24, 30, 12);
+        LibraryActions.Margin = ViewportHeight < 620 ? new(0, 8, 0, 0) : new(0, 18, 0, 0);
+        var profile = ViewportHeight < 620 ? 0 : ViewportWidth < 1000 || ViewportHeight < 650 ? 1 : 2;
         if (_vm?.CurrentPlaylist is not null && _playlistHeaderProfile != profile) BuildPlaylistHeader();
         var artist = hideMetadata ? 0 : narrow ? 88 : 130; var album = hideMetadata ? 0 : narrow ? 88 : 160;
         Application.Current!.Resources["ArtistColumnWidth"] = new GridLength(artist);
@@ -174,14 +184,19 @@ public sealed partial class MainWindow : Window
         Application.Current.Resources["TrackActionColumnWidth"] = new GridLength(_vm?.Settings.TouchMode == true ? 44 : 36);
         foreach (var label in TrackHeader.Children.OfType<TextBlock>().Where(c => Grid.GetColumn(c) is 4 or 5)) label.IsVisible = !hideMetadata;
         TrackHeader.ColumnDefinitions[7].Width = new GridLength(_vm?.Settings.TouchMode == true ? 176 : 144);
-        foreach (var button in Workspace.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("nav")))
-            button.Height = _vm?.Settings.TouchMode == true ? 48 : Bounds.Height < 760 ? 38 : button.Tag?.ToString()?.StartsWith("playlist:") == true ? 46 : 44;
+        RefreshNavigationMetrics();
         UpdateGroupColumns(contentWidth); PositionFullLyrics();
         PositionPlayerResizeGrip();
     }
+    private void RefreshNavigationMetrics()
+    {
+        var height = Bounds.Height > 0 ? Bounds.Height : Height;
+        foreach (var button in SidebarPanel.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("nav")))
+            button.Height = _vm?.Settings.TouchMode == true ? 48 : height < 760 ? 38 : button.Tag?.ToString()?.StartsWith("playlist:") == true ? 46 : 44;
+    }
     private void PositionPlayerResizeGrip(bool defaultLayout = false)
     {
-        var top = _vm?.Settings.PlayerTop == true;
+        var top = _vm is not null && InterfaceSettings.PlayerTop;
         PlayerResizeGrip.VerticalAlignment = top ? Avalonia.Layout.VerticalAlignment.Bottom : Avalonia.Layout.VerticalAlignment.Top;
         var inset = _vm?.Settings.TouchMode == true ? 20 : 12;
         PlayerResizeGrip.Margin = top ? new Thickness(0, 0, 0, inset) : new Thickness(0, inset, 0, 0);
@@ -197,6 +212,8 @@ public sealed partial class MainWindow : Window
         _lyricsMotion.Cancel();
         var transitionLayer = (Grid)WindowSurface.Child!;
         var lyricsRegion = LyricsTransitionRegion();
+        var previousPageSize = WindowSurface.Bounds.Size;
+        var previousPage = lyricsTransition && _vm.Page == "lyrics" ? LyricsPageMotion.Capture(WindowSurface, new(previousPageSize)) : null;
         var lyricsSnapshot = lyricsTransition && _displayedPage == "lyrics" ? LyricsPageMotion.Capture(WindowSurface, lyricsRegion) : null;
         SuspendElementExtensions();
         _displayedPage = _vm.Page;
@@ -207,17 +224,18 @@ public sealed partial class MainWindow : Window
             "albums" => "page.albums", "artists" => "page.artists", "statistics" => "page.statistics", _ => _vm.Page.StartsWith("playlist:") ? "page.playlist" : "" };
         var replacement = slot.Length > 0 ? ExtensionReplacement(slot) : null;
         var alternate = replacement is not null || _vm.Page is "library" or "terminal" or "settings" or "plugins" or "albums" or "artists" or "statistics" or "devices" || _vm.Page.StartsWith("plugin:", StringComparison.Ordinal);
+        alternate |= _vm.Page.StartsWith("interface:", StringComparison.Ordinal);
         var lyrics = _vm.Page == "lyrics"; FullLyricsHost.IsVisible = lyrics; ContentSurface.IsVisible = !lyrics; PageContentGrid.IsVisible = !lyrics; SidebarPanel.IsVisible = !lyrics;
         LibraryPage.IsVisible = !alternate; AlternatePage.IsVisible = alternate;
         LibraryActions.IsVisible = !alternate; SearchContainer.IsVisible = !alternate; TrackCountLabel.IsVisible = !alternate;
         UserManualButton.IsVisible = _vm.Page == "settings";
-        PageBackToTop.IsVisible = _vm.Page is "library" or "plugins" or "statistics";
+        PageBackToTop.IsVisible = _vm.Page is "library" or "plugins" or "statistics" or "albums" or "artists";
         BuildMusicSearchHeader();
         BuildPlaylistHeader(); UpdateSelectionToolbar();
         if (_vm.Page.StartsWith("plugin:") && _vm.Plugins.Installed.FirstOrDefault(p => "plugin:" + p.Id == _vm.Page && p.Type == "extension") is { } extension)
             PageHeading.IsVisible = !_vm.Plugins.LoadExtensionPage(extension).OwnsHeader;
         else PageHeading.IsVisible = true;
-        AlternatePage.Content = replacement ?? (_vm.Page switch
+        AlternatePage.Content = replacement ?? InterfacePage(_vm.Page) ?? (_vm.Page switch
         {
             "library" => MusicHome(), "terminal" => new TerminalView(this), "settings" => SettingsPage(), "plugins" => new PluginsView(this, _vm), "devices" => new LanDevicesView(this, _vm),
             "albums" => Groups(false), "artists" => Groups(true), "statistics" => new StatisticsView(_vm), _ => _vm.Page.StartsWith("plugin:") ? PluginPage(_vm.Page) : null
@@ -245,41 +263,39 @@ public sealed partial class MainWindow : Window
         {
             _pageMotion.Cancel();
             try { var origin = transitionLayer.TranslatePoint(default, WindowSurface) ?? default;
-                _lyricsMotion.Begin(transitionLayer, FullLyricsHost, lyricsSnapshot, lyricsRegion, new Vector(origin.X, origin.Y), lyrics, _vm.Settings.PlayerTop); }
-            catch (Exception error) { AppLog.Warning("UI", "Lyrics transition skipped", error); }
+                _lyricsMotion.Begin(transitionLayer, FullLyricsHost, lyricsSnapshot, lyricsRegion, new Vector(origin.X, origin.Y), lyrics, InterfaceSettings.PlayerTop, InterfaceMotionProfile, previousPage, previousPageSize); }
+            catch (Exception error) { previousPage?.Dispose(); AppLog.Warning("UI", "Lyrics transition skipped", error); }
         }
-        else if (navigated && IsVisible && WindowState != WindowState.Minimized)
-            _pageMotion.Enter(lyrics ? FullLyricsHost : alternate ? AlternatePage : LibraryPage);
+        else
+        {
+            previousPage?.Dispose();
+            if (navigated && IsVisible && WindowState != WindowState.Minimized)
+                _pageMotion.Enter(lyrics ? FullLyricsHost : alternate ? AlternatePage : LibraryPage, InterfaceMotionProfile?.PageDurationMs ?? 140);
+        }
     }
     private void BuildPlaylists()
     {
         if (_vm is null) return; PlaylistNavigation.Children.Clear();
-        foreach (var playlist in _vm.Playlists)
-        {
-            var label = new TextBlock { Text = PlaylistName(playlist), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
-            var content = new Grid { ColumnDefinitions = new ColumnDefinitions("34,*") };
-            content.Children.Add(PlaylistArtwork(playlist, 28)); Grid.SetColumn(label, 1); content.Children.Add(label);
-            var button = new Button { Content = content, Tag = "playlist:" + playlist.Id, Padding = new Thickness(10, 0), Height = 46 }; button.Classes.Add("nav"); ToolTip.SetTip(button, playlist.Name);
-            button.Click += (_, _) => _vm.Navigate("playlist:" + playlist.Id, playlist.Name);
-            AttachPlaylistDrag(button, playlist);
-            button.PointerPressed += (_, e) => { if (!e.GetCurrentPoint(button).Properties.IsRightButtonPressed) return; OpenPlaylistMenu(button, playlist); e.Handled = true; };
-            PlaylistNavigation.Children.Add(button);
-        }
-        foreach (var remote in _vm.LanPlaylistNavigation)
-        {
-            var text = new StackPanel { Spacing = 2 };
-            text.Children.Add(new TextBlock { Text = remote.Name, TextTrimming = TextTrimming.CharacterEllipsis });
-            text.Children.Add(Ui.Text(remote.Source, 11, true));
-            var content = new Grid { ColumnDefinitions = new ColumnDefinitions("34,*") };
-            content.Children.Add(new VectorIcon { Kind = IconKind.Playlist, Width = 22, Height = 22, Brush = Ui.Brush("TextSecondaryBrush") });
-            Grid.SetColumn(text, 1); content.Children.Add(text);
-            var button = new Button { Content = content, Tag = remote.Page, Padding = new Thickness(10, 4), MinHeight = 52 };
-            button.Classes.Add("nav"); ToolTip.SetTip(button, remote.Name + "\n" + remote.Source);
-            button.Click += (_, _) => _vm.Navigate(remote.Page, remote.Name);
-            PlaylistNavigation.Children.Add(button);
-        }
+        foreach (var playlist in _vm.Playlists) PlaylistNavigation.Children.Add(BuildPlaylistNavigationButton(playlist));
+        foreach (var remote in _vm.LanPlaylistNavigation) PlaylistNavigation.Children.Add(BuildRemotePlaylistNavigationButton(remote));
     }
     private void Navigate_Click(object? sender, RoutedEventArgs e) { if (sender is Button { Tag: string page }) _vm?.Navigate(page); }
+    /// <summary>界面方案复用同一歌单入口行为；右键、拖动和封面保持原功能。</summary>
+    private Button BuildPlaylistNavigationButton(Playlist playlist)
+    {
+        var label = new TextBlock { Text = PlaylistName(playlist), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
+        var content = new Grid { ColumnDefinitions = new("34,*") }; content.Children.Add(PlaylistArtwork(playlist, 28)); Grid.SetColumn(label, 1); content.Children.Add(label);
+        var button = new Button { Content = content, Tag = "playlist:" + playlist.Id, Padding = new(10, 0), MinHeight = 46, HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Stretch };
+        button.Classes.Add("nav"); ToolTip.SetTip(button, PlaylistName(playlist)); button.Click += (_, _) => _vm?.Navigate("playlist:" + playlist.Id, PlaylistName(playlist));
+        AttachPlaylistDrag(button, playlist); button.PointerPressed += (_, e) => { if (e.GetCurrentPoint(button).Properties.IsRightButtonPressed) { OpenPlaylistMenu(button, playlist); e.Handled = true; } }; return button;
+    }
+    private Button BuildRemotePlaylistNavigationButton((string Page, string Name, string Source) remote)
+    {
+        var text = new StackPanel { Spacing = 2 }; text.Children.Add(new TextBlock { Text = remote.Name, TextTrimming = TextTrimming.CharacterEllipsis }); text.Children.Add(Ui.Text(remote.Source, 11, true));
+        var content = new Grid { ColumnDefinitions = new("34,*") }; content.Children.Add(new VectorIcon { Kind = IconKind.Playlist, Width = 22, Height = 22, Brush = Ui.Brush("TextSecondaryBrush") }); Grid.SetColumn(text, 1); content.Children.Add(text);
+        var button = new Button { Content = content, Tag = remote.Page, Padding = new(10, 4), MinHeight = 52 }; button.Classes.Add("nav"); ToolTip.SetTip(button, remote.Name + "\n" + remote.Source);
+        button.Click += (_, _) => _vm?.Navigate(remote.Page, remote.Name); return button;
+    }
     private void PlayerResizeGrip_PointerPressed(object? sender, PointerPressedEventArgs e) => Workspace.BeginPlayerResize(e);
     private void ShowLyrics_Click(object? sender, RoutedEventArgs e) => ToggleLyrics();
     private void ClearSearch_Click(object? sender, RoutedEventArgs e) { if (_vm is not null) _vm.SearchText = ""; }
@@ -336,6 +352,8 @@ public sealed partial class MainWindow : Window
         })); menu.Items.Add(playlists);
         var info = Menu(L10n.T("Common.TrackInformation"), async () => { if (track is not null) await SongInfoDialog.Show(this, track); }, IconKind.Info);
         info.IsEnabled = track is not null; menu.Items.Add(info);
+        menu.Items.Add(new Separator());
+        AppendLyricsMenu(menu);
         OpenMenu(control, menu);
     }
     private async void CreatePlaylist_Click(object? sender, RoutedEventArgs e)
@@ -482,7 +500,7 @@ public sealed partial class MainWindow : Window
     private void CloseWindow_Click(object? sender, RoutedEventArgs e) => Close();
     private void MinimizeWindow_Click(object? sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void MaximizeWindow_Click(object? sender, RoutedEventArgs e) => ToggleMaximize();
-    private void ToggleMaximize() => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    private void ToggleMaximize() => _ = MaximizeWithStyleAsync();
     private async void ConfirmClosing(object? sender, WindowClosingEventArgs e)
     {
         if (_vm?.IsMigratingData == true) { e.Cancel = true; _vm.ReportWarning(L10n.T("Storage.AppDataIsBeingCopiedWaitForCompletionBefore")); return; }

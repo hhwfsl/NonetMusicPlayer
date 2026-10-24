@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using NonetMusicPlayer.Desktop.Plugins;
 
 namespace NonetMusicPlayer.Desktop.Views;
@@ -42,7 +43,12 @@ public sealed class NativeExtensionView : UserControl, IDisposable, NonetMusicPl
         catch (Exception error) { Dispose(); _manager.ReportPluginFault(_session.Manifest, error); Failed?.Invoke(); }
     }
     private void Unavailable(string id) { if (id == _session.Manifest.Id) { Dispose(); UnavailableView?.Invoke(); } }
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e) { Dispose(); base.OnDetachedFromVisualTree(e); }
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        // 完整界面方案会在同一 UI 事务内重新挂接父容器；仅真正离开页面时释放原生视图。
+        Dispatcher.UIThread.Post(() => { if (!this.IsAttachedToVisualTree()) Dispose(); }, DispatcherPriority.Background);
+    }
     public void Dispose()
     {
         if (_disposed) return; _disposed = true;

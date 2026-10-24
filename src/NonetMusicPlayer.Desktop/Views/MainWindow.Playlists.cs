@@ -19,7 +19,8 @@ public sealed partial class MainWindow
         var path = _vm?.GetPlaylistArtworkPath(playlist) ?? playlist.CoverPath;
         artwork.Children.Add(original ? new OriginalArtworkImage(path, image) { Name = "PlaylistOriginalCover" }
             : new Image { Source = image, Stretch = Stretch.UniformToFill, IsVisible = image is not null });
-        return new Border { Width = size, Height = size, CornerRadius = new CornerRadius(Math.Min(12, size / 5)), ClipToBounds = true, Background = Ui.Brush("SurfaceRaisedBrush"), Child = artwork };
+        var result = new Border { Width = size, Height = size, CornerRadius = new CornerRadius(Math.Min(12, size / 5)), ClipToBounds = true, Background = Ui.Brush("SurfaceRaisedBrush"), Child = artwork };
+        result.Classes.Add("playlist-artwork"); result.Classes.Set("placeholder", image is null); return result;
     }
     private void BuildPlaylistHeader()
     {

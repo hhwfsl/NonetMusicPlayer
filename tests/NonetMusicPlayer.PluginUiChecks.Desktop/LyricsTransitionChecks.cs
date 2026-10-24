@@ -13,7 +13,7 @@ using NonetMusicPlayer.Desktop.Views;
 /// <summary>覆盖歌词双向切换、快速重复导航、最小化清理和设置中的相对路径，不使用真实音乐或用户配置。</summary>
 internal static class LyricsTransitionChecks
 {
-    public static void Run(string output)
+    public static void Run(string output, string? styleFile = null)
     {
         AppBuilder.Configure<NonetMusicPlayer.Desktop.App>().UseSkia().WithInterFont()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false }).SetupWithoutStarting();
@@ -28,7 +28,9 @@ internal static class LyricsTransitionChecks
         var background = Path.Combine(root, "background.png");
         using (var image = new RenderTargetBitmap(new PixelSize(64, 64))) image.Save(background, PngBitmapEncoderOptions.Default);
         vm.Settings.BackgroundImagePath = AppBackgroundService.Import(storage, background);
-        var window = new MainWindow { DataContext = vm, Width = 1100, Height = 760 }; window.Show(); Pump();
+        var window = new MainWindow { DataContext = vm, Width = 1100, Height = 760 };
+        if (styleFile is not null) { using var input = File.OpenRead(styleFile); window.ApplyInterfaceLayers("fixture.transition", [NonetMusicPlayer.Core.Plugins.StyleSheetContract.Read(input)]); window.PrepareInitialAppearance(); }
+        window.Show(); Pump();
         vm.Navigate("settings"); Pump();
         var labels = window.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text ?? "").ToArray();
         Check(!labels.Any(t => t == L10n.T("Extensions.ProjectFolder")), "No plugin project directory setting.");
@@ -48,24 +50,26 @@ internal static class LyricsTransitionChecks
         Check(motionEnabled == Overlay(), "Opening uses one finite overlay when animations are enabled.");
         if (motionEnabled)
         {
+            var first = window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "LyricsTransitionOverlay");
+            Check(first.Child is Image { RenderTransform: TranslateTransform { Y: > 0 } } && window.GetVisualDescendants().OfType<Border>().Any(b => b.Name == "LyricsTransitionBackdrop"), "Before the first animation tick the snapshot is at its start and the old page remains visible.");
             AvaloniaHeadlessPlatform.ForceRenderTimerTick(); Dispatcher.UIThread.RunJobs();
             var host = window.GetVisualDescendants().OfType<ContentControl>().Single(c => c.Name == "FullLyricsHost");
             var opening = window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "LyricsTransitionOverlay");
             Check(opening.Child is Image { RenderTransform: TranslateTransform { Y: > 0 } } && opening.Bounds.Top >= 50 && opening.ZIndex > 20, "Bottom player expands only the lyrics viewport above the workspace.");
             Check(host.IsVisible && host.Opacity == 0 && !host.IsHitTestVisible, "Live lyrics clock remains attached while transition input is suppressed.");
-            Capture("lyrics-opening.png"); Pump(80);
-            Check(!Overlay() && host.Opacity == 1 && host.IsHitTestVisible, "Opening releases bitmap and restores original appearance/input.");
+            ObserveMotion(true); Pump(80);
+            Check(!Overlay() && !window.GetVisualDescendants().OfType<Border>().Any(b => b.Name == "LyricsTransitionBackdrop") && host.Opacity == 1 && host.IsHitTestVisible, "Opening releases both bitmaps and restores original appearance/input.");
             CenteredBeforeFrame(73);
         }
         vm.Navigate("settings");
         Check(motionEnabled == Overlay(), "Closing keeps outgoing lyrics only as a noninteractive snapshot.");
-        Capture("lyrics-closing.png"); Pump(80); Check(!Overlay(), "Closing releases overlay.");
+        if (motionEnabled) ObserveMotion(false); Pump(80); Check(!Overlay(), "Closing releases overlay.");
         vm.PlaybackPosition = 91.25; vm.Navigate("lyrics"); CenteredBeforeFrame(91); vm.Navigate("settings"); vm.Navigate("lyrics"); CenteredBeforeFrame(91); Pump(80);
         Check(!Overlay() && vm.Page == "lyrics", "Rapid toggles leave the latest page and no stale overlay.");
         vm.Navigate("settings"); Pump(80); vm.Settings.PlayerTop = true; vm.ApplySettings(); Pump();
         vm.PlaybackPosition = 51.25; vm.Navigate("lyrics"); CenteredBeforeFrame(51);
         AvaloniaHeadlessPlatform.ForceRenderTimerTick(); Dispatcher.UIThread.RunJobs();
-        if (motionEnabled) Check(window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "LyricsTransitionOverlay").Child is Image { RenderTransform: TranslateTransform { Y: < 0 } }, "Top player expands lyrics downward.");
+        if (motionEnabled) Check(window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "LyricsTransitionOverlay").Child is Image { RenderTransform: TranslateTransform transform } && (window.InterfaceSettings.PlayerTop ? transform.Y < 0 : transform.Y > 0), "Transition direction uses the effective player placement.");
         window.WindowState = WindowState.Minimized; Pump(); Check(!Overlay(), "Minimize cancels transition immediately.");
         window.WindowState = WindowState.Normal; Pump();
         var previous = Environment.GetEnvironmentVariable("NONET_REDUCED_MOTION");
@@ -82,6 +86,31 @@ internal static class LyricsTransitionChecks
         window.Close(); Pump();
         Console.WriteLine("PASS lyrics pre-centered before the first animation frame, stable after transition, variable-height rows, first/last/deep line, top/bottom player, cancellation, rapid navigation, reduced motion and snapshot scale.");
         bool Overlay() => window.GetVisualDescendants().OfType<Border>().Count(b => b.Name == "LyricsTransitionOverlay") == 1;
+        void ObserveMotion(bool opening)
+        {
+            var motion = typeof(MainWindow).GetField("_lyricsMotion", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(window)!;
+            var cancelField = typeof(LyricsPageMotion).GetField("_cancel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+            var priorCancel = (Action?)cancelField.GetValue(motion); string? cancellation = null;
+            cancelField.SetValue(motion, (Action)(() => { cancellation = Environment.StackTrace; priorCancel?.Invoke(); }));
+            var values = new List<double>(); var end = Environment.TickCount64 + 1500;
+            var initial = window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "LyricsTransitionOverlay");
+            var transform = (TranslateTransform)((Image)initial.Child!).RenderTransform!;
+            values.Add(transform.Y);
+            void Changed(object? sender, AvaloniaPropertyChangedEventArgs args) { if (args.Property == TranslateTransform.YProperty) values.Add(transform.Y); }
+            transform.PropertyChanged += Changed;
+            while (Overlay() && Environment.TickCount64 < end)
+            {
+                var overlay = window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "LyricsTransitionOverlay");
+                values.Add(((TranslateTransform)((Image)overlay.Child!).RenderTransform!).Y);
+                AvaloniaHeadlessPlatform.ForceRenderTimerTick(); Dispatcher.UIThread.RunJobs(); Thread.Sleep(4);
+            }
+            transform.PropertyChanged -= Changed;
+            Capture(opening ? "lyrics-opening-settled.png" : "lyrics-closing-settled.png");
+            File.WriteAllText(Path.Combine(root, opening ? "opening-trace.txt" : "closing-trace.txt"), string.Join(", ", values) + "\n" + cancellation);
+            Check(cancellation is null, "A stable page transition must not be canceled by a layout callback: " + cancellation);
+            Check(values.Count >= 3, "Observe actual position updates rather than accepting an already completed animation.");
+            for (var i = 1; i < values.Count; i++) Check(opening ? values[i] <= values[i - 1] + .5 : values[i] >= values[i - 1] - .5, "Snapshot position must not jump back at animation completion.");
+        }
         void Capture(string name) { using var frame = window.CaptureRenderedFrame()!; frame.Save(Path.Combine(root, name), PngBitmapEncoderOptions.Default); }
         // 不推进 Dispatcher 或动画时钟，确保快照捕获前已经完成真实虚拟化列表的定位。
         void CenteredBeforeFrame(int index)

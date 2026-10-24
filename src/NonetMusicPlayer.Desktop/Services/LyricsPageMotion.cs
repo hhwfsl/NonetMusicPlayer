@@ -43,9 +43,13 @@ public sealed class LyricsPageMotion : IDisposable
         catch (Exception error) { AppLog.Warning("UI", "Lyrics transition snapshot skipped", error); return null; }
     }
     public void Begin(Grid layer, ContentControl host, Bitmap snapshot, Rect region, Vector layerOffset, bool opening, bool playerTop)
+        => Begin(layer, host, snapshot, region, layerOffset, opening, playerTop, null);
+    public void Begin(Grid layer, ContentControl host, Bitmap snapshot, Rect region, Vector layerOffset, bool opening, bool playerTop, InterfaceMotionProfile? profile)
+        => Begin(layer, host, snapshot, region, layerOffset, opening, playerTop, profile, null, default);
+    public void Begin(Grid layer, ContentControl host, Bitmap snapshot, Rect region, Vector layerOffset, bool opening, bool playerTop, InterfaceMotionProfile? profile, Bitmap? previousPage, Size previousPageSize)
     {
         Cancel();
-        if (!InterfaceMotion.IsEnabled) { snapshot.Dispose(); return; }
+        if (!InterfaceMotion.IsEnabled) { snapshot.Dispose(); previousPage?.Dispose(); return; }
         var token = new CancellationTokenSource();
         var image = new Image { Source = snapshot, Stretch = Stretch.Fill, IsHitTestVisible = false };
         var overlay = new Border { Name = "LyricsTransitionOverlay", Child = image, ClipToBounds = true,
@@ -54,8 +58,20 @@ public sealed class LyricsPageMotion : IDisposable
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top, ZIndex = 30 };
         Grid.SetRowSpan(overlay, 2);
         var distance = region.Height * (playerTop ? -1 : 1);
-        // 基础值使用最终位置，动画解绑到资源释放之间不会闪回起点。
-        var transform = new TranslateTransform(0, opening ? 0 : distance);
+        // 动画第一次采样前也必须处于起点，不能先闪现完整歌词页再被首帧移走。
+        var transform = new TranslateTransform(0, opening ? distance : 0);
+        overlay.CornerRadius = new(opening ? profile?.LyricsCornerRadius ?? 0 : 0);
+        Border? backdrop = null;
+        if (opening && previousPage is not null)
+        {
+            var oldImage = new Image { Source = previousPage, Width = previousPageSize.Width, Height = previousPageSize.Height,
+                Stretch = Stretch.Fill, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+                RenderTransform = new TranslateTransform(-region.X, -region.Y) };
+            backdrop = new Border { Name = "LyricsTransitionBackdrop", Child = oldImage, ClipToBounds = true, IsHitTestVisible = false,
+                Width = region.Width, Height = region.Height, Margin = overlay.Margin,
+                HorizontalAlignment = overlay.HorizontalAlignment, VerticalAlignment = overlay.VerticalAlignment, ZIndex = 29 };
+            Grid.SetRowSpan(backdrop, 2);
+        }
         IDisposable? opacityLease = null, inputLease = null;
         image.RenderTransform = transform;
         var completed = false;
@@ -63,10 +79,13 @@ public sealed class LyricsPageMotion : IDisposable
         {
             if (completed) return; completed = true;
             opacityLease?.Dispose(); inputLease?.Dispose(); layer.Children.Remove(overlay); image.Source = null; snapshot.Dispose();
+            if (backdrop is not null) { layer.Children.Remove(backdrop); if (backdrop.Child is Image prior) prior.Source = null; }
+            previousPage?.Dispose();
             IsRunning = false; _cancel = null;
         }
         try
         {
+            if (backdrop is not null) layer.Children.Add(backdrop);
             layer.Children.Add(overlay);
             if (opening)
             {
@@ -81,13 +100,27 @@ public sealed class LyricsPageMotion : IDisposable
         catch { Finish(); token.Dispose(); throw; }
         async Task Animate()
         {
-            var animation = new Animation { Duration = TimeSpan.FromMilliseconds(opening ? 240 : 200), Easing = new CubicEaseOut(), Children =
+            // 结束值必须保持到快照交接完成；解绑回到起点会产生收起/展开各一帧的闪回。
+            var animation = new Animation { FillMode = FillMode.Forward, Duration = TimeSpan.FromMilliseconds(profile?.LyricsDurationMs ?? (opening ? 240 : 200)), Easing = new CubicEaseOut(), Children =
             {
                 new KeyFrame { Cue = new Cue(0), Setters = { new Setter(TranslateTransform.YProperty, opening ? distance : 0d) } },
                 new KeyFrame { Cue = new Cue(1), Setters = { new Setter(TranslateTransform.YProperty, opening ? 0d : distance) } }
             } };
             // Avalonia 的 TransformAnimator 以 Visual 为目标，再定位其 TranslateTransform。
-            try { await animation.RunAsync(image, token.Token); }
+            try
+            {
+                if (profile is null) await animation.RunAsync(image, token.Token);
+                else
+                {
+                    var radius = profile.LyricsCornerRadius ?? 16;
+                    var rounding = new Animation { FillMode = FillMode.Forward, Duration = animation.Duration, Easing = new CubicEaseOut(), Children =
+                    {
+                        new KeyFrame { Cue = new Cue(0), Setters = { new Setter(Border.CornerRadiusProperty, new CornerRadius(opening ? radius : 0)) } },
+                        new KeyFrame { Cue = new Cue(1), Setters = { new Setter(Border.CornerRadiusProperty, new CornerRadius(opening ? 0 : radius)) } }
+                    } };
+                    await Task.WhenAll(animation.RunAsync(image, token.Token), rounding.RunAsync(overlay, token.Token));
+                }
+            }
             catch (OperationCanceledException) { }
             catch (Exception error) { AppLog.Warning("UI", "Lyrics transition skipped", error); }
             finally

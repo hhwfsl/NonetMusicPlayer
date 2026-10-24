@@ -15,6 +15,7 @@ public sealed partial class PluginManager
         if (_uiHost == host && _uiVm == vm) return;
         DisposeUiRuntime(); _uiHost = host; _uiVm = vm; AttachExtensionEvents(); host.Closed += HostClosed; host.Opened += HostOpened;
         if (!host.IsVisible) return;
+        foreach (var plugin in Installed.Where(p => p.Enabled && p.Type == "extension" && p.AutoStart)) _ = StartAutomaticExtensionAsync(plugin);
         foreach (var plugin in Installed.Where(p => p.Enabled && p.Type == "extension" && p.Permissions.Contains("audio-processing"))) _ = StartAudioExtensionAsync(plugin);
         foreach (var plugin in Installed.Where(p => p.Enabled && p.Type == "ui")) RefreshUiRuntime(plugin);
     }
@@ -22,11 +23,15 @@ public sealed partial class PluginManager
     private void HostClosed(object? sender, EventArgs e) => DisposeUiRuntime();
     private void HostOpened(object? sender, EventArgs e)
     {
+        foreach (var plugin in Installed.Where(p => p.Enabled && p.Type == "extension" && p.AutoStart)) _ = StartAutomaticExtensionAsync(plugin);
         foreach (var plugin in Installed.Where(p => p.Enabled && p.Type == "extension" && p.Permissions.Contains("audio-processing"))) _ = StartAudioExtensionAsync(plugin);
         foreach (var plugin in Installed.Where(p => p.Enabled && p.Type == "ui")) RefreshUiRuntime(plugin);
     }
+    /// <summary>窗口首次显示前恢复外观贡献；需要可见窗口的桌宠等扩展仍在 Opened 启动。</summary>
+    public Task PrepareAutomaticExtensionsAsync() => Task.WhenAll(Installed.Where(p => p.Enabled && p.Type == "extension" && p.AutoStart && (p.RequiredCapabilities.Contains(StyleSheetContract.Capability) || p.RequiredCapabilities.Contains(InterfaceCompositionContract.Capability) || p.RequiredCapabilities.Contains(ElementLayoutContract.Capability))).ToArray().Select(StartAutomaticExtensionAsync));
     private void RefreshUiRuntime(PluginManifest manifest)
     {
+        if (manifest.Enabled && manifest.Type == "extension" && manifest.AutoStart && _uiHost?.IsVisible == true) _ = StartAutomaticExtensionAsync(manifest);
         if (!manifest.Enabled || manifest.Type != "ui")
         {
             if (_pets.Remove(manifest.Id, out var prior)) prior.Close();
@@ -60,5 +65,11 @@ public sealed partial class PluginManager
         if (_uiHost is not null) { _uiHost.Closed -= HostClosed; _uiHost.Opened -= HostOpened; }
         _uiHost = null; _uiVm = null;
         foreach (var pet in _pets.Values.ToArray()) pet.Close(); _pets.Clear();
+    }
+    private async Task StartAutomaticExtensionAsync(PluginManifest plugin)
+    {
+        try { await Extension(plugin).StartAsync().WaitAsync(TimeSpan.FromSeconds(12)); }
+        catch (OperationCanceledException) { }
+        catch (Exception error) { ReportPluginFault(plugin, error); }
     }
 }

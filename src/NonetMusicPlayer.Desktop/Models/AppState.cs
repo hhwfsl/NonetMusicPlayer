@@ -24,6 +24,8 @@ public sealed class AppState
     public string LastSourcePage { get; set; } = "library";
     public string? LastPlaylistId { get; set; }
     public List<ListeningEntry> ListeningEntries { get; set; } = [];
+    /// <summary>仅保留最近 72 个小时的播放次数，历史每日记录不推测小时分布。</summary>
+    public List<HourlyListeningEntry> HourlyListeningEntries { get; set; } = [];
     public Dictionary<string, string> GroupCovers { get; set; } = new(StringComparer.Ordinal);
     public HashSet<string> SoftwareDefaultGroupCovers { get; set; } = new(StringComparer.Ordinal);
 }

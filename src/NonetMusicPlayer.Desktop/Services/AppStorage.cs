@@ -128,6 +128,10 @@ public sealed class AppStorage
         var historyIds = state.History.ToHashSet(StringComparer.Ordinal);
         state.RecentTemporaryTracks = state.RecentTemporaryTracks.Where(t => t is not null && !string.IsNullOrWhiteSpace(t.Id) && historyIds.Contains(t.Id)).DistinctBy(t => t.Id).Take(state.Settings.HistoryLimit).ToList();
         state.ListeningEntries ??= []; state.GroupCovers ??= new(StringComparer.Ordinal); state.SoftwareDefaultGroupCovers ??= new(StringComparer.Ordinal);
+        // 可选小时元数据有界归并；旧备份缺省为空，不按每日次数补造分布。
+        state.HourlyListeningEntries = (state.HourlyListeningEntries ?? []).Where(e => e is not null && e.UtcHour >= 0 && e.UtcHour <= DateTimeOffset.MaxValue.ToUnixTimeSeconds() / 3600 && e.PlayCount > 0)
+            .GroupBy(e => e.UtcHour).OrderByDescending(g => g.Key).Take(72)
+            .Select(g => new HourlyListeningEntry { UtcHour = g.Key, PlayCount = (int)Math.Min(int.MaxValue, g.Sum(e => (long)e.PlayCount)) }).ToList();
         state.ListeningEntries = state.ListeningEntries.Where(entry => entry is not null && !string.IsNullOrWhiteSpace(entry.TrackId) && DateOnly.TryParse(entry.Date, out _) && double.IsFinite(entry.Seconds) && entry.Seconds >= 0).ToList();
         foreach (var entry in state.ListeningEntries) { entry.PlayCount = Math.Max(0, entry.PlayCount); entry.Title ??= "未命名歌曲"; entry.Artist ??= L10n.T("Library.UnknownArtist"); }
         foreach (var track in state.Tracks.Concat(state.RecentTemporaryTracks))
@@ -296,6 +300,7 @@ public sealed class AppStorage
 [JsonSerializable(typeof(AppState))]
 [JsonSerializable(typeof(AppSettings))]
 [JsonSerializable(typeof(ListeningStatisticsSnapshot))]
+[JsonSerializable(typeof(RecentListeningCharts))]
 [JsonSerializable(typeof(List<PluginManifest>))]
 [JsonSerializable(typeof(PluginManifest))]
 [JsonSerializable(typeof(ProviderCatalog))]

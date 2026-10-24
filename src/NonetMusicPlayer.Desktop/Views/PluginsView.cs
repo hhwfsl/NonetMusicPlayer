@@ -34,7 +34,6 @@ public sealed class PluginsView : UserControl, IDisposable
                     }
                     var details = L10n.Format("Plugins.AuthorTypeVersionPermissionsInstalledPluginsAreDisabledBy", manifest.Author, TypeName(manifest.Type), manifest.Version, manifest.Permissions.Count == 0 ? L10n.T("Common.None") : string.Join(" / ", manifest.Permissions.Select(PermissionName)), manifest.Description);
                     if (previous is not null) details = L10n.Format("Plugins.UpdateDetails", previous.Version, manifest.Version, string.Join(" / ", manifest.Permissions.Select(PermissionName)), manifest.Description);
-                    if (manifest.Runtime == "managed") details += "\n\n" + L10n.T("Extensions.ManagedWarning");
                     if (_disposed || !await PlayerDialog.Confirm(owner, previous is null ? L10n.Format("Common.Install", manifest.Name) : L10n.Format("Plugins.UpdateTitle", manifest.Name), details, L10n.T(previous is null ? "Common.TrustAndInstall" : "Plugins.TrustAndUpdate"))) return;
                     if (vm.IsBusy) throw new InvalidOperationException(L10n.T("Plugins.WaitForTheCurrentOperationBeforeInstallingAPlugin"));
                     vm.IsBusy = true;
@@ -125,23 +124,23 @@ public sealed class PluginsView : UserControl, IDisposable
             update.Name = "PluginUpdate"; update.Content = Icon(IconKind.Refresh); update.VerticalAlignment = VerticalAlignment.Center;
             ToolTip.SetTip(update, L10n.T("Plugins.CheckUpdate")); Avalonia.Automation.AutomationProperties.SetName(update, plugin.Name + " · " + L10n.T("Plugins.CheckUpdate"));
             Grid.SetColumn(update, 2); actions.Children.Add(update);
-            var folder = Ui.Button("", () => MainWindow.OpenPath(Path.Combine(vm.Storage.PluginsFolder, plugin.Id)));
-            folder.Name = "PluginOpenFolder"; folder.Content = Icon(IconKind.Folder); folder.VerticalAlignment = VerticalAlignment.Center;
-            ToolTip.SetTip(folder, L10n.T("Plugins.OpenFolder")); Avalonia.Automation.AutomationProperties.SetName(folder, L10n.T("Plugins.OpenFolder"));
-            Grid.SetColumn(folder, 3); actions.Children.Add(folder);
-            if (PluginManager.HasMediaSource(plugin))
+            var openPage = Ui.Button("", () => vm.Navigate("plugin:" + plugin.Id));
+            openPage.Name = "PluginOpenPage"; openPage.Content = Icon(IconKind.Sidebar); openPage.VerticalAlignment = VerticalAlignment.Center;
+            openPage.IsEnabled = plugin.Enabled && plugin.HasPage && plugin.Type is "extension" or "agent" or "ui" or "lyrics";
+            ToolTip.SetTip(openPage, L10n.T("Plugins.OpenPage")); Avalonia.Automation.AutomationProperties.SetName(openPage, L10n.T("Plugins.OpenPage"));
+            Grid.SetColumn(openPage, 3); actions.Children.Add(openPage);
             {
                 var more = Ui.Button("", () => { }); more.Name = "PluginMore";
                 more.Content = Icon(IconKind.More); ToolTip.SetTip(more, L10n.T("Common.More")); Avalonia.Automation.AutomationProperties.SetName(more, L10n.T("Common.More"));
                 var menu = new ContextMenu();
-                var configure = new MenuItem { Header = L10n.T("Common.Configure"), Icon = Icon(IconKind.Settings) };
-                configure.Click += async (_, _) =>
+                var folder = new MenuItem { Name = "PluginOpenFolder", Header = L10n.T("Plugins.OpenFolder"), Icon = Icon(IconKind.Folder) };
+                folder.Click += (_, _) => MainWindow.OpenPath(Path.Combine(vm.Storage.PluginsFolder, plugin.Id)); menu.Items.Add(folder);
+                if (PluginManager.HasMediaSource(plugin))
                 {
-                    await owner.OpenPluginConfigurationAsync(plugin);
-                };
-                var refresh = new MenuItem { Header = L10n.T("Common.LoadCatalog"), Icon = Icon(IconKind.Library) };
-                refresh.Click += async (_, _) => await vm.RefreshProviderAsync(plugin);
-                menu.ItemsSource = new[] { configure, refresh }; more.Click += (_, _) => owner.OpenMenu(more, menu); Grid.SetColumn(more, 4); more.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(more);
+                    var refresh = new MenuItem { Header = L10n.T("Common.LoadCatalog"), Icon = Icon(IconKind.Library) };
+                    refresh.Click += async (_, _) => await vm.RefreshProviderAsync(plugin); menu.Items.Add(refresh);
+                }
+                more.Click += (_, _) => owner.OpenMenu(more, menu); Grid.SetColumn(more, 4); more.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(more);
             }
             var uninstall = Ui.AsyncButton("", async () =>
             {

@@ -79,8 +79,10 @@ internal static class DataStatisticsChecks
             first = vm.State.Tracks[0]; second = vm.State.Tracks[1]; Wait(vm.PlayTrackAsync(first));
             Sample(vm, audio, clock, .5); Require(vm.GetStatistics().TotalPlays == 0, "A sub-second start does not count as a play");
             Sample(vm, audio, clock, .5); var stats = vm.GetStatistics(); Require(Near(stats.TotalSeconds, 1) && stats.TotalPlays == 1 && stats.ActiveDays == 1 && Near(stats.TodaySeconds, 1), "Real audio advance credits actual seconds and one session play");
+            Require(vm.GetRecentListeningCharts().Hours.Sum(p => p.Value) == 1 && vm.GetRecentListeningCharts().Hours[^1].Value == 1, "A genuine play is credited to its UTC hour");
             vm.TogglePlayPauseCommand.Execute(null); clock.Advance(1); Tick(vm); Require(Near(vm.GetStatistics().TotalSeconds, 1), "Paused wall time never credits listening");
             vm.TogglePlayPauseCommand.Execute(null); Sample(vm, audio, clock, .5); Require(vm.GetStatistics().TotalPlays == 1, "Pause and resume do not duplicate play count");
+            Require(vm.GetRecentListeningCharts().Hours.Sum(p => p.Value) == 1, "Pause and resume do not duplicate hourly plays");
             var beforeSeek = vm.GetStatistics().TotalSeconds; vm.Seek(200); Tick(vm); Require(Near(vm.GetStatistics().TotalSeconds, beforeSeek), "Seek jump itself contributes no listening time");
             Sample(vm, audio, clock, .5); Require(Near(vm.GetStatistics().TotalSeconds, beforeSeek + .5), "Listening after a seek resumes with fresh anchor");
             vm.IsSeeking = true; Sample(vm, audio, clock, .5); vm.IsSeeking = false; Require(Near(vm.GetStatistics().TotalSeconds, beforeSeek + .5), "Seek drag excludes sampling interval");
@@ -97,7 +99,8 @@ internal static class DataStatisticsChecks
             var selectedJson = File.ReadAllText(backup);
             var unrelated = Path.Combine(fixture, "not-a-library.json"); File.WriteAllText(unrelated, "{\"schemaVersion\":1,\"theme\":\"Dark\"}");
             Throws(() => vm.RestoreLibraryBackup(unrelated), "Unrelated JSON is rejected before replacing a library"); Require(vm.GetStatistics().TotalPlays == 2 && !Directory.Exists(Path.Combine(storage.BackupFolder, "Restores")), "Rejected restore does not mutate data or create a restoration archive");
-            var savedTotal = vm.GetStatistics().TotalSeconds; vm.State.ListeningEntries.Clear(); vm.Save(); vm.RestoreLibraryBackup(backup);
+            var savedTotal = vm.GetStatistics().TotalSeconds; vm.State.ListeningEntries.Clear(); vm.State.HourlyListeningEntries.Clear(); vm.Save(); vm.RestoreLibraryBackup(backup);
+            Require(vm.GetRecentListeningCharts().Hours.Sum(p => p.Value) == 2, "Explicit restore recovers hourly plays after clearing current state");
             Require(Near(vm.GetStatistics().TotalSeconds, savedTotal) && !vm.IsPlaying && vm.PlaybackPosition == 25 && vm.CurrentTrack?.Id == "second", "Explicit backup restores statistics and displayed progress without autoplay");
             Require(File.ReadAllText(backup) == selectedJson, "Explicit backup import preserves original file bytes");
             var restoreArchives = Directory.GetDirectories(Path.Combine(storage.BackupFolder, "Restores"));
@@ -123,7 +126,10 @@ internal static class DataStatisticsChecks
             Throws(() => Wait(vm.ConfigureDataDirectoryAsync(Path.Combine(storage.Root, "invalid-nested"))), "Async migration validates overlap"); Require(!vm.IsBusy, "Failed async migration clears busy state");
         }
         using (var restored = new MainViewModel(new MusicLibraryScanner(storage), new StatisticsAudio(), clock))
+        {
             Require(restored.GetStatistics().TotalPlays == 2 && restored.GetGroupCover("albums", "专辑") is not null && !restored.IsPlaying, "Source-generated persistence retains statistics and group covers");
+            Require(restored.GetRecentListeningCharts().Hours.Sum(p => p.Value) == 2, "SQLite restore and migration retain bounded hourly statistics");
+        }
     }
     private static void CheckMovedTrackImport(string fixture)
     {

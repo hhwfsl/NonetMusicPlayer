@@ -24,7 +24,7 @@
             BorderThickness="1"
             ClipToBounds="True"
             CornerRadius="12">
-            <Grid RowDefinitions="52,*">
+            <Grid x:Name="ShellLayout" RowDefinitions="52,*">
                 <Image
                     x:Name="AppBackgroundImage"
                     Grid.RowSpan="2"
@@ -267,6 +267,7 @@
                                             <StackPanel
                                                 x:Name="PageHeadingLabel"
                                                 Margin="0,0,18,0"
+                                                VerticalAlignment="Center"
                                                 Spacing="6">
                                                 <TextBlock
                                                     FontSize="26"
@@ -555,6 +556,7 @@
                                                                 Text="{Binding DisplayIndex}" />
                                                             <Border
                                                                 Grid.Column="2"
+                                                                Classes="track-artwork"
                                                                 Width="40"
                                                                 Height="40"
                                                                 HorizontalAlignment="Left"
@@ -566,7 +568,7 @@
                                                                     <ui:VectorIcon
                                                                         Width="24"
                                                                         Height="24"
-                                                                        Kind="Music" />
+                                                                        Kind="Music" Brush="{DynamicResource TextSecondaryBrush}" />
                                                                     <Image Source="{Binding Artwork}" Stretch="UniformToFill" />
                                                                 </Grid>
                                                             </Border>

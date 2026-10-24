@@ -40,7 +40,7 @@ public sealed partial class MainWindow
     }
     private void ApplyTitleButtons()
     {
-        var left = _vm?.Settings.TitleButtonsOnLeft ?? OperatingSystem.IsMacOS();
+        var left = _vm is null ? OperatingSystem.IsMacOS() : InterfaceSettings.TitleButtonsOnLeft;
         TitleBarLayout.Margin = left ? new(16, 0, 16, 0) : new(20, 0, 12, 0);
         TitleBarLayout.ColumnDefinitions = new ColumnDefinitions(left ? "*,Auto,*" : "Auto,*,Auto");
         Grid.SetColumn(TitleButtons, left ? 0 : 2); Grid.SetColumn(TitleBrand, left ? 1 : 0);

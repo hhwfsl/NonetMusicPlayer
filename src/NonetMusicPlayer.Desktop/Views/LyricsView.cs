@@ -28,7 +28,7 @@ public sealed class LyricsView : UserControl, IDisposable
     private readonly Border _art;
     private readonly Image _cover;
     private readonly TextBlock _title, _artist, _empty;
-    private readonly Button _more, _seek;
+    private readonly Button _seek;
     private readonly NonetMusicPlayer.Desktop.Models.BulkObservableCollection<LyricLine> _displayLines = [];
     private double[] _rowHeights = [], _rowOffsets = [];
     private double _measuredWidth;
@@ -41,7 +41,6 @@ public sealed class LyricsView : UserControl, IDisposable
     private double _animationFrom, _animationTo;
     private readonly DispatcherTimer _previewSettled, _resumeFollow;
     private ScrollViewer? _scroll;
-    private ContextMenu? _menu;
     private bool _disposed, _previewing, _touchScrolling, _lyricsRefreshPending, _initialCenter = true;
     private bool _preparingEntrance, _entrancePrepared;
     private int _centerRequest;
@@ -54,19 +53,20 @@ public sealed class LyricsView : UserControl, IDisposable
     public LyricsView(MainWindow owner, MainViewModel vm)
     {
         _owner = owner; _vm = vm;
-        _cover = new Image { Source = vm.CurrentArtwork, Stretch = Stretch.UniformToFill };
+        Name = "LyricsPage";
+        _cover = new Image { Name = "LyricsCoverImage", Source = vm.CurrentArtwork, Stretch = Stretch.UniformToFill };
         _art = new Border
         {
-            Width = 300, Height = 300, CornerRadius = new CornerRadius(22), ClipToBounds = true,
+            Name = "LyricsArtwork", Width = 300, Height = 300, CornerRadius = new CornerRadius(22), ClipToBounds = true,
             Background = Ui.Brush("SurfaceRaisedBrush"), HorizontalAlignment = HorizontalAlignment.Center,
             Child = new Grid { Children = { new VectorIcon { Kind = IconKind.Music, Width = 76, Height = 76 }, _cover } }
         };
-        _title = Ui.Text(vm.CurrentTitle, 26); _title.TextAlignment = TextAlignment.Center;
-        _artist = Ui.Text(vm.CurrentArtist, 15, true); _artist.TextAlignment = TextAlignment.Center;
-        _more = Ui.Button("", ShowMore); _more.Name = "LyricsMore"; _more.Classes.Add("quiet");
-        _more.Content = new VectorIcon { Kind = IconKind.More, Width = 22, Height = 22, Brush = Ui.Brush("TextPrimaryBrush") };
-        _more.Width = _more.Height = 44; _more.HorizontalAlignment = HorizontalAlignment.Center;
-        var left = Ui.Stack(_art, _title, _artist, _more);
+        _title = Ui.Text(vm.CurrentTitle, 26); _title.Name = "LyricsTitle"; _title.TextAlignment = TextAlignment.Center;
+        _artist = Ui.Text(vm.CurrentArtist, 15, true); _artist.Name = "LyricsArtist"; _artist.TextAlignment = TextAlignment.Center;
+        // 保留旧方案的稳定锚点，但不再呈现按钮；操作统一放在播放栏的更多菜单中。
+        var legacyAnchor = new Border { Name = "LyricsMore", IsVisible = false };
+        var left = Ui.Stack(_art, _title, _artist, legacyAnchor);
+        left.Name = "LyricsInfo";
         left.VerticalAlignment = VerticalAlignment.Center; left.HorizontalAlignment = HorizontalAlignment.Right; left.Margin = new Thickness(12, 12, 12, 12); left.Spacing = 18;
         _list = new ListBox
         {
@@ -102,14 +102,14 @@ public sealed class LyricsView : UserControl, IDisposable
             MovePreview(e.Key switch { Key.Up => -1, Key.Down => 1, Key.PageUp => -5, Key.PageDown => 5, Key.Home => -_vm.LyricLines.Count, _ => _vm.LyricLines.Count }); e.Handled = true;
         }, RoutingStrategies.Tunnel, true);
         _list.TemplateApplied += (_, _) => AttachScroll();
-        _empty = Ui.Text("", 18, true); _empty.TextAlignment = TextAlignment.Center;
+        _empty = Ui.Text("", 18, true); _empty.Name = "LyricsEmpty"; _empty.TextAlignment = TextAlignment.Center;
         _empty.VerticalAlignment = VerticalAlignment.Center; _empty.HorizontalAlignment = HorizontalAlignment.Center;
         _seek = Ui.Button("", SeekPreview); _seek.Name = "LyricPreviewSeek"; _seek.Width = _seek.Height = 46;
         _seek.Content = new VectorIcon { Kind = IconKind.Play, Width = 20, Height = 20, Brush = Ui.Brush("AccentForegroundBrush") };
         _seek.Classes.Add("primary"); _seek.IsVisible = false; _seek.HorizontalAlignment = HorizontalAlignment.Right;
         _seek.VerticalAlignment = VerticalAlignment.Center; _seek.Margin = new Thickness(0, 0, 12, 0);
-        _right = new Grid { Children = { _list, _empty, _seek }, Margin = new Thickness(0, 10, 12, 10) };
-        _layout = new Grid { ColumnDefinitions = new ColumnDefinitions("0.43*,0.57*") };
+        _right = new Grid { Name = "LyricsTextPanel", Children = { _list, _empty, _seek }, Margin = new Thickness(0, 10, 12, 10) };
+        _layout = new Grid { Name = "LyricsLayout", ColumnDefinitions = new ColumnDefinitions("0.43*,0.57*") };
         _layout.Children.Add(left); Grid.SetColumn(_right, 1); _layout.Children.Add(_right); Content = _layout;
         _previewSettled = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
         _previewSettled.Tick += (_, _) => { _previewSettled.Stop(); FindPreviewLine(); };
@@ -135,17 +135,17 @@ public sealed class LyricsView : UserControl, IDisposable
         foreach (var text in _list.GetVisualDescendants().OfType<KaraokeLine>())
             if (text.Tag is ValueTuple<LyricLine, bool> tag)
             {
-                text.TextColor = (Ui.Brush("AccentBrush") as ISolidColorBrush)?.Color ?? Colors.White;
-                text.PendingColor = (Ui.Brush(tag.Item2 ? "TextMutedBrush" : "TextPrimaryBrush") as ISolidColorBrush)?.Color;
+                text.TextColor = PresentationColor(_owner.InterfaceLyricsProfile?.ActiveColor, "AccentBrush");
+                text.PendingColor = PresentationColor(tag.Item2 ? _owner.InterfaceLyricsProfile?.TranslationColor : _owner.InterfaceLyricsProfile?.PendingColor, tag.Item2 ? "TextMutedBrush" : "TextPrimaryBrush");
             }
         MeasureLines(true); ResizeLayout(); RefreshWordColors();
     }
     private Control LyricContent(LyricLine? line)
     {
-        var original = new KaraokeLine { Tag = (line, false), TextSize = 23, TextColor = (Ui.Brush("AccentBrush") as ISolidColorBrush)?.Color ?? Colors.White, PendingColor = (Ui.Brush("TextPrimaryBrush") as ISolidColorBrush)?.Color };
+        var original = new KaraokeLine { Tag = (line, false), TextSize = 23, TextColor = PresentationColor(_owner.InterfaceLyricsProfile?.ActiveColor, "AccentBrush"), PendingColor = PresentationColor(_owner.InterfaceLyricsProfile?.PendingColor, "TextPrimaryBrush") };
         original.UpdateTimed(line?.Text ?? "", line?.Words ?? [], _vm.PlaybackPosition, false);
         original.Classes.Add("lyric-original");
-        var translation = new KaraokeLine { Tag = (line, true), TextSize = 17, TextColor = original.TextColor, PendingColor = (Ui.Brush("TextMutedBrush") as ISolidColorBrush)?.Color };
+        var translation = new KaraokeLine { Tag = (line, true), TextSize = 17, TextColor = original.TextColor, PendingColor = PresentationColor(_owner.InterfaceLyricsProfile?.TranslationColor, "TextMutedBrush") };
         translation.UpdateTimed(line?.Translation ?? "", line?.TranslationWords ?? [], _vm.PlaybackPosition, false);
         translation.IsVisible = !string.IsNullOrWhiteSpace(line?.Translation);
         var lines = Ui.Stack(original, translation); lines.Spacing = 7; lines.VerticalAlignment = VerticalAlignment.Center;
@@ -153,50 +153,11 @@ public sealed class LyricsView : UserControl, IDisposable
         return new Border { Name = "LyricRow", Height = index >= 0 && index < _rowHeights.Length ? _rowHeights[index] : LyricRowHeight, Padding = new Thickness(24, 5), Child = lines };
     }
     private void LanguageChanged(object? sender, EventArgs e) => UpdateText();
+    private static Color PresentationColor(string? value, string fallback) => string.IsNullOrEmpty(value) ? (Ui.Brush(fallback) as ISolidColorBrush)?.Color ?? Colors.White : value.StartsWith('@') ? (Ui.Brush(value[1..]) as ISolidColorBrush)?.Color ?? Colors.White : Color.Parse(value);
     private void UpdateText()
     {
         _empty.Text = L10n.T("Lyrics.NoLyricsAvailable0245E1") + "\n" + L10n.T("Lyrics.ImportAnLRCOrTXTFileMatchingThisTrack");
-        ToolTip.SetTip(_more, L10n.T("Common.More")); AutomationProperties.SetName(_more, L10n.T("Common.More"));
         ToolTip.SetTip(_seek, L10n.T("Lyrics.PlayFromThisLyric")); AutomationProperties.SetName(_seek, L10n.T("Lyrics.PlayFromThisLyric"));
-    }
-    private void ShowMore()
-    {
-        _menu?.Close();
-        var import = new MenuItem { Header = L10n.T("Lyrics.ImportLyrics"), Icon = new VectorIcon { Kind = IconKind.FileAdd, Width = 18, Height = 18 } };
-        import.Click += async (_, _) =>
-        {
-            var paths = await _owner.OpenFilesAsync(L10n.T("Lyrics.SelectLyrics"), ["*.lrc", "*.txt"], false);
-            if (paths.Length == 0) return;
-            try
-            {
-                if (_vm.CurrentTrack is not null && _vm.Lyrics.Read(_vm.CurrentTrack.Id).Length > 0 && !await PlayerDialog.Confirm(_owner,
-                    L10n.T("Lyrics.ReplaceCurrentLyrics"), L10n.T("Lyrics.ReplaceExistingLyricsWithTheSelectedFileTheMusic"), L10n.T("Common.Replace"))) return;
-                _vm.ImportLyrics(paths[0]); UpdateTrack();
-            }
-            catch (Exception error) { _vm.ReportError(L10n.T("Lyrics.LyricsImportFailed"), error); }
-        };
-        MenuItem Shift(string text, double seconds)
-        {
-            var item = new MenuItem { Header = L10n.T(text) };
-            item.Click += (_, _) => { _vm.Settings.LyricOffset = Math.Clamp(_vm.Settings.LyricOffset + seconds, -30, 30); _vm.ApplySettings(); ResumeFollow(); };
-            return item;
-        }
-        var reset = new MenuItem { Header = L10n.T("Lyrics.ResetLyricsOffset") };
-        reset.Click += (_, _) => { _vm.Settings.LyricOffset = 0; _vm.ApplySettings(); ResumeFollow(); };
-        var reveal = new MenuItem { Header = L10n.T("Lyrics.ShowLyricFileInFolder"), Icon = new VectorIcon { Kind = IconKind.Folder, Width = 18, Height = 18 }, IsEnabled = _vm.CurrentTrack is { } track && _vm.Lyrics.ExistingPath(track.Id) is not null };
-        reveal.Click += (_, _) => { try { if (_vm.CurrentTrack is { } current && _vm.Lyrics.ExistingPath(current.Id) is { } path) SongInfoDialog.RevealFile(path); } catch (Exception error) { _vm.ReportError(L10n.T("Lyrics.UnableToLocateTheLyricFile"), error); } };
-        var unlink = new MenuItem { Header = L10n.T("Lyrics.Unlink"), Icon = new VectorIcon { Kind = IconKind.Close, Width = 18, Height = 18 }, IsEnabled = _vm.CurrentTrack is not null };
-        unlink.Click += (_, _) => { _vm.CancelLyricsAssociation(); UpdateTrack(); };
-        var items = new List<object> { import, reveal, unlink, new Separator(), Shift(L10n.T("Lyrics.LyricsSecondsEarlier"), .5), Shift(L10n.T("Lyrics.LyricsSecondsLater"), -.5), reset };
-        foreach (var plugin in _vm.Plugins.Installed.Where(p => p.Enabled && p.Type is "ui" or "lyrics"))
-            foreach (var contribution in plugin.MenuContributions.Where(c => c.Location == "lyrics.more"))
-            {
-                var item = new MenuItem { Header = contribution.Label, Icon = new VectorIcon { Kind = IconKind.Edit, Width = 18, Height = 18 } };
-                item.Click += async (_, _) => { if (contribution.Action == "match-lyrics") await _vm.MatchCurrentLyricsAsync(plugin); else _vm.Navigate("plugin:" + plugin.Id); }; items.Add(item);
-            }
-        _menu = new ContextMenu { ItemsSource = items };
-        _owner.AddExtensionMenu(_menu, "lyrics.more", new System.Text.Json.Nodes.JsonObject { ["trackId"] = _vm.CurrentTrack?.Id });
-        _owner.OpenMenu(_more, _menu);
     }
     private void LyricsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
@@ -437,7 +398,7 @@ public sealed class LyricsView : UserControl, IDisposable
         if (_disposed) return; _disposed = true;
         _vm.PropertyChanged -= Changed; _vm.LyricLines.CollectionChanged -= LyricsChanged; L10n.LanguageChanged -= LanguageChanged;
         _vm.SettingsChanged -= SettingsChanged;
-        _previewSettled.Stop(); _resumeFollow.Stop(); _smoothScroll.Stop(); _wordFrames.Stop(); _menu?.Close(); _more.ContextMenu = null;
+        _previewSettled.Stop(); _resumeFollow.Stop(); _smoothScroll.Stop(); _wordFrames.Stop();
         if (_scroll is not null) _scroll.ScrollChanged -= ScrollChanged;
         _cover.Source = null; _list.ItemsSource = null; _displayLines.Clear();
     }

@@ -46,7 +46,15 @@ public sealed partial class MainViewModel
             if (entry is null) { entry = new ListeningEntry { Date = date, TrackId = track.Id, Title = track.Title, Artist = track.Artist }; State.ListeningEntries.Add(entry); }
             entry.Title = track.Title; entry.Artist = track.Artist; entry.Seconds += seconds; _sessionListeningSeconds += seconds;
             // 刚开始即暂停不算一次聆听；恢复同一会话仍只计一次。
-            if (!_sessionCounted && _sessionListeningSeconds >= 1) { entry.PlayCount++; _sessionCounted = true; }
+            if (!_sessionCounted && _sessionListeningSeconds >= 1)
+            {
+                entry.PlayCount++; _sessionCounted = true;
+                var hour = _listeningClock.GetUtcNow().ToUnixTimeSeconds() / 3600;
+                State.HourlyListeningEntries.RemoveAll(e => e.UtcHour < hour - 71 || e.UtcHour > hour);
+                var bucket = State.HourlyListeningEntries.FirstOrDefault(e => e.UtcHour == hour);
+                if (bucket is null) { bucket = new() { UtcHour = hour }; State.HourlyListeningEntries.Add(bucket); }
+                bucket.PlayCount++;
+            }
             if (_listeningClock.GetElapsedTime(_statisticsNotificationTimestamp, now) >= TimeSpan.FromSeconds(1))
             {
                 _statisticsNotificationTimestamp = now; StatisticsChanged?.Invoke(this, EventArgs.Empty);
@@ -54,6 +62,8 @@ public sealed partial class MainViewModel
         }
         catch (Exception error) { AppLog.Warning("Statistics", "更新听歌统计失败，本次采样已忽略", error); _hasListeningAnchor = false; }
     }
+
+    public RecentListeningCharts GetRecentListeningCharts() => RecentListeningCharts.Build(State.ListeningEntries, State.HourlyListeningEntries, _listeningClock.GetLocalNow());
 
     public ListeningStatisticsSnapshot GetStatistics(DateOnly? selectedDate = null, string period = "all")
     {

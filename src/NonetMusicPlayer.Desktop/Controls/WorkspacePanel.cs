@@ -12,6 +12,8 @@ public sealed class WorkspacePanel : Panel
     public AppSettings Profile { get; set; } = new();
     public string Scope { get; set; } = "Workspace";
     public bool Editing { get; private set; }
+    public bool NavigationResizeEnabled { get; set; } = true;
+    public bool PlayerResizeEnabled { get; set; } = true;
     public event EventHandler? LayoutChanged;
     private Point? _edgeStart;
     private bool _resizingNavigation;
@@ -31,6 +33,7 @@ public sealed class WorkspacePanel : Panel
     }
     private bool NavigationEdgeAt(Point point, double tolerance)
     {
+        if (!NavigationResizeEnabled) return false;
         var nav = RectFor("Navigation", Bounds.Size);
         return point.Y >= nav.Top && point.Y <= nav.Bottom && Math.Abs(point.X - (Profile.NavigationRight ? nav.Left : nav.Right)) <= tolerance;
     }
@@ -45,6 +48,7 @@ public sealed class WorkspacePanel : Panel
     }
     public void BeginPlayerResize(PointerPressedEventArgs e)
     {
+        if (!PlayerResizeEnabled) return;
         if (Editing || e.Pointer.Type == PointerType.Mouse && !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
         _edgeStart = e.GetPosition(this); _resizingNavigation = false;
         _originalExtent = RectFor("Player", Bounds.Size).Height;

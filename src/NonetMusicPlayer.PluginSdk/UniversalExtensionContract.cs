@@ -7,8 +7,10 @@ namespace NonetMusicPlayer.Core.Plugins;
 public static class UniversalExtensionContract
 {
     public static readonly string[] Capabilities = ["host.catalog.v1", "host.query.v1", "storage.v1", "logging.v1", "events.publish.v1", "workflow.v1", "ui.surfaces.v1", "ui.native.v1", "files.transactions.v1", "audio.pcm.v1", "metadata.v1", "artwork.v1", "maintenance.v1", "media.search.v1", "media.import.v1", "ui.image-data.v1", "media.artwork-batch.v1", "runtime.supervised.v1", "lyrics.tracks.v1", "ui.elements.v1", "appearance.background-accent.v1"];
-    public static readonly string[] Services = ["host", "query", "storage", "log", "events", "files", "metadata", "artwork", "maintenance", "media", "appearance", "network"];
+    public static readonly string[] Services = ["host", "query", "storage", "log", "events", "files", "metadata", "artwork", "maintenance", "media", "appearance", "network", "styles"];
     public const string NetworkLibraryCapability = "network.library.v1";
+    public const string StartupCapability = "runtime.startup.v1";
+    public const string InterfaceCapability = InterfaceCompositionContract.Capability;
     public static readonly string[] Slots = ["shell.workspace", "shell.navigation", "shell.player", "shell.titlebar", "settings.sections", "navigation.items", "tray.actions", "album.more", "artist.more", "history.more", "selection.more", "library.more", "ui.element"];
     public static readonly string[] Hooks = ["command.before", "playback.before", "navigation.before", "import.before"];
     public static bool IsService(string name) => Services.Contains(name, StringComparer.Ordinal);

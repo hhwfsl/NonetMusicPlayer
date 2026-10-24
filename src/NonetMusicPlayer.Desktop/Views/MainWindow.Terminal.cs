@@ -129,7 +129,9 @@ public sealed partial class MainWindow
                     case "history.remove": vm.RemoveRecentTracks(command.Arguments); break;
                     case "statistics":
                         var stats = vm.GetStatistics(command.Arguments.Count == 0 ? null : DateOnly.ParseExact(Arg(0), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), command.Arguments.Count > 1 ? Arg(1) : "all");
-                        data = JsonSerializer.SerializeToNode(stats, AppStorage.Json); break;
+                        data = JsonSerializer.SerializeToNode(stats, AppStorage.Json);
+                        if (data is JsonObject statsObject) statsObject["recent"] = JsonSerializer.SerializeToNode(vm.GetRecentListeningCharts(), AppStorage.Json);
+                        break;
                     case "settings.list": data = JsonSerializer.SerializeToNode(vm.Settings, AppStorage.Json); break;
                     case "settings.get": var settings = JsonSerializer.SerializeToNode(vm.Settings, AppStorage.Json)!.AsObject(); var key = settings.Select(p => p.Key).FirstOrDefault(k => k.Equals(Arg(0), StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.UnknownSetting")); data = settings[key]?.DeepClone(); break;
                     case "settings.set":

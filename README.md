@@ -24,7 +24,7 @@
 
 | 产品 | 当前版本 | 发行说明 |
 | --- | --- | --- |
-| 桌面 | [0.4.0-beta.33](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.33) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
+| 桌面 | [0.4.0-beta.37](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.37) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
 | CLI | [0.4.0-beta.32](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.32) | Windows、Linux、macOS x64 |
 | Android | [0.3.0-beta.9](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/android-v0.3.0-beta.9) | API 28+；通用 APK；沿用既有测试签名 |
 
@@ -41,7 +41,7 @@
 | 媒体标签 | TagLibSharp 2.3.0 |
 | 桌面持久化 | SQLite，Microsoft.Data.Sqlite 10.0.12 |
 | CLI 与共用 JSON | System.Text.Json，持久化模型使用 Source Generation |
-| 插件开发 SDK | NonetMusicPlayer.PluginSdk 4.13.0，Contract v1/v2、页面 Schema v1/v2 |
+| 插件开发 SDK | NonetMusicPlayer.PluginSdk 4.16.0，Contract v1/v2、页面 Schema v1/v2 |
 | Android 构建 | Kotlin 2.1.20，AGP 8.10.1，Gradle Wrapper 8.12，JDK 17–21 |
 | Android UI | Compose BOM 2025.05.01；自有 Foundation 控件，不使用 Material3 或 WebView |
 | Android 音频 / 网络 | Media3 1.6.1，OkHttp 4.12.0，Coil 2.7.0 |
@@ -118,7 +118,7 @@ pwsh -File scripts/publish-cli.ps1 -CleanOnly
 
 ```powershell
 ./scripts/publish-desktop.ps1 -CleanOnly -Rids win-x86,win-arm64,linux-arm64
-./scripts/verify-clean-desktop.ps1 -Version 0.4.0-beta.33
+./scripts/verify-clean-desktop.ps1 -Version 0.4.0-beta.36
 ```
 
 Windows 默认同步各架构安装器。`publish/desktop/windows_installer` 每个架构仅保留最新成功版本；纯净 ZIP 位于 `publish/desktop/archives`。`-CleanOnly` 不覆盖已有便携程序及用户数据。
@@ -128,12 +128,12 @@ Windows 默认同步各架构安装器。`publish/desktop/windows_installer` 每
 桌面更新资产的文件名固定为：
 
 ```text
-NonetMusicPlayer.Desktop-0.4.0-beta.33-win-x64.zip
-NonetMusicPlayer.Desktop-0.4.0-beta.33-win-x86.zip
-NonetMusicPlayer.Desktop-0.4.0-beta.33-win-arm64.zip
-NonetMusicPlayer.Desktop-0.4.0-beta.33-osx-x64.zip
-NonetMusicPlayer.Desktop-0.4.0-beta.33-linux-x64.zip
-NonetMusicPlayer.Desktop-0.4.0-beta.33-linux-arm64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.36-win-x64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.36-win-x86.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.36-win-arm64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.36-osx-x64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.36-linux-x64.zip
+NonetMusicPlayer.Desktop-0.4.0-beta.36-linux-arm64.zip
 ```
 
 macOS ZIP 从 `Contents/` 开始组织，解压到 `Nonet.app/` 内；Linux/macOS 的 ZIP 保存可执行权限。未进行代码签名或 macOS 公证。更新清单与校验规则见 [UPDATES.md](docs/UPDATES.md)。
@@ -177,6 +177,6 @@ UI 夹具使用 Avalonia.Headless 与隔离测试数据，不等同于跨平台�
 
 构建、变更和接口资料：[CHANGELOG](CHANGELOG.md)、[CLI 构建与使用](src/NonetMusicPlayerCli/README.md)、[插件开发与依赖](docs/PLUGIN_DEVELOPMENT.md)、[插件 Contract](docs/PLUGIN_DEVELOPMENT.md)、[存储](docs/STORAGE.md)、[本地化](docs/LOCALIZATION.md)。
 
-插件开发使用主项目的 SDK 4.13.0（程序集兼容基线为 4.0.0.0），并直接引用源码；通用扩展接口见 [EXTENSIONS](docs/EXTENSIONS.md) 与 [非核心扩展参考](docs/UNIVERSAL_EXTENSIONS.md)，旧插件兼容策略见 [PLUGIN_DEVELOPMENT](docs/PLUGIN_DEVELOPMENT.md)。Android 不提供插件或终端。
+插件开发使用主项目的 SDK 4.16.0（程序集兼容基线为 4.0.0.0），并直接引用源码；通用扩展接口见 [EXTENSIONS](docs/EXTENSIONS.md)、[非核心扩展参考](docs/UNIVERSAL_EXTENSIONS.md) 和 [风格与动画](docs/STYLE_EXTENSIONS.md)，旧插件兼容策略见 [PLUGIN_DEVELOPMENT](docs/PLUGIN_DEVELOPMENT.md)。Android 不提供插件或终端。
 
 背景仅支持静态图片，不再需要独立视频解码器。音乐解码所需的 SoundFlow / FFmpeg 原生库仍保持独立、可替换，并保留许可。Arch Linux 与 niri 的启动方式见 [Linux 运行指南](docs/LINUX.md)。

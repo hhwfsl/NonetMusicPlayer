@@ -1,6 +1,10 @@
 # NonetMusicPlayer.PluginSdk
 
-SDK 4.7.0，支持清单 Contract v1/v2、页面 Schema v1/v2。该 SDK 由 Nonet 主项目维护，只依赖 .NET 10 BCL，无桌面 UI、音频和外部 NuGet 包依赖。源码采用 GPL-3.0-only。既有程序集身份仍为 4.0.0.0，新增接口均为可选。
+完整界面方案使用 `InterfaceCompositionContract` 与 `StyleSheet.Layout`，能力 `ui.composition.v1`。它通过既有 styles 服务组装表现树、临时接管视觉设置，并保留原业务和控件生命周期；详见 [INTERFACE_PRESETS](../../docs/INTERFACE_PRESETS.md)。
+
+SDK 4.15.0，支持清单 Contract v1/v2、页面 Schema v1/v2。该 SDK 由 Nonet 主项目维护，只依赖 .NET 10 BCL，无桌面 UI、音频和外部 NuGet 包依赖。源码采用 GPL-3.0-only。既有程序集身份仍为 4.0.0.0，新增接口均为可选。
+
+类型级风格使用 `StyleSheetContract`、`StyleSheetJson` 与可选 `ui.styles.v1`。`styles` 服务按属性叠加有序数据层，支持状态、模板部件、过渡、控件微动画和连续圆角变形；停用撤销覆盖。可选清单 `autoStart` 需要 `runtime.startup.v1`，`nativePage` 使用既有原生视图工厂。详见 [风格扩展协议](../../docs/STYLE_EXTENSIONS.md)。
 
 搜索型音源可声明 `PluginManifest.MusicSearch`，通过 `MusicSearchPage` / `ProviderTrack` 提供分页结果。`MusicSearchContract` 是共同校验源，`MusicSourceJson` 提供 Native AOT 兼容的序列化上下文。具体协议见主项目 `docs/UNIVERSAL_EXTENSIONS.md`。
 

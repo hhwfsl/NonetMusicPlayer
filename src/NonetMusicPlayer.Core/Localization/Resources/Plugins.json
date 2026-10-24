@@ -164,6 +164,11 @@
     "en-US": "Plugin download canceled or timed out.",
     "ja-JP": "ダウンロードがキャンセルされたかタイムアウトしました。"
   },
+  "Plugins.OpenPage": {
+    "zh-CN": "打开插件页面",
+    "en-US": "Open plugin page",
+    "ja-JP": "プラグインページを開く"
+  },
   "Plugins.UnableToOpenPluginPage": {
     "zh-CN": "插件页面无法打开",
     "en-US": "Unable to open plugin page",

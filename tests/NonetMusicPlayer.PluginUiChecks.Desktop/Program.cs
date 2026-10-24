@@ -6,11 +6,15 @@ internal static class Program
         try
         {
             var output = args.FirstOrDefault() ?? "artifacts/plugin-ui-checks";
+            if (args.Contains("--statistics-charts")) { StatisticsChartChecks.Run(output, Array.IndexOf(args, "--style-file") is var chartStyle && chartStyle >= 0 ? args[chartStyle + 1] : null); return 0; }
+            if (args.Contains("--interface-lifecycle")) { InterfaceLifecycleChecks.Run(output); return 0; }
+            if (args.Contains("--composition")) { InterfaceCompositionChecks.Run(output, Array.IndexOf(args, "--style-file") is var compositionFile && compositionFile >= 0 ? args[compositionFile + 1] : null); return 0; }
+            if (args.Contains("--styles")) { StyleLayerChecks.Run(output, Array.IndexOf(args, "--style-package") is var styleIndex && styleIndex >= 0 ? args[styleIndex + 1] : null, Array.IndexOf(args, "--style-file") is var fileIndex && fileIndex >= 0 ? args[fileIndex + 1] : null); return 0; }
             if (args.Contains("--lan")) { LanHostChecks.Run(output); return 0; }
             if (args.Contains("--switching")) { PlaybackSwitchChecks.Run(output); return 0; }
             if (args.Contains("--rpc-cancellation")) { RpcCancellationChecks.Run(output).GetAwaiter().GetResult(); return 0; }
             if (args.Contains("--appearance")) { AppearanceChecks.Run(output); return 0; }
-            if (args.Contains("--lyrics-transition")) { LyricsTransitionChecks.Run(output); return 0; }
+            if (args.Contains("--lyrics-transition")) { LyricsTransitionChecks.Run(output, Array.IndexOf(args, "--style-file") is var lyricStyle && lyricStyle >= 0 ? args[lyricStyle + 1] : null); return 0; }
             if (args.Contains("--element-layout")) { ElementLayoutChecks.Run(output); return 0; }
             if (args.Contains("--runtime-faults")) { RuntimeFaultChecks.Run(output); return 0; }
             if (args.Contains("--music-search")) { MusicSearchChecks.Run(output); return 0; }

@@ -58,28 +58,28 @@ public sealed class SettingsView : UserControl, IDisposable
         }); selectBackground.Margin = new(0, 0, 8, 4); backgroundButtons.Children.Add(selectBackground);
         backgroundButtons.Children.Add(Ui.Button(L10n.T("Settings.RemoveBackgroundImage"), () => { s.BackgroundImagePath = null; Changed(); backgroundPath.Content = Ui.Text(L10n.T("Settings.NoBackgroundImage"), 12, true); }));
         var advancedAppearance = Ui.Stack(
-            Ui.Row(L10n.T("Common.CornerRadius"), L10n.T("Common.AdjustRoundedCornersOnButtonsInputsAndSelectedItems"), Ui.Range(0, 22, s.ControlCornerRadius, v => { s.ControlCornerRadius = v; Changed(); }, " px")),
+            Ui.SettingRow("controlCornerRadius", L10n.T("Common.CornerRadius"), L10n.T("Common.AdjustRoundedCornersOnButtonsInputsAndSelectedItems"), Ui.Range(0, 22, s.ControlCornerRadius, v => { s.ControlCornerRadius = v; Changed(); }, " px")),
             Ui.Row(L10n.T("Settings.BackgroundImage"), L10n.T("Background.StaticHint"), Ui.Stack(backgroundPath, backgroundButtons)),
-            Ui.Row(L10n.T("Settings.BackgroundOpacity35693E"), L10n.T("Settings.TheBackgroundCoversTheEntireWindowAdjustEachRegion"), Ui.Range(0, 100, s.BackgroundImageOpacity * 100, v => { s.BackgroundImageOpacity = v / 100; Changed(); }, "%")),
-            Ui.Row(L10n.T("Settings.TitleBarOpacity"), L10n.T("Settings.OnlyChangesTheBackgroundOverlayTextAndButtonsRemain"), Ui.Range(0, 100, s.TitleBarOpacity * 100, v => { s.TitleBarOpacity = v / 100; Changed(); }, "%")),
-            Ui.Row(L10n.T("Settings.SidebarOpacity"), L10n.T("Settings.AppliesWhenABackgroundImageIsEnabled"), Ui.Range(0, 100, s.NavigationOpacity * 100, v => { s.NavigationOpacity = v / 100; Changed(); }, "%")),
-            Ui.Row(L10n.T("Settings.ContentAreaOpacity"), L10n.T("Settings.AppliesWhenABackgroundImageIsEnabled"), Ui.Range(0, 100, s.ContentOpacity * 100, v => { s.ContentOpacity = v / 100; Changed(); }, "%")),
-            Ui.Row(L10n.T("Settings.PlayerBarOpacity"), L10n.T("Settings.AppliesWhenABackgroundImageIsEnabled"), Ui.Range(0, 100, s.PlayerOpacity * 100, v => { s.PlayerOpacity = v / 100; Changed(); }, "%")),
-            Ui.Row(L10n.T("Settings.WindowOpacity"), L10n.T("Common.AdjustTheOpacityOfTheEntireWindow"), Ui.Range(35, 100, s.UiOpacity * 100, v => { s.UiOpacity = v / 100; Changed(); }, "%")),
-            Ui.Row(L10n.T("Settings.BackgroundFit"), L10n.T("Common.FillCropsEdgesFitKeepsTheCompleteImageAt"), Ui.Choice([L10n.T("Common.Fill"), L10n.T("Common.Fit")], s.BackgroundImageStretch == "Uniform" ? L10n.T("Common.Fit") : L10n.T("Common.Fill"), v => { s.BackgroundImageStretch = v == L10n.T("Common.Fit") ? "Uniform" : "UniformToFill"; Changed(); })));
+            Ui.SettingRow("backgroundImageOpacity", L10n.T("Settings.BackgroundOpacity35693E"), L10n.T("Settings.TheBackgroundCoversTheEntireWindowAdjustEachRegion"), Ui.Range(0, 100, s.BackgroundImageOpacity * 100, v => { s.BackgroundImageOpacity = v / 100; Changed(); }, "%")),
+            Ui.SettingRow("titleBarOpacity", L10n.T("Settings.TitleBarOpacity"), L10n.T("Settings.OnlyChangesTheBackgroundOverlayTextAndButtonsRemain"), Ui.Range(0, 100, s.TitleBarOpacity * 100, v => { s.TitleBarOpacity = v / 100; Changed(); }, "%")),
+            Ui.SettingRow("navigationOpacity", L10n.T("Settings.SidebarOpacity"), L10n.T("Settings.AppliesWhenABackgroundImageIsEnabled"), Ui.Range(0, 100, s.NavigationOpacity * 100, v => { s.NavigationOpacity = v / 100; Changed(); }, "%")),
+            Ui.SettingRow("contentOpacity", L10n.T("Settings.ContentAreaOpacity"), L10n.T("Settings.AppliesWhenABackgroundImageIsEnabled"), Ui.Range(0, 100, s.ContentOpacity * 100, v => { s.ContentOpacity = v / 100; Changed(); }, "%")),
+            Ui.SettingRow("playerOpacity", L10n.T("Settings.PlayerBarOpacity"), L10n.T("Settings.AppliesWhenABackgroundImageIsEnabled"), Ui.Range(0, 100, s.PlayerOpacity * 100, v => { s.PlayerOpacity = v / 100; Changed(); }, "%")),
+            Ui.SettingRow("uiOpacity", L10n.T("Settings.WindowOpacity"), L10n.T("Common.AdjustTheOpacityOfTheEntireWindow"), Ui.Range(35, 100, s.UiOpacity * 100, v => { s.UiOpacity = v / 100; Changed(); }, "%")),
+            Ui.SettingRow("backgroundImageStretch", L10n.T("Settings.BackgroundFit"), L10n.T("Common.FillCropsEdgesFitKeepsTheCompleteImageAt"), Ui.Choice([L10n.T("Common.Fill"), L10n.T("Common.Fit")], s.BackgroundImageStretch == "Uniform" ? L10n.T("Common.Fit") : L10n.T("Common.Fill"), v => { s.BackgroundImageStretch = v == L10n.T("Common.Fit") ? "Uniform" : "UniformToFill"; Changed(); })));
         var appearance = Ui.Card(L10n.T("Common.Appearance"),
             Ui.Row(L10n.T("Common.DisplayLanguage"), L10n.T("Common.ChangesTakeEffectImmediately"), language),
-            Ui.Row(L10n.T("Settings.Theme"), L10n.T("Common.UseSystemLightOrDarkAppearance"), theme),
-            Ui.Row(L10n.T("Settings.ThemeColor"), L10n.T("Settings.OneThemeColorForHoverSelectionButtonsAndPlayback"), accentEditor),
-            Ui.Row(L10n.T("Background.AutomaticAccent"), L10n.T("Background.AutomaticAccentHint"), automaticAccent),
+            Ui.SettingRow("theme", L10n.T("Settings.Theme"), L10n.T("Common.UseSystemLightOrDarkAppearance"), theme),
+            Ui.SettingRow("accent", L10n.T("Settings.ThemeColor"), L10n.T("Settings.OneThemeColorForHoverSelectionButtonsAndPlayback"), accentEditor),
+            Ui.SettingRow("accentFromBackground", L10n.T("Background.AutomaticAccent"), L10n.T("Background.AutomaticAccentHint"), automaticAccent),
             Ui.Row(L10n.T("Settings.InterfaceFont"), L10n.T("Settings.ChooseASystemFontOrImportAFontFile"), FontControls(owner, vm, Changed)),
-            Ui.Row(L10n.T("Common.TextSize"), L10n.T("Common.AdjustBodyTextSize"), Ui.Range(11, 18, s.FontSize, v => { s.FontSize = v; Changed(); }, " px")),
+            Ui.SettingRow("fontSize", L10n.T("Common.TextSize"), L10n.T("Common.AdjustBodyTextSize"), Ui.Range(11, 18, s.FontSize, v => { s.FontSize = v; Changed(); }, " px")),
             advancedAppearance);
         var layout = LayoutCard(owner, vm);
         // 标题栏由应用自绘，三个桌面平台都可切换位置；平台默认值仍由设置模型决定。
         var titleButtonPosition = Ui.Choice([L10n.T("Common.TopRight"), L10n.T("Common.TopLeft")], s.TitleButtonsOnLeft ? L10n.T("Common.TopLeft") : L10n.T("Common.TopRight"), v => { s.TitleButtonsOnLeft = v == L10n.T("Common.TopLeft"); Changed(); });
         titleButtonPosition.Name = "TitleButtonPosition";
-        advancedAppearance.Children.Add(Ui.Row(L10n.T("Common.WindowButtonPosition"), L10n.T("Common.WindowsOrderOnTheRightMacOSOrderOnThe"), titleButtonPosition));
+        advancedAppearance.Children.Add(Ui.SettingRow("titleButtonsOnLeft", L10n.T("Common.WindowButtonPosition"), L10n.T("Common.WindowsOrderOnTheRightMacOSOrderOnThe"), titleButtonPosition));
         _layoutCard = layout;
         var devices = new[] { "Playback.SystemDefault" };
         devices = vm.AudioDevices.ToArray();
@@ -198,6 +198,25 @@ public sealed class SettingsView : UserControl, IDisposable
         });
     }
 
+    /// <summary>仅禁用对应编辑器，值仍显示用户原设置；关闭方案后按原状态还原。</summary>
+    public void RefreshInterfaceOwnership(MainWindow owner)
+    {
+        foreach (var row in this.GetLogicalDescendants().OfType<ResponsiveSettingsRow>().Where(r => r.InterfaceSettingKey.Length > 0 && r.Children.Count > 1))
+        {
+            var editor = row.Children[1];
+            var controlled = owner.IsInterfaceSettingOwned(row.InterfaceSettingKey);
+            editor.IsEnabled = !controlled;
+            if (row.InterfaceSettingKey == "accent" && (_vm.Settings.AccentFromBackground && !string.IsNullOrEmpty(_vm.Settings.BackgroundImagePath))) editor.IsEnabled = false;
+            ToolTip.SetTip(row, controlled ? L10n.Format("Settings.InterfaceOwned", owner.InterfaceSettingOwner(row.InterfaceSettingKey) ?? "") : null);
+            ToolTip.SetShowOnDisabled(row, true);
+            if (row.Children[0] is StackPanel labels)
+            {
+                var note = labels.Children.OfType<TextBlock>().FirstOrDefault(t => t.Name == "InterfaceSettingOwnership");
+                if (controlled && note is null) { note = Ui.Text("", 11, true); note.Name = "InterfaceSettingOwnership"; labels.Children.Add(note); }
+                if (note is not null) { note.IsVisible = controlled; if (controlled) note.Text = L10n.Format("Settings.InterfaceOwned", owner.InterfaceSettingOwner(row.InterfaceSettingKey) ?? ""); }
+            }
+        }
+    }
     private void AddSection(StackPanel parent, Border card, string title, string keywords, bool expanded)
     {
         _sections.Add((card, title + " " + keywords)); parent.Children.Add(card);
@@ -243,8 +262,8 @@ public sealed class SettingsView : UserControl, IDisposable
             value => { s.PlayerTop = value == L10n.T("Layout.Top"); vm.ApplySettings(); });
         player.Name = "PlayerPosition";
         return Ui.Card(L10n.T("Layout.Title"),
-            Ui.Row(L10n.T("Layout.NavigationPosition"), L10n.T("Layout.NavigationPositionHint"), navigation),
-            Ui.Row(L10n.T("Layout.PlayerPosition"), L10n.T("Layout.PlayerPositionHint"), player));
+            Ui.SettingRow("navigationRight", L10n.T("Layout.NavigationPosition"), L10n.T("Layout.NavigationPositionHint"), navigation),
+            Ui.SettingRow("playerTop", L10n.T("Layout.PlayerPosition"), L10n.T("Layout.PlayerPositionHint"), player));
     }
     private void RefreshDevices(object? sender, EventArgs e)
     {

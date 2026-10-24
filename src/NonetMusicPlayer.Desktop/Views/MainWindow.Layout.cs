@@ -76,8 +76,8 @@ public sealed partial class MainWindow
     private void RenderLayout(UiLayoutDocument document, bool fallback = false)
     {
         if (_playerControls is null || _vm is null) return;
-        var compact = Bounds.Width < 1000 && (fallback || LayoutConfiguration.AppliedJson == UiLayoutService.DefaultJson);
-        var ultraCompact = compact && Bounds.Width < 640;
+        var compact = ViewportWidth < 1000 && (fallback || LayoutConfiguration.AppliedJson == UiLayoutService.DefaultJson);
+        var ultraCompact = compact && ViewportWidth < 640;
         if (ReferenceEquals(document, _renderedDocument) && compact == _renderedCompact && ultraCompact == _renderedUltraCompact) return;
         _renderedDocument = document; _renderedCompact = compact; _renderedUltraCompact = ultraCompact;
         PlayerColumns.Margin = new(ultraCompact ? 18 : 24, 10, ultraCompact ? 18 : 24, 10);
@@ -119,7 +119,7 @@ public sealed partial class MainWindow
     private void SetWorkspaceProfile(UiLayoutDocument document)
     {
         if (_vm is null) return;
-        var s = _vm.Settings;
+        var s = InterfaceSettings;
         Workspace.Profile = new AppSettings
         {
             SidebarWidth = s.SidebarWidth, PlayerHeight = s.PlayerHeight, TouchMode = s.TouchMode,
@@ -133,8 +133,8 @@ public sealed partial class MainWindow
         if (_vm is null) return;
         try
         {
-            _vm.Settings.SidebarWidth = Workspace.Profile.SidebarWidth;
-            _vm.Settings.PlayerHeight = Workspace.Profile.PlayerHeight;
+            if (!IsInterfaceSettingOwned("sidebarWidth")) _vm.Settings.SidebarWidth = Workspace.Profile.SidebarWidth;
+            if (!IsInterfaceSettingOwned("playerHeight")) _vm.Settings.PlayerHeight = Workspace.Profile.PlayerHeight;
             _vm.Settings.Layout.Clear();
             if (LayoutConfiguration.Current.Workspace.Count > 0)
             {

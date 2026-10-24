@@ -36,6 +36,7 @@ public sealed partial class MainWindow
     }
     private void DisposePage()
     {
+        _restoreExpandedStyleControl?.Invoke();
         if (AlternatePage.Content is IDisposable page && !ReferenceEquals(page, _cachedSettings)) page.Dispose();
         if (FullLyricsHost.Content is IDisposable lyrics) lyrics.Dispose();
         // 分类网格现在由包含返回栏的页面承载，退出时仍需显式释放已实现卡片的封面。
@@ -94,8 +95,8 @@ public sealed partial class MainWindow
     private void PositionFullLyrics()
     {
         var player = Workspace.Children.OfType<Controls.LayoutWidget>().FirstOrDefault(w => w.Key == "Player");
-        var height = player?.Bounds.Height ?? 114;
-        FullLyricsHost.Margin = _vm?.Settings.PlayerTop == true ? new(0, height + 52, 0, 0) : new(0, 0, 0, height);
+        var height = player?.Bounds.Height ?? (PlayerSurface.Bounds.Height > 0 ? PlayerSurface.Bounds.Height : _vm is null ? 96 : InterfaceSettings.PlayerHeight);
+        FullLyricsHost.Margin = _vm is not null && InterfaceSettings.PlayerTop ? new(0, height + 52, 0, 0) : new(0, 0, 0, height);
     }
     private void UserManual_Click(object? sender, RoutedEventArgs e) => OpenUserManual();
     public void OpenUserManual()

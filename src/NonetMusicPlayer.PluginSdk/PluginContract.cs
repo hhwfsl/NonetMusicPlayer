@@ -25,6 +25,10 @@ public sealed class PluginManifest
     public string PageEntry { get; set; } = "";
     /// <summary>可选页面声明，旧清单默认保留页面；纯浮层或后台扩展可显式关闭。</summary>
     public bool HasPage { get; set; } = true;
+    /// <summary>可选原生主页仍经公共视图工厂创建；默认 false 保持旧声明式页面行为。</summary>
+    public bool NativePage { get; set; }
+    /// <summary>明确声明的后台扩展可在启用或宿主启动后初始化，不依赖用户先打开插件页面。</summary>
+    public bool AutoStart { get; set; }
     public string NavigationIcon { get; set; } = "";
     /// <summary>包内导航图片，省略时保留矢量图标；不能指定外部路径。</summary>
     public string NavigationImage { get; set; } = "";
@@ -54,6 +58,8 @@ public sealed class PluginManifest
     {
         Author = string.IsNullOrWhiteSpace(Author) ? "Author" : Author.Trim();
         Hooks ??= []; ProvidedServices ??= []; RequiredCapabilities ??= []; Events ??= []; Contributions ??= []; Permissions ??= []; EntryPoints ??= []; Tokens ??= []; Widgets ??= []; MenuContributions ??= []; Configuration ??= "{}";
+        if (AutoStart && (ContractVersion != 2 || Type != "extension" || !RequiredCapabilities.Contains("runtime.startup.v1"))) throw new InvalidDataException("Automatic startup requires runtime.startup.v1.");
+        if (NativePage && (!HasPage || ContractVersion != 2 || Type != "extension" || Runtime != "managed" || !Permissions.Contains("native-ui") || !RequiredCapabilities.Contains("ui.native.v1"))) throw new InvalidDataException("Native page requires a trusted managed UI extension.");
         if (MusicSearch is { } search && (string.IsNullOrWhiteSpace(search.Label) || search.Label.Length > 100 || search.Label.Any(char.IsControl)
             || search.PageSize is < 1 or > 100 || !Permissions.Contains("network")
             || !(Type == "provider" || Type == "extension" && ProvidedServices.Contains("media-source"))))

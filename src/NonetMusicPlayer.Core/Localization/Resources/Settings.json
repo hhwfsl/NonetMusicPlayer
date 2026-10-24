@@ -1,4 +1,9 @@
 {
+  "Settings.InterfaceOwned": {
+    "zh-CN": "此项由界面方案“{0}”临时接管。原设置未更改，关闭方案后恢复。",
+    "en-US": "Temporarily controlled by interface preset '{0}'. Your saved value is unchanged and returns when the preset is disabled.",
+    "ja-JP": "この項目は外観プリセット「{0}」が一時管理しています。保存値は変更されず、無効にすると元に戻ります。"
+  },
   "Settings.TheShortcutForIsInvalid": {
     "zh-CN": "“{0}”的快捷键无效。",
     "en-US": "The shortcut for '{0}' is invalid.",

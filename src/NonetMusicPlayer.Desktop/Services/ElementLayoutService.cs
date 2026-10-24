@@ -41,8 +41,8 @@ public sealed class ElementLayoutService(Control root) : IDisposable
             }).ToArray()) };
     }
     public static readonly string[] PropertyNames = ["width", "height", "minWidth", "minHeight", "maxWidth", "maxHeight", "margin", "padding",
-        "horizontalAlignment", "verticalAlignment", "row", "column", "rowSpan", "columnSpan", "zIndex", "opacity", "visible",
-        "fontSize", "orientation", "spacing", "rows", "columns", "left", "top", "dock"];
+        "horizontalAlignment", "verticalAlignment", "row", "column", "rowSpan", "columnSpan", "zIndex", "opacity", "visible", "clipToBounds",
+        "fontSize", "textAlignment", "textWrapping", "maxLines", "orientation", "spacing", "rows", "columns", "left", "top", "dock"];
 
     public void Apply(string owner, JsonArray patches)
     {
@@ -124,7 +124,7 @@ public sealed class ElementLayoutService(Control root) : IDisposable
     }
     public void Remove(string owner) { Suspend(); _plans.Remove(owner); Refresh(); }
     public void Dispose() { Suspend(); _plans.Clear(); }
-    private static (AvaloniaProperty? Property, object Value) Resolve(Control c, string name, JsonNode? value)
+    internal static (AvaloniaProperty? Property, object Value) Resolve(Control c, string name, JsonNode? value)
     {
         double Number(double minimum = 0, double maximum = 8192)
         {
@@ -158,7 +158,11 @@ public sealed class ElementLayoutService(Control root) : IDisposable
             "horizontalAlignment" => (Control.HorizontalAlignmentProperty, Choice<HorizontalAlignment>()), "verticalAlignment" => (Control.VerticalAlignmentProperty, Choice<VerticalAlignment>()),
             "row" => (Grid.RowProperty, Integer(0, 255)), "column" => (Grid.ColumnProperty, Integer(0, 255)), "rowSpan" => (Grid.RowSpanProperty, Integer(1, 256)), "columnSpan" => (Grid.ColumnSpanProperty, Integer(1, 256)),
             "zIndex" => (Visual.ZIndexProperty, Integer(-100, 100)), "opacity" => (Visual.OpacityProperty, Number(0, 1)), "visible" => (Visual.IsVisibleProperty, value!.GetValue<bool>()),
+            "clipToBounds" => (Visual.ClipToBoundsProperty, value!.GetValue<bool>()),
             "fontSize" when c is TextBlock => (TextBlock.FontSizeProperty, Number(8, 96)), "fontSize" when c is TemplatedControl => (TemplatedControl.FontSizeProperty, Number(8, 96)),
+            "textAlignment" when c is TextBlock => (TextBlock.TextAlignmentProperty, Choice<Avalonia.Media.TextAlignment>()),
+            "textWrapping" when c is TextBlock => (TextBlock.TextWrappingProperty, Choice<Avalonia.Media.TextWrapping>()),
+            "maxLines" when c is TextBlock => (TextBlock.MaxLinesProperty, Integer(0, 100)),
             "padding" when c is Border => (Border.PaddingProperty, ThicknessValue()), "padding" when c is TemplatedControl => (TemplatedControl.PaddingProperty, ThicknessValue()),
             "orientation" when c is StackPanel => (StackPanel.OrientationProperty, Choice<Orientation>()), "spacing" when c is StackPanel => (StackPanel.SpacingProperty, Number(0, 512)),
             "rows" when c is Grid => (null, new RowDefinitions(Tracks())), "columns" when c is Grid => (null, new ColumnDefinitions(Tracks())),

@@ -1,4 +1,6 @@
-# 通用扩展层 v2 / SDK 4.13
+# 通用扩展层 v2 / SDK 4.14
+
+SDK 4.14 新增可选 `ui.styles.v1`、`runtime.startup.v1` 和原生主页声明。插件可按控件类型、状态和模板部件叠加样式与动画，详见 [风格开发协议](STYLE_EXTENSIONS.md)。类型级样式与具体控件布局接口独立，停用后恢复原始值，不改变既有 Contract 或程序集身份。
 
 SDK 4.13 新增可选 `network.library.v1`：读取已配对设备、分页查询远端歌单/歌曲、请求打开设备页或启停共享；播放、收藏和加入歌单仍使用原 `commands` 服务。订阅 `network.changed` 获取连接变化。协议细节与权限参见 [通用扩展参考](UNIVERSAL_EXTENSIONS.md)。旧插件不必重新编译，SDK 程序集身份保持 4.0.0.0。
 
@@ -506,3 +508,13 @@ Contract v2 扩展可声明 `"hasPage": false`、`"pageEntry": ""`，并将 `ui.
 ## 控件级界面定制
 
 从 SDK 4.11 起，可通过 `ui.elements.v1` 查询控件目录、覆盖布局、移动现有 Panel 子项，并使用 `ui.element` 贡献在稳定命名锚点加入控件。接口与恢复语义见 [UNIVERSAL_EXTENSIONS](UNIVERSAL_EXTENSIONS.md) 和 [UI_LAYOUT](UI_LAYOUT.md)。模板依然直接引用主项目 SDK，不复制宿主界面源码，不依赖任何具体插件。
+
+## 选择器交互（SDK 4.16）
+
+声明 `ui.select-options.v1` 后，`select` 节点可使用 `popupPlacement`（`auto`、`top`、`bottom`）和 `suppressTooltips`。前者控制弹出方向，后者同时关闭触发控件和所有选项的提示。缺省为自动方向、保留现有提示行为；旧页面无需改动。
+
+```json
+{"type":"select","bind":"choices","selectedBind":"choice","input":"choice","action":"choose","popupPlacement":"top","suppressTooltips":true}
+```
+
+同一组选项不会因轮询状态而重新创建。动作提交期间保留用户选择，完成后再与插件返回的选中状态同步；拒绝审批仍由宿主处理，交互属性不改变授权规则。

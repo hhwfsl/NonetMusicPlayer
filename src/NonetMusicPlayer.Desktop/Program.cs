@@ -23,6 +23,7 @@ internal static class Program
             if (args.Length == 3 && args[0] == "--verify-extension-plugin") return Services.ReleaseVerifier.RunExtension(args[1], args[2]);
             if (args.Length == 3 && args[0] == "--verify-runtime-fault") return Services.ReleaseVerifier.RunRuntimeFault(args[1], args[2]);
             if (args.Length == 4 && args[0] == "--verify-extension-image") return Services.ReleaseVerifier.RunExtensionImage(args[1], args[2], args[3]);
+            if (args.Length == 4 && args[0] == "--verify-style-plugin") return Services.ReleaseVerifier.RunStyles(args[1], args[2], args[3]);
             if (args.Length == 3 && args[0] == "--verify-agent-plugin") return Services.ReleaseVerifier.RunAgent(args[1], args[2]);
             if (args.Length == 3 && args[0] == "--verify-plugin-configuration") return Services.ReleaseVerifier.RunPluginConfiguration(args[1], args[2]);
             if (args.Length == 3 && args[0] == "--verify-lyrics-plugin") return Services.ReleaseVerifier.RunLyrics(args[1], args[2]);

@@ -18,18 +18,31 @@ public sealed class StatisticsView : UserControl, IDisposable
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(5) };
     private readonly ResponsiveUniformGrid _metrics = new() { MinimumCellWidth = 185, MaximumColumns = 4 };
     private readonly StackPanel _periods = Ui.Stack();
+    private readonly ListeningBarChart _week = new() { Duration = true, Height = 190, Name = "StatisticsWeekChart" };
+    private readonly ListeningBarChart _hours = new() { Height = 190, Name = "StatisticsHourChart" };
+    private readonly TextBlock _weekTotal = Ui.RawText("", 13, true), _hourTotal = Ui.RawText("", 13, true);
     public StatisticsDatePicker DateSelector { get; }
     public StatisticsView(MainViewModel vm)
     {
         _vm = vm;
         DateSelector = new StatisticsDatePicker { Name = "StatisticsDate", SelectedDate = DateTime.Today, HorizontalAlignment = HorizontalAlignment.Right, MinWidth = 190, Margin = new(0, 0, 24, 0) };
         DateSelector.SelectedDateChanged += (_, _) => Refresh();
-        Content = Ui.Scroll(Ui.Stack(_metrics, Ui.Row(L10n.T("Statistics.StatisticsDate"), L10n.T("Statistics.ChooseADateToViewItsDayMonthAnd"), DateSelector), _periods));
+        var charts = new ResponsiveUniformGrid { MinimumCellWidth = 360, MaximumColumns = 2 };
+        _week.Bind(ListeningBarChart.FillProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("AccentSecondaryBrush"));
+        _hours.Bind(ListeningBarChart.FillProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("AccentBrush"));
+        foreach (var plot in new[] { _week, _hours }) plot.Bind(ListeningBarChart.ForegroundProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("TextSecondaryBrush"));
+        var weekCard = Ui.Card(L10n.T("Statistics.RecentSevenDays"), _weekTotal, _week); weekCard.Name = "StatisticsWeekCard";
+        var hourCard = Ui.Card(L10n.T("Statistics.RecentTwentyFourHours"), _hourTotal, _hours); hourCard.Name = "StatisticsHourCard";
+        foreach (var card in new[] { weekCard, hourCard }) { card.Classes.Add("statistics-chart-card"); card.Margin = new(0, 0, 8, 8); charts.Children.Add(card); }
+        Content = Ui.Scroll(Ui.Stack(_metrics, charts, Ui.Row(L10n.T("Statistics.StatisticsDate"), L10n.T("Statistics.ChooseADateToViewItsDayMonthAnd"), DateSelector), _periods));
         Refresh(); _timer.Tick += (_, _) => Refresh(); _timer.Start();
     }
     private void Refresh()
     {
         var statistics = _vm.GetStatistics();
+        var recent = _vm.GetRecentListeningCharts(); _week.Update(recent.Days); _hours.Update(recent.Hours);
+        _weekTotal.Text = L10n.Format("Statistics.ChartTotal", Time(recent.Days.Sum(p => p.Value)));
+        _hourTotal.Text = L10n.Format("Statistics.ChartTotal", L10n.Format("Statistics.Plays", recent.Hours.Sum(p => p.Value)));
         _metrics.Children.Clear();
         string[] labels = [L10n.T("Statistics.ListeningTime"), L10n.T("Playback.Plays"), L10n.T("Statistics.ActiveDays"), L10n.T("Statistics.Today")];
         string[] values = [Time(statistics.TotalSeconds), statistics.TotalPlays.ToString(), statistics.ActiveDays.ToString(), Time(statistics.TodaySeconds)];

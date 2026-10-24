@@ -104,6 +104,7 @@ public sealed partial class MainViewModel
         NormalizeRetiredBackground();
         if (State.Settings.BackgroundImagePath is { } background && File.Exists(background) && !DataDirectoryService.Contains(Storage.Root, background)) State.Settings.BackgroundImagePath = AppBackgroundService.Import(Storage, background);
         State.ListeningEntries = restored.ListeningEntries; State.GroupCovers = restored.GroupCovers; State.SoftwareDefaultGroupCovers = restored.SoftwareDefaultGroupCovers;
+        State.HourlyListeningEntries = restored.HourlyListeningEntries;
         State.LastTrackId = restored.LastTrackId; State.LastPosition = restored.LastPosition; State.LastSourcePage = restored.LastSourcePage; State.LastPlaylistId = restored.LastPlaylistId;
         State.LastTemporaryFile = restored.LastTemporaryFile; State.LastTemporaryCounted = restored.LastTemporaryCounted; _temporaryTracks.Clear(); _countedTemporaryIds.Clear();
         Playlists.Clear(); foreach (var playlist in State.Playlists) Playlists.Add(playlist); ObserveTracks(); _undo.Clear();

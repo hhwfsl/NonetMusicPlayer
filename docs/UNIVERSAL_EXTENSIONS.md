@@ -1,4 +1,18 @@
-# 通用扩展接口参考（SDK 4.13）
+# 通用扩展接口参考（SDK 4.16）
+
+## 选择器与近期统计（SDK 4.16，可选）
+
+`ui.select-options.v1` 为 `select` 增加 `popupPlacement` 和 `suppressTooltips`，见 [PLUGIN_DEVELOPMENT](PLUGIN_DEVELOPMENT.md)。同一组选项在状态刷新期间保持身份，提交动作完成后同步选中值。
+
+`statistics.charts.v1` 提供 `ListeningBarChart` 样式类型和趋势卡片样式类，见 [STYLE_EXTENSIONS](STYLE_EXTENSIONS.md)。既有 `query` 服务的 `statistics` 操作结果新增可选 `recent`：`days` 为最近七个本地日，值为秒；`hours` 为包含当前小时的二十四个小时，值为播放次数。每点包含 `label`、`value`、`detail`。需要现有 `music-read` 权限，无需新增写入权限。
+
+小时计数基于开始聆听超过一秒的真实播放会话；暂停恢复不重复计数。UTC 整点键避免本地小时重复，持久化最多七十二个桶。旧版本只有每日数据，因此旧小时图保持零，不根据每日记录分摊。`recent` 不受既有 day/month/year 筛选改变，其余统计字段语义保持不变。
+
+## 类型级风格与动画（SDK 4.14，可选）
+
+声明 `ui.styles.v1` 和 `ui-extend` 后使用 `styles` 服务，支持 catalog/apply/reset/morph。风格数组从底层到顶层排列，按控件类型、类名、模板部件与状态合并属性；资源和动画均可覆盖或补充。宿主管理可释放绑定、动态控件匹配、减少动画与快照清理，插件管理导入、排序及持久化。完整格式见 [STYLE_EXTENSIONS](STYLE_EXTENSIONS.md)。
+
+可选清单 `autoStart:true` 需要 `runtime.startup.v1`，启用与宿主启动后初始化；`nativePage:true` 使用现有 INonetNativeViewExtension 工厂创建 `plugin.page`，需要可信托管原生 UI 权限。两项默认 false，旧扩展不受影响。
 
 ## 局域网设备曲库（SDK 4.13，可选）
 
@@ -297,7 +311,7 @@ Contract v2 扩展可声明 `"hasPage": false`、`"pageEntry": ""`，并将 `ui.
 
 ### 信任边界
 
-托管插件不是沙箱，也不是崩溃隔离。宿主可捕获自身调用、生命周期、事件及受监督任务中的普通异常并停用对应插件；栈溢出、任意线程未捕获异常、FailFast、原生致命崩溃或全局状态污染仍可能使 Nonet 退出。导入与首次启用显示风险提示，更新包撤销托管授权。取消令牌只支持协作停止；无法强制杀死不合作线程或保证立即卸载 DLL。需要崩溃隔离时选择 process，不因模式不同削减服务能力。
+托管插件不是沙箱，也不是崩溃隔离。宿主可捕获自身调用、生命周期、事件及受监督任务中的普通异常并停用对应插件；栈溢出、任意线程未捕获异常、FailFast、原生致命崩溃或全局状态污染仍可能使 Nonet 退出。首次启用时集中确认风险，不在安装后另发重复通知；更新包撤销托管授权，再次启用需重新确认。取消令牌只支持协作停止；无法强制杀死不合作线程或保证立即卸载 DLL。需要崩溃隔离时选择 process，不因模式不同削减服务能力。
 
 ### 运行时连接与后台任务
 

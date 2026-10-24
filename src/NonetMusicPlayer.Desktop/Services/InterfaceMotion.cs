@@ -26,25 +26,28 @@ public sealed class InterfaceMotion : IDisposable
                 new DoubleTransition { Property = ScaleTransform.ScaleYProperty, Duration = TimeSpan.FromMilliseconds(90) }
             } };
             button.RenderTransform = transform; button.RenderTransformOrigin = RelativePoint.Center;
-            button.AddHandler(InputElement.PointerPressedEvent, (_, _) => { transform.ScaleX = .94; transform.ScaleY = .94; }, RoutingStrategies.Tunnel);
-            button.AddHandler(InputElement.PointerReleasedEvent, (_, _) => { transform.ScaleX = 1; transform.ScaleY = 1; }, RoutingStrategies.Tunnel, true);
-            button.PointerCaptureLost += (_, _) => { transform.ScaleX = 1; transform.ScaleY = 1; };
-            button.PointerExited += (_, _) => { transform.ScaleX = 1; transform.ScaleY = 1; };
+            void Scale(double value) { var target = StyleLayerService.OwnsMotion(button) ? 1 : value; transform.ScaleX = target; transform.ScaleY = target; }
+            button.AddHandler(InputElement.PointerPressedEvent, (_, _) => Scale(.94), RoutingStrategies.Tunnel);
+            button.AddHandler(InputElement.PointerReleasedEvent, (_, _) => Scale(1), RoutingStrategies.Tunnel, true);
+            button.PointerCaptureLost += (_, _) => Scale(1);
+            button.PointerExited += (_, _) => Scale(1);
         }
     }
     public static bool IsEnabled => Environment.GetEnvironmentVariable("NONET_REDUCED_MOTION") != "1"
         && (!OperatingSystem.IsWindows() || !SystemParametersInfo(0x1042, 0, out var enabled, 0) || enabled);
     public void Enter(Control control)
+        => Enter(control, 140);
+    public void Enter(Control control, int durationMs)
     {
         Cancel();
-        if (!IsEnabled) return;
-        _running = new(); _ = Run(control, _running.Token);
+        if (!IsEnabled || durationMs == 0) return;
+        _running = new(); _ = Run(control, Math.Clamp(durationMs, 0, 1000), _running.Token);
     }
-    private static async Task Run(Control control, CancellationToken cancellationToken)
+    private static async Task Run(Control control, int durationMs, CancellationToken cancellationToken)
     {
         var animation = new Animation
         {
-            Duration = TimeSpan.FromMilliseconds(140), Easing = new CubicEaseOut(),
+            Duration = TimeSpan.FromMilliseconds(durationMs), Easing = new CubicEaseOut(),
             Children =
             {
                 new KeyFrame { Cue = new Cue(0), Setters = { new Setter(Visual.OpacityProperty, .84) } },

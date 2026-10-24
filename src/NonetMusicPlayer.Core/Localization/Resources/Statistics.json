@@ -98,5 +98,20 @@
     "zh-CN": "总聆听时长",
     "en-US": "Total listening time",
     "ja-JP": "合計再生時間"
+  },
+  "Statistics.RecentSevenDays": {
+    "zh-CN": "最近 7 天播放时长",
+    "ja-JP": "過去7日間の再生時間",
+    "en-US": "Listening time · last 7 days"
+  },
+  "Statistics.RecentTwentyFourHours": {
+    "zh-CN": "最近 24 小时播放次数",
+    "ja-JP": "過去24時間の再生回数",
+    "en-US": "Plays · last 24 hours"
+  },
+  "Statistics.ChartTotal": {
+    "zh-CN": "合计 · {0}",
+    "ja-JP": "合計 · {0}",
+    "en-US": "Total · {0}"
   }
 }

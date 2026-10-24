@@ -48,12 +48,13 @@ public sealed partial class App : Application
                 new MusicLibraryScanner(),
                 new NativeAudioPlayer());
 
-            desktop.MainWindow = new MainWindow
+            var window = new MainWindow
             {
                 DataContext = _mainViewModel
             };
+            var appearanceReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var initialized = false;
-            desktop.MainWindow.Opened += async (_, _) =>
+            window.Opened += async (_, _) =>
             {
                 // 托盘恢复会再次触发 Opened；启动参数及启动警告只处理一次，避免重复播放文件。
                 if (initialized) return; initialized = true;
@@ -66,7 +67,7 @@ public sealed partial class App : Application
                 if (_mainViewModel.Storage.RecoveryMessage is { } warning) _mainViewModel.ReportWarning(warning);
                 Program.Instance?.Receive(files => Dispatcher.UIThread.Post(async () =>
                 {
-                    ((MainWindow)desktop.MainWindow).RestoreFromTray();
+                    window.RestoreFromTray();
                     if (files.Length > 0) await _mainViewModel.PlayTemporaryFilesAsync(files);
                 }));
                 if (desktop.Args is { Length: > 0 } files) await _mainViewModel.PlayTemporaryFilesAsync(files);
@@ -76,12 +77,22 @@ public sealed partial class App : Application
                 {
                     if (activation is FileActivatedEventArgs fileActivation)
                     {
-                        ((MainWindow)desktop.MainWindow).RestoreFromTray();
+                        await appearanceReady.Task;
+                        window.RestoreFromTray();
                         await _mainViewModel.PlayTemporaryFilesAsync(fileActivation.Files.Select(file => file.TryGetLocalPath()).OfType<string>());
                     }
                 };
 
             desktop.Exit += (_, _) => { TaskScheduler.UnobservedTaskException -= BackgroundException; try { _mainViewModel.Dispose(); } finally { AppLog.Info("Application", "Normal shutdown"); AppLog.Flush(); AppLog.Shutdown(); } };
+            // 生命周期进入消息循环时先不指定 MainWindow，避免框架抢先显示未恢复风格的窗口。
+            Dispatcher.UIThread.Post(async () =>
+            {
+                await _mainViewModel.Plugins.PrepareAutomaticExtensionsAsync();
+                window.PrepareInitialAppearance();
+                desktop.MainWindow = window;
+                window.Show();
+                appearanceReady.TrySetResult();
+            });
         }
 
         base.OnFrameworkInitializationCompleted();

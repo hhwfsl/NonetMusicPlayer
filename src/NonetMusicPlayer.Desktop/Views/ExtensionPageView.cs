@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using NonetMusicPlayer.Desktop.Controls;
 using NonetMusicPlayer.Desktop.Plugins;
 using NonetMusicPlayer.Desktop.Services;
@@ -31,7 +32,8 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
         Margin = new(0, 0, 18, 0); _session.Changed += Refresh; manager.UiPluginUnavailable += Unavailable;
         AttachedToVisualTree += async (_, _) =>
         {
-            try { await _session.StartAsync(); Refresh(_session.Frame); }
+            if (_disposed) return;
+            try { await _session.StartAsync(); if (!_disposed) Refresh(_session.Frame); }
             catch (OperationCanceledException) { }
             catch (Exception error) { if (_disposed) return; Dispose(); manager.ReportExtensionError(error); Failed?.Invoke(); }
         };
@@ -224,19 +226,34 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
                 toggle.IsCheckedChanged += async (_, _) => { if (toggleUpdating) return; _inputs[node.Input] = JsonValue.Create(toggle.IsChecked == true); await Invoke(node, item); };
                 control = toggle; break;
             case "select":
-                var select = new ComboBox { MinWidth = 120 };
-                var selectSignature = ""; var selectUpdating = false;
+                var select = new ExtensionSelect { MinWidth = 120, PopupDirection = node.PopupPlacement, SuppressTooltips = node.SuppressTooltips };
+                var selectSignature = ""; var selectUpdating = false; var selectPending = false;
                 bindings.Add(state =>
                 {
                     var data = Value(node.Bind, state, item) as JsonArray; var signature = data?.ToJsonString() ?? "[]";
                     if (signature == selectSignature && node.SelectedBind.Length == 0) return;
-                    selectSignature = signature; selectUpdating = true; select.ItemsSource = data?.Select(String).ToArray();
-                    if (node.SelectedBind.Length > 0) select.SelectedItem = String(Value(node.SelectedBind, state, item));
-                    else if (_inputs.TryGetValue(node.Input, out var selected)) select.SelectedItem = String(selected);
-                    else select.SelectedIndex = 0;
-                    _inputs[node.Input] = JsonValue.Create(select.SelectedItem as string); selectUpdating = false;
+                    // 不变的状态帧不能重建选项，否则会中断打开的菜单和正在提交的选择。
+                    selectUpdating = true;
+                    try
+                    {
+                        if (signature != selectSignature) { selectSignature = signature; select.ItemsSource = data?.Select(String).ToArray(); }
+                        if (selectPending) return;
+                        var desired = node.SelectedBind.Length > 0 ? String(Value(node.SelectedBind, state, item))
+                            : _inputs.TryGetValue(node.Input, out var selected) ? String(selected) : select.ItemsSource?.Cast<string>().FirstOrDefault();
+                        if (!Equals(select.SelectedItem, desired)) select.SelectedItem = desired;
+                        _inputs[node.Input] = JsonValue.Create(select.SelectedItem as string);
+                    }
+                    finally { selectUpdating = false; }
                 });
-                select.SelectionChanged += async (_, _) => { if (selectUpdating) return; _inputs[node.Input] = JsonValue.Create(select.SelectedItem as string); if (node.Action.Length > 0) await Invoke(node, item); };
+                select.SelectionChanged += async (_, _) =>
+                {
+                    if (selectUpdating) return;
+                    _inputs[node.Input] = JsonValue.Create(select.SelectedItem as string);
+                    if (node.Action.Length == 0) return;
+                    selectPending = true;
+                    try { await Invoke(node, item); }
+                    finally { selectPending = false; if (!_disposed) Refresh(_session.Frame); }
+                };
                 control = select; break;
             default:
                 TextBlock text = node.Type == "selectable-text" ? new SelectableTextBlock() : new TextBlock();
@@ -279,6 +296,11 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
     }
     private void Unavailable(string id) { if (id == _session.Manifest.Id) { Dispose(); UnavailableView?.Invoke(); } }
     private sealed class ImageLifetime(Action dispose) : IDisposable { public void Dispose() => dispose(); }
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e) { Dispose(); base.OnDetachedFromVisualTree(e); }
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        // 最大化、响应式布局和方案重排不是页面退出；等待同步挂接完成再决定释放。
+        Dispatcher.UIThread.Post(() => { if (!this.IsAttachedToVisualTree()) Dispose(); }, DispatcherPriority.Background);
+    }
     public void Dispose() { if (_disposed) return; _disposed = true; _activeContextMenu?.Close(); _activeContextMenu = null; _session.Changed -= Refresh; _manager.UiPluginUnavailable -= Unavailable; _bindings.Clear(); foreach (var asset in _assets) asset.Dispose(); _assets.Clear(); }
 }

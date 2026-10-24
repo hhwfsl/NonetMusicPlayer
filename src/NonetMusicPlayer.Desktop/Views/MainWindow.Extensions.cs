@@ -47,7 +47,7 @@ public sealed partial class MainWindow
     {
         var plugin = _vm?.Plugins.Installed.FirstOrDefault(p => p.Enabled && p.HasPage && p.Type is "ui" or "widget" or "lyrics" or "agent" or "extension" && "plugin:" + p.Id == page);
         if (plugin is null) return Ui.Card(L10n.T("Plugins.PluginIsDisabled"), Ui.Text(L10n.T("Plugins.EnableThisPluginInThePluginManagerFirst"), 13, true));
-        try { return plugin.Type == "extension" ? new ExtensionPageView(_vm!.Plugins, plugin) : new PluginPageView(_vm!.Plugins, plugin, includeTitle: false); }
+        try { return plugin.Type == "extension" ? plugin.NativePage ? new NativeExtensionView(_vm!.Plugins, plugin, "plugin.page") : new ExtensionPageView(_vm!.Plugins, plugin) : new PluginPageView(_vm!.Plugins, plugin, includeTitle: false); }
         catch (Exception e) { _vm!.ReportError(L10n.T("Plugins.UnableToOpenPluginPage"), e); return Ui.Card(L10n.T("Common.PageFailedToLoad"), Ui.Text(L10n.T("Plugins.DataIsUnchangedCheckThePluginSPageConfiguration"), 13, true)); }
     }
     private sealed record MusicGroup(string Name, TrackItem[] Tracks) { public int Count => Tracks.Length; }
@@ -64,11 +64,12 @@ public sealed partial class MainWindow
     {
         if (_vm is null) return Ui.Text("");
         var groups = _vm.VisibleTracks.GroupBy(t => artists ? t.Artist : t.Album).OrderBy(g => g.Key).Select(g => new MusicGroup(g.Key, g.ToArray())).ToArray();
-        var page = new Grid { RowDefinitions = new("Auto,*"), RowSpacing = 12 };
+        var page = new Grid { RowDefinitions = new("Auto,*") };
         var back = Ui.Button("Home.Back", () => _vm.Navigate(_groupsReturnPage));
         back.Name = "GroupsBack"; back.Content = Ui.Actions(new VectorIcon { Kind = IconKind.Back }, Ui.Text("Home.Back"));
         back.HorizontalAlignment = HorizontalAlignment.Left; back.Classes.Add("quiet");
-        var header = new Grid { ColumnDefinitions = new("*,Auto") }; header.Children.Add(back);
+        // 旧命名锚点保留给已安装方案；默认不占布局，回顶统一使用页面标题行的入口。
+        var header = new Grid { Name = "GroupsHeader", ColumnDefinitions = new("*,Auto"), IsVisible = false }; header.Children.Add(back);
         var top = Ui.IconButton(IconKind.BackToTop, "Common.BackToTop", () => { if (_groupList is not null) _groupList.Offset = default; }); top.Name = "GroupsBackToTop";
         Grid.SetColumn(top, 1); header.Children.Add(top); page.Children.Add(header);
         if (groups.Length == 0)
