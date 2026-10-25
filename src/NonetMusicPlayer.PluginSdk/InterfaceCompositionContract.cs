@@ -7,7 +7,7 @@ public static class InterfaceCompositionContract
 {
     public const string Capability = "ui.composition.v1";
     public const string PlaylistCardsCapability = "ui.playlist-cards.v1";
-    public static readonly string[] NavigationPages = ["library", "songs", "history", "albums", "artists", "statistics", "devices", "settings", "plugins", "terminal", "favorites", "lyrics", "back"];
+    public static readonly string[] NavigationPages = ["library", "songs", "playlists", "history", "albums", "artists", "statistics", "devices", "settings", "plugins", "terminal", "favorites", "lyrics", "back"];
     public static readonly string[] Actions = ["playlist.create", "player.play-pause", "player.previous", "player.next", "lyrics.toggle"];
     public static readonly string[] Settings = ["navigationRight", "playerTop", "sidebarWidth", "playerHeight", "myMusicExpanded", "pluginsExpanded", "playlistsExpanded", "controlCornerRadius", "fontSize", "theme", "accent", "accentFromBackground", "uiOpacity", "titleBarOpacity", "navigationOpacity", "contentOpacity", "playerOpacity", "backgroundImageOpacity", "backgroundImageStretch", "titleButtonsOnLeft"];
     public static void Validate(InterfaceComposition composition)

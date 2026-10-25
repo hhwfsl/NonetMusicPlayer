@@ -25,17 +25,18 @@ public sealed class ListeningBarChart : Control
     public override void Render(DrawingContext context)
     {
         base.Render(context);
-        if (Points.Count == 0 || Bounds.Width < 90 || Bounds.Height < 80) return;
+        if (Points.Count == 0 || Bounds.Width < 90 || Bounds.Height < 64) return;
+        var compact = Bounds.Height < 100;
         var font = new Typeface(GetValue(Avalonia.Controls.Documents.TextElement.FontFamilyProperty));
-        FormattedText Text(string value) => new(value, L10n.Culture, FlowDirection.LeftToRight, font, 12, Foreground);
+        FormattedText Text(string value) => new(value, L10n.Culture, FlowDirection.LeftToRight, font, compact ? 10 : 12, Foreground);
         var maximum = Math.Max(0, Points.Max(p => p.Value));
         // 时长以分钟/小时的自然刻度取整，次数采用 1/2/5 的刻度，避免出现小数次。
         double ceiling;
         if (Duration) ceiling = new double[] { 60, 300, 600, 1800, 3600, 7200, 14400, 28800, 86400 }.FirstOrDefault(v => v >= maximum, Math.Ceiling(maximum / 86400) * 86400);
         else { var magnitude = Math.Pow(10, Math.Floor(Math.Log10(Math.Max(1, maximum)))); ceiling = new[] { 1d, 2, 5, 10 }.Select(n => n * magnitude).First(n => n >= Math.Max(1, maximum)); }
         var maxText = Text(Duration ? Views.StatisticsView.Time(ceiling) : ceiling.ToString("0", L10n.Culture));
-        var left = Math.Max(32, maxText.Width + 12); var bottom = Bounds.Height - 30; const double top = 12;
-        context.DrawText(maxText, new(0, top)); context.DrawText(Text("0"), new(0, bottom - 12));
+        var left = Math.Max(compact ? 24 : 32, maxText.Width + 12); var bottom = Bounds.Height - (compact ? 22 : 30); var top = compact ? 5d : 12d;
+        context.DrawText(maxText, new(0, top)); context.DrawText(Text("0"), new(0, bottom - (compact ? 10 : 12)));
         var slot = (Bounds.Width - left - 4) / Points.Count;
         for (var i = 0; i < Points.Count; i++)
         {
@@ -46,7 +47,7 @@ public sealed class ListeningBarChart : Control
             // 小时图仅保留四至六个标签，窄窗口不挤成一团。
             var step = Points.Count <= 7 ? (slot < 39 ? 2 : 1) : (slot < 16 ? 6 : 4);
             if (i % step != 0 && i != Points.Count - 1) continue;
-            var label = Text(point.Label); context.DrawText(label, new(left + slot * (i + .5) - label.Width / 2, bottom + 10));
+            var label = Text(point.Label); context.DrawText(label, new(left + slot * (i + .5) - label.Width / 2, bottom + (compact ? 6 : 10)));
         }
     }
 }

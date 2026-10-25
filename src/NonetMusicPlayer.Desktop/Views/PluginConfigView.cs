@@ -38,7 +38,7 @@ public sealed class PluginConfigView : UserControl
         var actions = Ui.Actions(save, dismiss); actions.HorizontalAlignment = HorizontalAlignment.Right; actions.Margin = new(26, 16, 26, 22);
         var layout = new Grid { RowDefinitions = new("Auto,*,Auto") }; layout.Children.Add(header); Grid.SetRow(form, 1);
         var scroll = Ui.Scroll(form); Grid.SetRow(scroll, 1); layout.Children.Add(scroll); Grid.SetRow(actions, 2); layout.Children.Add(actions);
-        Content = new Border { CornerRadius = new(16), Background = Ui.Brush("SurfaceBrush"), BorderBrush = Ui.Brush("DividerBrush"), BorderThickness = new(1), Child = layout };
+        Content = new Border { CornerRadius = new(16), Background = Ui.Brush("SurfaceBrush"), BorderThickness = new(0), Child = layout };
         AddHandler(KeyDownEvent, (_, e) => { if (e.Key == Key.Escape) { _close(false); e.Handled = true; } }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
     }
     public void Save()

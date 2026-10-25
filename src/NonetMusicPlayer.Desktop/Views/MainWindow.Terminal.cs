@@ -132,6 +132,10 @@ public sealed partial class MainWindow
                         data = JsonSerializer.SerializeToNode(stats, AppStorage.Json);
                         if (data is JsonObject statsObject) statsObject["recent"] = JsonSerializer.SerializeToNode(vm.GetRecentListeningCharts(), AppStorage.Json);
                         break;
+                    case "statistics.history":
+                        vm.RefreshPlaybackState(); vm.Save(playbackOnly: true);
+                        data = vm.Storage.ListeningJournal.Page(command.Arguments.Count > 0 ? Arg(0) : "session", command.Arguments.Count > 1 ? CommandResults.Integer(command, 1, 1, 500) : 100,
+                            command.Arguments.Count > 2 ? CommandResults.Integer(command, 2, 0, int.MaxValue) : 0, command.Arguments.Count > 3 ? Arg(3) : null); break;
                     case "settings.list": data = JsonSerializer.SerializeToNode(vm.Settings, AppStorage.Json); break;
                     case "settings.get": var settings = JsonSerializer.SerializeToNode(vm.Settings, AppStorage.Json)!.AsObject(); var key = settings.Select(p => p.Key).FirstOrDefault(k => k.Equals(Arg(0), StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.UnknownSetting")); data = settings[key]?.DeepClone(); break;
                     case "settings.set":

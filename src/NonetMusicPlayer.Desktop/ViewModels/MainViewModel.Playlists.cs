@@ -311,9 +311,10 @@ public sealed partial class MainViewModel
     private void CleanupTrackData(IReadOnlyList<TrackItem> removed)
     {
         var ids = removed.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
-        var history = State.History.ToList(); var recent = State.RecentTemporaryTracks.ToList(); var statistics = State.ListeningEntries.ToList();
-        _undo.Push(() => { State.History = history; State.RecentTemporaryTracks = recent; State.ListeningEntries = statistics; });
-        State.History.RemoveAll(ids.Contains); State.RecentTemporaryTracks.RemoveAll(t => ids.Contains(t.Id)); State.ListeningEntries.RemoveAll(e => ids.Contains(e.TrackId));
+        var history = State.History.ToList(); var recent = State.RecentTemporaryTracks.ToList();
+        _undo.Push(() => { State.History = history; State.RecentTemporaryTracks = recent; });
+        // 移除音乐引用只清理引用及派生文件，已发生的聆听汇总和元数据快照长期保留。
+        State.History.RemoveAll(ids.Contains); State.RecentTemporaryTracks.RemoveAll(t => ids.Contains(t.Id));
         foreach (var track in removed)
         {
             // 只回收可证明由应用生成的精确文件，不删除音频、相邻原始歌词或用户指定的源文件。

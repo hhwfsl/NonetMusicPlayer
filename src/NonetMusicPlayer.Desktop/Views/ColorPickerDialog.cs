@@ -45,7 +45,7 @@ public sealed class ColorPickerDialog : Window
             if (!System.Text.RegularExpressions.Regex.IsMatch(hex.Text ?? "", "^#[0-9a-fA-F]{6}$")) { error.Text = L10n.T("Settings.InvalidColorEnterRRGGBBOrChooseAColorAgain"); hex.Focus(); return; }
             Close(Hex(Color.Parse(hex.Text!)));
         }, true)); buttons.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
-        Content = new Border { Background = Ui.Brush("SurfaceBrush"), BorderBrush = Ui.Brush("DividerBrush"), BorderThickness = new(1), Padding = new(26), Child = Ui.Scroll(Ui.Stack(title, Ui.Text(L10n.T("Settings.ChooseHueAndSaturationWithTheWheelAdjustBrightness"), 12, true), wheel, Ui.Text(L10n.T("Common.Brightness"), 12, true), brightness, rgb, Ui.Actions(preview, hex, applyHex), error, buttons)) };
+        Content = new Border { Background = Ui.Brush("SurfaceBrush"), BorderThickness = new(0), Padding = new(26), Child = Ui.Scroll(Ui.Stack(title, Ui.Text(L10n.T("Settings.ChooseHueAndSaturationWithTheWheelAdjustBrightness"), 12, true), wheel, Ui.Text(L10n.T("Common.Brightness"), 12, true), brightness, rgb, Ui.Actions(preview, hex, applyHex), error, buttons)) };
         KeyDown += (_, e) => { if (e.Key == Key.Escape) { Close(); e.Handled = true; } };
         Closed += (_, _) => wheel.Dispose();
     }

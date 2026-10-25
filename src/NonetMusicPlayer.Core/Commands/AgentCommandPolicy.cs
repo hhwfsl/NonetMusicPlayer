@@ -12,7 +12,7 @@ public static class PluginCommandPolicy
         "player.volume", "player.mute", "player.mode", "player.devices", "player.device", "queue.list", "queue.play",
         "music.list", "music.info", "music.remove", "music.search", "playlist.list", "playlist.create", "playlist.rename",
         "playlist.describe", "playlist.delete", "playlist.add", "playlist.remove", "playlist.move", "playlist.reorder",
-        "favorite.add", "favorite.remove", "history.list", "history.remove", "history.clear", "statistics",
+        "favorite.add", "favorite.remove", "history.list", "history.remove", "history.clear", "statistics", "statistics.history",
         "settings.list", "settings.get", "settings.set", "settings.reset", "plugins.list",
         "plugins.enable", "plugins.disable", "navigate", "window.show", "window.minimize", "window.maximize",
         "window.restore", "window.close", "desktop-lyrics.toggle", "desktop-lyrics.lock"
@@ -63,7 +63,7 @@ public static class PluginCommandPolicy
             if (!SafeSettings.Contains(call.Arguments[0])) throw new InvalidDataException("This setting is not available to agents.");
             if (call.Operation == "settings.set") SettingsContract.Validate(call.Arguments[0], CommandResults.ParseSettingValue(call.Arguments[1]));
         }
-        if (call.Operation == "navigate" && call.Arguments[0] is not ("library" or "songs" or "albums" or "artists" or "statistics" or "settings" or "lyrics" or "history" or "plugins")
+        if (call.Operation == "navigate" && call.Arguments[0] is not ("library" or "songs" or "playlists" or "albums" or "artists" or "statistics" or "settings" or "lyrics" or "history" or "plugins")
             && !call.Arguments[0].StartsWith("playlist:", StringComparison.Ordinal)) throw new InvalidDataException("Navigation target is not allowed.");
         // -- 结束选项解析，模型参数中的 -y/--yes 永远只是参数，不能伪造用户确认。
         var command = CommandSyntax.PublicName(call.Operation) + " -- " + string.Join(" ", call.Arguments.Select(a => "\"" + a.Replace("\"", "\\\"") + "\""));

@@ -16,9 +16,13 @@ public sealed class PluginsView : UserControl, IDisposable
     private bool _remoteBusy;
     private readonly MainWindow _owner;
     private readonly List<(string Id, Button Badge)> _badges = [];
+    private readonly List<Action> _cardStates = [];
+    private readonly PluginManager _manager;
+    private bool _refreshingCards;
     public PluginsView(MainWindow owner, MainViewModel vm)
     {
-        _owner = owner; owner.PluginUpdatesChanged += UpdatesChanged;
+        _owner = owner; _manager = vm.Plugins; owner.PluginUpdatesChanged += UpdatesChanged;
+        _manager.LifecycleChanged += PluginLifecycleChanged;
         async Task Install(string path, string? origin = null, PluginManifest? updating = null)
         {
             if (_disposed) return;
@@ -87,6 +91,7 @@ public sealed class PluginsView : UserControl, IDisposable
         {
             var enabled = Ui.Toggle(plugin.Enabled, async value =>
             {
+                if (_refreshingCards) return;
                 if (value && plugin.Runtime == "managed" && !plugin.ManagedExecutionConsent)
                 {
                     if (!await PlayerDialog.Confirm(owner, plugin.Name, L10n.T("Extensions.ManagedWarning"), L10n.T("Common.Confirm"))) { owner.ShowPage(); return; }
@@ -127,6 +132,12 @@ public sealed class PluginsView : UserControl, IDisposable
             var openPage = Ui.Button("", () => vm.Navigate("plugin:" + plugin.Id));
             openPage.Name = "PluginOpenPage"; openPage.Content = Icon(IconKind.Sidebar); openPage.VerticalAlignment = VerticalAlignment.Center;
             openPage.IsEnabled = plugin.Enabled && plugin.HasPage && plugin.Type is "extension" or "agent" or "ui" or "lyrics";
+            _cardStates.Add(() =>
+            {
+                enabled.IsChecked = plugin.Enabled;
+                openPage.IsEnabled = plugin.Enabled && plugin.HasPage && plugin.Type is "extension" or "agent" or "ui" or "lyrics";
+                ToolTip.SetTip(enabled, L10n.T(plugin.Enabled ? "Plugins.DisablePlugin" : "Plugins.EnablePlugin"));
+            });
             ToolTip.SetTip(openPage, L10n.T("Plugins.OpenPage")); Avalonia.Automation.AutomationProperties.SetName(openPage, L10n.T("Plugins.OpenPage"));
             Grid.SetColumn(openPage, 3); actions.Children.Add(openPage);
             {
@@ -152,12 +163,24 @@ public sealed class PluginsView : UserControl, IDisposable
             ToolTip.SetTip(uninstall, L10n.T("Common.Uninstall")); Avalonia.Automation.AutomationProperties.SetName(uninstall, plugin.Name + " · " + L10n.T("Common.Uninstall"));
             Grid.SetColumn(uninstall, 5); uninstall.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(uninstall);
             var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") }; grid.Children.Add(info); Grid.SetColumn(actions, 1); grid.Children.Add(actions);
-            panel.Children.Add(new Border { Child = grid, Padding = new Thickness(20), CornerRadius = new CornerRadius(12), BorderBrush = Ui.Brush("DividerBrush"), BorderThickness = new Thickness(1), Background = Ui.Brush("SurfaceBrush") });
+            panel.Children.Add(new Border { Child = grid, Padding = new Thickness(20), CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(0), Background = Ui.Brush("SurfaceBrush") });
         }
         Content = Ui.Scroll(panel);
     }
     private void UpdatesChanged(object? sender, EventArgs e) { foreach (var (id, badge) in _badges) badge.IsVisible = _owner.PluginUpdate(id) is not null; }
-    public void Dispose() { _owner.PluginUpdatesChanged -= UpdatesChanged; if (_disposed) return; _disposed = true; _downloadCancellation.Cancel(); _downloadCancellation.Dispose(); }
+    private void PluginLifecycleChanged(PluginManifest plugin, string stage)
+    {
+        void RefreshCards()
+        {
+            if (_disposed) return;
+            _refreshingCards = true;
+            try { foreach (var refresh in _cardStates) refresh(); }
+            finally { _refreshingCards = false; }
+        }
+        if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) RefreshCards();
+        else Avalonia.Threading.Dispatcher.UIThread.Post(RefreshCards);
+    }
+    public void Dispose() { _owner.PluginUpdatesChanged -= UpdatesChanged; _manager.LifecycleChanged -= PluginLifecycleChanged; if (_disposed) return; _disposed = true; _downloadCancellation.Cancel(); _downloadCancellation.Dispose(); }
     private static VectorIcon Icon(IconKind kind) => new() { Kind = kind, Width = 18, Height = 18, Brush = Ui.Brush("TextPrimaryBrush") };
     private static string TypeName(string type) => L10n.T(type switch { "provider" => L10n.T("Common.Provider"), "theme" => L10n.T("Settings.Theme"), "widget" => L10n.T("Common.Cards"), "lyrics" => L10n.T("LyricsSearch.PluginType"), "agent" => L10n.T("Agent.PluginType"), _ => L10n.T("Common.Page") });
     private static string PermissionName(string name) => L10n.T(name switch { "player-control" => L10n.T("Playback.PlaybackControl"), "navigation" => L10n.T("Common.NavigationAndSearch"), "statistics" => L10n.T("Statistics.ListeningStatistics"), "desktop-widget" => L10n.T("Common.DesktopWidget"), "network" => L10n.T("Common.Network"), "process" => L10n.T("Common.NativeProcess"), "filesystem" => L10n.T("Common.FileSystem"), _ => name });

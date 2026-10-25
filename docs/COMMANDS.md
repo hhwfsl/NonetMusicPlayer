@@ -78,9 +78,12 @@ settings set lanApprovalWaitSeconds 30
 | `import` | `cancel` |
 | `playlist` | `import <m3u-file>`、`export <m3u-file>` |
 | `data` | `directory <folder>` |
+| `statistics` | `history [session或interval或event或hour] [limit] [offset] [session-id]` |
 | `selection` | `begin`、`end`、`all`、`clear`、`select <track-id...>`、`list` |
 
-页面 ID：`library`（音乐主页）、`songs`、`albums`、`artists`、`history`、`statistics`、`network`（设备互听）、`plugins`、`terminal`、`settings`、`lyrics`。歌单使用 `playlist:<id>`，分类使用 `album:<name>` 和 `artist:<name>`。
+页面 ID：`library`（音乐主页）、`songs`、`playlists`、`albums`、`artists`、`history`、`statistics`、`network`（设备互听）、`plugins`、`terminal`、`settings`、`lyrics`。歌单使用 `playlist:<id>`，分类使用 `album:<name>` 和 `artist:<name>`。
+
+`nonet statistics history` 分页读取长期听歌明细，缺省显示 100 个会话，每页最多 500 条；例如 `nonet statistics history event 50 0 <session-id>` 读取某个会话的播放事件。该命令不修改歌曲或历史记录。
 
 `auto` 恢复解析封面，`default` 使用软件默认封面。`window close` 遵循托盘设置。裁剪等视觉编辑不模拟系统键鼠，命令操作其保存结果。
 

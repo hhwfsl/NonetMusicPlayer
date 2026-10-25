@@ -31,7 +31,7 @@ public sealed class TerminalView : Border, IDisposable
         public TerminalEditor(PlayerTerminalSession session)
         {
             _session = session; _snapshot = session.Snapshot;
-            Name = "TerminalOutput"; AcceptsReturn = true; IsUndoEnabled = false;
+            Name = "TerminalOutput"; Classes.Add("terminal-editor"); AcceptsReturn = true; IsUndoEnabled = false;
             TextWrapping = TextWrapping.Wrap; FontFamily = new("Cascadia Mono, Consolas, DejaVu Sans Mono, monospace");
             FontSize = 14; Padding = new(16); VerticalContentAlignment = VerticalAlignment.Top;
             HorizontalAlignment = HorizontalAlignment.Stretch; VerticalAlignment = VerticalAlignment.Stretch;

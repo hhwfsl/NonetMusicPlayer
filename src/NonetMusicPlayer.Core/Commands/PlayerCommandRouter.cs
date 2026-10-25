@@ -25,6 +25,7 @@ public sealed class PlayerCommandRouter(IPlayerCommandBackend backend)
         new("playlist.move", "playlist.move <id> <track-id> <1-based-position>"), new("playlist.reorder", "playlist.reorder <id> <1-based-position>"), new("playlist.cover", "playlist.cover <id> <file|default>"),
         new("favorite.add", "favorite.add <track-id>"), new("favorite.remove", "favorite.remove <track-id>"),
         new("history.list", "history.list"), new("history.remove", "history.remove <track-id...>"), new("history.clear", "history.clear", true), new("statistics", "statistics [yyyy-MM-dd] [day|month|year]"),
+        new("statistics.history", "statistics.history [session|interval|event|hour] [limit] [offset] [session-id]", DesktopOnly: true),
         new("settings.list", "settings.list"), new("settings.get", "settings.get <name>"), new("settings.set", "settings.set <name> <json-value>"), new("settings.reset", "settings.reset", true),
         new("data.backup", "data.backup <file>"), new("data.restore", "data.restore <file>", true),
         new("lyrics.show", "lyrics.show"), new("lyrics.import", "lyrics.import <file>"), new("lyrics.path", "lyrics.path"),

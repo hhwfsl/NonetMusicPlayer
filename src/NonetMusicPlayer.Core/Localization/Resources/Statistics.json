@@ -109,6 +109,26 @@
     "ja-JP": "過去24時間の再生回数",
     "en-US": "Plays · last 24 hours"
   },
+  "Statistics.RecentTwentyFourHoursDuration": {
+    "zh-CN": "最近 24 小时播放时长",
+    "ja-JP": "過去24時間の再生時間",
+    "en-US": "Listening time · last 24 hours"
+  },
+  "Statistics.RecordedChartTotal": {
+    "zh-CN": "已记录到小时 · {0}",
+    "en-US": "Recorded by hour · {0}",
+    "ja-JP": "時間別の記録 · {0}"
+  },
+  "Statistics.IncompleteHourlyHistory": {
+    "zh-CN": "部分历史缺少小时信息，无法分配到图表。今日累计仍保留：{0}。",
+    "en-US": "Some history has no hourly timestamps and cannot be plotted. Today's total is preserved: {0}.",
+    "ja-JP": "時刻情報のない履歴はグラフに反映できません。今日の累計は保持されています：{0}。"
+  },
+  "Statistics.UnableToRecordHistory": {
+    "zh-CN": "无法记录听歌明细",
+    "en-US": "Unable to record listening history",
+    "ja-JP": "再生履歴の詳細を記録できません"
+  },
   "Statistics.ChartTotal": {
     "zh-CN": "合计 · {0}",
     "ja-JP": "合計 · {0}",

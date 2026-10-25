@@ -165,7 +165,7 @@ public sealed partial class MainWindow
                 image.Bind(Image.SourceProperty, new Binding(nameof(_vm.CurrentArtwork)) { Source = _vm }); return image;
             case "navigate":
                 var destination = node.Page.StartsWith("view:", StringComparison.Ordinal) ? "interface:" + node.Page[5..] : node.Page;
-                if (destination is not ("library" or "songs" or "history" or "albums" or "artists" or "statistics" or "devices" or "settings" or "plugins" or "terminal" or "favorites" or "lyrics" or "back") && !destination.StartsWith("interface:", StringComparison.Ordinal)) throw new InvalidDataException("Not an existing navigation destination.");
+                if (destination is not ("library" or "songs" or "playlists" or "history" or "albums" or "artists" or "statistics" or "devices" or "settings" or "plugins" or "terminal" or "favorites" or "lyrics" or "back") && !destination.StartsWith("interface:", StringComparison.Ordinal)) throw new InvalidDataException("Not an existing navigation destination.");
                 var label = Ui.Text(node.Label); label.TextTrimming = TextTrimming.CharacterEllipsis;
                 var body = new Grid { ColumnDefinitions = new("30,*") }; body.Children.Add(new VectorIcon { Kind = Enum.TryParse<IconKind>(node.Icon, out var glyph) ? glyph : IconKind.Music }); Grid.SetColumn(label, 1); body.Children.Add(label);
                 var button = new Button { Content = body, Tag = destination == "favorites" ? "playlist:" + Playlist.LikedId : destination, MinHeight = 0, HorizontalContentAlignment = HorizontalAlignment.Stretch };

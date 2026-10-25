@@ -31,7 +31,7 @@ public sealed class SongInfoDialog : Window
         var close = Ui.Button(L10n.T("Common.Close"), () => Close(), true); close.Name = "CloseSongInfo";
         var actions = Ui.Actions(close); actions.HorizontalAlignment = HorizontalAlignment.Right;
         var panel = Ui.Stack(heading, header, Field(L10n.T("Library.Albums"), track.Album), Field(L10n.T("Common.Duration"), track.DurationText), Field(L10n.T("Common.Format"), track.FormatText), Field(L10n.T("Common.FileSize"), track.FileSizeText), Ui.Text(L10n.T("Common.FilePath"), 12, true), pathText, path, actions);
-        Content = new Border { Padding = new Thickness(28), BorderThickness = new Thickness(1), BorderBrush = Ui.Brush("DividerBrush"), Background = Ui.Brush("SurfaceBrush"), Child = Ui.Scroll(panel) };
+        Content = new Border { Padding = new Thickness(28), BorderThickness = new Thickness(0), Background = Ui.Brush("SurfaceBrush"), Child = Ui.Scroll(panel) };
         KeyDown += (_, e) => { if (e.Key == Key.Escape) { Close(); e.Handled = true; } };
     }
     private static Control Field(string label, string value)

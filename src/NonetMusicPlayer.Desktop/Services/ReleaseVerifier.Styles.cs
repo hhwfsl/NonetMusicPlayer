@@ -33,6 +33,11 @@ internal static partial class ReleaseVerifier
             if (window.IsVisible) throw new InvalidDataException("Window shown before appearance preparation completed.");
             window.Show();
             NativePump(() => window.StyleLayers.Catalog()["activeLayers"]!.AsArray().Count == 1);
+            window.UpdateLayout();
+            var startupSearchWidth = window.GetVisualDescendants().OfType<TextBox>().Single(c => c.Name == "HomeMusicSearch").Bounds.Width;
+            vm.Navigate("history"); window.UpdateLayout(); vm.Navigate("library"); window.UpdateLayout();
+            var returnedSearchWidth = window.GetVisualDescendants().OfType<TextBox>().Single(c => c.Name == "HomeMusicSearch").Bounds.Width;
+            if (Math.Abs(startupSearchWidth - returnedSearchWidth) > .1) throw new InvalidDataException("Startup search width differs after navigation.");
             if (sheet.Resources.TryGetValue("AccentBrush", out var accent) && ((ISolidColorBrush)Application.Current!.Resources["AccentBrush"]!).Color != Color.Parse(accent)) throw new InvalidDataException("Style resource not applied.");
             vm.Navigate("plugin:" + plugin.Id);
             NativePump(() => window.GetVisualDescendants().OfType<NativeExtensionView>().Any(v => v.Content is Control));

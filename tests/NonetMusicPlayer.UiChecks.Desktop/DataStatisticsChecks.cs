@@ -11,7 +11,7 @@ internal static class DataStatisticsChecks
     public static void Run(string output)
     {
         var fixture = Path.Combine(output, "data-statistics-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(fixture);
-        CheckDirectories(fixture); CheckStatistics(fixture); CheckMovedTrackImport(fixture); CheckCustomLyricsDirectory(fixture);
+        CheckDirectories(fixture); CheckStatistics(fixture); CheckHourlyDuration(fixture); CheckListeningRetention(fixture); CheckLocalMidnight(fixture); CheckMovedTrackImport(fixture); CheckCustomLyricsDirectory(fixture);
         Console.WriteLine("Data/statistics checks passed: portable bootstrap, non-destructive migration, latest-state mirroring, owned covers, actual listening and restore.");
     }
     private static void CheckDirectories(string fixture)
@@ -80,6 +80,7 @@ internal static class DataStatisticsChecks
             Sample(vm, audio, clock, .5); Require(vm.GetStatistics().TotalPlays == 0, "A sub-second start does not count as a play");
             Sample(vm, audio, clock, .5); var stats = vm.GetStatistics(); Require(Near(stats.TotalSeconds, 1) && stats.TotalPlays == 1 && stats.ActiveDays == 1 && Near(stats.TodaySeconds, 1), "Real audio advance credits actual seconds and one session play");
             Require(vm.GetRecentListeningCharts().Hours.Sum(p => p.Value) == 1 && vm.GetRecentListeningCharts().Hours[^1].Value == 1, "A genuine play is credited to its UTC hour");
+            Require(Near(vm.GetRecentListeningCharts().HourDurations.Sum(p => p.Value), 1), "Hourly duration records actual listening rather than song length");
             vm.TogglePlayPauseCommand.Execute(null); clock.Advance(1); Tick(vm); Require(Near(vm.GetStatistics().TotalSeconds, 1), "Paused wall time never credits listening");
             vm.TogglePlayPauseCommand.Execute(null); Sample(vm, audio, clock, .5); Require(vm.GetStatistics().TotalPlays == 1, "Pause and resume do not duplicate play count");
             Require(vm.GetRecentListeningCharts().Hours.Sum(p => p.Value) == 1, "Pause and resume do not duplicate hourly plays");
@@ -87,7 +88,8 @@ internal static class DataStatisticsChecks
             Sample(vm, audio, clock, .5); Require(Near(vm.GetStatistics().TotalSeconds, beforeSeek + .5), "Listening after a seek resumes with fresh anchor");
             vm.IsSeeking = true; Sample(vm, audio, clock, .5); vm.IsSeeking = false; Require(Near(vm.GetStatistics().TotalSeconds, beforeSeek + .5), "Seek drag excludes sampling interval");
             vm.ApplySettings(); Sample(vm, audio, clock, 1); Require(Near(vm.GetStatistics().TotalSeconds, beforeSeek + 1.5), "Normal playback credits real seconds");
-            var beforeSleep = vm.GetStatistics().TotalSeconds; Sample(vm, audio, clock, 30); Require(Near(vm.GetStatistics().TotalSeconds, beforeSleep), "Long suspended or delayed timer interval is conservatively excluded");
+            var beforeSleep = vm.GetStatistics().TotalSeconds; Sample(vm, audio, clock, 30); Require(Near(vm.GetStatistics().TotalSeconds, beforeSleep + 30), "Delayed UI sampling retains confirmed audio progress");
+            var beforeIdle = vm.GetStatistics().TotalSeconds; clock.Advance(30); Tick(vm); Require(Near(vm.GetStatistics().TotalSeconds, beforeIdle), "Wall time without audio advance never credits listening");
             Wait(vm.PlayTrackAsync(second)); Sample(vm, audio, clock, 1); stats = vm.GetStatistics();
             Require(stats.TotalPlays == 2 && stats.Songs.Count == 2 && stats.Artists.Any(artist => artist.Name == "AC/DC") && stats.Artists.All(artist => artist.Name is not ("AC" or "DC")), "Song and collaborator rankings preserve slash-containing artist names");
             Require(stats.Artists.Any(artist => artist.Name == "甲") && stats.Artists.Any(artist => artist.Name == "乙"), "Tagged multiple performers receive separate ranking entries");
@@ -100,6 +102,7 @@ internal static class DataStatisticsChecks
             var unrelated = Path.Combine(fixture, "not-a-library.json"); File.WriteAllText(unrelated, "{\"schemaVersion\":1,\"theme\":\"Dark\"}");
             Throws(() => vm.RestoreLibraryBackup(unrelated), "Unrelated JSON is rejected before replacing a library"); Require(vm.GetStatistics().TotalPlays == 2 && !Directory.Exists(Path.Combine(storage.BackupFolder, "Restores")), "Rejected restore does not mutate data or create a restoration archive");
             var savedTotal = vm.GetStatistics().TotalSeconds; vm.State.ListeningEntries.Clear(); vm.State.HourlyListeningEntries.Clear(); vm.Save(); vm.RestoreLibraryBackup(backup);
+            Require(Near(vm.GetRecentListeningCharts().HourDurations.Sum(p => p.Value), savedTotal), "Hourly duration excludes pauses, seeking and sleep, and survives backup restore");
             Require(vm.GetRecentListeningCharts().Hours.Sum(p => p.Value) == 2, "Explicit restore recovers hourly plays after clearing current state");
             Require(Near(vm.GetStatistics().TotalSeconds, savedTotal) && !vm.IsPlaying && vm.PlaybackPosition == 25 && vm.CurrentTrack?.Id == "second", "Explicit backup restores statistics and displayed progress without autoplay");
             Require(File.ReadAllText(backup) == selectedJson, "Explicit backup import preserves original file bytes");
@@ -130,6 +133,39 @@ internal static class DataStatisticsChecks
             Require(restored.GetStatistics().TotalPlays == 2 && restored.GetGroupCover("albums", "专辑") is not null && !restored.IsPlaying, "Source-generated persistence retains statistics and group covers");
             Require(restored.GetRecentListeningCharts().Hours.Sum(p => p.Value) == 2, "SQLite restore and migration retain bounded hourly statistics");
         }
+    }
+    private static void CheckHourlyDuration(string fixture)
+    {
+        var storage = new AppStorage(Path.Combine(fixture, "hour-boundary"));
+        storage.Save(new AppState { Tracks = [Track("boundary")] });
+        var clock = new ManualClock(); clock.Advance(3598.5); var audio = new StatisticsAudio();
+        using (var vm = new MainViewModel(new MusicLibraryScanner(storage), audio, clock))
+        {
+            Wait(vm.PlayTrackAsync(vm.State.Tracks.Single())); Sample(vm, audio, clock, 1); Sample(vm, audio, clock, 1);
+            var hours = vm.State.HourlyListeningEntries.OrderBy(e => e.UtcHour).ToArray();
+            Require(hours.Length == 2 && Near(hours[0].Seconds, 1.5) && Near(hours[1].Seconds, .5) && hours[0].PlayCount == 1 && hours[1].PlayCount == 0, "A sample spanning an hour boundary splits elapsed duration without inventing another play");
+            vm.Save();
+        }
+        var restored = storage.Load().HourlyListeningEntries.OrderBy(e => e.UtcHour).ToArray();
+        Require(restored.Length == 2 && Near(restored.Sum(e => e.Seconds), 2) && restored[1].PlayCount == 0, "SQLite preserves a duration-only bucket after restart");
+    }
+    private static void CheckListeningRetention(string fixture)
+    {
+        var storage = new AppStorage(Path.Combine(fixture, "history-retention")); storage.Save(new AppState { Tracks = [Track("removed")] });
+        var clock = new ManualClock(); var audio = new StatisticsAudio();
+        using var vm = new MainViewModel(new MusicLibraryScanner(storage), audio, clock);
+        var track = vm.State.Tracks.Single(); Wait(vm.PlayTrackAsync(track)); Sample(vm, audio, clock, 1);
+        vm.RemoveLibraryTracks([track]); vm.Save();
+        Require(vm.State.Tracks.Count == 0 && Near(vm.GetStatistics().TotalSeconds, 1) && storage.ListeningJournal.Page()["total"]!.GetValue<long>() == 1, "Removing the last music reference preserves historical listening snapshots and totals");
+    }
+    private static void CheckLocalMidnight(string fixture)
+    {
+        var storage = new AppStorage(Path.Combine(fixture, "local-midnight")); storage.Save(new AppState { Tracks = [Track("midnight")] });
+        var zone = TimeZoneInfo.CreateCustomTimeZone("Fixture+0545", TimeSpan.FromMinutes(345), "Fixture", "Fixture");
+        var clock = new ManualClock(zone); clock.Advance(18 * 3600 + 14 * 60 + 59.5); var audio = new StatisticsAudio();
+        using var vm = new MainViewModel(new MusicLibraryScanner(storage), audio, clock);
+        Wait(vm.PlayTrackAsync(vm.State.Tracks.Single())); Sample(vm, audio, clock, 1);
+        Require(vm.State.ListeningEntries.Count == 2 && vm.State.ListeningEntries.All(e => Near(e.Seconds, .5)) && !vm.GetRecentListeningCharts().HasIncompleteHourHistory, "Non-whole-hour zones split at local midnight without false missing-history notices");
     }
     private static void CheckMovedTrackImport(string fixture)
     {
@@ -187,13 +223,13 @@ internal static class DataStatisticsChecks
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
     private static void Throws(Action action, string message) { try { action(); } catch (InvalidDataException) { return; } throw new InvalidOperationException(message); }
     private static bool MigrationBlocked(Action action) { try { action(); } catch (InvalidOperationException exception) when (exception.Message.Contains("迁移")) { return true; } return false; }
-    private sealed class ManualClock : TimeProvider
+    private sealed class ManualClock(TimeZoneInfo? localZone = null) : TimeProvider
     {
         private long _milliseconds;
         public override long TimestampFrequency => 1000;
         public override long GetTimestamp() => _milliseconds;
         public override DateTimeOffset GetUtcNow() => new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero).AddMilliseconds(_milliseconds);
-        public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
+        public override TimeZoneInfo LocalTimeZone => localZone ?? TimeZoneInfo.Utc;
         public void Advance(double seconds) => _milliseconds += (long)(seconds * 1000);
     }
     private sealed class StatisticsAudio : IAudioPlayer

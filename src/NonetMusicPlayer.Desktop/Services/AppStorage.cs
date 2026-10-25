@@ -16,6 +16,7 @@ public sealed class AppStorage
     public string BackupFolder { get; private set; }
     public string BackupPath => Path.Combine(BackupFolder, "state.json.bak");
     public string DatabasePath => Path.Combine(Root, "library.db");
+    public ListeningJournalStore ListeningJournal { get; }
     public string DatabaseBackupPath => Path.Combine(BackupFolder, "library.db.bak");
     private LibraryDatabase? _database, _pendingDatabase;
     private DateTimeOffset _databaseBackupAt = DateTimeOffset.MinValue;
@@ -33,6 +34,7 @@ public sealed class AppStorage
     public AppStorage(string? root = null, string? installationDirectory = null)
     {
         Paths = new(root, installationDirectory); Root = Paths.DataDirectory; BackupFolder = Paths.BackupDirectory; RecoveryMessage = Paths.RecoveryMessage;
+        ListeningJournal = new(DatabasePath);
         DataDirectoryService.ValidateBackup(Root, BackupFolder);
         foreach (var folder in new[] { Root, ArtworkFolder, PluginsFolder, DefaultLyricsFolder, LogsFolder, PluginTempFolder, BackupFolder }) Directory.CreateDirectory(folder);
         Paths.EnsureBootstrap();
@@ -77,7 +79,6 @@ public sealed class AppStorage
     internal string ReadBackupText(string? path = null)
     {
         path ??= File.Exists(DatabaseBackupPath) ? DatabaseBackupPath : BackupPath;
-        if (new FileInfo(path).Length > 256L * 1024 * 1024) throw new InvalidDataException("资料库备份超过 256 MB 限制。");
         using (var file = File.OpenRead(path))
         {
             var signature = new byte[16]; var length = file.Read(signature);
@@ -88,6 +89,7 @@ public sealed class AppStorage
                 return JsonSerializer.Serialize(state, Json);
             }
         }
+        if (new FileInfo(path).Length > 256L * 1024 * 1024) throw new InvalidDataException("资料库 JSON 备份超过 256 MB 限制。");
         return File.ReadAllText(path);
     }
     internal AppState ParseBackup(string json)
@@ -108,13 +110,22 @@ public sealed class AppStorage
         foreach (var playlist in state.Playlists) playlist.TrackIds ??= [];
         state.Settings.Validate(); MigrateState(state); return state;
     }
-    public string ArchiveRestore(AppState current, string selectedJson)
+    public string ArchiveRestore(AppState current, string selectedJson, string? selectedPath = null)
     {
         // 独立命名的不可变快照不受滚动 state.json.bak 替换影响。
         ParseBackup(selectedJson); var currentJson = JsonSerializer.Serialize(current, Json);
         var name = DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff") + "-" + Guid.NewGuid().ToString("N")[..8];
         var folder = Path.Combine(BackupFolder, "Restores", name);
         AtomicWrite(Path.Combine(folder, "current.state.json"), currentJson); AtomicWrite(Path.Combine(folder, "selected.state.json"), selectedJson);
+        // SQLite 备份包含独立明细表；使用备份 API 捕获 WAL，不能只复制主文件。
+        if (selectedPath is not null && File.Exists(selectedPath))
+        {
+            using var source = File.OpenRead(selectedPath); var signature = new byte[16];
+            if (source.Read(signature) == 16 && System.Text.Encoding.ASCII.GetString(signature) == "SQLite format 3\0")
+                new LibraryDatabase(selectedPath).Backup(Path.Combine(folder, "selected.library.db"));
+        }
+        Save(current);
+        if (File.Exists(DatabasePath)) new LibraryDatabase(DatabasePath).Backup(Path.Combine(folder, "current.library.db"));
         if (_pendingBackup is { } pending && !string.Equals(pending, BackupFolder, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
         {
             var mirrored = Path.Combine(pending, "Restores", name);
@@ -129,11 +140,15 @@ public sealed class AppStorage
         state.RecentTemporaryTracks = state.RecentTemporaryTracks.Where(t => t is not null && !string.IsNullOrWhiteSpace(t.Id) && historyIds.Contains(t.Id)).DistinctBy(t => t.Id).Take(state.Settings.HistoryLimit).ToList();
         state.ListeningEntries ??= []; state.GroupCovers ??= new(StringComparer.Ordinal); state.SoftwareDefaultGroupCovers ??= new(StringComparer.Ordinal);
         // 可选小时元数据有界归并；旧备份缺省为空，不按每日次数补造分布。
-        state.HourlyListeningEntries = (state.HourlyListeningEntries ?? []).Where(e => e is not null && e.UtcHour >= 0 && e.UtcHour <= DateTimeOffset.MaxValue.ToUnixTimeSeconds() / 3600 && e.PlayCount > 0)
+        state.HourlyListeningEntries = (state.HourlyListeningEntries ?? []).Where(e => e is not null && e.UtcHour >= 0 && e.UtcHour <= DateTimeOffset.MaxValue.ToUnixTimeSeconds() / 3600 && (e.PlayCount > 0 || double.IsFinite(e.Seconds) && e.Seconds > 0))
             .GroupBy(e => e.UtcHour).OrderByDescending(g => g.Key).Take(72)
-            .Select(g => new HourlyListeningEntry { UtcHour = g.Key, PlayCount = (int)Math.Min(int.MaxValue, g.Sum(e => (long)e.PlayCount)) }).ToList();
+            .Select(g => new HourlyListeningEntry { UtcHour = g.Key, PlayCount = (int)Math.Min(int.MaxValue, g.Sum(e => (long)Math.Max(0, e.PlayCount))), Seconds = Math.Min(3600, g.Sum(e => double.IsFinite(e.Seconds) ? Math.Max(0, e.Seconds) : 0)) }).ToList();
         state.ListeningEntries = state.ListeningEntries.Where(entry => entry is not null && !string.IsNullOrWhiteSpace(entry.TrackId) && DateOnly.TryParse(entry.Date, out _) && double.IsFinite(entry.Seconds) && entry.Seconds >= 0).ToList();
-        foreach (var entry in state.ListeningEntries) { entry.PlayCount = Math.Max(0, entry.PlayCount); entry.Title ??= "未命名歌曲"; entry.Artist ??= L10n.T("Library.UnknownArtist"); }
+        foreach (var entry in state.ListeningEntries)
+        {
+            entry.PlayCount = Math.Max(0, entry.PlayCount); entry.Title ??= "未命名歌曲"; entry.Artist ??= L10n.T("Library.UnknownArtist");
+            if (entry.TimestampedSeconds is { } timed) entry.TimestampedSeconds = double.IsFinite(timed) ? Math.Clamp(timed, 0, entry.Seconds) : null;
+        }
         foreach (var track in state.Tracks.Concat(state.RecentTemporaryTracks))
         {
             track.Title ??= "未命名歌曲"; track.Artist ??= L10n.T("Library.UnknownArtist"); track.Album ??= L10n.T("Library.UnknownAlbum"); track.FilePath ??= ""; track.Extension ??= "";
@@ -173,7 +188,8 @@ public sealed class AppStorage
         _database ??= new LibraryDatabase(DatabasePath);
         var backup = _primaryHealthy && File.Exists(DatabasePath) && DateTimeOffset.UtcNow - _databaseBackupAt >= TimeSpan.FromMinutes(5);
         if (backup) { _database.Backup(DatabaseBackupPath); _databaseBackupAt = DateTimeOffset.UtcNow; }
-        _database.Save(state, playbackOnly); _primaryHealthy = true;
+        var journal = ListeningJournal.Capture();
+        _database.Save(state, playbackOnly, journal); _primaryHealthy = true;
         if (!File.Exists(DatabaseBackupPath)) { _database.Backup(DatabaseBackupPath); _databaseBackupAt = DateTimeOffset.UtcNow; }
         if (PendingRoot is { } pending)
         {
@@ -185,8 +201,15 @@ public sealed class AppStorage
             copy.Settings.BackupFolder = DataDirectoryService.Contains(pending, pendingBackup) ? Path.GetRelativePath(pending, pendingBackup) : pendingBackup;
             Directory.CreateDirectory(pendingBackup);
             _pendingDatabase ??= new LibraryDatabase(Path.Combine(pending, "library.db"));
-            _pendingDatabase.Save(copy, playbackOnly); _pendingDatabase.Backup(Path.Combine(pendingBackup, "library.db.bak"));
+            _pendingDatabase.Save(copy, playbackOnly, journal); _pendingDatabase.Backup(Path.Combine(pendingBackup, "library.db.bak"));
         }
+        ListeningJournal.Acknowledge(journal);
+    }
+    public void RestoreListeningJournal(string? archivedDatabase)
+    {
+        (_database ??= new LibraryDatabase(DatabasePath)).ReplaceJournalFrom(archivedDatabase);
+        ListeningJournal.ClearPending();
+        if (_pendingDatabase is not null) _pendingDatabase.ReplaceJournalFrom(archivedDatabase);
     }
     public void SetBackupFolder(string folder)
     {
@@ -210,7 +233,12 @@ public sealed class AppStorage
         DataDirectoryService.ValidateBackup(candidate, backup);
         RejectForeignBackup(backup);
         if (DataDirectoryService.Contains(Root, candidate) || DataDirectoryService.Contains(candidate, Root)) throw new InvalidDataException("新旧数据目录不能相同或相互包含。");
-        if (copyExisting) DataDirectoryService.CopyNonDestructive(Root, candidate, skipRuntimeFiles: true);
+        if (copyExisting)
+        {
+            DataDirectoryService.CopyNonDestructive(Root, candidate, skipRuntimeFiles: true);
+            // 迁移必须取得包含 WAL 的一致数据库快照，明细不依赖普通文件复制是否已检查点。
+            if (File.Exists(DatabasePath)) (_database ??= new LibraryDatabase(DatabasePath)).Backup(Path.Combine(candidate, "library.db"));
+        }
         else { if (Directory.Exists(candidate) && Directory.EnumerateFileSystemEntries(candidate).Any()) throw new InvalidDataException("为保护现有数据，请选择空目录。"); Directory.CreateDirectory(candidate); }
         Directory.CreateDirectory(backup);
         Paths.SaveConfiguration(candidate, backup);
@@ -301,6 +329,10 @@ public sealed class AppStorage
 [JsonSerializable(typeof(AppSettings))]
 [JsonSerializable(typeof(ListeningStatisticsSnapshot))]
 [JsonSerializable(typeof(RecentListeningCharts))]
+[JsonSerializable(typeof(ListeningSessionRecord))]
+[JsonSerializable(typeof(ListeningIntervalRecord))]
+[JsonSerializable(typeof(ListeningEventRecord))]
+[JsonSerializable(typeof(HourlyListeningEntry))]
 [JsonSerializable(typeof(List<PluginManifest>))]
 [JsonSerializable(typeof(PluginManifest))]
 [JsonSerializable(typeof(ProviderCatalog))]

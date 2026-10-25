@@ -42,6 +42,11 @@ public sealed class PluginPetControl : Control, IDisposable
             context.DrawGeometry(null, Outline, MouthGeometry);
         }
     }
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e) { Dispose(); base.OnDetachedFromVisualTree(e); }
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        // 同步重组页面不应永久停止部件动画。
+        Dispatcher.UIThread.Post(() => { if (TopLevel.GetTopLevel(this) is null) Dispose(); }, DispatcherPriority.Background);
+    }
     public void Dispose() { if (IsDisposed) return; IsDisposed = true; _timer.Stop(); _timer.Tick -= Tick; }
 }

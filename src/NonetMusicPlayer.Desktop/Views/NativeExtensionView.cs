@@ -59,6 +59,10 @@ public sealed class NativeExtensionView : UserControl, IDisposable, NonetMusicPl
     private async Task ReleaseAsync(INonetNativeView view)
     {
         try { await view.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2)); }
-        catch (Exception error) { _manager.ReportPluginFault(_session.Manifest, error); }
+        catch (Exception error)
+        {
+            if (!_session.IsDisposed) _manager.ReportPluginFault(_session.Manifest, error);
+            else NonetMusicPlayer.Core.Diagnostics.AppLog.Warning("Plugin " + _session.Manifest.Name + " (" + _session.Manifest.Id + ")", "Native view cleanup failed after session closure.", error);
+        }
     }
 }

@@ -30,7 +30,7 @@ public static class ThemeService
         Color Panel(Color color) => hasBackground ? Color.FromArgb(215, color.R, color.G, color.B) : color;
         Color Region(double opacity) => hasBackground ? Color.FromArgb((byte)Math.Round(opacity * 255), surface.R, surface.G, surface.B) : surface;
         Set("TitleBarBackgroundBrush", Region(settings.TitleBarOpacity)); Set("NavigationBackgroundBrush", Region(settings.NavigationOpacity));
-        Set("ContentBackgroundBrush", Region(settings.ContentOpacity)); Set("PlayerBackgroundBrush", Region(settings.PlayerOpacity));
+        Set("ContentBackgroundBrush", hasBackground ? Region(settings.ContentOpacity) : background); Set("PlayerBackgroundBrush", Region(settings.PlayerOpacity));
         // 大面积面板使用克制的主题色调，保持中性明度和可读对比，避免高饱和底色。
         var card = Mix(surface, interactionTint, darkSurface ? .065 : .035);
         var raised = Mix(Mix(surface, neutral, darkSurface ? .055 : .04), interactionTint, darkSurface ? .085 : .055);
@@ -57,11 +57,11 @@ public static class ThemeService
         {
             Set("ExpanderHeaderBackground" + state, state is "PointerOver" or "Pressed" ? Mix(surface, interactionTint, .18) : Mix(surface, neutral, .055));
             Set("ExpanderHeaderForeground" + state, primaryText);
-            Set("ExpanderHeaderBorderBrush" + state, Mix(surface, primaryText, .16));
+            Set("ExpanderHeaderBorderBrush" + state, Colors.Transparent);
             Set("ExpanderChevronForeground" + state, primaryText);
             Set("ExpanderChevronBackground" + state, surface);
         }
-        Set("ExpanderContentBackground", surface); Set("ExpanderContentBorderBrush", Mix(surface, primaryText, .16));
+        Set("ExpanderContentBackground", surface); Set("ExpanderContentBorderBrush", Colors.Transparent);
         Set("ErrorBrush", EnsureContrast(Color.Parse("#F0526C"), surface, 4.5));
         var fluent = app.Styles.OfType<FluentTheme>().FirstOrDefault();
         if (fluent is not null) foreach (var palette in fluent.Palettes.Values) palette.Accent = accent;

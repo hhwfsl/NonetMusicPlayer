@@ -77,7 +77,7 @@ public sealed class PluginDownloadNotification : IDisposable, IProgress<double>
         var button = Ui.Button("", close); button.Content = new VectorIcon { Kind = IconKind.Close, Width = 16, Height = 16 }; button.Classes.Add("transport"); button.Width = button.Height = 28; button.MinHeight = button.MinWidth = 28;
         ToolTip.SetTip(button, L10n.T(closeTip)); Avalonia.Automation.AutomationProperties.SetName(button, L10n.T(closeTip));
         content.Margin = new(10, 0); var grid = new Grid { ColumnDefinitions = new(closable ? "24,*,28" : "24,*") }; grid.Children.Add(icon); Grid.SetColumn(content, 1); grid.Children.Add(content); if (closable) { Grid.SetColumn(button, 2); grid.Children.Add(button); }
-        return new Border { Padding = new(16), CornerRadius = new(12), Background = Ui.Brush("SurfaceRaisedBrush"), BorderBrush = Ui.Brush("AccentBrush"), BorderThickness = new(1), Child = grid };
+        return new Border { Padding = new(16), CornerRadius = new(12), Background = Ui.Brush("SurfaceRaisedBrush"), BorderThickness = new(0), Child = grid };
     }
     private void OwnerClosed(object? sender, EventArgs e) => Dispose();
     public void Dispose()

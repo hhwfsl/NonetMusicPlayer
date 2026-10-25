@@ -13,6 +13,7 @@ namespace NonetMusicPlayer.Desktop.Views;
 public sealed partial class MainWindow
 {
     private string _selectedMusicSource = "", _homeMusicQuery = "";
+    private Grid? _homeMusicSearchField;
     private ScrollViewer? _musicSearchScroll;
     private bool _musicSearchScrollRequested;
     private readonly DispatcherTimer _musicSearchViewportTimer = new() { Interval = TimeSpan.FromMilliseconds(180) };
@@ -65,14 +66,15 @@ public sealed partial class MainWindow
     {
         if (_vm is null) return;
         MusicSearchHeader.IsVisible = _vm.Page is "library" or "cloud-search";
-        if (!MusicSearchHeader.IsVisible) { _homeMusicQuery = ""; MusicSearchHeader.Content = null; return; }
+        if (!MusicSearchHeader.IsVisible) { _homeMusicQuery = ""; _homeMusicSearchField = null; MusicSearchHeader.Content = null; return; }
         var sources = new[] { (Id: "", Label: L10n.T("Common.Local")) }.Concat(_vm.Plugins.MusicSearchSources.Select(p => (p.Id, p.MusicSearch!.Label))).ToArray();
         if (sources.All(s => s.Id != _selectedMusicSource)) _selectedMusicSource = "";
         var select = new ComboBox { Name = "MusicSearchSource", ItemsSource = sources.Select(s => s.Label).ToArray(), SelectedIndex = Array.FindIndex(sources, s => s.Id == _selectedMusicSource), Width = 112, VerticalAlignment = VerticalAlignment.Center };
         ToolTip.SetTip(select, L10n.T("MusicSearch.Source"));
         var editor = new TextBox { Name = "HomeMusicSearch", Text = _homeMusicQuery, PlaceholderText = L10n.T("MusicSearch.Placeholder"), MaxLength = 300, MinHeight = 40, Padding = new(34, 0, 32, 0) };
         editor.Classes.Add("web-search");
-        var field = new Grid { Width = Math.Clamp(Bounds.Width * .22, 140, 280), Height = 40, ClipToBounds = true }; field.Children.Add(editor);
+        var field = new Grid { Name = "HomeMusicSearchField", Width = Math.Clamp(ViewportWidth * .22, 140, 280), Height = 40, ClipToBounds = true }; field.Children.Add(editor);
+        _homeMusicSearchField = field;
         async Task Search()
         {
             _homeMusicQuery = editor.Text ?? ""; FocusManager?.Focus(null);
@@ -89,5 +91,10 @@ public sealed partial class MainWindow
         select.SelectionChanged += (_, _) => { if (select.SelectedIndex >= 0) _selectedMusicSource = sources[select.SelectedIndex].Id; };
         var row = Ui.Actions(field, select); row.Spacing = 8;
         MusicSearchHeader.Content = row;
+    }
+    /// <summary>隐藏首帧使用预设窗口宽度，显示及缩放后更新现有容器，不重建输入框或改变焦点。</summary>
+    private void UpdateMusicSearchHeaderWidth()
+    {
+        if (_homeMusicSearchField is { } field) field.SetCurrentValue(WidthProperty, Math.Clamp(ViewportWidth * .22, 140, 280));
     }
 }

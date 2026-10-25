@@ -61,10 +61,12 @@ public sealed partial class ExtensionSession : IDisposable
             }
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { Dispose(); throw; }
+        catch (Exception) when (_lifetime.IsCancellationRequested) { Dispose(); throw new OperationCanceledException(_lifetime.Token); }
         catch (Exception error) { _manager.ReportPluginFault(Manifest, error); Dispose(); throw; }
         finally { _gate.Release(); }
         try { await PublishAsync(Frame); }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { throw; }
+        catch (Exception) when (_lifetime.IsCancellationRequested) { throw new OperationCanceledException(_lifetime.Token); }
         catch (Exception error) { _manager.ReportPluginFault(Manifest, error); throw; }
     }
     public async Task InvokeAsync(string action, JsonObject values, bool userGesture = false)
@@ -76,6 +78,7 @@ public sealed partial class ExtensionSession : IDisposable
             await PublishAsync(await CallAsync("extension.invoke", new() { ["invocation"] = JsonSerializer.Serialize(new ExtensionInvocation(action, values), ExtensionJson.Default.ExtensionInvocation) }));
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { throw; }
+        catch (Exception) when (_lifetime.IsCancellationRequested) { throw new OperationCanceledException(_lifetime.Token); }
         catch (Exception error) { _manager.ReportPluginFault(Manifest, error); throw; }
         finally { _gesture = false; _gate.Release(); }
     }
@@ -109,6 +112,7 @@ public sealed partial class ExtensionSession : IDisposable
     }
     private async Task<ExtensionFrame> CallAsync(string method, Dictionary<string, string>? args = null, CancellationToken token = default, TimeSpan? timeout = null)
         {
+        _lifetime.Token.ThrowIfCancellationRequested();
         using var combined = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token, token);
         if ((timeout ?? TimeSpan.FromSeconds(20)) is var limit && limit > TimeSpan.Zero) combined.CancelAfter(limit);
         var instance = _declarative ?? _managed?.Instance;
@@ -123,6 +127,7 @@ public sealed partial class ExtensionSession : IDisposable
     }
     private async Task PublishAsync(ExtensionFrame frame)
     {
+        _lifetime.Token.ThrowIfCancellationRequested();
         ExtensionContract.ValidateFrame(frame);
         // 请求 ID 去重，重发状态不会重复执行事务。
         for (var round = 0; frame.Requests.Count > 0 && round < 16; round++)
@@ -133,9 +138,12 @@ public sealed partial class ExtensionSession : IDisposable
             try { result = await ServiceAsync(fresh); }
             catch (Exception error) when (error is not OperationCanceledException)
             { AppLog.Warning("Extensions", "Service rejected: " + fresh.Service, error); result = new() { ["success"] = false, ["message"] = "Request rejected." }; }
+            // 配置保存、停用或更新会替换会话；旧请求不能再向已释放的进程回传结果。
+            _lifetime.Token.ThrowIfCancellationRequested();
             frame = await CallAsync("extension.complete", new() { ["id"] = fresh.Id, ["result"] = result.ToJsonString() });
             ExtensionContract.ValidateFrame(frame);
         }
+        _lifetime.Token.ThrowIfCancellationRequested();
         Frame = frame; Changed?.Invoke(frame);
         if (frame.Busy && !_polling) { _polling = true; _ = PollAsync(); }
     }

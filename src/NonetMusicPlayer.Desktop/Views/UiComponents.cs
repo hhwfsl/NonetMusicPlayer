@@ -54,7 +54,7 @@ internal static class Ui
     {
         var stack = Stack(); var heading = Text(title, 17); heading.FontWeight = FontWeight.SemiBold; stack.Children.Add(heading);
         foreach (var control in controls) stack.Children.Add(control);
-        var card = new Border { Background = Brush("SurfaceBrush"), BorderBrush = Brush("DividerBrush"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Padding = new Thickness(22), Child = stack };
+        var card = new Border { Background = Brush("SurfaceBrush"), BorderThickness = new Thickness(0), CornerRadius = new CornerRadius(12), Padding = new Thickness(22), Child = stack };
         card.Classes.Add("surface-card"); return card;
     }
     public static Grid SettingRow(string key, string label, string description, Control editor, string wideColumns = "*,240")
@@ -128,7 +128,7 @@ public sealed class PlayerDialog : Window
         var panel = Ui.Stack(header, Ui.Text(description, 13, true)); panel.Spacing = 18;
         if (content is not null) panel.Children.Add(content);
         var buttons = Ui.Actions(Ui.Button(L10n.T("Common.Cancel"), () => Close()), Ui.Button(acceptText, () => accept(this), true)); buttons.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right; panel.Children.Add(buttons);
-        Content = new Border { Padding = new Thickness(28), BorderThickness = new Thickness(1), BorderBrush = Ui.Brush("DividerBrush"), Background = Ui.Brush("SurfaceBrush"), Child = Ui.Scroll(panel) };
+        Content = new Border { Padding = new Thickness(28), BorderThickness = new Thickness(0), Background = Ui.Brush("SurfaceBrush"), Child = Ui.Scroll(panel) };
         KeyDown += (_, e) => { if (e.Key == Key.Escape) { Close(); e.Handled = true; } };
     }
     public static Task<bool> Confirm(Window owner, string title, string description, string accept = "Common.Confirm")

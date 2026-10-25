@@ -142,7 +142,12 @@ public sealed class SnakeGameControl : UserControl, IDisposable, IPluginKeyboard
         _toggle.Content = L10n.T(Game.Status == SnakeGameStatus.Running ? L10n.T("Common.PauseGame") : Game.Status == SnakeGameStatus.Paused ? L10n.T("Common.ResumeGame") : L10n.T("Common.StartGame"));
         _board.InvalidateVisual();
     }
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e) { Dispose(); base.OnDetachedFromVisualTree(e); }
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        // 方案重排只移动原控件，真正离开窗口后再结束游戏计时器。
+        Dispatcher.UIThread.Post(() => { if (TopLevel.GetTopLevel(this) is null) Dispose(); }, DispatcherPriority.Background);
+    }
     public void Dispose()
     {
         if (_disposed) return; _disposed = true; _timer.Stop(); _timer.Tick -= TimerTick; Game.Pause(); IsEnabled = false;

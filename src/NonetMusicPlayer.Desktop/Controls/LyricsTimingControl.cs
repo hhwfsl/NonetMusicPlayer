@@ -8,6 +8,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.VisualTree;
+using Avalonia.Threading;
 using NonetMusicPlayer.Core.Lyrics;
 using NonetMusicPlayer.Desktop.Models;
 using NonetMusicPlayer.Desktop.ViewModels;
@@ -187,7 +188,12 @@ public sealed class LyricsTimingControl : UserControl, IPluginKeyboardScope, IDi
         if (times is not null) for (var i = 0; i < _rows.Count; i++) _rows[i].Update(times[i]);
         if (_session is { } session) { _lines.SelectedIndex = Math.Min(session.NextLine, session.Lines.Count - 1); if (_lines.SelectedItem is { } selected) _lines.ScrollIntoView(selected); }
     }
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e) { Dispose(); base.OnDetachedFromVisualTree(e); }
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        // 重新排版保留标注会话与播放限制；真正退出时仍取消并释放租约。
+        Dispatcher.UIThread.Post(() => { if (TopLevel.GetTopLevel(this) is null) Dispose(); }, DispatcherPriority.Background);
+    }
     public void Dispose() { if (_disposed) return; Cancel(); _disposed = true; }
     private sealed class TimingRow(int index, string text) : ViewModelBase
     {

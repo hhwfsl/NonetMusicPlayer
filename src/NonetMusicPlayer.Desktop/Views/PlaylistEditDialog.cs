@@ -51,7 +51,7 @@ public sealed class PlaylistEditDialog : Window
         }, true);
         var actions = Ui.Actions(Ui.Button(L10n.T("Common.Cancel"), () => Close()), save); actions.HorizontalAlignment = HorizontalAlignment.Right;
         var panel = Ui.Stack(title, coverRow, Ui.Text(playlist.IsSystem ? L10n.T("Playlists.NameFixedPlaylistCannotBeRenamedOrDeleted") : L10n.T("Playlists.PlaylistName"), 12, true), name, Ui.Text(L10n.T("Playlists.Description"), 12, true), description, errorText, actions);
-        Content = new Border { Padding = new Thickness(28), Background = Ui.Brush("SurfaceBrush"), BorderBrush = Ui.Brush("DividerBrush"), BorderThickness = new Thickness(1), Child = Ui.Scroll(panel) };
+        Content = new Border { Padding = new Thickness(28), Background = Ui.Brush("SurfaceBrush"), BorderThickness = new Thickness(0), Child = Ui.Scroll(panel) };
         KeyDown += (_, e) => { if (e.Key == Key.Escape) { Close(); e.Handled = true; } };
         Closed += (_, _) => { image.Source = null; _preview?.Dispose(); _preview = null; };
     }

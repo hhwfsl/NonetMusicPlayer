@@ -17,7 +17,7 @@ public sealed partial class MainWindow
     {
         if (_vm is null) return Task.FromResult(false);
         if (_pluginConfigCompletion is not null) return _pluginConfigCompletion.Task;
-        var completion = _pluginConfigCompletion = new TaskCompletionSource<bool>();
+        var completion = _pluginConfigCompletion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         void Close(bool saved)
         {
             _pluginOverlay!.IsVisible = false; _pluginOverlay.Child = null; _pluginConfigCompletion = null; completion.TrySetResult(saved);

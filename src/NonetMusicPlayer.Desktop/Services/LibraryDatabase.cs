@@ -33,7 +33,7 @@ public sealed class LibraryDatabase(string path)
         }
         for (var i = 0; i < state.ListeningEntries.Count; i++)
         {
-            var e = state.ListeningEntries[i]; yield return new("listening", e.Date + ":" + e.TrackId, i, (e.Title, e.Artist, e.Seconds, e.PlayCount), () => JsonSerializer.Serialize(e, AppStorage.Json));
+            var e = state.ListeningEntries[i]; yield return new("listening", e.Date + ":" + e.TrackId, i, (e.Title, e.Artist, e.Seconds, e.PlayCount, e.TimestampedSeconds), () => JsonSerializer.Serialize(e, AppStorage.Json));
         }
     }
     private SqliteConnection Open(bool readOnly)
@@ -46,15 +46,16 @@ public sealed class LibraryDatabase(string path)
     }
     public AppState Read()
     {
-        if (new FileInfo(Path).Length > 256L * 1024 * 1024) throw new InvalidDataException("资料库数据库超过 256 MB 限制。");
         using var connection = Open(true); using var check = connection.CreateCommand(); check.CommandText = "PRAGMA application_id;";
         if (Convert.ToInt32(check.ExecuteScalar()) != ApplicationId) throw new InvalidDataException("文件不是 NonetMusicPlayer 资料库。");
         using var query = connection.CreateCommand(); query.CommandText = "SELECT kind,payload FROM entities ORDER BY kind,sort_order;";
-        using var reader = query.ExecuteReader(); AppState? state = null; var tracks = new List<TrackItem>(); var playlists = new List<Playlist>(); var listening = new List<ListeningEntry>(); var count = 0;
+        using var reader = query.ExecuteReader(); AppState? state = null; var tracks = new List<TrackItem>(); var playlists = new List<Playlist>(); var listening = new List<ListeningEntry>(); var count = 0; long payloadSize = 0;
         while (reader.Read())
         {
             if (++count > 500_000) throw new InvalidDataException("资料库实体过多。");
             var text = reader.GetString(1); if (text.Length > 100_000_000) throw new InvalidDataException("资料库实体过大。");
+            // 明细表不在启动时加载；限制实际加载的实体体积，而非整个历史数据库的文件大小。
+            payloadSize += text.Length * 2L; if (payloadSize > 256L * 1024 * 1024) throw new InvalidDataException("资料库实体总量超过限制。");
             switch (reader.GetString(0))
             {
                 case "state": state = JsonSerializer.Deserialize<AppState>(text, AppStorage.Json); break;
@@ -70,11 +71,12 @@ public sealed class LibraryDatabase(string path)
         _initialized = true;
         return state;
     }
-    public void Save(AppState state, bool playbackOnly = false)
+    public void Save(AppState state, bool playbackOnly = false, IReadOnlyList<ListeningJournalDocument>? journal = null)
     {
         Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
         using var connection = Open(false); using var schema = connection.CreateCommand();
         schema.CommandText = $"PRAGMA application_id={ApplicationId}; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; CREATE TABLE IF NOT EXISTS entities(kind TEXT NOT NULL,id TEXT NOT NULL,sort_order INTEGER NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(kind,id)) WITHOUT ROWID;"; schema.ExecuteNonQuery();
+        ListeningJournalStore.EnsureSchema(connection);
         // 定期进度保存只检查状态和统计。曲目/歌单修改均走完整保存，避免每 15 秒扫描数万首歌曲。
         playbackOnly &= _initialized;
         var present = Documents(state, playbackOnly).ToDictionary(d => (d.Kind, d.Id));
@@ -92,6 +94,8 @@ public sealed class LibraryDatabase(string path)
         var old = _known.Keys.Where(k => !playbackOnly || k.Kind is "state" or "listening").ToList();
         if (!_initialized) { using var existing = connection.CreateCommand(); existing.Transaction = transaction; existing.CommandText = "SELECT kind,id FROM entities;"; using var rows = existing.ExecuteReader(); while (rows.Read()) old.Add((rows.GetString(0), rows.GetString(1))); }
         foreach (var key in old.Where(k => !present.ContainsKey(k))) { remove.Parameters[0].Value = key.Kind; remove.Parameters[1].Value = key.Id; remove.ExecuteNonQuery(); LastWrittenRows++; }
+        // 明细和汇总同一事务提交，失败时由调用方保留缓冲，不能只写入其中一部分。
+        ListeningJournalStore.Write(connection, transaction, journal ?? []);
         transaction.Commit();
         if (!playbackOnly) _known.Clear(); else foreach (var key in old.Where(k => !present.ContainsKey(k))) _known.Remove(key);
         foreach (var document in present.Values) _known[(document.Kind, document.Id)] = (document.Order, document.Fingerprint);
@@ -101,5 +105,27 @@ public sealed class LibraryDatabase(string path)
     {
         DataDirectoryService.RejectLinkedAncestors(destination); Directory.CreateDirectory(System.IO.Path.GetDirectoryName(destination)!);
         using var source = Open(true); using var target = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = destination, Pooling = false }.ToString()); target.Open(); source.BackupDatabase(target);
+    }
+    public void ReplaceJournalFrom(string? sourcePath)
+    {
+        using var connection = Open(false); ListeningJournalStore.EnsureSchema(connection);
+        if (sourcePath is not null && System.IO.Path.GetFullPath(sourcePath).Equals(Path, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) throw new InvalidDataException("Restore requires an independent database snapshot.");
+        using var source = sourcePath is null ? null : new LibraryDatabase(sourcePath).Open(true);
+        var hasSource = source is not null && ListeningJournalStore.Exists(source);
+        using var transaction = connection.BeginTransaction(); using var replace = connection.CreateCommand(); replace.Transaction = transaction;
+        replace.CommandText = "DELETE FROM listening_journal;"; replace.ExecuteNonQuery();
+        if (hasSource)
+        {
+            // 源数据库始终只读，按批流式恢复，避免将多年明细一次性放入内存。
+            using var query = source!.CreateCommand(); query.CommandText = "SELECT kind,id,session_id,occurred_utc,closed,payload FROM listening_journal;";
+            using var reader = query.ExecuteReader(); var rows = new List<ListeningJournalDocument>(250);
+            while (reader.Read())
+            {
+                rows.Add(new(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetInt64(3), reader.GetBoolean(4), reader.GetString(5)));
+                if (rows.Count < 250) continue; ListeningJournalStore.Write(connection, transaction, rows); rows.Clear();
+            }
+            ListeningJournalStore.Write(connection, transaction, rows);
+        }
+        transaction.Commit();
     }
 }

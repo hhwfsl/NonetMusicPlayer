@@ -116,6 +116,14 @@ await context.RequestFromUserAsync("styles", new JsonObject
 
 可选能力 `statistics.charts.v1` 提供类型 `ListeningBarChart`，可覆盖 `fill`（柱色）和 `foreground`（坐标文字颜色）。图表不接受插件代码或额外数据查询。普通信息卡片使用 `Border.surface-card`，趋势卡片还带 `statistics-chart-card`；可分别设置背景、描边、内边距和圆角。输入框、焦点提示等不是卡片，不建议用全局 Border 规则清除其可辨识边界。
 
+音乐主页使用 `MusicHome`、`HomeMetrics`、`HomePlaylists` 和 `HomeRecent` 命名锚点；`HomeNowPlaying` 保留为二十四小时图表区域的兼容锚点，图表名为 `HomeHourChart`，复用 `ListeningBarChart` 类型。汇总入口带 `overview-metric` 类，信息卡片带 `overview-card` 类，歌单按钮及方形封面分别带 `overview-playlist` 和 `overview-playlist-cover` 类。控件可通过既有元素目录和完整界面方案接口重组，不新增独立业务入口。终端编辑区带 `terminal-editor` 类，风格应保留透明背景和无悬停边框，避免覆盖其独立不透明度设置。拖入反馈使用 `DropPreviewSurface`，不参与命中测试，不拦截实际投放。
+
+默认窗口外框厚度恒为零，不因页面或方案切换改变内容区尺寸。普通信息区域通过表面颜色分块，侧栏宽度分隔线、输入边界和键盘焦点提示仍承担交互反馈。
+
+`HomeHourChart` 按秒显示最近二十四小时播放时长，保留原名称与样式类型。`statistics` 查询的 `recent.hours` 仍表示播放次数，新增 `recent.hourDurations` 表示相同 UTC 小时时间窗的聆听秒数；旧记录缺少时长时为零，不根据次数估算。`navigation open playlists` 与界面节点的 `target: "playlists"` 打开内置虚拟化歌单页；主页“查看全部”优先进入已启用方案的 `interface:playlists` 页面，没有该方案页时进入内置页。
+
+界面重挂接可能在同一 UI 事务内触发分离和重新附加。宿主保留仍挂回窗口的原生/旧式页面及样式动画通道，只在真正离开页面、停用或配置替换时释放。配置替换取消旧会话的未完成回传，正常取消不视为插件故障。
+
 ```json
 {"type":"Border","classes":["statistics-chart-card"],"setters":{"background":"@SurfaceRaisedBrush","borderThickness":"0"}}
 ```

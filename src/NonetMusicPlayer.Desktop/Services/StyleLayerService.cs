@@ -252,7 +252,15 @@ public sealed class StyleLayerService : IDisposable
             control.PropertyChanged += Changed; control.Classes.CollectionChanged += ClassesChanged; control.DetachedFromVisualTree += Detached;
             if (_stateOwner is not null) { _stateOwner.PropertyChanged += Changed; _stateOwner.Classes.CollectionChanged += ClassesChanged; }
         }
-        private void Detached(object? sender, VisualTreeAttachmentEventArgs args) { Dispose(); _service._controls.Remove(_control); }
+        private void Detached(object? sender, VisualTreeAttachmentEventArgs args)
+        {
+            // 同一事务中的界面重挂接保留动画通道，避免播放栏等控件短暂还原或重复入场。
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (!_control.IsAttachedToVisualTree() && _service._controls.GetValueOrDefault(_control) == this)
+                { Dispose(); _service._controls.Remove(_control); }
+            }, DispatcherPriority.Background);
+        }
         private void ClassesChanged(object? sender, NotifyCollectionChangedEventArgs args) => Update();
         private void Changed(object? sender, AvaloniaPropertyChangedEventArgs args)
         {

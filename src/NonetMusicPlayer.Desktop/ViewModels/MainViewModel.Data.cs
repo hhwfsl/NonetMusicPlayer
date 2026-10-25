@@ -70,7 +70,8 @@ public sealed partial class MainViewModel
         var selectedJson = Storage.ReadBackupText(path); var restored = Storage.ParseBackup(selectedJson);
         UpdateListeningStatistics();
         State.LastTrackId = CurrentTrack?.Id; State.LastPosition = PlaybackPosition; State.LastSourcePage = PlayingSourcePage; State.LastPlaylistId = PlayingPlaylistId;
-        Storage.ArchiveRestore(State, selectedJson);
+        _listeningJournal.End("data-restored", _listeningClock.GetUtcNow());
+        var archive = Storage.ArchiveRestore(State, selectedJson, path ?? (File.Exists(Storage.DatabaseBackupPath) ? Storage.DatabaseBackupPath : Storage.BackupPath));
         foreach (var playlist in restored.Playlists)
             if (playlist.CoverPath is { } cover && File.Exists(cover) && !DataDirectoryService.Contains(Storage.ArtworkFolder, cover)) playlist.CoverPath = StoreManagedCover("playlist-" + playlist.Id, cover);
         foreach (var key in restored.GroupCovers.Keys.ToArray())
@@ -121,6 +122,10 @@ public sealed partial class MainViewModel
         _audioLoaded = false; _resumePending = CurrentTrack is not null; _playingList = SourceTracks(PlayingSourcePage).ToList();
         _sessionListeningSeconds = 0; _sessionCounted = false; ResetListeningAnchor();
         Volume = Settings.Volume; ApplySettings(); Navigate(PlayingSourcePage); StatisticsChanged?.Invoke(this, EventArgs.Empty); Save();
+        var journalBackup = Path.Combine(archive, "selected.library.db"); Storage.RestoreListeningJournal(File.Exists(journalBackup) ? journalBackup : null);
+        Storage.ListeningJournal.MarkInterrupted(_listeningClock.GetUtcNow());
+        foreach (var entry in State.HourlyListeningEntries) Storage.ListeningJournal.Stage(entry);
+        Save();
         StatusText = L10n.T("Storage.LibraryRestoredPreviousDataAndTheSelectedBackupWere"); CompleteOperation("data.restore");
     }
     public IImage? GetGroupCover(string groupType, string name)

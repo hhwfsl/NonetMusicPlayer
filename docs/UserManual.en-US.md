@@ -22,7 +22,9 @@ Select or create a playlist, then use its Add Music / Add Folder icons (with too
 
 ## Music home and playback
 
-Music is a compact home with album and artist cards. Browse Songs shows the union of songs referenced by playlists; View All opens each full category. Album and artist links no longer occupy the sidebar. Minimizing/restoring or regaining focus preserves the current scroll position. Explicitly opening songs/recent starts at the top; only the playlist that owns playback locates its playing song. Deleting another playlist from the sidebar does not leave the current page.
+Startup opens Music, a single-screen overview of collection counts, listening time for the last 24 hours, recent tracks and playlists. Playlist covers stay square and resize for smaller windows without page scrolling. Click a count to open the full collection; the playlists section's View All opens the full playlist page, including playlists from connected devices. Hourly listening time accumulates from versions that record it; older play counts are not converted into duration. Playback restoration is independent of startup navigation. Minimizing/restoring or regaining focus preserves the current scroll position. Explicitly opening songs/recent starts at the top; only the playlist that owns playback locates its playing song. Deleting another playlist from the sidebar does not leave the current page.
+
+A floating drag hint identifies temporary playback, the receiving playlist, lyric association or reordering. Leaving the window clears the hint without changing source files.
 
 Shuffle reduces the probability of previously selected songs without excluding them. With at least two distinct songs, the next random choice cannot be the current song. Weight history is session-local and does not change playlist ordering.
 
@@ -105,6 +107,10 @@ Windows: register audio support in Settings, then choose Nonet in system Default
 Shortcuts can be recorded, disabled, reset and saved immediately. Conflicts and invalid combinations prevent saving. Common defaults: Space play/pause, Ctrl+Left/Right previous/next, Ctrl+D favorite, Ctrl+O add music, Ctrl+L search and Ctrl+B batch mode. Inputs, sliders, selection controls and plugin games retain their own keys. Touch operation is supported through visible buttons and menus.
 
 ## Listening statistics
+
+The seven-day and 24-hour charts show actual listening time and totals. Older daily totals without hourly timestamps remain intact; their hourly distribution is not estimated.
+
+Sessions, continuous playback intervals, positions, track/source snapshots and playback events are retained in local SQLite storage. Active playback checkpoints run about every five seconds; pause, seek, track changes and exit also save. Removing music references or clearing recent history retains statistics. Temporary playback may retain events but does not contribute to statistics. SQLite backups include details; older JSON backups restore only their existing summaries.
 
 The top four cards retain overall totals. A shared calendar selection controls daily, monthly and yearly panels for that date, its month and its year. Each shows total duration, play count and longest-listened / most-played songs and artists. Pausing, loading, seeking and unsaved temporary playback do not add listening time. Statistics stay local.
 

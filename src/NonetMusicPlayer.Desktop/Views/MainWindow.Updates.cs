@@ -108,7 +108,7 @@ public sealed partial class MainWindow
         buttons.Children.Add(cancel); buttons.Children.Add(action);
         var grid = new Grid { RowDefinitions = new("Auto,*,Auto,Auto"), RowSpacing = 16 }; grid.Children.Add(heading);
         var scroll = Ui.Scroll(notes); Grid.SetRow(scroll, 1); grid.Children.Add(scroll); Grid.SetRow(status, 2); grid.Children.Add(status); Grid.SetRow(buttons, 3); grid.Children.Add(buttons);
-        window.Content = new Border { Padding = new(26), Background = Ui.Brush("SurfaceBrush"), BorderBrush = Ui.Brush("DividerBrush"), BorderThickness = new(1), CornerRadius = new(12), Child = grid };
+        window.Content = new Border { Padding = new(26), Background = Ui.Brush("SurfaceBrush"), BorderThickness = new(0), CornerRadius = new(12), Child = grid };
         heading.PointerPressed += (_, e) => { if (e.GetCurrentPoint(window).Properties.IsLeftButtonPressed) window.BeginMoveDrag(e); };
         window.Closed += (_, _) => _releaseWindow = null; _releaseWindow = window;
         return window.ShowDialog(this);

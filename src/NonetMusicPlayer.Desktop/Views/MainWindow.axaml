@@ -21,7 +21,7 @@
             x:Name="WindowSurface"
             Background="{DynamicResource AppBackgroundBrush}"
             BorderBrush="{DynamicResource DividerBrush}"
-            BorderThickness="1"
+            BorderThickness="0"
             ClipToBounds="True"
             CornerRadius="12">
             <Grid x:Name="ShellLayout" RowDefinitions="52,*">
@@ -166,7 +166,7 @@
                                                 </Button>
                                             </StackPanel>
                                             <Border
-                                                Height="1"
+                                                Height="0"
                                                 Margin="10,14,10,4"
                                                 Background="{DynamicResource DividerBrush}" />
                                             <Grid Margin="12,4,4,4" ColumnDefinitions="*,Auto,Auto">
@@ -193,7 +193,7 @@
                                                 IsVisible="False"
                                                 Spacing="4">
                                                 <Border
-                                                    Height="1"
+                                                    Height="0"
                                                     Margin="10,14,10,4"
                                                     Background="{DynamicResource DividerBrush}" />
                                                 <Button Classes="section-heading" Click="TogglePlugins_Click">
@@ -214,7 +214,7 @@
                                         Margin="0,12,0,0"
                                         Spacing="4">
                                         <Border
-                                            Height="1"
+                                            Height="0"
                                             Margin="10,0,10,10"
                                             Background="{DynamicResource DividerBrush}" />
                                         <Button Classes="nav" Click="Navigate_Click" Tag="plugins">
@@ -994,7 +994,7 @@
                 Padding="16"
                 Background="{DynamicResource SurfaceRaisedBrush}"
                 BorderBrush="{DynamicResource AccentBrush}"
-                BorderThickness="1"
+                BorderThickness="0"
                 CornerRadius="12"
                 IsVisible="False">
                 <Grid ColumnDefinitions="24,*,28">

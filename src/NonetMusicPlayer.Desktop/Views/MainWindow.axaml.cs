@@ -41,6 +41,7 @@ public sealed partial class MainWindow : Window
         PropertyChanged += (_, e) => { if (e.Property == WindowStateProperty) { if (WindowState == WindowState.Minimized) { _pageMotion.Cancel(); _lyricsMotion.Cancel(); } RefreshWindowFrame(); RefreshResizeBorders(); } };
         DragDrop.SetAllowDrop(this, true);
         AddHandler(DragDrop.DragOverEvent, DragOver);
+        InitializeDropPreview();
         AddHandler(DragDrop.DropEvent, Library_Drop);
         AddHandler(KeyDownEvent, (_, e) => RecoverExtensionInterface(e), RoutingStrategies.Tunnel, true);
         AddHandler(KeyDownEvent, Shortcuts, RoutingStrategies.Tunnel);
@@ -97,7 +98,8 @@ public sealed partial class MainWindow : Window
     private void RefreshWindowFrame()
     {
         WindowSurface.CornerRadius = WindowState == WindowState.Maximized ? new(0) : new(12);
-        WindowSurface.BorderThickness = WindowState == WindowState.Maximized || _vm?.Page == "lyrics" && InterfaceLyricsProfile?.EdgeToEdge == true ? new(0) : new(1);
+        // 外框始终不占布局尺寸，避免无边歌词页和普通页面之间发生一像素伸缩。
+        WindowSurface.BorderThickness = new(0);
     }
     private string? _displayedPage;
     private void ViewChanged(object? sender, EventArgs e)
@@ -163,6 +165,7 @@ public sealed partial class MainWindow : Window
     }
     private void Responsive()
     {
+        UpdateMusicSearchHeaderWidth();
         var contentWidth = Workspace.Children.OfType<LayoutWidget>().FirstOrDefault(w => w.Key == "Content")?.Bounds.Width ?? ViewportWidth;
         var narrow = contentWidth < 1000;
         SearchContainer.Width = Math.Min(300, Math.Max(125, contentWidth - (_vm?.CurrentPlaylist is null ? 150 : 260) - (TracksList.BatchMode ? 430 : 0)));
@@ -196,8 +199,9 @@ public sealed partial class MainWindow : Window
     private void RefreshNavigationMetrics()
     {
         var height = Bounds.Height > 0 ? Bounds.Height : Height;
+        var compactScheme = height < 680 && _interfaceLayers.Values.SelectMany(s => s).Any(s => s.Layout?.Regions.ContainsKey("ShellLayout") == true);
         foreach (var button in SidebarPanel.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("nav")))
-            button.Height = _vm?.Settings.TouchMode == true ? 48 : height < 760 ? 38 : button.Tag?.ToString()?.StartsWith("playlist:") == true ? 46 : 44;
+            button.Height = _vm?.Settings.TouchMode == true ? 48 : compactScheme ? 32 : height < 760 ? 38 : button.Tag?.ToString()?.StartsWith("playlist:") == true ? 46 : 44;
     }
     private void PositionPlayerResizeGrip(bool defaultLayout = false)
     {
@@ -228,13 +232,13 @@ public sealed partial class MainWindow : Window
         var slot = _vm.Page switch { "library" => "page.music", "songs" => "page.songs", "history" => "page.history",
             "albums" => "page.albums", "artists" => "page.artists", "statistics" => "page.statistics", _ => _vm.Page.StartsWith("playlist:") ? "page.playlist" : "" };
         var replacement = slot.Length > 0 ? ExtensionReplacement(slot) : null;
-        var alternate = replacement is not null || _vm.Page is "library" or "terminal" or "settings" or "plugins" or "albums" or "artists" or "statistics" or "devices" || _vm.Page.StartsWith("plugin:", StringComparison.Ordinal);
+        var alternate = replacement is not null || _vm.Page is "library" or "playlists" or "terminal" or "settings" or "plugins" or "albums" or "artists" or "statistics" or "devices" || _vm.Page.StartsWith("plugin:", StringComparison.Ordinal);
         alternate |= _vm.Page.StartsWith("interface:", StringComparison.Ordinal);
         var lyrics = _vm.Page == "lyrics"; FullLyricsHost.IsVisible = lyrics; ContentSurface.IsVisible = !lyrics; PageContentGrid.IsVisible = !lyrics; SidebarPanel.IsVisible = !lyrics;
         LibraryPage.IsVisible = !alternate; AlternatePage.IsVisible = alternate;
         LibraryActions.IsVisible = !alternate; SearchContainer.IsVisible = !alternate; TrackCountLabel.IsVisible = !alternate;
         UserManualButton.IsVisible = _vm.Page == "settings";
-        PageBackToTop.IsVisible = _vm.Page is "library" or "plugins" or "statistics" or "albums" or "artists";
+        PageBackToTop.IsVisible = _vm.Page is "plugins" or "statistics" or "albums" or "artists" or "playlists";
         BuildMusicSearchHeader();
         BuildPlaylistHeader(); UpdateSelectionToolbar();
         if (_vm.Page.StartsWith("plugin:") && _vm.Plugins.Installed.FirstOrDefault(p => "plugin:" + p.Id == _vm.Page && p.Type == "extension") is { } extension)
@@ -243,6 +247,7 @@ public sealed partial class MainWindow : Window
         AlternatePage.Content = replacement ?? InterfacePage(_vm.Page) ?? (_vm.Page switch
         {
             "library" => MusicHome(), "terminal" => new TerminalView(this), "settings" => SettingsPage(), "plugins" => new PluginsView(this, _vm), "devices" => new LanDevicesView(this, _vm),
+            "playlists" => new InterfacePlaylistGallery(_vm, BuildPlaylistCard, BuildRemotePlaylistCard),
             "albums" => Groups(false), "artists" => Groups(true), "statistics" => new StatisticsView(_vm), _ => _vm.Page.StartsWith("plugin:") ? PluginPage(_vm.Page) : null
         });
         if (lyrics) FullLyricsHost.Content = ExtensionReplacement("page.lyrics") ?? new LyricsView(this, _vm);
@@ -400,12 +405,13 @@ public sealed partial class MainWindow : Window
         try { var transfer = new DataTransfer(); transfer.Add(DataTransferItem.CreateText("nonet-tracks:" + string.Join('\n', ids))); await DragDrop.DoDragDropAsync(press, transfer, DragDropEffects.Copy | DragDropEffects.Move); }
         finally { _dragging = false; }
     }
-    private void DragOver(object? sender, DragEventArgs e) { var text = e.DataTransfer.TryGetText(); e.DragEffects = text?.StartsWith("nonet-playlist:") == true ? DragDropEffects.Move : e.DataTransfer.Contains(DataFormat.File) || text?.StartsWith("nonet-tracks:") == true ? DragDropEffects.Copy : DragDropEffects.None; e.Handled = true; }
+    private void DragOver(object? sender, DragEventArgs e) { var text = e.DataTransfer.TryGetText(); e.DragEffects = text?.StartsWith("nonet-playlist:") == true ? DragDropEffects.Move : e.DataTransfer.Contains(DataFormat.File) || text?.StartsWith("nonet-tracks:") == true ? DragDropEffects.Copy : DragDropEffects.None; UpdateDropPreview(e); e.Handled = true; }
     private async void Library_Drop(object? sender, DragEventArgs e) { if (e.Handled) return; e.Handled = true; if (TryReorderTracks(e)) return; await DropAsync(e, _vm?.CurrentPlaylist?.IsSystem == true, _vm?.CurrentPlaylist); }
     private async void Favorite_Drop(object? sender, DragEventArgs e) { e.Handled = true; await DropAsync(e, true, null); }
     private async void Player_Drop(object? sender, DragEventArgs e)
     {
         if (e.Handled || _vm is null) return; e.Handled = true;
+        if (e.DataTransfer.TryGetText() is { } payload && DroppedTracks(payload) is { Length: > 0 } tracks) { await _vm.PlayTrackAsync(tracks[0], tracks); return; }
         var paths = e.DataTransfer.TryGetFiles()?.Select(file => file.TryGetLocalPath()).OfType<string>().Where(File.Exists).ToArray() ?? [];
         if (paths.Length > 0) await _vm.PlayTemporaryFilesAsync(paths);
     }
@@ -432,11 +438,17 @@ public sealed partial class MainWindow : Window
     private void AddDroppedTracks(string payload, bool favorite, Playlist? playlist)
     {
         if (_vm is null || !payload.StartsWith("nonet-tracks:", StringComparison.Ordinal)) return;
-        var byId = _vm.State.Tracks.ToDictionary(t => t.Id, StringComparer.Ordinal);
-        var tracks = payload["nonet-tracks:".Length..].Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.Ordinal).Select(id => byId.GetValueOrDefault(id)).OfType<TrackItem>().ToArray();
+        var tracks = DroppedTracks(payload);
         if (tracks.Length == 0) { _vm.ReportWarning(L10n.T("Library.DroppedTracksAreNoLongerInTheLibrarySelect")); return; }
         if (favorite) _vm.FavoriteTracks(tracks);
         else if (playlist is not null) _vm.AddToPlaylist(playlist, tracks);
+    }
+    private TrackItem[] DroppedTracks(string payload)
+    {
+        if (_vm is null || !payload.StartsWith("nonet-tracks:", StringComparison.Ordinal)) return [];
+        // 只接受已知歌曲 ID，允许搜索结果和最近播放中的临时歌曲，不接受任意路径命令。
+        var byId = _vm.VisibleTracks.Concat(_vm.State.Tracks).Concat(_vm.State.RecentTemporaryTracks).DistinctBy(t => t.Id).ToDictionary(t => t.Id, StringComparer.Ordinal);
+        return payload["nonet-tracks:".Length..].Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.Ordinal).Select(id => byId.GetValueOrDefault(id)).OfType<TrackItem>().ToArray();
     }
     private void LibraryMore_Click(object? sender, RoutedEventArgs e)
     {

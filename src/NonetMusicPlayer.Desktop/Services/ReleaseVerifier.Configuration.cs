@@ -10,8 +10,8 @@ namespace NonetMusicPlayer.Desktop.Services;
 
 internal static partial class ReleaseVerifier
 {
-    /// <summary>验证真实精简发行程序的配置布局，隔离数据且不启用插件、不连接模型。</summary>
-    public static int RunPluginConfiguration(string package, string output)
+    /// <summary>验证精简发行程序的配置表单；可选启动真实插件验证运行中保存，不连接模型。</summary>
+    public static int RunPluginConfiguration(string package, string output, string? configureAction = null)
     {
         var root = Path.GetFullPath(output); Directory.CreateDirectory(root);
         MainWindow? window = null;
@@ -26,6 +26,13 @@ internal static partial class ReleaseVerifier
             window = new MainWindow { DataContext = vm, Width = 1100, Height = 750 };
             var plugin = vm.Plugins.Install(Path.GetFullPath(package));
             window.Show(); Pump();
+            Task? invocation = null;
+            if (configureAction is not null)
+            {
+                plugin.ManagedExecutionConsent = true; vm.Plugins.SetEnabled(plugin, true); vm.Navigate("plugin:" + plugin.Id); Pump();
+                invocation = vm.Plugins.Extension(plugin).InvokeAsync(configureAction, new(), true);
+                Until(() => window.HasPluginConfigurationOverlay);
+            }
             var overlay = window.OpenPluginConfigurationAsync(plugin); Pump();
             var form = window.GetVisualDescendants().OfType<PluginConfigView>().Single();
             Expand(form);
@@ -38,18 +45,25 @@ internal static partial class ReleaseVerifier
             }
             form.Save(); Pump();
             if (!overlay.IsCompletedSuccessfully || !overlay.Result) throw new InvalidDataException("Configuration save did not close overlay.");
+            if (invocation is not null)
+            {
+                Until(() => invocation.IsCompleted);
+                try { invocation.GetAwaiter().GetResult(); } catch (OperationCanceledException) { }
+                Pump(); if (!plugin.Enabled || vm.Plugins.Extension(plugin).IsDisposed) throw new InvalidDataException("Live configuration fault-disabled the plugin.");
+            }
             overlay = window.OpenPluginConfigurationAsync(plugin); Pump();
             form = window.GetVisualDescendants().OfType<PluginConfigView>().Single(); Expand(form);
             form.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "ClosePluginConfiguration")
                 .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); Pump();
             if (!overlay.IsCompletedSuccessfully || overlay.Result) throw new InvalidDataException("Configuration discard failed.");
-            AppStorage.AtomicWrite(Path.Combine(root, "result.txt"), "PASS\nActualPublishedHost=True\nNativeLayout=True\nRepeatedExpansion=True\nPresetRebuild=True\nSaveReopen=True\nNoModelRequests=True\n");
+            AppStorage.AtomicWrite(Path.Combine(root, "result.txt"), $"PASS\nActualPublishedHost=True\nNativeLayout=True\nRepeatedExpansion=True\nPresetRebuild=True\nSaveReopen=True\nLiveConfiguration={invocation is not null}\nNoModelRequests=True\n");
             return 0;
         }
         catch (Exception error) { AppStorage.AtomicWrite(Path.Combine(root, "result.txt"), "FAIL\n" + AppLog.Redact(error.ToString())); return 1; }
         finally { window?.Close(); AppLog.Flush(); AppLog.Shutdown(); }
 
         void Pump() { Dispatcher.UIThread.RunJobs(); window!.UpdateLayout(); Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); }
+        void Until(Func<bool> ready) { var end = Environment.TickCount64 + 20000; while (!ready() && Environment.TickCount64 < end) { Pump(); Thread.Sleep(5); } if (!ready()) throw new TimeoutException("Configuration verification timed out."); }
         void Expand(PluginConfigView view)
         {
             var groups = view.GetVisualDescendants().OfType<Expander>().ToArray();

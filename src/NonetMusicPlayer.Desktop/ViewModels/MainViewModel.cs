@@ -58,6 +58,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     {
         _listeningClock = timeProvider ?? TimeProvider.System;
         _scanner = scanner; _audio = audioPlayer; State = Storage.Load(); Plugins = new(Storage);
+        _listeningJournal = new(Storage.ListeningJournal);
         // 重启时连接均未建立，清除未收藏的远端临时引用，保留正常歌单中的移动歌曲。
         var retainedLan = State.Playlists.SelectMany(p => p.TrackIds).ToHashSet(StringComparer.Ordinal);
         var ephemeralLan = State.RecentTemporaryTracks.Where(t => t.ProviderId?.StartsWith("lan:", StringComparison.Ordinal) == true && !retainedLan.Contains(t.Id)).Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
@@ -65,6 +66,20 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         _maintainedBackground = Storage.Root + "\0" + Settings.BackgroundImagePath;
         TrimHistory();
         AppLog.Initialize(Storage.Root);
+        try
+        {
+            Storage.ListeningJournal.MarkInterrupted(_listeningClock.GetUtcNow());
+            foreach (var row in Storage.ListeningJournal.Page("hour", 72)["items"]!.AsArray())
+            {
+                var saved = System.Text.Json.JsonSerializer.Deserialize<HourlyListeningEntry>(row!.ToJsonString(), AppStorage.Json)!;
+                var cached = State.HourlyListeningEntries.FirstOrDefault(e => e.UtcHour == saved.UtcHour);
+                if (cached is not null) { cached.Seconds = Math.Max(cached.Seconds, saved.Seconds); cached.PlayCount = Math.Max(cached.PlayCount, saved.PlayCount); }
+                else if (saved.UtcHour >= _listeningClock.GetUtcNow().ToUnixTimeSeconds() / 3600 - 71) State.HourlyListeningEntries.Add(saved);
+            }
+            // 保存升级前仍可取得的小时记录；图表缓存淘汰不删除 SQLite 明细。
+            foreach (var entry in State.HourlyListeningEntries) Storage.ListeningJournal.Stage(entry);
+        }
+        catch (Exception error) { ReportError(L10n.T("Statistics.UnableToRecordHistory"), error); }
         if (!RetiredBackgroundCleanup.Run()) ReportWarning(L10n.T("Background.CleanupFailed"));
         NormalizeRetiredBackground();
         AppBackgroundService.CleanupUnused(Storage, Settings.BackgroundImagePath);
@@ -97,7 +112,8 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         _updatingPosition = false;
         _resumePending = CurrentTrack is not null;
         _playingList = SourceTracks(PlayingSourcePage).ToList();
-        Page = PlayingSourcePage == "temporary" || PlayingSourcePage.StartsWith("lan:", StringComparison.Ordinal) ? "library" : PlayingSourcePage; PageTitle = LocalizedTitleForPage(Page);
+        // 播放队列可以恢复，但临时搜索页与上次播放来源不应成为启动导航。
+        Page = "library"; PageTitle = LocalizedTitleForPage(Page);
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(100), DispatcherPriority.Normal, Tick); _timer.Start();
         if (Plugins.RecoveryMessage is { } pluginWarning) ReportWarning(pluginWarning);
         if (Settings.ValidationWarning is { } settingsWarning) ReportWarning(settingsWarning);
@@ -153,7 +169,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     {
         OnPropertyChanged(nameof(PositionText));
         if (!_updatingPosition && !_loadingAudio && _audioLoaded && CurrentTrack is not null)
-            try { UpdateListeningStatistics(); _audio.Position = TimeSpan.FromSeconds(value); ResetListeningAnchor(); } catch (Exception e) { ReportError(L10n.T("Playback.UnableToSeek"), e); }
+            try { UpdateListeningStatistics(); _audio.Position = TimeSpan.FromSeconds(value); _listeningJournal.Seek(_listeningClock.GetUtcNow(), value); ResetListeningAnchor(); } catch (Exception e) { ReportError(L10n.T("Playback.UnableToSeek"), e); }
     }
     partial void OnPlaybackDurationChanged(double value) => OnPropertyChanged(nameof(DurationText));
     partial void OnCurrentTrackChanged(TrackItem? value)
@@ -309,6 +325,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         UpdateListeningStatistics();
         try { if (!_loadingAudio) _audio.Pause(); }
         catch (Exception e) { ReportError(L10n.T("Playback.UnableToStopPlayback"), e); }
+        _listeningJournal.End("stopped", _listeningClock.GetUtcNow());
         IsPlaying = false; _audioLoaded = false; _resumePending = false;
         ResetListeningAnchor();
         _updatingPosition = true; PlaybackPosition = 0; _updatingPosition = false;
@@ -380,6 +397,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
             UpdateListeningStatistics();
             if (_audioLoaded) _audio.Position = TimeSpan.FromSeconds(position);
             else _resumePending = true;
+            _listeningJournal.Seek(_listeningClock.GetUtcNow(), position);
             _updatingPosition = true; PlaybackPosition = position; ResetListeningAnchor(); Save();
             CompleteOperation("player.seek");
         }
@@ -496,7 +514,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         {
             if (_disposed || _loadingAudio || _requestedTrack is not null || !_audioLoaded || request != Interlocked.Read(ref _playRequest)) return;
             if (e is AudioPlaybackEndedEventArgs ended && ended.PlaybackGeneration != 0 && ended.PlaybackGeneration != _audio.PlaybackGeneration) return;
-            try { if (_audio.IsPlaying) return; UpdateListeningStatistics(); IsPlaying = false; _failedPlaybackIds.Clear(); PlayRelative(1, true); }
+            try { if (_audio.IsPlaying) return; UpdateListeningStatistics(); _listeningJournal.End("completed", _listeningClock.GetUtcNow()); IsPlaying = false; _failedPlaybackIds.Clear(); PlayRelative(1, true); }
             catch (Exception error) { ReportError(L10n.T("Playback.UnableToAdvanceToTheNextSong"), error); }
         });
     }
@@ -513,6 +531,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
             var canRecover = _audioLoaded;
             UpdateListeningStatistics();
             _audioLoaded = false; IsPlaying = false; _resumePending = CurrentTrack is not null;
+            _listeningJournal.End("playback-error", _listeningClock.GetUtcNow());
             ReportError(L10n.T("Playback.PlaybackFailed987DF3"), new InvalidOperationException(e.Message));
             if (canRecover) RecoverRuntimeFailure();
         });
@@ -527,7 +546,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
             if (_audioLoaded && !IsSeeking && _audio.Duration.TotalSeconds > 0) { PlaybackPosition = _audio.Position.TotalSeconds; PlaybackDuration = Math.Max(1, _audio.Duration.TotalSeconds); }
             IsPlaying = _audioLoaded && _audio.IsPlaying;
             if (IsPlaying && PlaybackPosition >= _recoveryStartPosition + 3) _failedPlaybackIds.Clear();
-            if (DateTimeOffset.UtcNow - _lastSave > TimeSpan.FromSeconds(15)) { Save(playbackOnly: true); _lastSave = DateTimeOffset.UtcNow; }
+            if (DateTimeOffset.UtcNow - _lastSave > TimeSpan.FromSeconds(Storage.ListeningJournal.HasPending ? 5 : 15)) { Save(playbackOnly: true); _lastSave = DateTimeOffset.UtcNow; }
         }
         catch (Exception error) { _audioLoaded = false; IsPlaying = false; _resumePending = CurrentTrack is not null; ReportError(L10n.T("Playback.UnableToReadPlaybackState"), error); }
         finally { _updatingPosition = false; }
@@ -580,7 +599,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         if (_disposed) return;
         // 先取消可能持有音频锁的网络载入，再读取统计时钟，避免退出等待旧音源超时。
         Interlocked.Increment(ref _playRequest); _playCancellation?.Cancel();
-        _lyricsPlaybackLease?.Dispose(); UpdateListeningStatistics(); _disposed = true; _lyricsSearchLifetime.Cancel(); _playCancellation?.Dispose(); _scanCancellation?.Cancel(); _timer.Stop(); Save();
+        _lyricsPlaybackLease?.Dispose(); UpdateListeningStatistics(); _listeningJournal.End("application-exit", _listeningClock.GetUtcNow()); _disposed = true; _lyricsSearchLifetime.Cancel(); _playCancellation?.Dispose(); _scanCancellation?.Cancel(); _timer.Stop(); Save();
         _backgroundAccentCancellation?.Cancel(); _backgroundAccentCancellation?.Dispose(); CloseLan();
         _audio.PlaybackStopped -= PlaybackEnded; _audio.PlaybackFailed -= PlaybackFailed;
         if (_audio is Core.Audio.IExtensionAudioHost extensible) extensible.ProcessorBypassed -= ExtensionAudioBypassed;

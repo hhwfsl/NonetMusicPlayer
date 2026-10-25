@@ -88,6 +88,7 @@
             <Setter Property="IsHitTestVisible" Value="False" />
         </Style>
         <Style Selector="Button">
+            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
             <Setter Property="MinHeight" Value="{DynamicResource ButtonMinHeight}" />
             <Setter Property="MinWidth" Value="{DynamicResource ButtonMinWidth}" />
@@ -404,12 +405,14 @@
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         </Style>
         <Style Selector="Expander">
+            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
         </Style>
         <Style Selector="Expander /template/ ToggleButton#ExpanderHeader">
+            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />

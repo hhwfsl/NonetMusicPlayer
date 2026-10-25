@@ -80,12 +80,19 @@ public sealed partial class ExtensionSession
             case "query":
                 var operation = args["operation"]?.GetValue<string>() ?? "status";
                 // 只读查询采用与终端相同的业务源，但先分页再脱敏，避免完整音乐库进入进程帧。
-                if (operation is not ("status" or "music.list" or "music.info" or "playlist.list" or "queue.list" or "history.list" or "statistics" or "player.devices" or "settings.list" or "settings.get" or "plugins.list" or "selection.list"))
+                if (operation is not ("status" or "music.list" or "music.info" or "playlist.list" or "queue.list" or "history.list" or "statistics" or "statistics.history" or "player.devices" or "settings.list" or "settings.get" or "plugins.list" or "selection.list"))
                     throw new InvalidDataException("Not a query operation.");
                 var arguments = (args["arguments"] as JsonArray ?? []).Select(a => a!.GetValue<string>()).ToArray();
                 var command = UniversalPluginCommandPolicy.ValidateFor(new(request.Id, operation, arguments), Manifest.Permissions);
                 var offset = args["offset"]?.GetValue<int>() ?? 0; var limit = args["limit"]?.GetValue<int>() ?? 100;
                 if (offset < 0 || limit is < 1 or > 100) throw new InvalidDataException("Invalid query page.");
+                if (operation == "statistics.history")
+                {
+                    var vm = _manager.ExtensionViewModel;
+                    vm.RefreshPlaybackState(); vm.Save(playbackOnly: true);
+                    var history = vm.Storage.ListeningJournal.Page(arguments.Length > 0 ? arguments[0] : "session", limit, offset, args["sessionId"]?.GetValue<string>() ?? (arguments.Length > 3 ? arguments[3] : null));
+                    return new() { ["success"] = true, ["data"] = PluginCommandPolicy.Sanitize(history["items"]), ["total"] = history["total"]!.DeepClone(), ["offset"] = offset, ["limit"] = limit };
+                }
                 if (PagedQuery(operation, arguments, offset, limit) is { } page) return page;
                 var result = await Owner.Commands.ExecuteAsync(command, cancellationToken: _lifetime.Token);
                 var total = result.Data is JsonArray list ? list.Count : 1;

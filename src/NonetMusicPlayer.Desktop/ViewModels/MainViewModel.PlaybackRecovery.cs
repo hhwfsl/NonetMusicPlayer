@@ -36,6 +36,8 @@ public sealed partial class MainViewModel
             if (request != Interlocked.Read(ref _playRequest) || _disposed) return;
             if (_lyricsPlaybackLease is { } active && active.Track.Id != track.Id) { RejectLyricsPlaybackChange(); return; }
             UpdateListeningStatistics();
+            _listeningJournal.End("track-changed", _listeningClock.GetUtcNow());
+            Save(playbackOnly: true);
             if (!preserveFailures) _failedPlaybackIds.Clear();
             var explicitTracks = list?.ToArray();
             if (!preserveQueueScope) _explicitQueueIds = explicitTracks?.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);

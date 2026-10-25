@@ -14,7 +14,7 @@ while (Console.ReadLine() is { } line)
             await Task.Delay(int.Parse(rpc.Params["milliseconds"]));
             result = new JsonObject { ["reply"] = "delayed" }; break;
         case "initialize":
-            await extension.InitializeAsync(new(2, "{}", rpc.Params.GetValueOrDefault("storageDirectory") ?? "", ExtensionContract.Capabilities), default);
+            await extension.InitializeAsync(new(2, rpc.Params.GetValueOrDefault("configuration") ?? "{}", rpc.Params.GetValueOrDefault("storageDirectory") ?? "", ExtensionContract.Capabilities), default);
             result = new JsonObject { ["contractVersion"] = 2, ["capabilities"] = new JsonArray(ExtensionContract.Capabilities.Select(c => (JsonNode?)JsonValue.Create(c)).ToArray()) }; break;
         case "extension.invoke": result = JsonSerializer.SerializeToNode(await extension.InvokeAsync(JsonSerializer.Deserialize(rpc.Params["invocation"], ExtensionJson.Default.ExtensionInvocation)!, default), ExtensionJson.Default.ExtensionFrame)!; break;
         case "extension.event": result = JsonSerializer.SerializeToNode(await extension.EventAsync(JsonSerializer.Deserialize(rpc.Params["event"], ExtensionJson.Default.ExtensionEvent)!, default), ExtensionJson.Default.ExtensionFrame)!; break;
@@ -57,6 +57,8 @@ public sealed class BaselineExtension : INonetExtension
             _frame.Revision++; return ValueTask.FromResult(_frame);
         }
         _frame.Revision++; _frame.State["count"] = (_frame.State["count"]?.GetValue<int>() ?? 0) + 1;
+        if (invocation.Action == "configure") _frame.Requests.Add(new(Guid.NewGuid().ToString("N"), "config", new()));
+        if (invocation.Action == "crash") throw new InvalidOperationException("Intentional fixture failure.");
         if (invocation.Action == "collapse") _frame.State["columns"] = "0,*";
         if (invocation.Action == "expand") _frame.State["columns"] = "180,*";
         if (invocation.Action == "clear-image") _frame.State["image"] = "";

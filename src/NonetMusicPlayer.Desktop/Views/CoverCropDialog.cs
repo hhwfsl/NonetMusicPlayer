@@ -38,7 +38,7 @@ public sealed class CoverCropDialog : Window
         var right = new Grid { Name = "CropParameters", RowDefinitions = new("*,Auto"), Margin = new(18, 0, 0, 0) }; right.Children.Add(parameters); Grid.SetRow(actions, 1); right.Children.Add(actions);
         var body = new Grid { ColumnDefinitions = new("*,220"), ColumnSpacing = 4 }; body.Children.Add(crop); Grid.SetColumn(right, 1); body.Children.Add(right);
         var layout = new Grid { RowDefinitions = new("Auto,*"), RowSpacing = 16 }; layout.Children.Add(title); Grid.SetRow(body, 1); layout.Children.Add(body);
-        Content = new Border { Padding = new Thickness(20), Background = Ui.Brush("SurfaceBrush"), BorderBrush = Ui.Brush("DividerBrush"), BorderThickness = new(1), CornerRadius = new(14), Child = layout };
+        Content = new Border { Padding = new Thickness(20), Background = Ui.Brush("SurfaceBrush"), BorderThickness = new(0), CornerRadius = new(14), Child = layout };
         KeyDown += (_, e) => { if (e.Key == Key.Escape) { Close(); e.Handled = true; } };
     }
     public static async Task<string?> Show(Window owner, AppStorage storage, string path)

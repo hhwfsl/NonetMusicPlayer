@@ -92,7 +92,12 @@ public sealed class PluginPageView : UserControl, IDisposable, IPluginKeyboardSc
         if (id != _pluginId) return;
         if (Dispatcher.UIThread.CheckAccess()) Dispose(); else Dispatcher.UIThread.Post(Dispose);
     }
-    protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e) { Dispose(); base.OnDetachedFromVisualTree(e); }
+    protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        // 界面方案同步重组父容器并非离开页面，不能因此关闭歌词搜索等原生功能控件。
+        Dispatcher.UIThread.Post(() => { if (TopLevel.GetTopLevel(this) is null) Dispose(); }, DispatcherPriority.Background);
+    }
     public void Dispose()
     {
         if (IsDisposed) return; IsDisposed = true;

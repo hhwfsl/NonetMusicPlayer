@@ -21,9 +21,10 @@ internal static class CoreChecks
             vm.UserNotification += (_, args) => notifications.Add(args); vm.LocatePlayingTrack += (_, _) => locate++;
             Require(vm.LikedPlaylist.Id == "liked" && vm.LikedPlaylist.IsSystem && vm.LikedPlaylist.TrackIds.SequenceEqual(["a"]), "Legacy favorites migrate to permanent liked playlist");
             Require(vm.Settings.PlayMode == PlayMode.RepeatAll && Enum.GetValues<PlayMode>().Length == 3, "Old numeric mode zero migrates; only three modes remain");
-            Require(vm.Page == "playlist:liked" && vm.PlayingPlaylistId == "liked" && vm.CurrentTrack?.Id == "a", "Restore selected song and source playlist");
+            Require(vm.Page == "library" && vm.PlayingPlaylistId == "liked" && vm.CurrentTrack?.Id == "a", "Restore selected song and source playlist while opening the home page");
             Require(audio.LoadCount == 0 && audio.PlayCount == 0 && !vm.IsPlaying, "Launch never autoplays");
             Require(Math.Abs(vm.PlaybackPosition - 3.75) < .001 && vm.Volume == 42 && Math.Abs(audio.Volume - .42f) < .001, "Restore position and volume for display");
+            vm.Navigate("playlist:liked");
             Tick(vm); vm.Save(); Require(Math.Abs(storage.Load().LastPosition - 3.75) < .001, "Unloaded timer cannot overwrite saved position with zero");
             var positionWrites = audio.PositionWrites; vm.Seek(7); Require(audio.PositionWrites == positionWrites && vm.PlaybackPosition == 7, "Unloaded Seek changes pending restore only");
             vm.TogglePlayPauseCommand.Execute(null); Require(audio.LoadCount == 1 && audio.PlayCount == 1 && audio.Position.TotalSeconds == 7, "First play resumes stored position");

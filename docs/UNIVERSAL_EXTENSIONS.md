@@ -4,9 +4,28 @@
 
 `ui.select-options.v1` 为 `select` 增加 `popupPlacement` 和 `suppressTooltips`，见 [PLUGIN_DEVELOPMENT](PLUGIN_DEVELOPMENT.md)。同一组选项在状态刷新期间保持身份，提交动作完成后同步选中值。
 
-`statistics.charts.v1` 提供 `ListeningBarChart` 样式类型和趋势卡片样式类，见 [STYLE_EXTENSIONS](STYLE_EXTENSIONS.md)。既有 `query` 服务的 `statistics` 操作结果新增可选 `recent`：`days` 为最近七个本地日，值为秒；`hours` 为包含当前小时的二十四个小时，值为播放次数。每点包含 `label`、`value`、`detail`。需要现有 `music-read` 权限，无需新增写入权限。
+`statistics.charts.v1` 提供 `ListeningBarChart` 样式类型和趋势卡片样式类，见 [STYLE_EXTENSIONS](STYLE_EXTENSIONS.md)。既有 `query` 服务的 `statistics` 操作结果新增可选 `recent`：`days` 为最近七个本地日，值为秒；`hours` 为包含当前小时的二十四个小时，值为播放次数；`hourDurations` 使用同一小时时间窗，值为实际聆听秒数。每点包含 `label`、`value`、`detail`。需要现有 `music-read` 权限，无需新增写入权限。
 
-小时计数基于开始聆听超过一秒的真实播放会话；暂停恢复不重复计数。UTC 整点键避免本地小时重复，持久化最多七十二个桶。旧版本只有每日数据，因此旧小时图保持零，不根据每日记录分摊。`recent` 不受既有 day/month/year 筛选改变，其余统计字段语义保持不变。
+小时计数基于开始聆听超过一秒的真实播放会话；暂停恢复不重复计数。时长同时根据单调时钟和音频位置确认，界面延迟不会丢弃已播放的音频，暂停或无音频前进的间隔不计入。跨整点和本地午夜分段累计。UTC 整点键避免本地小时重复；内存缓存保留七十二个小时，完整小时记录与会话明细在 SQLite 长期保留。旧版本缺少的小时次数或时长不根据每日记录分摊，也不将次数换算为时长。`recent.hasIncompleteHourHistory` 表示时间窗内存在未分配到小时的日记录，`recent.todaySeconds` 保留今日累计；该覆盖标记供查询使用。`recent` 不受既有 day/month/year 筛选改变。
+
+## 听歌明细（可选 `statistics.journal.v1`）
+
+插件先检查 `host` 目录中的能力，再通过现有 `query` 服务读取明细，需要 `music-read` 权限。请求示例：
+
+```json
+{"operation":"statistics.history","arguments":["session"],"limit":50,"offset":0}
+```
+
+`arguments[0]` 为 `session`、`interval`、`event` 或 `hour`，缺省为 `session`；可选 `sessionId` 限定会话。插件请求每页最多 100 条。结果沿用 `success`、`data`、`total`、`offset`、`limit`，`data` 为当前页数组。该查询不会把完整历史装入插件帧。
+
+- `session`：稳定会话 ID，歌曲 ID、名称、艺术家、专辑、格式、文件大小和本地路径快照，音频时长、可用的采样率与声道数，音源类型、提供商 ID、歌单快照，UTC 起止时间和时区偏移，起止位置、实际播放秒数、计入统计秒数、播放次数，初始及最后的音量、模式、输出设备，以及状态和结束原因。
+- `interval`：连续播放片段的会话 ID、UTC 起止时间、时区偏移、音频起止位置、实际播放及计入统计的秒数。暂停、跳转或时间不连续时分段；连续采样更新同一条记录。
+- `event`：稳定 ID、会话 ID、会话内序号、UTC 时间、时区偏移、播放位置、事件类型与参数。包括开始、暂停、继续、跳转、音量、播放方式、设备变化、正常完成、切歌、停止、错误、退出和异常中断。
+- `hour`：完整小时汇总，以 `utcHour` 为键，包含 `seconds` 和 `playCount`；旧记录可能只有次数、时长为零，不能视为完整覆盖。
+
+临时播放可以保留操作明细，但 `countedSeconds` 为零，保存到歌单后才参与统计。流媒体地址、鉴权请求头和凭据不写入明细。本地路径仍受既有查询脱敏规则约束。明细与日/小时汇总在同一 SQLite 事务中提交，活动播放通常每五秒检查点，暂停、跳转、切歌及正常退出也保存。非正常退出可能缺少最后一个检查点后的信息；下次启动标记为 `interrupted`，不推测丢失时长。
+
+最近播放清理、图表缓存淘汰和移除音乐引用不删除明细。SQLite 备份完整包含明细表；恢复旧 JSON 时只恢复该文件拥有的汇总，不生成不存在的历史明细，恢复前的数据库另行归档。字段可继续增补，插件应忽略不认识的可选字段。
 
 ## 类型级风格与动画（SDK 4.14，可选）
 
