@@ -37,7 +37,7 @@ internal class AppUpdates(private val app: MusicApplication,private val source: 
     private val partial=File(folder,"pending.part");val apk=File(folder,"apk/verified.apk")
     private val record=File(folder,"ready.json")
     private var checking: Job?=null;private var downloading: Job?=null
-    private var launchChecked=false
+    private var launchCheckRequested=false
     private val initialized=app.scope.launch {
         val saved=withContext(Dispatchers.IO) {
             folder.mkdirs();partial.delete()
@@ -54,7 +54,8 @@ internal class AppUpdates(private val app: MusicApplication,private val source: 
         UpdateNotifications.clear(app)
         if(saved!=null) {mutable.value=UpdateState(UpdatePhase.Ready,saved,received=saved.size);UpdateNotifications.post(app,state.value)}
     }
-    fun checkOnLaunch() {if(!launchChecked){launchChecked=true;check(true)}}
+    fun checkAfterCreate(restoredActivity: Boolean) {if(!restoredActivity || !launchCheckRequested) checkOnLaunch()}
+    fun checkOnLaunch() {launchCheckRequested=true;check(true)}
     fun check(automatic: Boolean=false) {
         if(checking?.isActive==true || state.value.active) return
         checking=app.scope.launch {

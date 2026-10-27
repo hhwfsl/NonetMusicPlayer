@@ -135,4 +135,20 @@
     <string name="lan_accept">許可</string>
     <string name="lan_reject">拒否</string>
     <string name="lan_waiting">相手の端末の確認を待っています…</string>
+    <string name="color_choose">テーマ色を選択</string>
+    <string name="color_wheel">カラーホイール</string>
+    <string name="color_brightness">明るさ</string>
+    <string name="color_alpha">不透明度（A）</string>
+    <string name="color_hex">16進数 · #RRGGBB / #AARRGGBB</string>
+    <string name="color_invalid">有効なカラーコードと 0～255 の ARGB 値を入力してください。</string>
+    <string name="sleep_timer">スリープタイマー</string>
+    <string name="sleep_duration">時間</string>
+    <string name="sleep_minutes">%1$d 分</string>
+    <string name="sleep_custom_minutes">時間を指定 · 1～1440 分</string>
+    <string name="sleep_finish_song">再生中の曲が終わってから終了</string>
+    <string name="sleep_hint">設定時間になると再生を停止して Nonet を終了します。この設定を有効にすると、その時再生中の曲が終わってから終了し、次の曲は再生しません。</string>
+    <string name="sleep_start">タイマー開始</string>
+    <string name="sleep_restart">タイマーを再設定</string>
+    <string name="sleep_waiting">この曲が終わったら終了</string>
+    <string name="sleep_remaining">終了まで %1$02d:%2$02d</string>
 </resources>

@@ -11,8 +11,8 @@ android {
         applicationId = "app.littlemusicplayer.android"
         minSdk = 28
         targetSdk = 36
-        versionCode = 11
-        versionName = "0.3.0-beta.9"
+        versionCode = 12
+        versionName = "0.3.0-beta.10"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }
@@ -31,7 +31,7 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
-    packaging { resources.excludes += setOf("META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/LICENSE.md", "META-INF/LICENSE-notice.md") }
+    packaging { resources.excludes += setOf("META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/LICENSE.md", "META-INF/LICENSE-notice.md", "META-INF/versions/9/OSGI-INF/MANIFEST.MF") }
 }
 // 将项目与新增矢量资源许可一起带入 APK，来源文档仍只维护一份。
 val nonetLicenses by tasks.registering(Sync::class) {
@@ -56,6 +56,8 @@ dependencies {
     implementation("androidx.media3:media3-session:1.6.1")
     implementation("androidx.media3:media3-datasource-okhttp:1.6.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
+    implementation("com.google.zxing:core:3.5.3")
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     testImplementation("junit:junit:4.13.2")

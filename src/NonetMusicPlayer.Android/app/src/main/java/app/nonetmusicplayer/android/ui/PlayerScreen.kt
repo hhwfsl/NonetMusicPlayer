@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.alpha
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.onClick
@@ -185,7 +186,8 @@ import kotlinx.coroutines.flow.first
     if(lines.isEmpty()) Box(modifier.then(touch).testTag("lyrics_view"),contentAlignment=Alignment.Center) {Text(stringResource(R.string.no_lyrics),color=NonetTheme.colorScheme.onSurfaceVariant)}
     else LazyColumn(modifier.then(touch).testTag("lyrics_view").onSizeChanged {viewport=it}.alpha(if(aligned) 1f else 0f),state=list,contentPadding=PaddingValues(vertical=with(density){(viewport.height/2f).toDp()}),verticalArrangement=Arrangement.spacedBy(24.dp)) {
         itemsIndexed(lines,key={i,_ -> i}) { index,line ->
-            Row(Modifier.fillMaxWidth().testTag("lyric_line_$index").semantics {selected=index==current},verticalAlignment=Alignment.CenterVertically) {
+            val emphasis by animateFloatAsState(if(index==current) 1f else .68f,tween(220),label="lyric_emphasis")
+            Row(Modifier.fillMaxWidth().alpha(emphasis).testTag("lyric_line_$index").semantics {selected=index==current},verticalAlignment=Alignment.CenterVertically) {
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     KaraokeText(line.text,line.words,position,index==current,NonetTheme.typography.headlineSmall) {clock.longValue}
                     if(line.translation.isNotBlank()) {

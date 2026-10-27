@@ -17,12 +17,20 @@ class MusicApplication : Application(), ImageLoaderFactory {
     lateinit var log: AppLog; private set
     lateinit var lan: app.nonetmusicplayer.android.network.LanManager; private set
     internal lateinit var updates: app.nonetmusicplayer.android.updates.AppUpdates; private set
+    internal lateinit var sleepTimer: app.nonetmusicplayer.android.playback.SleepTimer; private set
+    fun canPlay(track: app.nonetmusicplayer.android.domain.Track)=lan.available(track)
     val messages=MutableSharedFlow<Int>(extraBufferCapacity=16)
     val playQueue=kotlinx.coroutines.flow.MutableStateFlow<List<String>>(emptyList())
     override fun onCreate() {
         super.onCreate();log=AppLog(this);repository=MusicRepository(this,scope)
         lan=app.nonetmusicplayer.android.network.LanManager(this)
         updates=app.nonetmusicplayer.android.updates.AppUpdates(this)
+        sleepTimer=app.nonetmusicplayer.android.playback.SleepTimer(this)
+        // 移除旧登录密文和专用密钥；不触碰本地音频及设备互听凭据。
+        scope.launch(Dispatchers.IO) {
+            getSharedPreferences("cloud_session",MODE_PRIVATE).edit().clear().commit()
+            runCatching {java.security.KeyStore.getInstance("AndroidKeyStore").apply {load(null)}.deleteEntry("Nonet.Netease")}
+        }
         scope.launch {repository.removePeerEphemeral()}
         log.write("INFO","Application started")
     }

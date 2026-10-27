@@ -75,12 +75,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
         if(matches(R.string.appearance,R.string.theme,R.string.language,R.string.font_size,R.string.accent,R.string.background_image,R.string.background_opacity)) item { SettingsCard(stringResource(R.string.appearance)) {
             ChoiceSetting(stringResource(R.string.theme),p.theme,listOf("system" to stringResource(R.string.theme_system),"light" to stringResource(R.string.theme_light),"dark" to stringResource(R.string.theme_dark))) {onSave(p.copy(theme=it))}
             ChoiceSetting(stringResource(R.string.language),p.language,listOf("system" to stringResource(R.string.theme_system),"zh" to "中文","en" to "English","ja" to "日本語")) {onSave(p.copy(language=it))}
-            Text(stringResource(R.string.accent),style=NonetTheme.typography.bodyMedium)
-            Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) { listOf("#A895FF","#79CDBE","#EF87A5","#72A8F0","#E9B15D").forEach { hex ->
-                Box(Modifier.size(40.dp).clip(CircleShape).background(Color(android.graphics.Color.parseColor(hex))).clickable {onSave(p.copy(accent=hex))},contentAlignment=Alignment.Center) {
-                    if(p.accent.equals(hex,true)) Icon(Icons.Outlined.Check,null,tint=Color(0xFF24212B))
-                }
-            } }
+            AccentColorSetting(p.accent) {onSave(p.copy(accent=it))}
             OutlinedButton(onClick=onBackground,shape=RoundedCornerShape(8.dp)) {Icon(Icons.Outlined.Image,null);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.background_image))}
             if(p.background.isNotBlank()) {
                 Text(stringResource(R.string.background_opacity))
@@ -88,7 +83,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
                 RoundSlider(opacity,{opacity=it},onValueChangeFinished={onSave(p.copy(backgroundOpacity=opacity))})
                 TextButton(onClick={onSave(p.copy(background=""))}) {Text(stringResource(R.string.remove_background))}
             }
-            CommitField(stringResource(R.string.accent),p.accent,{if(Regex("#[0-9a-fA-F]{6}").matches(it)) onSave(p.copy(accent=it)) else onInvalid()})
             Text(stringResource(R.string.font_size))
             var fontScale by remember(p.fontScale) {mutableFloatStateOf(p.fontScale)}
             RoundSlider(fontScale,onValueChange={fontScale=it},onValueChangeFinished={onSave(p.copy(fontScale=fontScale))},valueRange=.85f..1.3f)
@@ -100,9 +94,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
         } }
         if(matches(R.string.system_integration,R.string.battery_settings,R.string.notification_settings)) item { SettingsCard(stringResource(R.string.system_integration)) {
             Text(stringResource(R.string.background_hint),style=NonetTheme.typography.bodySmall)
-            OutlinedButton(shape=RoundedCornerShape(8.dp),onClick={systemSettings(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)}) {Text(stringResource(R.string.battery_settings))}
-            OutlinedButton(shape=RoundedCornerShape(8.dp),onClick={runCatching {context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,context.packageName).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))}.onFailure {onInvalid()}}) {Text(stringResource(R.string.notification_settings))}
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(modifier=Modifier.weight(1f),shape=RoundedCornerShape(8.dp),onClick={systemSettings(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)}) {Text(stringResource(R.string.battery_settings),maxLines=2)}
+                OutlinedButton(modifier=Modifier.weight(1f),shape=RoundedCornerShape(8.dp),onClick={runCatching {context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,context.packageName).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))}.onFailure {onInvalid()}}) {Text(stringResource(R.string.notification_settings),maxLines=2)}
+            }
         } }
+        if(matches(R.string.sleep_timer,R.string.sleep_finish_song)) item {SleepTimerSettings(p,onSave,onInvalid,vm.app.sleepTimer)}
         if(matches(R.string.scan_settings,R.string.scan_minimum,R.string.scan_included,R.string.scan_excluded)) item {
             ScanSettings(p.scan,{onSave(p.copy(scan=it))},onInvalid,vm::addScanFolder)
         }
@@ -113,8 +110,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
             },KeyboardType.Number)
         }}
         if(matches(R.string.backup,R.string.backup_export,R.string.backup_import)) item { SettingsCard(stringResource(R.string.backup)) {
-            OutlinedButton(shape=RoundedCornerShape(8.dp),onClick={backup.launch("Nonet_"+java.time.LocalDate.now()+".zip")}) {Icon(Icons.Outlined.FileUpload,null);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.backup_export))}
-            OutlinedButton(shape=RoundedCornerShape(8.dp),onClick={restore.launch(arrayOf("*/*"))}) {Icon(Icons.Outlined.FileDownload,null);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.backup_import))}
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(modifier=Modifier.weight(1f),shape=RoundedCornerShape(8.dp),onClick={backup.launch("Nonet_"+java.time.LocalDate.now()+".zip")}) {Icon(Icons.Outlined.FileUpload,null);Spacer(Modifier.width(6.dp));Text(stringResource(R.string.backup_export),maxLines=2)}
+                OutlinedButton(modifier=Modifier.weight(1f),shape=RoundedCornerShape(8.dp),onClick={restore.launch(arrayOf("*/*"))}) {Icon(Icons.Outlined.FileDownload,null);Spacer(Modifier.width(6.dp));Text(stringResource(R.string.backup_import),maxLines=2)}
+            }
         } }
         if(matches(R.string.about,R.string.help,R.string.version,R.string.update_check,R.string.update_repository)) item { SettingsCard(stringResource(R.string.about)) {
             TextButton(onClick={guide=true}) {Icon(Icons.AutoMirrored.Outlined.HelpOutline,null);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.help))}

@@ -13,7 +13,11 @@
 | Guava、ListenableFuture | Apache-2.0 | https://github.com/google/guava |
 | Checker Framework 注解 | MIT | https://github.com/typetools/checker-framework |
 | GitHub Octicons mark-github-16 | MIT | https://github.com/primer/octicons |
+| Bouncy Castle X25519 | MIT | https://github.com/bcgit/bc-java |
+| ZXing Core（二维码生成） | Apache-2.0 | https://github.com/zxing/zxing |
 
 完整 Apache-2.0 文本：https://www.apache.org/licenses/LICENSE-2.0 。各项目原始版权 / NOTICE 见上述源代码仓库。SQLite 使用 Android 系统提供的实现；平台组件不复制进 APK。应用角色图标为独立美术资源，并非上述组件的一部分。
 
 GitHub 图标复用官方原始矢量路径，仅适配尺寸和前景色；完整许可见 [Octicons-MIT](docs/licenses/Octicons-MIT.txt)。
+
+设备互听使用 Bouncy Castle 和 ZXing；对应许可随 APK 提供。

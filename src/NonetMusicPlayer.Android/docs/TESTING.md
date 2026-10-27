@@ -1,5 +1,15 @@
 # Android 测试
 
+## 0.3.0-beta.10 验证
+
+- JVM JUnitCore：25/25 通过，覆盖歌词、扫描、版本、网络策略、小时统计拆分及六位/八位 ARGB 编解码。
+- Android 15 手机尺寸仪器回归：14/14 通过，覆盖色轮拖动、ARGB/十六进制输入、非法值拒绝、取消、直接输入分钟后启动及取消定时。
+- 实际 Media3 音频验证后台立即停止、等待当前歌曲自然结束、单曲循环不重播；定时结束前提交播放位置，重新打开保持暂停。
+- SQLite 从版本 1/2 升级到 3，保留本地音乐、歌单和过去统计，移除已删除音源的播放引用；小时明细和新设置可经新旧备份恢复。
+- 本地搜索的键盘聚焦、主页与统计、互听资料、歌词定位和预览回归通过。平板横屏补测色轮及定时输入。
+- Debug、R8 Release 和资源裁剪构建通过；lintDebug 为 0 errors、69 warnings，保留已有兼容 API、资源与依赖建议。
+- 当前验证环境为模拟器；未连接实体手机，厂商省电策略及未播放时的系统闹钟调度仍需真机验收。
+
 ## 环境
 
 Windows / JDK 21 / Gradle 8.12 / Android SDK 36。
@@ -16,6 +26,12 @@ Windows / JDK 21 / Gradle 8.12 / Android SDK 36。
 DomainTests：LRC 多种时间格式、逐字/翻译、降权随机、有界输入。
 AudioImporterTests：APIC 封面、USLT 内嵌歌词、独立歌词导入。
 EmbeddedLyricsTests：ID3 v2.2/v2.3/v2.4、UTF-16、扩展头、去同步、FLAC 大封面跳过、Ogg/Opus 跨页、M4A ©lyr、WAV ID3 和损坏标签边界。
+AccentColorTests / ColorPickerTests：颜色顺序、透明度、色轮、非法值及取消；手机与横屏平板均可操作。
+
+SleepTimerTests：后台立即关闭、整首结束后关闭、取消、单曲循环和退出后的重新打开。
+
+HourlyStatisticsTests / RemovedSourceMigrationTests：SQLite 升级、旧音源引用清理、保留统计及新旧备份。
+
 RepositoryTests：排序/收藏、统计不重建曲目、临时播放/历史、持久化、私网邀请与断线引用保留。
 PlayerUiTests：真实媒体播放/跳转/自然结束、系统控制、无效队列、语言/主题、横屏/平板/小屏、歌词即时导入、重复后台/前台转换与灭屏、备份恢复、图片裁剪。
 

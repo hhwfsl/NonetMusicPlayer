@@ -90,7 +90,7 @@ import java.io.File
                 Text(track.title,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=if(active) FontWeight.SemiBold else FontWeight.Normal,color=if(active) NonetTheme.colorScheme.primary else NonetTheme.colorScheme.onSurface)
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)) {
                     Text(track.artist.ifBlank {stringResource(R.string.unknown_artist)},Modifier.weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis,style=NonetTheme.typography.bodySmall,color=NonetTheme.colorScheme.onSurfaceVariant)
-                    if(track.providerId.isNotBlank()) Text(stringResource(if(track.providerId.startsWith("lan:")) when(track.sourceDeviceKind) {"desktop"->R.string.lan_source_desktop;"mobile"->R.string.lan_source_mobile;else->R.string.lan_source_unknown} else R.string.cloud_song),style=NonetTheme.typography.labelSmall,color=NonetTheme.colorScheme.primary)
+                    if(track.providerId.isNotBlank()) Text(stringResource(if(track.providerId.startsWith("lan:")) when(track.sourceDeviceKind) {"desktop"->R.string.lan_source_desktop;"mobile"->R.string.lan_source_mobile;else->R.string.lan_source_unknown} else R.string.lan_source_unknown),style=NonetTheme.typography.labelSmall,color=NonetTheme.colorScheme.primary)
                     Text(timeLabel(track.durationMs),style=NonetTheme.typography.labelSmall,color=NonetTheme.colorScheme.onSurfaceVariant)
                 }
             }

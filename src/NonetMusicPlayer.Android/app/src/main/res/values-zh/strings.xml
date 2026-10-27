@@ -135,4 +135,20 @@
     <string name="lan_accept">接受连接</string>
     <string name="lan_reject">拒绝</string>
     <string name="lan_waiting">正在等待对方设备确认连接…</string>
+    <string name="color_choose">选择主题色</string>
+    <string name="color_wheel">色轮</string>
+    <string name="color_brightness">亮度</string>
+    <string name="color_alpha">不透明度（A）</string>
+    <string name="color_hex">十六进制 · #RRGGBB / #AARRGGBB</string>
+    <string name="color_invalid">请输入有效颜色代码，ARGB 各项范围为 0–255。</string>
+    <string name="sleep_timer">定时关闭</string>
+    <string name="sleep_duration">时长</string>
+    <string name="sleep_minutes">%1$d 分钟</string>
+    <string name="sleep_custom_minutes">自定义时长 · 1–1440 分钟</string>
+    <string name="sleep_finish_song">播放完整歌曲后关闭</string>
+    <string name="sleep_hint">到时停止播放并关闭 Nonet。开启“播放完整歌曲”后，会等到到时正在播放的这一首结束，不再播放下一首。</string>
+    <string name="sleep_start">启动定时</string>
+    <string name="sleep_restart">重新计时</string>
+    <string name="sleep_waiting">当前歌曲播放完后关闭</string>
+    <string name="sleep_remaining">剩余 %1$02d:%2$02d 后关闭</string>
 </resources>

@@ -29,10 +29,14 @@ class UpdateFlowTests {
     @Test fun oneStartupCheckAndManualCheckAreIndependent()=runBlocking {
         val app=compose.activity.application as MusicApplication;val checks=AtomicInteger()
         val updates=AppUpdates(app,UpdateSource {checks.incrementAndGet();null})
-        compose.runOnUiThread {updates.checkOnLaunch();updates.checkOnLaunch()}
+        compose.runOnUiThread {updates.checkAfterCreate(true)}
         compose.waitUntil(10000){updates.state.value.phase==UpdatePhase.Current}
         assertEquals(1,checks.get())
-        compose.runOnUiThread {updates.check()};compose.waitUntil(5000){checks.get()==2 && updates.state.value.phase==UpdatePhase.Current}
+        compose.runOnUiThread {updates.checkAfterCreate(true)}
+        assertEquals(1,checks.get())
+        compose.runOnUiThread {updates.checkOnLaunch()};compose.waitUntil(5000){checks.get()==2 && updates.state.value.phase==UpdatePhase.Current}
+        assertFalse(updates.state.value.dialog)
+        compose.runOnUiThread {updates.check()};compose.waitUntil(5000){checks.get()==3 && updates.state.value.phase==UpdatePhase.Current}
         assertTrue(updates.state.value.dialog)
     }
     @Test fun foregroundBackgroundNotificationCancelAndInstaller(): Unit=runBlocking {

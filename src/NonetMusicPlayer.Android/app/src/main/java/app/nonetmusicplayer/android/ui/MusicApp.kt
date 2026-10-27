@@ -6,6 +6,8 @@ import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
@@ -80,10 +82,12 @@ import kotlinx.coroutines.*
             if(library.preferences.background.isNotBlank()) {
                 coil.compose.AsyncImage(java.io.File(library.preferences.background),null,Modifier.fillMaxSize(),contentScale=androidx.compose.ui.layout.ContentScale.Crop,alpha=library.preferences.backgroundOpacity)
             }
-            if(expanded && playback.track!=null) {
+            AnimatedVisibility(expanded && playback.track!=null,enter=fadeIn(tween(180))+slideInVertically(tween(260)) {it/8},exit=fadeOut(tween(160))+slideOutVertically(tween(220)) {it/8}) {
+                if(playback.track!=null)
                 PlayerScreen(playback,library.preferences.mode,library.playlists.first {it.id=="liked"}.trackIds.contains(playback.track!!.id),lines,
                     {expanded=false},vm::togglePlay,vm::previous,vm::next,vm::seek,vm::cycleMode,{vm.favorite(playback.track!!)},{moreTrack=playback.track})
-            } else {
+            }
+            AnimatedVisibility(!expanded || playback.track==null,enter=fadeIn(tween(180)),exit=fadeOut(tween(140))) {
                 val pageTitle=when {
                     route=="music" ->stringResource(R.string.home);route=="playlists" ->stringResource(R.string.playlists);route=="devices" ->stringResource(R.string.lan_title);route=="settings" ->stringResource(R.string.settings)
                     route=="browse" ->stringResource(R.string.browse_music);route=="albums" ->stringResource(R.string.albums);route=="artists" ->stringResource(R.string.artists);route=="recent" ->stringResource(R.string.recent);route=="statistics" ->stringResource(R.string.statistics)
@@ -94,7 +98,8 @@ import kotlinx.coroutines.*
                 LibraryShell(library,playback,route,pageTitle,busy,{focus.clearFocus();navigate(it)},::back,{create=true},{if(!busy) scanConfirmation=library.preferences.scan},{expanded=true},vm::togglePlay,{showQueue=true},nearby.peers,
                     onSearch={focus.clearFocus();searchRequested=true;navigate("browse")}) {holder.SaveableStateProvider(route) {
                     when(route) {
-                        "music" -> MusicHome(library,::navigate,{create=true})
+                        "music" -> MusicHome(library,::navigate,{create=true},::start)
+                        "browse" -> MusicSearchScreen(vm,::start,{moreTrack=it},searchRequested,{searchRequested=false})
                         "playlists" -> PlaylistGrid(library,{navigate("playlist:$it")},{create=true},{menuPlaylist=it;playlistMore=true},{id,delta ->vm.launchOperation {vm.repository.movePlaylist(id,delta)}})
                         "albums","artists" -> GroupGrid(library,route=="artists") {navigate((if(route=="artists") "artist:" else "album:")+it)}
                         "settings" -> SettingsScreen(library.preferences,{vm.launchOperation {vm.repository.updatePreferences(it)}},{vm.app.messages.tryEmit(R.string.invalid_settings)},{vm.launchOperation {vm.repository.updatePreferences(Preferences())}},{imageKey="background";imagePicker.launch("image/*")},vm)

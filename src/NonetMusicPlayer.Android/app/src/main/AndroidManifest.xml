@@ -34,6 +34,7 @@
                 <data android:mimeType="audio/*" />
             </intent-filter>
         </activity>
+        <receiver android:name=".playback.SleepTimerReceiver" android:exported="false" />
         <receiver android:name=".network.PairingActionReceiver" android:exported="false" />
         <service android:name=".updates.UpdateDownloadService" android:exported="false" android:foregroundServiceType="dataSync" />
         <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.updates"

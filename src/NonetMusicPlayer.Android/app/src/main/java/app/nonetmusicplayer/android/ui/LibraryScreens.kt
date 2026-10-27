@@ -23,17 +23,17 @@ import androidx.compose.ui.unit.dp
 import app.nonetmusicplayer.android.R
 import app.nonetmusicplayer.android.domain.*
 
-@Composable fun MusicHome(state: LibraryState,onNavigate: (String)->Unit,onCreate: ()->Unit) {
-    val tracks=remember(state.tracks) {state.tracks.filter {it.inLibrary && (it.providerId.isEmpty() || it.providerId.startsWith("lan:"))}}
-    val albums=remember(tracks) { tracks.filter { it.album.isNotBlank() }.groupBy { it.album } }
-    val artists=remember(tracks) { tracks.filter { it.artist.isNotBlank() }.groupBy { it.artist } }
-    LazyColumn(contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+@Composable fun MusicHome(state: LibraryState,onNavigate: (String)->Unit,onCreate: ()->Unit,onPlay: (Track,List<Track>)->Unit={_,_->}) {
+    val tracks=remember(state.tracks) {state.tracks.filter {it.inLibrary}}
+    val byId=remember(state.tracks) {state.tracks.associateBy {it.id}}
+    val today=java.time.LocalDate.now().toString()
+    LazyColumn(Modifier.testTag("music_overview"),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         item {
-            Surface(shape=RoundedCornerShape(12.dp),color=NonetTheme.colorScheme.surface,border=BorderStroke(1.dp,NonetTheme.colorScheme.outlineVariant)) {
+            Surface(shape=RoundedCornerShape(16.dp),color=NonetTheme.colorScheme.surfaceVariant) {
                 Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Text(stringResource(R.string.overview),style=NonetTheme.typography.titleMedium)
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-                        listOf(R.string.music to tracks.size,R.string.albums to albums.size,R.string.artists to artists.size).forEach {(label,count) ->Column(Modifier.weight(1f)) {Text(count.toString(),style=NonetTheme.typography.headlineSmall,fontWeight=FontWeight.SemiBold);Text(stringResource(label),style=NonetTheme.typography.bodySmall,color=NonetTheme.colorScheme.onSurfaceVariant)}}
+                        listOf(R.string.music to tracks.size,R.string.playlists to state.playlists.size,R.string.today_listening to null).forEach {(label,count) ->Column(Modifier.weight(1f)) {Text(count?.toString() ?: timeLabel(state.statistics.filter {it.day==today}.sumOf {it.durationMs}),style=NonetTheme.typography.headlineSmall,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis);Text(stringResource(label),style=NonetTheme.typography.bodySmall,color=NonetTheme.colorScheme.onSurfaceVariant)}}
                     }
                 }
             }
@@ -43,14 +43,26 @@ import app.nonetmusicplayer.android.domain.*
             QuickCard(stringResource(R.string.statistics),Icons.Outlined.BarChart,Modifier.weight(1f)) { onNavigate("statistics") }
         } }
         if(tracks.isEmpty()) item { EmptyState(stringResource(R.string.empty_music),stringResource(R.string.empty_music_body),stringResource(R.string.create_playlist),onCreate) }
-        if(albums.isNotEmpty()) {
-            item { SectionHeading(stringResource(R.string.albums)) { onNavigate("albums") } }
-            item { GroupStrip(albums,state.covers,"album:") { onNavigate("album:$it") } }
+        item {ListeningChart(stringResource(R.string.chart_hours),ListeningCharts.hours(state.hourlyListening),compact=true)}
+        item {SectionHeading(stringResource(R.string.playlists)) {onNavigate("playlists")}}
+        item {LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            items(state.playlists.take(8),key={it.id}) {p ->
+                Column(Modifier.width(104.dp).clickable {onNavigate("playlist:${p.id}")},verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    Cover(state.covers["playlist:${p.id}"] ?: byId[p.trackIds.firstOrNull()]?.cover.orEmpty(),Modifier.size(104.dp),p.id=="liked")
+                    Text(if(p.id=="liked") stringResource(R.string.liked) else p.name,maxLines=1,overflow=TextOverflow.Ellipsis,style=NonetTheme.typography.titleSmall)
+                    Text(stringResource(R.string.tracks_count,p.trackIds.size),style=NonetTheme.typography.bodySmall,color=NonetTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }}
+        if(state.recentIds.isNotEmpty()) {
+            item {SectionHeading(stringResource(R.string.recent_music)) {onNavigate("recent")}}
+            items(state.recentIds.take(3),key={"recent-$it"}) {id ->byId[id]?.let {t ->
+                Surface(Modifier.fillMaxWidth(),RoundedCornerShape(12.dp),NonetTheme.colorScheme.surfaceVariant,onClick={onPlay(t,state.recentIds.mapNotNull {byId[it]})}) {
+                    Row(Modifier.padding(10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {Cover(t.cover,Modifier.size(40.dp));Column(Modifier.weight(1f)) {Text(t.title,maxLines=1,overflow=TextOverflow.Ellipsis);Text(t.artist,maxLines=1,overflow=TextOverflow.Ellipsis,style=NonetTheme.typography.bodySmall,color=NonetTheme.colorScheme.onSurfaceVariant)};Icon(Icons.Outlined.PlayArrow,stringResource(R.string.play),tint=NonetTheme.colorScheme.primary)}
+                }
+            }}
         }
-        if(artists.isNotEmpty()) {
-            item { SectionHeading(stringResource(R.string.artists)) { onNavigate("artists") } }
-            item { GroupStrip(artists,state.covers,"artist:") { onNavigate("artist:$it") } }
-        }
+        item {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {QuickCard(stringResource(R.string.albums),Icons.Outlined.Album,Modifier.weight(1f)) {onNavigate("albums")};QuickCard(stringResource(R.string.artists),Icons.Outlined.PersonOutline,Modifier.weight(1f)) {onNavigate("artists")}}}
     }
 }
 @Composable private fun QuickCard(label: String,icon: androidx.compose.ui.graphics.vector.ImageVector,modifier: Modifier,onClick: ()->Unit) {
@@ -71,7 +83,7 @@ import app.nonetmusicplayer.android.domain.*
 }
 @Composable fun GroupGrid(state: LibraryState,artist: Boolean,onSelect: (String)->Unit) {
     val groups=remember(state.tracks,artist) {
-        state.tracks.filter {it.inLibrary && (it.providerId.isEmpty() || it.providerId.startsWith("lan:"))}.groupBy {if(artist) it.artist else it.album}.filterKeys {it.isNotBlank()}
+        state.tracks.filter {it.inLibrary}.groupBy {if(artist) it.artist else it.album}.filterKeys {it.isNotBlank()}
     }
     LazyVerticalGrid(columns=GridCells.Adaptive(128.dp),contentPadding=PaddingValues(20.dp),horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
         items(groups.entries.toList(),key={it.key}) { (name,tracks) ->

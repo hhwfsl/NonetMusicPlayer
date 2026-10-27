@@ -23,19 +23,21 @@ class MainActivity : ComponentActivity() {
     }
     private val installer=registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState);enableEdgeToEdge()
+        super.onCreate(savedInstanceState);(application as MusicApplication).sleepTimer.onNewTask();enableEdgeToEdge()
         setContent { MusicApp(model) }
         if(savedInstanceState==null) consume(intent)
-        (application as MusicApplication).updates.checkOnLaunch()
+        // 旋转和系统恢复沿用同一次启动；从启动器再次进入现有进程时在 onNewIntent 检查。
+        (application as MusicApplication).updates.checkAfterCreate(savedInstanceState!=null)
     }
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         // 更新通知是一次性动作，不替换正常启动 Intent，避免后续恢复重放安装请求。
         if(intent.action !in setOf(app.nonetmusicplayer.android.updates.UpdateDownloadService.SHOW,app.nonetmusicplayer.android.updates.UpdateDownloadService.INSTALL)) setIntent(intent)
         consume(intent)
+        if(intent.action==Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_LAUNCHER)) (application as MusicApplication).updates.checkOnLaunch()
         if(intent.action==app.nonetmusicplayer.android.updates.UpdateDownloadService.INSTALL && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) resumeUpdateInstall()
     }
-    override fun onResume() {super.onResume();resumeUpdateInstall()}
+    override fun onResume() {super.onResume();if((application as MusicApplication).sleepTimer.closing) finishAndRemoveTask() else resumeUpdateInstall()}
     /** 通知返回的安装请求不依赖 Compose 下一帧；先消费标志，避免重复弹出安装器。 */
     private fun resumeUpdateInstall() {
         val state=(application as MusicApplication).updates.state.value

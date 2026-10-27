@@ -8,6 +8,7 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import app.nonetmusicplayer.android.ui.musicString as stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
@@ -15,12 +16,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.nonetmusicplayer.android.R
 import app.nonetmusicplayer.android.domain.LibraryState
+import app.nonetmusicplayer.android.domain.ListeningCharts
 import java.time.*
 
 @Composable fun StatisticsScreen(state: LibraryState) {
     var date by remember { mutableStateOf(LocalDate.now()) };var calendar by remember { mutableStateOf(false) }
     val stats=state.statistics
-    LazyColumn(contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+    LazyColumn(Modifier.testTag("statistics_list"),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         item { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             StatCell(stringResource(R.string.total_time),stringResource(R.string.hours,stats.sumOf { it.durationMs }/3600000.0),Modifier.weight(1f))
             StatCell(stringResource(R.string.total_plays),stats.sumOf { it.plays }.toString(),Modifier.weight(1f))
@@ -29,6 +31,8 @@ import java.time.*
             StatCell(stringResource(R.string.tracks_heard),stats.map {it.trackId}.distinct().size.toString(),Modifier.weight(1f))
             StatCell(stringResource(R.string.active_days),stats.map {it.day}.distinct().size.toString(),Modifier.weight(1f))
         } }
+        item {ListeningChart(stringResource(R.string.chart_week),ListeningCharts.days(stats))}
+        item {ListeningChart(stringResource(R.string.chart_hours),ListeningCharts.hours(state.hourlyListening))}
         item { OutlinedButton(onClick={calendar=true}) { Icon(Icons.Outlined.CalendarMonth,null);Spacer(Modifier.width(8.dp));Text(date.toString()) } }
         for((prefix,label) in listOf(date.toString() to R.string.day_stats,date.toString().take(7) to R.string.month_stats,date.year.toString() to R.string.year_stats)) item {
             val period=stats.filter {it.day.startsWith(prefix)}

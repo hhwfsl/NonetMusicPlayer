@@ -11,6 +11,9 @@ import androidx.compose.foundation.text.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.geometry.*
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -51,7 +54,9 @@ internal val LocalContentColor=staticCompositionLocalOf {Color(0xFF202329)}
     val fill=when(kind) {0->c.primary;1->c.surface;else->Color.Transparent}
     val foreground=(if(kind==0) c.onPrimary else c.primary).copy(alpha=if(enabled) 1f else .4f)
     val stroke=if(kind==1) BorderStroke(1.dp,c.outlineVariant) else null
-    Surface(modifier.heightIn(min=44.dp).then(if(enabled) Modifier.clickable(role=Role.Button,onClick=onClick) else Modifier.semantics {disabled()}),shape,fill,stroke) {
+    val interaction=remember {MutableInteractionSource()};val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if(pressed) .97f else 1f,tween(130),label="button_press")
+    Surface(modifier.graphicsLayer {scaleX=scale;scaleY=scale}.heightIn(min=44.dp).then(if(enabled) Modifier.clickable(interactionSource=interaction,indication=null,role=Role.Button,onClick=onClick) else Modifier.semantics {disabled()}),shape,fill,stroke) {
         CompositionLocalProvider(LocalContentColor provides foreground) {
             Row(Modifier.padding(horizontal=if(kind==2) 10.dp else 16.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.Center,content=content)
         }
@@ -61,7 +66,9 @@ internal val LocalContentColor=staticCompositionLocalOf {Color(0xFF202329)}
 @Composable fun OutlinedButton(onClick: ()->Unit,modifier: Modifier=Modifier,enabled: Boolean=true,shape: Shape=RoundedCornerShape(10.dp),content: @Composable RowScope.()->Unit)=ActionButton(onClick,modifier,enabled,shape,1,content)
 @Composable fun TextButton(onClick: ()->Unit,modifier: Modifier=Modifier,enabled: Boolean=true,content: @Composable RowScope.()->Unit)=ActionButton(onClick,modifier,enabled,RoundedCornerShape(8.dp),2,content)
 @Composable fun IconButton(onClick: ()->Unit,modifier: Modifier=Modifier,enabled: Boolean=true,content: @Composable ()->Unit) {
-    Box(modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).then(if(enabled) Modifier.clickable(role=Role.Button,onClick=onClick) else Modifier.semantics {disabled()}),contentAlignment=Alignment.Center) {content()}
+    val interaction=remember {MutableInteractionSource()};val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if(pressed) .92f else 1f,tween(130),label="icon_press")
+    Box(modifier.size(48.dp).graphicsLayer {scaleX=scale;scaleY=scale}.clip(RoundedCornerShape(8.dp)).then(if(enabled) Modifier.clickable(interactionSource=interaction,indication=null,role=Role.Button,onClick=onClick) else Modifier.semantics {disabled()}),contentAlignment=Alignment.Center) {content()}
 }
 @Composable fun FilledIconButton(onClick: ()->Unit,modifier: Modifier=Modifier,enabled: Boolean=true,shape: Shape=RoundedCornerShape(10.dp),content: @Composable ()->Unit) {
     Surface(modifier.size(48.dp),shape,NonetTheme.colorScheme.primary,onClick=if(enabled) onClick else null) {
@@ -85,9 +92,10 @@ internal val LocalContentColor=staticCompositionLocalOf {Color(0xFF202329)}
 @Composable fun HorizontalDivider(modifier: Modifier=Modifier,color: Color=NonetTheme.colorScheme.outlineVariant) {Box(modifier.fillMaxWidth().height(1.dp).background(color))}
 @Composable fun Switch(checked: Boolean,onCheckedChange: (Boolean)->Unit,modifier: Modifier=Modifier) {
     val c=NonetTheme.colorScheme
+    val offset by animateDpAsState(if(checked) 18.dp else 0.dp,tween(180),label="switch_thumb")
     Box(modifier.size(60.dp,48.dp).toggleable(checked,role=Role.Switch,onValueChange=onCheckedChange),contentAlignment=Alignment.Center) {
         Box(Modifier.size(42.dp,24.dp).background(if(checked) c.primary else c.outlineVariant,CircleShape)) {
-            Box(Modifier.align(if(checked) Alignment.CenterEnd else Alignment.CenterStart).padding(3.dp).size(18.dp).background(Color.White,CircleShape))
+            Box(Modifier.offset(x=offset).padding(3.dp).size(18.dp).background(Color.White,CircleShape))
         }
     }
 }

@@ -44,6 +44,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val embeddedLock=Mutex()
     private val embeddedCache=linkedMapOf<String,String>()
     private val listener=object : Player.Listener { override fun onEvents(player: Player, events: Player.Events) { updatePlayback() } }
+    private var playRequest: Job?=null
     init {
         future.addListener({ runCatching { controller=future.get();controller?.addListener(listener);updatePlayback() }.onFailure { report(R.string.playback_failed,it) } },ContextCompat.getMainExecutor(application))
         viewModelScope.launch { while(isActive) { delay(250);updatePlayback() } }
@@ -61,11 +62,19 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     } }
     private fun report(message: Int, error: Throwable) { app.messages.tryEmit(message);app.log.write("ERROR","User operation failed",error) }
     fun play(track: Track, queue: List<Track>, source: String="") {
-        if(!app.lan.available(track)) {app.messages.tryEmit(R.string.lan_disconnected);return}
+        if(!app.canPlay(track)) {app.messages.tryEmit(R.string.lan_disconnected);return}
         val c=controller ?: run { app.messages.tryEmit(R.string.player_connecting);return }
         // 队列位于同一应用进程，不把数千个 ID 重复塞进 Binder 消息。
-        app.playQueue.value=queue.map {it.id}
-        c.sendCustomCommand(PlaybackService.PLAY_QUEUE,Bundle().apply {putString("track",track.id);putString("source",source)})
+        playRequest?.cancel()
+        playRequest=viewModelScope.launch {
+            try {
+                val existing=library.value.tracks.mapTo(HashSet()) {it.id}
+                val missing=queue.filter {it.id !in existing}
+                if(missing.isNotEmpty()) repository.storeTracks(missing)
+                ensureActive();app.playQueue.value=queue.map {it.id}
+                c.sendCustomCommand(PlaybackService.PLAY_QUEUE,Bundle().apply {putString("track",track.id);putString("source",source)})
+            } catch(e: CancellationException) {throw e} catch(e: Exception) {report(R.string.playback_failed,e)}
+        }
     }
     fun togglePlay() {controller?.let {if(it.isPlaying) it.pause() else it.play()}}
     // 解码器只保留当前项；使用队列命令避免客户端把单项时间轴的切歌当成无操作。
@@ -140,7 +149,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         } catch(cancel: CancellationException) {throw cancel}
         catch(error: Throwable) {report(R.string.invalid_lyrics,error)}
     }
-    suspend fun lyricsFor(track: Track): List<LyricLine> = LrcParser.parse(lyricText(track))
+    suspend fun lyricsFor(track: Track): List<LyricLine> = try {LrcParser.parse(lyricText(track))} catch(e: CancellationException) {throw e} catch(e: Exception) {app.log.write("WARN","Lyrics could not be loaded");emptyList()}
     suspend fun lyricText(track: Track): String = withContext(Dispatchers.IO) {
         if(track.lyrics=="none:") return@withContext ""
         if(track.providerId.startsWith("lan:") && track.lyrics.isBlank()) return@withContext app.lan.lyrics(track)

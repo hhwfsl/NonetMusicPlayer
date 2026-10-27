@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
@@ -56,7 +57,7 @@ object NonetTheme {
     }}
     val requested=runCatching { Color(android.graphics.Color.parseColor(preferences.accent)) }.getOrDefault(Color(0xFFA895FF))
     val background=if(dark) Color(0xFF141414) else Color(0xFFF4F4F4)
-    var primary=requested
+    var primary=requested.compositeOver(background)
     // 小文字与操作颜色至少满足 4.5:1；背景仅轻微染色，不直接铺高饱和度主题色。
     repeat(30) { if(ColorUtils.calculateContrast(primary.toArgb(),background.toArgb())<4.5) primary=lerp(primary,if(dark) Color.White else Color.Black,.06f) }
     val onPrimary=if(primary.luminance()>.179) Color.Black else Color.White

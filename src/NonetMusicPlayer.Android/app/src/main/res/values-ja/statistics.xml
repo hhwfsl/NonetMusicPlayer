@@ -1,0 +1,7 @@
+<resources>
+    <string name="chart_week">過去 7 日間の再生時間</string>
+    <string name="chart_hours">過去 24 時間の再生時間</string>
+    <string name="chart_total">合計 · %1$s</string>
+    <string name="today_listening">今日の再生時間</string>
+    <string name="recent_music">最近の再生</string>
+</resources>

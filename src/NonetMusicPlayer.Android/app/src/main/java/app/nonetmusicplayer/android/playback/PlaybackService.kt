@@ -48,7 +48,10 @@ class PlaybackService : MediaSessionService() {
     private var lastStatsAt=SystemClock.elapsedRealtime()
     private var lastStatsId=""
     private var lastStatsPlaying=false
-    private val pendingDuration=mutableMapOf<String,Long>()
+    private var lastStatsPosition=0L
+    private data class ListeningSlice(val id: String,val duration: Long,val end: Long)
+    private val pendingDuration=mutableListOf<ListeningSlice>()
+    private var timerSong: Int?=null
     private lateinit var audioManager: AudioManager
     private var outputIds=emptySet<Int>()
     private val deviceCallback=object : AudioDeviceCallback() {
@@ -74,7 +77,7 @@ class PlaybackService : MediaSessionService() {
                     collectListening()
                     if(state==Player.STATE_ENDED) {
                         val ended=generation;failed.clear()
-                        Handler(mainLooper).post {if(generation==ended && playbackState==Player.STATE_ENDED) advance(1,false)}
+                        Handler(mainLooper).post {if(generation==ended && playbackState==Player.STATE_ENDED) {if(timerSong==ended) app.sleepTimer.finish() else if(playWhenReady) advance(1,false)}}
                     }
                 }
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -86,8 +89,13 @@ class PlaybackService : MediaSessionService() {
                     }
                     persist()
                 }
+                override fun onPlayWhenReadyChanged(playWhenReady: Boolean,reason: Int) {
+                    // 缓冲不视为暂停；即使暂停发生在缓冲期间，也不能永久等待无法结束的歌曲。
+                    if(!playWhenReady && timerSong!=null && playbackState!=Player.STATE_ENDED) app.sleepTimer.finish()
+                }
                 override fun onPlayerError(error: PlaybackException) {
                     collectListening()
+                    if(timerSong!=null) {app.sleepTimer.finish();return}
                     val track=app.repository.state.value.tracks.firstOrNull {it.id==currentMediaItem?.mediaId}
                     if(track?.providerId?.startsWith("lan:")==true && (error.errorCode in 2000..2008 || !app.lan.available(track))) {
                         suspendForNetwork(track);app.lan.noteTransportFailure(track)
@@ -136,13 +144,28 @@ class PlaybackService : MediaSessionService() {
                 if(command.customAction!=PLAY_QUEUE.customAction) return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
                 val ids=(args.getStringArrayList("ids") ?: app.playQueue.value).take(10000)
                 val selected=args.getString("track").orEmpty()
-                val available=app.repository.state.value.tracks.filter {app.lan.available(it)}.map {it.id}.toSet()
+                val available=app.repository.state.value.tracks.filter {app.canPlay(it)}.map {it.id}.toSet()
                 if(selected !in ids || selected !in available) return Futures.immediateFuture(SessionResult(SessionError.ERROR_BAD_VALUE))
                 queue=ids.distinct().filter { it in available };app.playQueue.value=queue;origin=args.getString("source").orEmpty();failed.clear();revision++
                 startTrack(selected,0,true)
                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
         }).build()
+        app.sleepTimer.attach(
+            onDeadline={finishSong ->
+                if(finishSong && player.playWhenReady && player.playbackState in setOf(Player.STATE_READY,Player.STATE_BUFFERING)) {
+                    timerSong=generation;true
+                } else false
+            },
+            onCancel={timerSong=null},
+            onClose={
+                // 关闭前同步提交最后一段统计与进度，不依赖已经离开的 Activity。
+                timerSong=null;collectListening();player.pause()
+                val batch=pendingDuration.toList();pendingDuration.clear()
+                app.repository.recordDurations(batch.filter {it.duration>0}.map {Triple(it.id,it.duration,it.end)})
+                app.repository.savePlayback(PlaybackSnapshot(player.currentMediaItem?.mediaId.orEmpty(),queue,player.currentPosition.coerceAtLeast(0),player.volume,origin))
+                player.stop();stopSelf()
+            })
         audioManager=getSystemService(AudioManager::class.java)
         outputIds=audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).map { it.id }.toSet()
         audioManager.registerAudioDeviceCallback(deviceCallback,Handler(Looper.getMainLooper()))
@@ -187,7 +210,9 @@ class PlaybackService : MediaSessionService() {
     private fun resumeCurrent() {
         val item=player.currentMediaItem ?: return
         val track=app.repository.state.value.tracks.firstOrNull {it.id==item.mediaId} ?: return
-        if(!app.lan.available(track)) {player.pause();app.messages.tryEmit(R.string.lan_disconnected);return}
+        if(!app.canPlay(track)) {player.pause();app.messages.tryEmit(R.string.lan_disconnected);return}
+        // 播完整首后退出保存的是末尾位置；恢复时保持暂停，用户继续才从头播放。
+        if(player.playbackState==Player.STATE_ENDED) {startTrack(track.id,0,true);return}
         networkResume?.takeIf {it.first==track.id}?.let {startTrack(it.first,it.second,true);return}
         val uri=app.lan.resolve(track)
         if(track.providerId.startsWith("lan:") && item.localConfiguration?.uri.toString()!=uri) {
@@ -197,19 +222,22 @@ class PlaybackService : MediaSessionService() {
     }
     private fun startTrack(id: String, position: Long, play: Boolean) {
         networkResume=null
+        if(timerSong!=null) {app.sleepTimer.finish();return}
         val track=app.repository.state.value.tracks.firstOrNull { it.id==id } ?: return
-        if(!app.lan.available(track)) {player.pause();app.messages.tryEmit(R.string.lan_disconnected);return}
+        if(!app.canPlay(track)) {player.pause();app.messages.tryEmit(R.string.lan_disconnected);return}
         collectListening();player.pause();counted=false;generation++
         val metadata=MediaMetadata.Builder().setTitle(track.title).setArtist(track.artist).setAlbumTitle(track.album).setExtras(Bundle().apply { putString("source",origin) }).apply {
             if(track.cover.isNotBlank()) setArtworkUri(if(track.cover.startsWith("https:")) android.net.Uri.parse(track.cover) else android.net.Uri.fromFile(File(track.cover)))
         }.build()
-        player.setMediaItem(MediaItem.Builder().setMediaId(track.id).setUri(app.lan.resolve(track)).setMediaMetadata(metadata).build(),position.coerceAtLeast(0))
+        val item=MediaItem.Builder().setMediaId(track.id).setUri(app.lan.resolve(track)).setMediaMetadata(metadata).build()
+        player.setMediaItem(item,position.coerceAtLeast(0))
         player.prepare();player.playWhenReady=play
         persist();app.log.write("INFO","Playback source changed")
     }
     private fun advance(direction: Int, manual: Boolean) {
+        if(timerSong!=null) {app.sleepTimer.finish();return}
         val current=player.currentMediaItem?.mediaId
-        val allowed=app.repository.state.value.tracks.filter {app.lan.available(it)}.map {it.id}.toSet()
+        val allowed=app.repository.state.value.tracks.filter {app.canPlay(it)}.map {it.id}.toSet()
         val candidates=queue.filter { it in allowed && it !in failed }
         if(candidates.isEmpty()) { player.pause();if(failed.isNotEmpty()) app.messages.tryEmit(R.string.no_playable_tracks);return }
         val mode=app.repository.state.value.preferences.mode
@@ -229,16 +257,21 @@ class PlaybackService : MediaSessionService() {
     private fun collectListening() {
         if(!::player.isInitialized) return
         val now=SystemClock.elapsedRealtime()
-        if(lastStatsPlaying && lastStatsId.isNotBlank()) pendingDuration[lastStatsId]=(pendingDuration[lastStatsId] ?: 0)+(now-lastStatsAt).coerceIn(0,3000)
-        lastStatsAt=now;lastStatsId=player.currentMediaItem?.mediaId.orEmpty();lastStatsPlaying=player.isPlaying
+        val id=player.currentMediaItem?.mediaId.orEmpty();val position=player.currentPosition.coerceAtLeast(0)
+        if(lastStatsPlaying && lastStatsId.isNotBlank() && id==lastStatsId) {
+            val elapsed=(now-lastStatsAt).coerceAtLeast(0);val advance=position-lastStatsPosition
+            // 只计入真实音频前进；暂停、缓冲和跳转不计时，后台调度变慢也不会丢弃整段时长。
+            if(advance in 1..(elapsed+750)) pendingDuration+=ListeningSlice(id,minOf(elapsed,advance),System.currentTimeMillis())
+        }
+        lastStatsAt=now;lastStatsId=id;lastStatsPosition=position;lastStatsPlaying=player.isPlaying
     }
     private fun flushListening() {
-        val batch=pendingDuration.toMap();pendingDuration.clear()
-        app.scope.launch {batch.forEach { (id,duration) -> if(duration>0) app.repository.recordDuration(id,duration) }}
+        val batch=pendingDuration.toList();pendingDuration.clear()
+        if(batch.isNotEmpty()) app.scope.launch {app.repository.recordDurations(batch.filter {it.duration>0}.map {Triple(it.id,it.duration,it.end)})}
     }
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
     override fun onDestroy() {
-        collectListening();flushListening();persist();audioManager.unregisterAudioDeviceCallback(deviceCallback);scope.cancel();session?.release();player.release();session=null;decodeThread.quitSafely();super.onDestroy()
+        collectListening();flushListening();persist();audioManager.unregisterAudioDeviceCallback(deviceCallback);scope.cancel();app.sleepTimer.detach();session?.release();player.release();session=null;decodeThread.quitSafely();super.onDestroy()
     }
     companion object {
         val PLAY_QUEUE=SessionCommand("app.nonetmusicplayer.PLAY_QUEUE",Bundle.EMPTY)

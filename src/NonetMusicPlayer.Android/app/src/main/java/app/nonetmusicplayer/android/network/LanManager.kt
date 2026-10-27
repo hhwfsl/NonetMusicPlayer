@@ -192,6 +192,8 @@ class LanManager(private val app: MusicApplication) {
             publishHealth(peer)
         }
     }
+    /** 定时退出等待已连接设备收到断开通知，然后再停止共享服务。 */
+    internal suspend fun disconnectAll() {connections.values.toList().map {peer ->app.scope.async {disconnect(peer)}}.awaitAll()}
     fun disconnect(id: String) {connections[id]?.let {p ->app.scope.launch {disconnect(p)}}}
     @androidx.annotation.OptIn(markerClass=[androidx.media3.common.util.UnstableApi::class])
     private suspend fun disconnect(peer: PeerConnection,reason: String="local") {

@@ -136,4 +136,20 @@
     <string name="lan_accept">Accept</string>
     <string name="lan_reject">Reject</string>
     <string name="lan_waiting">Waiting for confirmation on the other device…</string>
+    <string name="color_choose">Choose color</string>
+    <string name="color_wheel">Color wheel</string>
+    <string name="color_brightness">Brightness</string>
+    <string name="color_alpha">Opacity (A)</string>
+    <string name="color_hex">Hex · #RRGGBB / #AARRGGBB</string>
+    <string name="color_invalid">Enter a valid hex color and ARGB values from 0 to 255.</string>
+    <string name="sleep_timer">Sleep timer</string>
+    <string name="sleep_duration">Duration</string>
+    <string name="sleep_minutes">%1$d minutes</string>
+    <string name="sleep_custom_minutes">Custom duration · 1–1440 minutes</string>
+    <string name="sleep_finish_song">Finish the current song before closing</string>
+    <string name="sleep_hint">At the deadline, stop playback and close Nonet. With this option enabled, the song playing at that time finishes first; the next song will not start.</string>
+    <string name="sleep_start">Start timer</string>
+    <string name="sleep_restart">Restart timer</string>
+    <string name="sleep_waiting">Closing after this song finishes</string>
+    <string name="sleep_remaining">Closes in %1$02d:%2$02d</string>
 </resources>

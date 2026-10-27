@@ -26,7 +26,7 @@
 | --- | --- | --- |
 | 桌面 | [0.4.0-beta.40](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.40) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
 | CLI | [0.4.0-beta.32](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.32) | Windows、Linux、macOS x64 |
-| Android | [0.3.0-beta.9](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/android-v0.3.0-beta.9) | API 28+；通用 APK；沿用既有测试签名 |
+| Android | [0.3.0-beta.10](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/android-v0.3.0-beta.10) | API 28+；通用 APK；沿用既有测试签名 |
 
 本仓库包含桌面、CLI、共享核心、Android、插件 SDK、打包器和测试。插件模板独立维护在 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)。
 

@@ -99,6 +99,7 @@ class PlayerUiTests {
         compose.onAllNodesWithText("设置").onFirst().assertIsDisplayed();screenshot("settings-dark-zh")
         compose.onNodeWithTag("navigation_toggle").performClick();compose.onNodeWithTag("drawer_list").performScrollToNode(hasTestTag("drawer_music"));compose.onNodeWithTag("drawer_music").performClick();screenshot("home-dark-zh")
         compose.onNodeWithText("听歌统计").performClick();screenshot("statistics-phone")
+        compose.onNodeWithTag("statistics_list").performScrollToNode(hasClickAction() and hasText(java.time.LocalDate.now().toString()))
         compose.onNode(hasClickAction() and hasText(java.time.LocalDate.now().toString())).performClick()
         compose.waitForIdle();compose.mainClock.advanceTimeBy(500);windowScreenshot("calendar-phone")
         compose.onNodeWithText("取消").assertIsDisplayed().performClick()
