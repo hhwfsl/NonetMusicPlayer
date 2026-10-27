@@ -182,14 +182,20 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     public void Navigate(string page, string? title = null)
     {
         var request = ++_extensionNavigationRequest;
+        page = NormalizeNavigationPage(page);
+        // 重复导航不清空筛选、不重建控件，也使先前尚未完成的插件导航失效。
+        if (Page == page) return;
         if (page is not ("settings" or "plugins" or "terminal") && Plugins.HasHook("navigation.before")) { _ = NavigateWithHooksAsync(page, title, request); return; }
         NavigateCore(page, title);
     }
     private void NavigateCore(string page, string? title)
     {
+        page = NormalizeNavigationPage(page);
+        // 钩子可能将请求重定向回当前页，同样保持原页面和滚动位置。
+        if (Page == page) return;
         // 浮层/后台扩展没有独立页面，导航命令不能为其创建空白页。
         if (page.StartsWith("plugin:", StringComparison.Ordinal) && Plugins.Installed.Any(p => p.Id == page[7..] && !p.HasPage)) return;
-        Page = page == "favorites" ? "playlist:" + Playlist.LikedId : page == "temporary" ? "library" : page; SearchText = "";
+        Page = page; SearchText = "";
         LeaveMusicSearch(Page);
         PageTitle = title ?? LocalizedTitleForPage(Page);
         OnPropertyChanged(nameof(CurrentPlaylist));
@@ -198,14 +204,24 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         RequestPlayingTrackLocation();
         CompleteOperation("navigate");
     }
-    public void ApplyFilter()
+    private static string NormalizeNavigationPage(string page) => page == "favorites" ? "playlist:" + Playlist.LikedId : page == "temporary" ? "library" : page;
+    public void ApplyFilter() => ApplyFilterCore(incremental: false);
+    private void ApplyFilterCore(bool incremental)
     {
         if (Page is "terminal" or "settings" or "plugins" or "statistics" or "lyrics" || Page.StartsWith("plugin:", StringComparison.Ordinal)) { RefreshPlayingRows(); return; }
         ObserveTracks();
         IEnumerable<TrackItem> tracks = SourceTracks(Page);
         var query = SearchText.Trim();
-        if (query.Length > 0) tracks = tracks.Where(t => new[] { t.Title, t.Artist, t.Album, t.ProviderId ?? L10n.T("Common.Local") }.Any(v => v.Contains(query, StringComparison.CurrentCultureIgnoreCase)));
-        VisibleTracks.ReplaceAll(tracks);
+        if (query.Length > 0)
+        {
+            // 搜索保持原有文化比较规则，不再为每首歌曲分配四项临时数组。
+            var local = L10n.T("Common.Local");
+            tracks = tracks.Where(t => t.Title.Contains(query, StringComparison.CurrentCultureIgnoreCase)
+                || t.Artist.Contains(query, StringComparison.CurrentCultureIgnoreCase)
+                || t.Album.Contains(query, StringComparison.CurrentCultureIgnoreCase)
+                || (t.ProviderId ?? local).Contains(query, StringComparison.CurrentCultureIgnoreCase));
+        }
+        if (incremental) VisibleTracks.SynchronizeOrder(tracks); else VisibleTracks.ReplaceAll(tracks);
         RefreshPlayingRows();
         OnPropertyChanged(nameof(EmptyStateTitle)); OnPropertyChanged(nameof(EmptyStateDescription));
     }
@@ -216,7 +232,8 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         IsBusy = true; var cancellation = new CancellationTokenSource(); _scanCancellation = cancellation; var inputs = paths.ToArray(); StatusText = L10n.T("Lyrics.ScanningMusicArtworkAndLyrics");
         try
         {
-            var tracks = await Task.Run(() => _scanner.ScanPaths(inputs, cancellation.Token));
+            var prepared = await Plugins.PrepareLocalFilesAsync(inputs, "import", ReportWarning, cancellation.Token);
+            var tracks = await Task.Run(() => _scanner.ScanPaths(prepared, cancellation.Token));
             if (_disposed) return [];
             playlist ??= favorite ? LikedPlaylist : CurrentPlaylist;
             if (tracks.Count > 0 && playlist is null)
@@ -278,19 +295,23 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     {
         if (RejectLyricsPlaybackChange()) return;
         if (IsBusy) { ReportWarning(L10n.T("Common.AnImportIsInProgressWaitForItTo")); return; }
-        var files = paths.Where(p => File.Exists(p) && MusicLibraryScanner.SupportedExtensions.Contains(Path.GetExtension(p))).ToArray();
+        var accepted = Plugins.InputFileExtensions.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var files = paths.Where(p => File.Exists(p) && accepted.Contains(Path.GetExtension(p))).ToArray();
         if (files.Length == 0) { ReportWarning(L10n.T("Playlists.SelectAPlaylistBeforeAddingMusic")); return; }
         IsBusy = true;
         try
         {
-            var tracks = await Task.Run(() => _scanner.ScanPaths(files));
+            using var cancellation = new CancellationTokenSource(); _scanCancellation = cancellation;
+            var prepared = await Plugins.PrepareLocalFilesAsync(files, "temporary-play", ReportWarning, cancellation.Token);
+            var tracks = await Task.Run(() => _scanner.ScanPaths(prepared, cancellation.Token));
             if (_disposed || tracks.Count == 0) return;
             _temporaryTracks = tracks.ToList(); _countedTemporaryIds.Clear();
             await StartTrackAsync(tracks[0], tracks, "temporary", 0);
             if (IsPlaying) CompleteOperation("player.play");
         }
+        catch (OperationCanceledException) { StatusText = L10n.T("Common.ImportCancelledYourLibraryIsUnchanged"); }
         catch (Exception error) { ReportError(L10n.T("Playback.CouldNotOpenTemporaryAudio"), error); }
-        finally { IsBusy = false; }
+        finally { _scanCancellation = null; IsBusy = false; }
     }
     public void CancelImport() { _cancelFolderPlaylists = true; _scanCancellation?.Cancel(); CompleteOperation("import.cancel"); }
     public async Task PlayTrackAsync(TrackItem? track, IEnumerable<TrackItem>? list = null)

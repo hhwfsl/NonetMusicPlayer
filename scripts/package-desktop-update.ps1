@@ -23,7 +23,7 @@ try {
             try { $taskFiles[$taskRelative] = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($taskInput)).ToLowerInvariant(); $taskInput.Position = 0
                 $taskEntry = $taskArchive.CreateEntry($taskRelative, [IO.Compression.CompressionLevel]::Fastest)
                 # POSIX 模式用于跨平台恢复可执行权限；普通文档和依赖采用 0644。
-                $taskMode = if ($taskFile.Name -eq 'Nonet') { 0x81ED } else { 0x81A4 }
+                $taskMode = if ($taskFile.Name -in @('Nonet','NonetCrashHandler')) { 0x81ED } else { 0x81A4 }
                 $taskEntry.ExternalAttributes = [int]($taskMode -shl 16)
                 $taskWriter = $taskEntry.Open(); try { $taskInput.CopyTo($taskWriter) } finally { $taskWriter.Dispose() }
             } finally { $taskInput.Dispose() }

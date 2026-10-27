@@ -29,6 +29,8 @@ internal static class ApplicationIntegrationChecks
         var output = Path.GetFullPath(args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal)) ?? "artifacts/ui-checks");
         var data = Path.Combine(output, "test-data-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(output);
+        if (args.Contains("--memory-navigation-only")) { MemoryNavigationChecks.Run(output); return; }
+        if (args.Contains("--memory-audio-only")) { MemoryAudioChecks.Run(output, exerciseMinimize: true); return; }
         if (args.Contains("--experience-revision-only")) { ExperienceRevisionChecks.Run(output); return; }
         if (args.Contains("--desktop-revision-only")) { DesktopRevisionChecks.Run(output); return; }
         if (args.Contains("--storage-compatibility-only")) { CoreChecks.Run(output); DataStatisticsChecks.Run(output); return; }

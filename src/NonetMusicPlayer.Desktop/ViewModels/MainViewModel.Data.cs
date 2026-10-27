@@ -130,7 +130,7 @@ public sealed partial class MainViewModel
     }
     public IImage? GetGroupCover(string groupType, string name)
     {
-        var key = GroupCoverKey(groupType, name);
+        var key = GroupCoverKey(groupType, GroupDisplayName(groupType, name));
         return State.GroupCovers.TryGetValue(key, out var path) ? ArtworkCache.Shared.GetImage(path) : null;
     }
     public void SetGroupCover(string groupType, string name, string? path)
@@ -142,8 +142,8 @@ public sealed partial class MainViewModel
         State.SoftwareDefaultGroupCovers.Remove(key);
         Save(); ViewChanged?.Invoke(this, EventArgs.Empty); StatusText = stored is null ? L10n.T("Common.DefaultCoverRestored") : L10n.T("Storage.CustomCoverSavedToTheDataFolder"); CompleteOperation(groupType.StartsWith("artist") ? "artist.cover" : "album.cover");
     }
-    public bool UsesSoftwareDefaultGroupCover(string groupType, string name) => State.SoftwareDefaultGroupCovers.Contains(GroupCoverKey(groupType, name));
-    public IImage? ResolveGroupCover(string groupType, string name) => ResolveGroupCover(groupType, name, SourceTracks(GroupCoverKey(groupType, name)));
+    public bool UsesSoftwareDefaultGroupCover(string groupType, string name) => State.SoftwareDefaultGroupCovers.Contains(GroupCoverKey(groupType, GroupDisplayName(groupType, name)));
+    public IImage? ResolveGroupCover(string groupType, string name) => ResolveGroupCover(groupType, name, SourceTracks(GroupCoverKey(groupType, GroupDisplayName(groupType, name))));
     public IImage? ResolveGroupCover(string groupType, string name, IEnumerable<TrackItem> tracks)
     {
         if (UsesSoftwareDefaultGroupCover(groupType, name)) return null;
@@ -160,6 +160,9 @@ public sealed partial class MainViewModel
         State.SoftwareDefaultGroupCovers.Add(key);
         Save(); ViewChanged?.Invoke(this, EventArgs.Empty); StatusText = L10n.T("Common.ApplicationDefaultCoverApplied"); CompleteOperation(groupType.StartsWith("artist") ? "artist.cover" : "album.cover");
     }
+    /// <summary>未补全的分类名称仅在展示和只读查询中回退；不改写原始标签或放宽写入校验。</summary>
+    public static string GroupDisplayName(string groupType, string? name)
+        => string.IsNullOrWhiteSpace(name) ? L10n.T(groupType.Equals("artist", StringComparison.OrdinalIgnoreCase) || groupType.Equals("artists", StringComparison.OrdinalIgnoreCase) ? "Library.UnknownArtist" : "Library.UnknownAlbum") : name;
     private static string GroupCoverKey(string groupType, string name)
     {
         var type = groupType.ToLowerInvariant() switch { "artist" or "artists" => "artist", "album" or "albums" => "album", _ => throw new InvalidDataException(L10n.T("Common.CoverTypeMustBeArtistOrAlbum")) };

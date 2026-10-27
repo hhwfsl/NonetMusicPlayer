@@ -12,7 +12,7 @@ using NonetMusicPlayer.Desktop.ViewModels;
 /// <summary>Runs the actual MainViewModel -> native player -> UI dispatcher -> next-track chain.</summary>
 internal static class MemoryAudioChecks
 {
-    public static void Run(string output, bool enforceBounds = true)
+    public static void Run(string output, bool enforceBounds = true, bool exerciseMinimize = false)
     {
         Directory.CreateDirectory(output);
         var data = Path.Combine(Path.GetFullPath(output), "memory-data-" + Guid.NewGuid().ToString("N"));
@@ -43,10 +43,15 @@ internal static class MemoryAudioChecks
             covers.Add(cover);
         }
         var tracks = Enumerable.Range(0, 128).Select(i => new TrackItem("memory-" + i, "Fixture " + i, "Fixture artist", "Fixture album " + i, sources[i % sources.Count], Path.GetExtension(sources[i % sources.Count]), new FileInfo(sources[i % sources.Count]).Length) { CoverPath = covers[i], DurationSeconds = 1 }).ToList();
-        storage.Save(new AppState { Tracks = tracks, Settings = new AppSettings { Volume = 0, PlayMode = PlayMode.RepeatAll } });
+        // 播放来源必须有真实歌单引用，否则旧的无归属测试数据只会重复首曲，无法覆盖跨格式切歌。
+        storage.Save(new AppState { Tracks = tracks, Playlists = [new Playlist { Id = "memory-checks", Name = "Memory checks", TrackIds = tracks.Select(t => t.Id).ToList() }], Settings = new AppSettings { Volume = 0, PlayMode = PlayMode.RepeatAll } });
         var before = Measure("before-playback");
         using var audio = new NativeAudioPlayer { Volume = 0 };
         using var vm = new MainViewModel(new MusicLibraryScanner(storage), audio);
+        vm.Navigate("playlist:memory-checks");
+        var window = exerciseMinimize ? new NonetMusicPlayer.Desktop.Views.MainWindow { DataContext = vm } : null;
+        window?.Show();
+        var minimized = false; var restored = false;
         var errors = new List<string>(); vm.UserNotification += (_, args) => { if (!args.IsWarning) errors.Add(args.Message); };
         var ended = 0; var touched = new HashSet<string>(); var milestones = new List<MemoryPoint>();
         audio.PlaybackStopped += (_, _) => Interlocked.Increment(ref ended);
@@ -55,6 +60,8 @@ internal static class MemoryAudioChecks
         while (Volatile.Read(ref ended) < 48 && clock.Elapsed.TotalSeconds < 90)
         {
             Dispatcher.UIThread.RunJobs();
+            if (window is not null && !minimized && Volatile.Read(ref ended) >= 12) { window.WindowState = Avalonia.Controls.WindowState.Minimized; minimized = true; }
+            if (window is not null && !restored && Volatile.Read(ref ended) >= 24) { window.WindowState = Avalonia.Controls.WindowState.Normal; restored = true; }
             if (vm.CurrentTrack is { } current && touched.Add(current.Id))
             {
                 var image = current.Artwork; Require(image is not null && image.Size.Width <= 320 && image.Size.Height <= 320, "Current real VM artwork decoded at bounded size");
@@ -65,7 +72,8 @@ internal static class MemoryAudioChecks
             Thread.Sleep(4);
         }
         vm.StopPlaybackCommand.Execute(null); Dispatcher.UIThread.RunJobs();
-        Require(ended >= 48 && touched.Count >= 48 && errors.Count == 0, "48 naturally ended cross-format tracks through actual VM dispatcher and native player");
+        Require(ended >= 48 && touched.Count >= 48 && errors.Count == 0, $"48 naturally ended cross-format tracks through actual VM dispatcher and native player; ended={ended}, distinct={touched.Count}, failures={errors.Count}");
+        if (exerciseMinimize) Require(minimized && restored, "Native playback continues while hidden-window memory cleanup runs and restores");
         var afterPlayback = Measure("after-48-natural-ends");
         foreach (var track in vm.State.Tracks) Require(track.Artwork is not null, "All 128 independent library covers remain available");
         var afterBrowse = Measure("after-browse-128-covers");
@@ -110,7 +118,7 @@ internal static class MemoryAudioChecks
         }
         var report = new { Before = before, Milestones = milestones, AfterPlayback = afterPlayback, AfterBrowse = afterBrowse, NaturalEnds = ended, TracksVisited = touched.Count, Covers = 128, EnforceBounds = enforceBounds };
         File.WriteAllText(Path.Combine(output, "memory-report.json"), System.Text.Json.JsonSerializer.Serialize(report, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
-        vm.Dispose(); var afterDispose = Measure("after-dispose");
+        window?.ExitApplication(); vm.Dispose(); var afterDispose = Measure("after-dispose");
         if (enforceBounds)
         {
             var cache = cacheType!.GetProperty("Shared")!.GetValue(null)!;

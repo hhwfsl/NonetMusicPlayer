@@ -13,6 +13,9 @@ public sealed class KaraokeLine : Control
     private const double Inset = 4;
     private FormattedText? _pending;
     private Geometry? _glyphs, _completed;
+    private Geometry? _activeClip;
+    private double _clipCharacters = double.NaN;
+    private readonly SolidColorBrush _activeBrush = new(Colors.White), _pendingBrush = new();
     private readonly Dictionary<int, Rect> _elementBounds = [];
     private int[] _elements = [];
     private int _completedLength = -1;
@@ -29,13 +32,13 @@ public sealed class KaraokeLine : Control
     public Color TextColor
     {
         get => _textColor;
-        set { if (_textColor == value) return; _textColor = value; VisualRevision++; InvalidateVisual(); }
+        set { if (_textColor == value) return; _textColor = value; _activeBrush.Color = value; VisualRevision++; InvalidateVisual(); }
     }
     private double _textSize = 28;
     public double TextSize { get => _textSize; set { if (Math.Abs(_textSize - value) < .01) return; _textSize = value; ResetLayout(); VisualRevision++; InvalidateMeasure(); InvalidateVisual(); } }
     private void ResetLayout()
     {
-        _pending = null; _glyphs = _completed = null; _completedLength = -1; _elementBounds.Clear();
+        _pending = null; _glyphs = _completed = _activeClip = null; _clipCharacters = double.NaN; _completedLength = -1; _elementBounds.Clear();
     }
     public Size NaturalSize(double size)
     {
@@ -104,7 +107,7 @@ public sealed class KaraokeLine : Control
     {
         var family = (TopLevel.GetTopLevel(this) as Window)?.FontFamily ?? FontFamily.Default;
         if (_layoutWidth != width || !Equals(family, _family)) { _layoutWidth = width; _family = family; ResetLayout(); }
-        _pending ??= Format(TextSize, width, new SolidColorBrush(TextColor));
+        _pending ??= Format(TextSize, width, _activeBrush);
         var x = Wrap ? Inset : Math.Max(Inset, (Bounds.Width - _pending.Width) / 2) - _marquee;
         var y = Math.Max(Inset, (Bounds.Height - _pending.Height) / 2);
         // MaxTextWidth 对齐换行文本；输入区域只覆盖实际字形，非悬停时不能截获整行空白。
@@ -119,13 +122,16 @@ public sealed class KaraokeLine : Control
         get
         {
             var (text, _, _) = GetTextLayout(Bounds.Width);
+            if (_activeClip is not null && _clipCharacters == _characters) return _activeClip;
             var completed = 0; var partial = -1;
-            foreach (var start in _elements)
+            // 文本元素起点有序，二分定位当前字，避免每帧重扫整句并重复二分每个已唱字。
+            if (_characters >= _text.Length) completed = _text.Length;
+            else if (_characters > 0 && _elements.Length > 0)
             {
-                if (start >= _characters) break;
-                var next = Array.BinarySearch(_elements, start) + 1;
-                var end = next < _elements.Length ? _elements[next] : _text.Length;
-                if (_characters >= end) completed = end; else { partial = start; break; }
+                var index = Array.BinarySearch(_elements, (int)Math.Floor(_characters));
+                index = index >= 0 ? index : Math.Max(0, ~index - 1);
+                completed = _elements[index];
+                if (_characters > completed) partial = completed;
             }
             if (_completedLength != completed)
             {
@@ -143,7 +149,7 @@ public sealed class KaraokeLine : Control
                 var fraction = Math.Clamp((_characters - partial) / (end - partial), 0, 1);
                 if (region.Width > 0 && region.Height > 0) clip.Children.Add(new RectangleGeometry(new Rect(region.X, region.Y, region.Width * fraction, region.Height)));
             }
-            return clip;
+            _clipCharacters = _characters; return _activeClip = clip;
         }
     }
     public override void Render(DrawingContext context)
@@ -152,6 +158,7 @@ public sealed class KaraokeLine : Control
         var (text, origin, _) = GetTextLayout(Bounds.Width);
         if (string.IsNullOrWhiteSpace(_text)) return;
         var pending = PendingColor ?? Color.FromArgb(220, (byte)((TextColor.R + 130) / 2), (byte)((TextColor.G + 130) / 2), (byte)((TextColor.B + 130) / 2));
+        if (_pendingBrush.Color != pending) _pendingBrush.Color = pending;
         // LCD 抗锯齿假设背景不透明；透明覆盖层使用灰度 Alpha。
         using (context.PushClip(new Rect(Bounds.Size)))
         using (context.PushTextOptions(new TextOptions { TextRenderingMode = TextRenderingMode.Antialias }))
@@ -161,8 +168,8 @@ public sealed class KaraokeLine : Control
             if (_glyphs is null) return;
             using (context.PushTransform(Matrix.CreateTranslation(origin.X, origin.Y)))
             {
-                context.DrawGeometry(new SolidColorBrush(pending), null, _glyphs);
-                if (_characters > 0) using (context.PushGeometryClip(ActiveClip)) context.DrawGeometry(new SolidColorBrush(TextColor), null, _glyphs);
+                context.DrawGeometry(_pendingBrush, null, _glyphs);
+                if (_characters > 0) using (context.PushGeometryClip(ActiveClip)) context.DrawGeometry(_activeBrush, null, _glyphs);
             }
         }
     }

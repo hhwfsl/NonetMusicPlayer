@@ -5,6 +5,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using NonetMusicPlayer.Desktop.Controls;
 using NonetMusicPlayer.Desktop.Models;
+using NonetMusicPlayer.Desktop.ViewModels;
 using NonetMusicPlayer.Desktop.Services;
 using NonetMusicPlayer.Desktop.Views;
 
@@ -63,7 +64,7 @@ public sealed partial class MainWindow
     private Control Groups(bool artists)
     {
         if (_vm is null) return Ui.Text("");
-        var groups = _vm.VisibleTracks.GroupBy(t => artists ? t.Artist : t.Album).OrderBy(g => g.Key).Select(g => new MusicGroup(g.Key, g.ToArray())).ToArray();
+        var groups = _vm.VisibleTracks.GroupBy(t => MainViewModel.GroupDisplayName(artists ? "artist" : "album", artists ? t.Artist : t.Album)).OrderBy(g => g.Key).Select(g => new MusicGroup(g.Key, g.ToArray())).ToArray();
         var page = new Grid { RowDefinitions = new("Auto,*") };
         var back = Ui.Button("Home.Back", () => _vm.Navigate(_groupsReturnPage));
         back.Name = "GroupsBack"; back.Content = Ui.Actions(new VectorIcon { Kind = IconKind.Back }, Ui.Text("Home.Back"));

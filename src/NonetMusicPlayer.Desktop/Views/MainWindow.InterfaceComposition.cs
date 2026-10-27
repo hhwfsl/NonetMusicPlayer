@@ -21,6 +21,8 @@ public sealed partial class MainWindow
     private bool _committingInterface;
     private readonly Dictionary<string, string> _ownedInterfaceSettings = [];
     public AppSettings InterfaceSettings => _effectiveInterfaceSettings ?? _vm!.Settings;
+    public ResolvedPageTransition ResolvePageTransition(string from, string to)
+        => PageTransitionContract.Resolve(_interfaceLayers.Values.SelectMany(layers => layers), from, to);
     public InterfaceMotionProfile? InterfaceMotionProfile
     {
         get
@@ -49,6 +51,7 @@ public sealed partial class MainWindow
     public void ApplyInterfaceLayers(string owner, IReadOnlyList<StyleSheet> layers)
     {
         foreach (var sheet in layers) StyleSheetContract.Validate(sheet);
+        _pageMotion.Cancel();
         var old = _interfaceLayers.GetValueOrDefault(owner); var originalOrder = _interfaceLayers.ToArray();
         SuspendElementExtensions(); _interfaceLayers.Remove(owner);
         if (layers.Count > 0) _interfaceLayers[owner] = layers.ToList();
@@ -65,6 +68,7 @@ public sealed partial class MainWindow
     private void RemoveInterfaceLayers(string owner)
     {
         if (!_interfaceLayers.Remove(owner)) return;
+        _pageMotion.Cancel();
         SuspendElementExtensions(); RebuildInterfaceSettings(); ApplyAppearance(); RefreshElementExtensions();
         if (_vm?.Page.StartsWith("interface:", StringComparison.Ordinal) == true)
         {

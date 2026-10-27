@@ -70,7 +70,7 @@ public sealed partial class ExtensionSession
         if (operation is "import" or "temporary-play")
         {
             var target = operation == "import" ? vm.Playlists.FirstOrDefault(p => p.Id == args["playlistId"]?.GetValue<string>()) ?? throw new InvalidDataException("Unknown playlist.") : null;
-            var files = await Owner.OpenFilesAsync(Manifest.Name, MusicLibraryScanner.SupportedExtensions.Select(e => "*" + e).ToArray(), true);
+            var files = await Owner.OpenFilesAsync(Manifest.Name, vm.Plugins.InputFileExtensions.Select(e => "*" + e).ToArray(), true);
             if (files.Length == 0) return new() { ["success"] = false };
             if (target is null) await vm.PlayTemporaryFilesAsync(files); else await vm.ImportAsync(files, playlist: target);
             return new() { ["success"] = true };

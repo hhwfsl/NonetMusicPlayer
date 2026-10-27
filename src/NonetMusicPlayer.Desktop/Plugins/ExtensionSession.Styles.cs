@@ -13,6 +13,13 @@ public sealed partial class ExtensionSession
         var operation = args["operation"]?.GetValue<string>() ?? "catalog";
         if (operation == "catalog") return Owner.StyleLayers.Catalog();
         if (operation == "composition-catalog") return Owner.InterfaceCatalog();
+        if (operation == "resolve-page-transition")
+        {
+            var from = args["from"]?.GetValue<string>() ?? _manager.ExtensionViewModel.Page;
+            var to = args["to"]?.GetValue<string>() ?? "";
+            if (from.Length > 200 || to.Length is 0 or > 200 || from.Any(char.IsControl) || to.Any(char.IsControl)) throw new InvalidDataException("Invalid transition route.");
+            return new() { ["success"] = true, ["profile"] = JsonSerializer.SerializeToNode(Owner.ResolvePageTransition(from, to), StyleSheetJson.Default.ResolvedPageTransition) };
+        }
         if (operation is "apply" or "reset")
         {
             var layers = operation == "reset" ? [] : args["layers"]?.Deserialize(StyleSheetJson.Default.ListStyleSheet) ?? throw new InvalidDataException("Missing style layers.");

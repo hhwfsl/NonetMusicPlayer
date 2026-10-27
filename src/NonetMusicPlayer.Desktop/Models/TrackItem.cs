@@ -62,6 +62,11 @@ public sealed partial class TrackItem : ObservableObject
     private string? _artworkPath;
     private IImage? _artwork;
     public void ReleaseArtwork() { ArtworkCache.Shared.Invalidate(_artworkPath); _artwork = null; _artworkPath = null; }
+    /// <summary>云端后台补全只通知当前行，不重建列表或改变用户的滚动位置。</summary>
+    public void RefreshMetadata()
+    {
+        OnPropertyChanged(nameof(Title)); OnPropertyChanged(nameof(Artist)); OnPropertyChanged(nameof(Album)); OnPropertyChanged(nameof(DurationText));
+    }
     /// <summary>同一路径从缩略图更新为高清封面后重新建立绘制代理，避免沿用旧尺寸裁切。</summary>
     public void RefreshArtwork() { ReleaseArtwork(); OnPropertyChanged(nameof(Artwork)); OnPropertyChanged(nameof(HasArtwork)); }
 }

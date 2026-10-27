@@ -1,5 +1,9 @@
 # 通用扩展接口参考（SDK 4.16）
 
+## 页面过渡（可选 `ui.page-transitions.v1`）
+
+`styles` 服务通过 `StyleSheet.pageTransitions` 提供默认配置与按来源/目标页面匹配的覆盖规则；支持淡入、位移、组合效果、时长、初始透明度和缓动。`catalog` 返回目录，`resolve-page-transition` 查询叠加后的有效配置。参数、优先级、取消恢复及歌词专用转场的关系见 [PAGE_TRANSITIONS](PAGE_TRANSITIONS.md)。
+
 ## 选择器与近期统计（SDK 4.16，可选）
 
 `ui.select-options.v1` 为 `select` 增加 `popupPlacement` 和 `suppressTooltips`，见 [PLUGIN_DEVELOPMENT](PLUGIN_DEVELOPMENT.md)。同一组选项在状态刷新期间保持身份，提交动作完成后同步选中值。
@@ -174,6 +178,16 @@ read/associate/unlink 保持既有契约；新增 parse，参数 trackId 与可�
 系统事件包括 player.track-changed/state-changed/position、navigation.changed、settings.changed、library.changed、window.changed、operation.completed、library.lyrics-missing。敏感数据不加入载荷。精确事务审计使用 Logs，状态事件用于刷新或触发异步任务。
 
 ## 文件事务
+
+### 导入前文件转换（可选 `files.transform.v1`）
+
+转换插件声明 `providedServices:["file-transform"]`、`permissions:["user-files","file-transform",...]`、`requiredCapabilities:["files.transform.v1",...]`，通过 `fileExtensions:[".example"]` 注册最多 64 个小写扩展名。托管与独立进程共用现有服务协议，不修改冻结的 `INonetExtension`。
+
+仅在用户选择/拖入文件或文件夹后，扫描标签前调用 `service:file-transform`，values 为 `{method:"file.transform",inputPath:"完整源路径",purpose:"import"}`。临时播放的 purpose 为 `temporary-play`。插件返回 `frame.state.serviceResult={success:true,outputPath:"另一普通音频文件完整路径"}`；格式拒绝返回 `success:false,message:"可读原因"`。
+
+宿主等待当前文件完成才继续导入或播放，单文件最多 20 分钟，可取消。插件必须将取消令牌传递到实际转换，失败时清理未完成输出。输出须存在、为普通音频后缀、不是源文件本身、不是符号链接。输出目录由插件配置；没有另行取得覆盖授权时必须另存，保留源文件。多个插件注册相同后缀时按插件 ID 选择首个，不连环转换。
+
+此角色仅适用于本次用户提供的文件，不能扩大自动文件读取范围。宿主不发送整首音频 Base64，也不认识特定加密格式。未启用转换插件时沿用原扫描路径和性能。目录最多 50000 文件/64 层，不跟随链接。
 
 files 需要 user-files 和当次用户操作，路径只来自宿主文件选择器，不接受 arguments 中的路径。返回成功状态，不返回源路径。
 
@@ -387,3 +401,14 @@ public Task RefreshAsync() => _runtime!.RunAsync(async token =>
 
 例如：`context.RequestAsync("appearance", new JsonObject { ["operation"] = "set-auto-accent", ["enabled"] = true })`。也可通过既有命令服务使用 `settings.set accentFromBackground true`；颜色仍由同一个宿主设置模型持久化，`host` 状态带 `accentFromBackground`。默认关闭；开启或背景变化时异步提取，关闭/移除背景后保留最后颜色。没有背景或透明背景时不虚构颜色，失败保留原主题并报告错误。只分析有界缩略图，不创建持续采样任务。
 
+### 后台歌单导入与页面本地操作
+
+声明 `media.import-background.v1` 后，可在用户手势中请求 `media`：
+
+```json
+{"operation":"import-catalog","catalogId":"stable-id","name":"歌单名","background":true}
+```
+
+确认后立即返回 `success`、`pending: true`、`playlistId` 和 `jobId`，目标歌单已经创建。宿主以字符串参数 `includeArtwork: "false"` 读取轻量 `catalog.list`；插件应返回稳定 ID 和已有的基本信息，不能在此阶段逐首获取封面或歌词。引用导入后，宿主按小批调用 `music.artwork`（已声明 `media.artwork-batch.v1`）补齐基本信息与封面；没有批量能力时回退到 `music.describe`。补全失败保留引用并记录警告，退出或停用插件会取消任务。省略 `background` 时保留原同步导入语义。
+
+页面声明 `ui.visibility-actions.v1` 后，按钮可使用 `hideTargets` / `showTargets`（控件 ID 数组）立即隐藏或恢复页面内控件，然后再执行可选的插件 `action`。本地操作不等待插件会话锁，不取消后台任务；不能修改其他插件或宿主页面。只读 `selectable-text` 可设置 `preserveScroll: true`，防止焦点请求将长文本滚动回顶部。绑定内容相同时宿主不重复赋值，保留选择状态。

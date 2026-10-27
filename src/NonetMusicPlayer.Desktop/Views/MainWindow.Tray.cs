@@ -3,6 +3,8 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using NonetMusicPlayer.Desktop.Controls;
 using NonetMusicPlayer.Desktop.Services;
 
 namespace NonetMusicPlayer.Desktop.Views;
@@ -12,6 +14,9 @@ public sealed partial class MainWindow
     private TrayIcon? _tray;
     private NativeMenuItem? _trayOpen, _trayExit;
     private bool _memorySuspended;
+    private bool _memoryCachesReleased;
+    private CancellationTokenSource? _memoryOptimization;
+    private Task _memoryOptimizationTask = Task.CompletedTask;
     public bool TrayAvailable => _tray is not null;
     private void InitializeTrayLifecycle()
     {
@@ -32,15 +37,12 @@ public sealed partial class MainWindow
         };
         PropertyChanged += (_, e) =>
         {
-            if (e.Property == WindowStateProperty)
-            {
-                if (WindowState == WindowState.Minimized) SuspendVisualMemory();
-                else RestoreVisualMemory();
-            }
-            if (e.Property == IsVisibleProperty) { if (!IsVisible) SuspendVisualMemory(); else RestoreVisualMemory(); }
+            if (e.Property != WindowStateProperty && e.Property != IsVisibleProperty) return;
+            if (!IsVisible || WindowState == WindowState.Minimized) SuspendVisualMemory();
+            else RestoreVisualMemory();
         };
         L10n.LanguageChanged += TrayLanguageChanged;
-        Closed += (_, _) => { L10n.LanguageChanged -= TrayLanguageChanged; _tray?.Dispose(); _tray = null; };
+        Closed += (_, _) => { _memoryOptimization?.Cancel(); L10n.LanguageChanged -= TrayLanguageChanged; _tray?.Dispose(); _tray = null; };
     }
     private void TrayLanguageChanged(object? sender, EventArgs e)
     {
@@ -65,21 +67,45 @@ public sealed partial class MainWindow
         if (_memorySuspended || _vm?.Settings.OptimizeMemoryWhenMinimized != true) return;
         // 保留页面、歌词布局及封面引用。可见性变化不是导航，不能以重建界面换取内存下降。
         _memorySuspended = true;
-        Dispatcher.UIThread.Post(() =>
+        _memoryOptimization?.Cancel();
+        var cancellation = _memoryOptimization = new CancellationTokenSource();
+        _memoryOptimizationTask = OptimizeHiddenMemoryAsync(cancellation);
+    }
+    private async Task OptimizeHiddenMemoryAsync(CancellationTokenSource cancellation)
+    {
+        var token = cancellation.Token;
+        try
         {
-            if (!_memorySuspended) return;
-            _ = Task.Run(() =>
-            {
-                if (!_memorySuspended) return;
-                // 仅在窗口可见性变化时整理内存，不在播放循环中触发。
-                GC.Collect(2, GCCollectionMode.Optimized, blocking: false, compacting: false);
-                AppLog.Info("Memory", "Collected unused objects; active UI and playback retained");
-            });
-        }, DispatcherPriority.Background);
+            // 快速切换窗口不回收缓存；实际持续最小化或隐藏后才执行一次。
+            await Task.Delay(800, token);
+            if (!_memorySuspended || _vm?.Settings.OptimizeMemoryWhenMinimized != true || IsVisible && WindowState != WindowState.Minimized) return;
+            _pageMotion.Cancel(); _lyricsMotion.Cancel();
+            foreach (var image in this.GetVisualDescendants().OfType<OriginalArtworkImage>()) image.SuspendDecodedPixels();
+            AppBackgroundService.TrimMemory(); ArtworkCache.Shared.Clear();
+            _memoryCachesReleased = true;
+            await Task.Run(() => HiddenWindowMemory.Collect(token), token);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception error) { AppLog.Warning("Memory", "Unable to release hidden-window cache", error); }
+        finally
+        {
+            if (ReferenceEquals(_memoryOptimization, cancellation)) _memoryOptimization = null;
+            cancellation.Dispose();
+        }
     }
     private void RestoreVisualMemory()
     {
+        _memoryOptimization?.Cancel();
         if (!_memorySuspended || _vm is null) return;
-        _memorySuspended = false; _vm.RefreshPlaybackState();
+        _memorySuspended = false;
+        if (_memoryCachesReleased)
+        {
+            _memoryCachesReleased = false;
+            // 原有绘制场景可能没有重新调用代理；恢复像素并标记重绘，不触发外观或布局重建。
+            AppBackgroundService.GetImage(InterfaceSettings.BackgroundImagePath);
+            this.FindControl<Image>("AppBackgroundImage")?.InvalidateVisual();
+            foreach (var image in this.GetVisualDescendants().OfType<OriginalArtworkImage>()) image.ResumeDecodedPixels();
+        }
+        _vm.RefreshPlaybackState();
     }
 }

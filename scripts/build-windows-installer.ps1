@@ -19,6 +19,9 @@ $taskPackage = [IO.Path]::GetFullPath($PackageDirectory)
 $taskExecutable = Join-Path $taskPackage 'Nonet.exe'
 if (-not (Test-Path -LiteralPath $taskExecutable -PathType Leaf)) { throw 'Publish the Windows application before building its installer.' }
 & (Join-Path $PSScriptRoot 'verify-native-architecture.ps1') -Directory $taskPackage -Rid "win-$Architecture"
+# 安装脚本必须显式包含观察器，不能只验证源目录存在而漏装辅助进程。
+$taskSetupScript = Join-Path $PSScriptRoot 'windows-installer/NonetMusicPlayer.iss'
+if ([IO.File]::ReadAllText($taskSetupScript) -notmatch '(?m)^Source: "\{#PackageDirectory\}\\NonetCrashHandler\.exe";') { throw '安装脚本缺少 NonetCrashHandler.exe。' }
 # 不允许把旧程序重标成新版本；纯净构建也可以直接指定其 package 目录。
 $taskBinaryVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($taskExecutable)
 if ($taskBinaryVersion.ProductVersion.Split('+')[0] -ne $Version -or [version]$taskBinaryVersion.FileVersion -ne [version]$taskProject.FileVersion) {

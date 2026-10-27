@@ -146,7 +146,8 @@ public sealed class PluginsView : UserControl, IDisposable
                 var menu = new ContextMenu();
                 var folder = new MenuItem { Name = "PluginOpenFolder", Header = L10n.T("Plugins.OpenFolder"), Icon = Icon(IconKind.Folder) };
                 folder.Click += (_, _) => MainWindow.OpenPath(Path.Combine(vm.Storage.PluginsFolder, plugin.Id)); menu.Items.Add(folder);
-                if (PluginManager.HasMediaSource(plugin))
+                // 搜索型音源从自己的页面导入指定歌单，不再提供无目标的整库读取入口。
+                if (PluginManager.HasMediaSource(plugin) && plugin.MusicSearch is null)
                 {
                     var refresh = new MenuItem { Header = L10n.T("Common.LoadCatalog"), Icon = Icon(IconKind.Library) };
                     refresh.Click += async (_, _) => await vm.RefreshProviderAsync(plugin); menu.Items.Add(refresh);

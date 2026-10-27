@@ -6,12 +6,14 @@ namespace NonetMusicPlayer.Desktop;
 internal static class Program
 {
     internal static SingleInstanceService? Instance { get; private set; }
+    internal static CrashHandlerService? CrashHandler { get; private set; }
     [STAThread]
     public static int Main(string[] args)
     {
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
             AppLog.Error("Application", "Unhandled fatal exception", e.ExceptionObject as Exception); AppLog.Flush();
+            CrashHandler?.ReportFatal(e.ExceptionObject as Exception);
         };
         try
         {
@@ -22,10 +24,12 @@ internal static class Program
             if (args.Length == 4 && args[0] == "--verify-provider") return Services.ReleaseVerifier.RunProvider(args[1], args[2], args[3]);
             if (args.Length == 4 && args[0] == "--verify-music-source") return Services.ReleaseVerifier.RunMusicSource(args[1], args[2], args[3]);
             if (args.Length == 3 && args[0] == "--verify-extension-plugin") return Services.ReleaseVerifier.RunExtension(args[1], args[2]);
+            if (args.Length == 4 && args[0] == "--verify-file-transform") return Services.ReleaseVerifier.RunFileTransform(args[1], args[2], args[3]);
             if (args.Length == 3 && args[0] == "--verify-runtime-fault") return Services.ReleaseVerifier.RunRuntimeFault(args[1], args[2]);
             if (args.Length == 4 && args[0] == "--verify-extension-image") return Services.ReleaseVerifier.RunExtensionImage(args[1], args[2], args[3]);
             if (args.Length == 4 && args[0] == "--verify-style-plugin") return Services.ReleaseVerifier.RunStyles(args[1], args[2], args[3]);
             if (args.Length == 3 && args[0] == "--verify-agent-plugin") return Services.ReleaseVerifier.RunAgent(args[1], args[2]);
+            if (args.Length == 3 && args[0] == "--verify-catalog-navigation") return Services.ReleaseVerifier.RunCatalogNavigation(args[1], args[2]);
             if (args.Length == 3 && args[0] == "--verify-plugin-configuration") return Services.ReleaseVerifier.RunPluginConfiguration(args[1], args[2]);
             if (args.Length == 4 && args[0] == "--verify-live-plugin-configuration") return Services.ReleaseVerifier.RunPluginConfiguration(args[1], args[3], args[2]);
             if (args.Length == 3 && args[0] == "--verify-lyrics-plugin") return Services.ReleaseVerifier.RunLyrics(args[1], args[2]);
@@ -39,18 +43,23 @@ internal static class Program
             Instance = instance;
             AppLog.Initialize(AppStorage.ResolveRoot());
             var iconDataRoot = AppStorage.ResolveRoot();
+            CrashHandler = CrashHandlerService.Start(iconDataRoot);
             _ = Task.Run(() => WindowsIconRefreshService.RefreshIfChanged(iconDataRoot));
             AppLog.Info("Application", "Starting " + typeof(Program).Assembly.GetName().Version);
-            return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            var exitCode = BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            if (exitCode == 0) CrashHandler.CompleteNormalExit();
+            else CrashHandler.ReportFatal(new InvalidOperationException("Application exited with code " + exitCode));
+            return exitCode;
         }
         catch (Exception error)
         {
             AppLog.Error("Application", "Startup or application failed", error); AppLog.Flush();
-            if (OperatingSystem.IsWindows()) FatalMessage(L10n.T("Application.StartupFailed"), "Nonet", 0x10);
+            CrashHandler?.ReportFatal(error);
+            if (OperatingSystem.IsWindows() && CrashHandler?.IsAvailable != true) FatalMessage(L10n.T("Application.StartupFailed"), "Nonet", 0x10);
             else Console.Error.WriteLine(L10n.T("Application.StartupFailed"));
             return 1;
         }
-        finally { AppLog.Shutdown(); }
+        finally { CrashHandler?.Dispose(); CrashHandler = null; AppLog.Shutdown(); }
     }
 
     [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "MessageBoxW", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]

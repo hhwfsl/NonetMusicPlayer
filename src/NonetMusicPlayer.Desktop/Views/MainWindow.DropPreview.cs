@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using NonetMusicPlayer.Desktop.Controls;
 using NonetMusicPlayer.Desktop.Models;
 using NonetMusicPlayer.Desktop.Services;
@@ -15,15 +16,27 @@ public sealed partial class MainWindow
 {
     private Border? _dropPreview;
     private TextBlock? _dropPreviewText;
+    private int _dropPreviewRevision;
     private void InitializeDropPreview()
     {
-        AddHandler(DragDrop.DropEvent, (_, _) => HideDropPreview(), RoutingStrategies.Tunnel, true);
-        AddHandler(DragDrop.DragLeaveEvent, (_, e) => { if (!new Rect(ClientSize).Contains(e.GetPosition(this))) HideDropPreview(); }, RoutingStrategies.Bubble, true);
+        // Drop 实际使用冒泡路由；子控件标记已处理也必须清理，不等待异步导入或播放结束。
+        AddHandler(DragDrop.DropEvent, (_, _) => HideDropPreview(), RoutingStrategies.Bubble, true);
+        AddHandler(DragDrop.DragLeaveEvent, (_, _) =>
+        {
+            // 取消拖动的坐标可能仍在客户区；目标切换紧随的新 DragOver 则使这次清理失效。
+            var revision = _dropPreviewRevision;
+            Dispatcher.UIThread.Post(() => { if (revision == _dropPreviewRevision) HideDropPreview(); }, DispatcherPriority.Background);
+        }, RoutingStrategies.Bubble, true);
+        AddHandler(PointerReleasedEvent, (_, _) => HideDropPreview(), RoutingStrategies.Tunnel, true);
+        AddHandler(KeyDownEvent, (_, e) => { if (e.Key == Key.Escape) HideDropPreview(); }, RoutingStrategies.Tunnel, true);
+        PropertyChanged += (_, e) => { if (e.Property == IsVisibleProperty && !IsVisible || e.Property == WindowStateProperty && WindowState == WindowState.Minimized) HideDropPreview(); };
         Deactivated += (_, _) => HideDropPreview();
+        Closed += (_, _) => HideDropPreview();
     }
     /// <summary>提示与实际投放目标使用同一原控件身份，不依赖左右位置或界面方案的容器结构。</summary>
     private void UpdateDropPreview(DragEventArgs e)
     {
+        ++_dropPreviewRevision;
         if (_vm is null) return;
         var ancestors = Ancestors(e.Source).OfType<Control>().ToArray();
         var player = ancestors.Contains(PlayerSurface);
@@ -34,7 +47,7 @@ public sealed partial class MainWindow
         string? message = null;
         var name = paths.Length == 1 ? Path.GetFileName(paths[0]) : L10n.Format("Home.DropItems", paths.Length);
         if (player && payload.StartsWith("nonet-tracks:", StringComparison.Ordinal) && DroppedTracks(payload) is { Length: > 0 } dropped) message = L10n.Format("Home.DropPlay", dropped.Length == 1 ? dropped[0].Title : L10n.Format("Home.DropItems", dropped.Length));
-        else if (player && paths.Any(p => MusicLibraryScanner.SupportedExtensions.Contains(Path.GetExtension(p)))) message = L10n.Format("Home.DropPlay", name);
+        else if (player && paths.Any(p => _vm.Plugins.InputFileExtensions.Contains(Path.GetExtension(p), StringComparer.OrdinalIgnoreCase))) message = L10n.Format("Home.DropPlay", name);
         else if (!player && paths.Length == 1 && Path.GetExtension(paths[0]).ToLowerInvariant() is ".lrc" or ".txt") message = L10n.Format("Home.DropLyrics", name);
         else if (payload.StartsWith("nonet-playlist:", StringComparison.Ordinal) && navigation is not null) message = L10n.T("Home.DropPlaylistReorder");
         else if (!player && playlist is not null)
@@ -55,5 +68,5 @@ public sealed partial class MainWindow
         }
         _dropPreviewText!.Text = message; _dropPreview.IsVisible = true;
     }
-    private void HideDropPreview() { if (_dropPreview is not null) _dropPreview.IsVisible = false; }
+    private void HideDropPreview() { ++_dropPreviewRevision; if (_dropPreview is not null) _dropPreview.IsVisible = false; }
 }

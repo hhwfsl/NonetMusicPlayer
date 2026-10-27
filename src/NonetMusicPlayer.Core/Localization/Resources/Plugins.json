@@ -1,4 +1,6 @@
 {
+  "Plugins.FileTransformLimit": {"zh-CN":"文件转换数量或目录层级超过限制。","en-US":"Too many files or nested folders for conversion.","ja-JP":"変換ファイル数またはフォルダー階層が上限を超えています。"},
+  "Plugins.FileTransformFailed": {"zh-CN":"{0} · {1}：{2}","en-US":"{0} · {1}: {2}","ja-JP":"{0} · {1}: {2}"},
   "Extensions.ManagedWarning": {
     "zh-CN": "此插件与 Nonet 共享主进程运行时，具有普通用户权限，不是安全沙箱。普通异常会自动停用插件，但栈溢出、原生崩溃等致命错误仍可能导致 Nonet 退出或数据丢失。仅安装可信插件。是否允许？",
     "en-US": "This plugin shares Nonet's process and runtime with normal user permissions; it is not a sandbox. Ordinary failures disable the plugin, but fatal errors can crash Nonet or cause data loss. Install only trusted plugins. Allow?",

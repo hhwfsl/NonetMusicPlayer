@@ -1,5 +1,6 @@
 # 类型级风格与动画扩展
 
+普通页面过渡可通过可选 `pageTransitions` 定义，能力为 `ui.page-transitions.v1`，支持按路由叠加与有效配置查询。字段、范围和示例见 [页面过渡扩展](PAGE_TRANSITIONS.md)。
 完整布局可在风格文件的可选 `layout` 中定义，使用 SDK 4.15 的 `ui.composition.v1`；旧文件保持有效。控件树、设置接管、条件布局和转场见 [INTERFACE_PRESETS](INTERFACE_PRESETS.md)。
 
 SDK 4.14，能力 `ui.styles.v1`，服务 `styles`。Contract v1/v2、页面 Schema 与 SDK AssemblyVersion 4.0.0.0 不变；旧插件不需要修改或重新打包。

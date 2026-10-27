@@ -6,8 +6,16 @@ internal static class Program
         try
         {
             var output = args.FirstOrDefault() ?? "artifacts/plugin-ui-checks";
+            if (args.Length == 4 && args[0] == "--crash-observer-child") return CrashHandlerChecks.Child(args[1], args[2], args[3]);
+            if (Array.IndexOf(args, "--crash-handler") is var crashIndex && crashIndex >= 0) { CrashHandlerChecks.Run(output, args[crashIndex + 1]); return 0; }
+            if (args.Contains("--catalog-navigation")) { CatalogNavigationChecks.Run(output, Array.IndexOf(args, "--style-file") is var catalogStyle && catalogStyle >= 0 ? args[catalogStyle + 1] : null); return 0; }
+            if (args.Contains("--source-lifecycle")) { SourceLifecycleChecks.Run(output); return 0; }
+            if (args.Contains("--drop-preview")) { DropPreviewLifecycleChecks.Run(output); return 0; }
+            if (args.Contains("--page-transitions")) { PageTransitionChecks.Run(output); return 0; }
+            if (args.Contains("--optimization")) { OptimizationChecks.Run(output); return 0; }
             if (args.Contains("--home-search-layout")) { HomeSearchLayoutChecks.Run(output, Array.IndexOf(args, "--style-file") is var searchStyle && searchStyle >= 0 ? args[searchStyle + 1] : null); return 0; }
             if (args.Contains("--listening-journal")) { ListeningJournalChecks.Run(output); return 0; }
+            if (args.Contains("--file-transforms")) { FileTransformChecks.Run(output); return 0; }
             if (args.Contains("--desktop-interactions")) { DesktopInteractionChecks.Run(output, Array.IndexOf(args, "--style-file") is var interactionStyle && interactionStyle >= 0 ? args[interactionStyle + 1] : null); return 0; }
             if (args.Contains("--settings-continuity")) { SettingsContinuityChecks.Run(output, Array.IndexOf(args, "--style-file") is var settingsStyle && settingsStyle >= 0 ? args[settingsStyle + 1] : null); return 0; }
             if (args.Contains("--statistics-charts")) { StatisticsChartChecks.Run(output, Array.IndexOf(args, "--style-file") is var chartStyle && chartStyle >= 0 ? args[chartStyle + 1] : null); return 0; }

@@ -10,9 +10,9 @@
     "ja-JP": "プレイリスト"
   },
   "Settings.MemoryContinuity": {
-    "zh-CN": "回收未使用的对象，保留页面、滚动位置和播放状态",
-    "en-US": "Collect unused objects while retaining pages, scroll position and playback",
-    "ja-JP": "ページ・スクロール位置・再生を維持して未使用のオブジェクトを回収"
+    "zh-CN": "持续最小化后释放可重建的图片缓存，保留页面、滚动位置与播放状态",
+    "en-US": "Release rebuildable image caches after staying minimized; retain pages, scroll position and playback",
+    "ja-JP": "最小化が続くと再構築可能な画像キャッシュを解放。ページ・スクロール位置・再生は維持"
   },
   "Plugins.DeleteFiles": {
     "zh-CN": "同时删除插件文件",

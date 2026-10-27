@@ -53,6 +53,11 @@ public sealed partial class ExtensionSession
                 var catalogId = args["catalogId"]?.GetValue<string>() ?? ""; var playlistName = args["name"]?.GetValue<string>() ?? Manifest.Name;
                 if (playlistName.Length is 0 or > 200 || playlistName.Any(char.IsControl)) throw new InvalidDataException("Invalid playlist name.");
                 if (!await ConfirmExtensionAsync("media.import", true, L10n.Format("MusicSearch.ImportConfirm", Manifest.Name, playlistName))) return new() { ["success"] = false };
+                if (args["background"]?.GetValue<bool>() == true)
+                {
+                    var job = _manager.BeginCatalogImport(Manifest, catalogId, playlistName, _lifetime.Token);
+                    return new() { ["success"] = true, ["pending"] = true, ["playlistId"] = job.Playlist.Id, ["jobId"] = job.Id };
+                }
                 var imported = await _manager.ReadMusicCatalogAsync(Manifest, catalogId, _lifetime.Token);
                 if (imported.Count == 0) return new() { ["success"] = false, ["message"] = L10n.T("MusicSearch.Empty") };
                 var playlist = _manager.ExtensionViewModel.CreatePlaylist(playlistName); _manager.ExtensionViewModel.AddToPlaylist(playlist, imported);
@@ -183,7 +188,7 @@ public sealed partial class ExtensionSession
         try
         {
             // 音源详情可能组合鉴权、图片和歌词请求，使用有界长时限，不改变旧普通动作的默认时限。
-            var frame = await CallAsync("extension.invoke", new() { ["invocation"] = JsonSerializer.Serialize(new ExtensionInvocation("service:" + name, arguments), ExtensionJson.Default.ExtensionInvocation) }, token, name == "media-source" ? TimeSpan.FromSeconds(120) : null);
+            var frame = await CallAsync("extension.invoke", new() { ["invocation"] = JsonSerializer.Serialize(new ExtensionInvocation("service:" + name, arguments), ExtensionJson.Default.ExtensionInvocation) }, token, name == FileTransformContract.Service ? TimeSpan.FromMinutes(20) : name == "media-source" ? TimeSpan.FromSeconds(120) : null);
             ExtensionContract.ValidateFrame(frame);
             if (frame.Requests.Count > 0) throw new InvalidDataException("Media service results cannot recursively request host transactions.");
             using var document = JsonDocument.Parse(frame.State["serviceResult"]?.ToJsonString() ?? "{}");

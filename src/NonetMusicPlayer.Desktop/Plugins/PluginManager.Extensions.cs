@@ -33,7 +33,7 @@ public sealed partial class PluginManager
         if (!_extensions.TryGetValue(manifest.Id, out var session) || session.IsDisposed) _extensions[manifest.Id] = session = new(this, manifest);
         return session;
     }
-    private void StopExtension(string id, string reason = "lifecycle.disable") { if (_extensions.Remove(id, out var session)) session.Stop(reason); }
+    private void StopExtension(string id, string reason = "lifecycle.disable", bool background = false) { if (_extensions.Remove(id, out var session)) session.Stop(reason, background); }
     internal void ReportExtensionError(Exception error) => _uiVm?.ReportError(L10n.T("Plugins.UnableToOpenPluginPage"), error);
     public IEnumerable<(PluginManifest Plugin, ExtensionContribution Contribution)> Contributions(string slot)
         => Installed.Where(p => p.Enabled && p.Type == "extension" && p.Permissions.Contains("ui-extend")).OrderBy(p => p.Id)

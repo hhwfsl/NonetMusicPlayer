@@ -23,17 +23,17 @@ function Copy-TaskTree([string]$Source, [string]$Target) {
 foreach ($taskFile in @('NonetMusicPlayer.slnx','Directory.Build.props','global.json','NuGet.Config','.editorconfig','.gitignore','.gitattributes','README.md','CHANGELOG.md','LICENSE','AGENTS.md')) {
     Copy-Item -LiteralPath (Join-Path $taskSource $taskFile) -Destination (Join-Path $taskDestination $taskFile)
 }
-foreach ($taskFolder in @('src/NonetMusicPlayer.Desktop','src/NonetMusicPlayer.Core','src/NonetMusicPlayerCli','src/NonetMusicPlayer.PluginSdk','tools/NonetMusicPlayer.PluginPackager','tools/NonetMusicPlayer.IconBuilder','tests','assets/icons','scripts/macos','scripts/windows-installer')) {
+foreach ($taskFolder in @('src/NonetMusicPlayer.Desktop','src/NonetMusicPlayer.Core','src/NonetMusicPlayerCli','src/NonetMusicPlayer.PluginSdk','tools/NonetMusicPlayer.PluginPackager','tools/NonetMusicPlayer.IconBuilder','native/NonetCrashHandler','tests','assets/icons','scripts/macos','scripts/windows-installer')) {
     Copy-TaskTree (Join-Path $taskSource $taskFolder) (Join-Path $taskDestination $taskFolder)
 }
 if ($IncludeAndroid) {
     Copy-TaskTree (Join-Path $taskSource 'src/NonetMusicPlayer.Android') (Join-Path $taskDestination 'src/NonetMusicPlayer.Android')
 }
-foreach ($taskScript in @('publish-desktop.ps1','publish-cli.ps1','package-desktop-update.ps1','verify-clean-desktop.ps1','verify-native-architecture.ps1','build-windows-installer.ps1','sync-plugin-foundation.ps1','pack-plugin.ps1','export-desktop-source.ps1')) {
+foreach ($taskScript in @('publish-desktop.ps1','publish-cli.ps1','package-desktop-update.ps1','verify-clean-desktop.ps1','verify-native-architecture.ps1','build-windows-installer.ps1','build-crash-handler.ps1','verify-windows-installer.ps1','sync-plugin-foundation.ps1','pack-plugin.ps1','export-desktop-source.ps1')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $taskScript) -Destination (Join-Path $taskDestination 'scripts')
 }
 [IO.Directory]::CreateDirectory((Join-Path $taskDestination 'docs')) | Out-Null
-foreach ($taskDocument in @('CLI.md','COMMANDS.md','LOCALIZATION.md','EXTENSIONS.md','UNIVERSAL_EXTENSIONS.md','PLUGIN_DEVELOPMENT.md','RELEASE_VALIDATION.md','STORAGE.md','UI_LAYOUT.md','STYLE_EXTENSIONS.md','INTERFACE_PRESETS.md','UPDATES.md','USER_MANUAL.md','UserManual.zh-CN.md','UserManual.en-US.md','UserManual.ja-JP.md','WINDOWS_INSTALLER.md','BACKGROUND_MEDIA.md','LINUX.md','LAN_LIBRARY.md')) {
+foreach ($taskDocument in @('CLI.md','COMMANDS.md','LOCALIZATION.md','EXTENSIONS.md','UNIVERSAL_EXTENSIONS.md','PLUGIN_DEVELOPMENT.md','RELEASE_VALIDATION.md','STORAGE.md','UI_LAYOUT.md','STYLE_EXTENSIONS.md','INTERFACE_PRESETS.md','UPDATES.md','USER_MANUAL.md','UserManual.zh-CN.md','UserManual.en-US.md','UserManual.ja-JP.md','WINDOWS_INSTALLER.md','BACKGROUND_MEDIA.md','LINUX.md','LAN_LIBRARY.md','PAGE_TRANSITIONS.md','PERFORMANCE_REVIEW.md')) {
     Copy-Item -LiteralPath (Join-Path $taskSource ('docs/' + $taskDocument)) -Destination (Join-Path $taskDestination 'docs')
 }
 Copy-TaskTree (Join-Path $taskSource 'docs/licenses') (Join-Path $taskDestination 'docs/licenses')

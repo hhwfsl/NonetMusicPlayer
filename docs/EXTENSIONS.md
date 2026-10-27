@@ -171,3 +171,10 @@ public Task RefreshAsync() => _runtime!.RunAsync(async token =>
 
 宿主保存显式原文/译文段标识。可导入原生网易云 API JSON 的 lrc/yrc/tlyric/ytlrc 字段以及双段 LRC；普通时间戳重复与旧双语 LRC仍按既有规则处理。旧云端自动歌词可刷新为显式轨道，手动关联歌词不被覆盖。
 
+### 音源启动和目录导入
+
+需要随应用恢复账号状态的扩展声明 `autoStart: true` 与既有 `runtime.startup.v1`。初始化应立即返回，再在后台验证保存的会话；验证过程中返回 `busy: true`，结束后返回状态文字及 `busy: false`，宿主会同步页面状态。不要把自动验证放在“打开插件页”动作中，也不要在配置重载的析构回调中清除会话。
+
+`catalog.list` 中的 ProviderTrack 可直接携带封面与独立歌词轨道。宿主导入时落盘这些元数据，不等待首次播放。插件应分批返回数据并限制图片体积，保持状态帧不超过 Contract 上限；无封面或单张图片失败不应让整个歌单无法导入。搜索型音源应从自己的页面发起 `media/import-catalog`，插件中心不提供无目标的整库读取。
+
+后台导入可声明 "media.import-background.v1" 并传入 "background: true"，使目标歌单先建立、引用先导入、信息随后分批补全。页面可声明 "ui.visibility-actions.v1"，通过 "hideTargets" / "showTargets" 独立切换局部结果可见性。完整参数和兼容行为见 [通用扩展接口](UNIVERSAL_EXTENSIONS.md)。

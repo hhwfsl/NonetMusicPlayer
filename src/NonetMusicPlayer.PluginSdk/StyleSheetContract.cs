@@ -40,6 +40,7 @@ public static partial class StyleSheetContract
         if (sheet.Morph is { } morph && (morph.DurationMs is < 0 or > 1500 || !Finite(morph.CornerRadius, 0, 96) || !Finite(morph.Arc, -240, 240))) throw new InvalidDataException("Invalid morph animation.");
         if (sheet.BackgroundBlur is { } blur && !Finite(blur, 0, 40)) throw new InvalidDataException("Invalid background blur.");
         if (sheet.Layout is not null) InterfaceCompositionContract.Validate(sheet.Layout);
+        if (sheet.PageTransitions is not null) PageTransitionContract.Validate(sheet.PageTransitions);
     }
     private static bool Finite(double? number, double minimum, double maximum) => number is null || double.IsFinite(number.Value) && number >= minimum && number <= maximum;
     [GeneratedRegex("^[a-z][a-z0-9._-]{2,95}$", RegexOptions.CultureInvariant)] private static partial Regex Identity();
@@ -61,6 +62,8 @@ public sealed class StyleSheet
     public StyleMorph? Morph { get; set; }
     public double? BackgroundBlur { get; set; }
     public InterfaceComposition? Layout { get; set; }
+    /// <summary>可选导航动画，省略时沿用宿主默认和较低层的定义。</summary>
+    public PageTransitions? PageTransitions { get; set; }
 }
 public sealed class StyleRule
 {
@@ -94,4 +97,5 @@ public sealed class StyleMorph
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true, WriteIndented = true)]
 [JsonSerializable(typeof(StyleSheet))]
 [JsonSerializable(typeof(List<StyleSheet>))]
+[JsonSerializable(typeof(ResolvedPageTransition))]
 public partial class StyleSheetJson : JsonSerializerContext;

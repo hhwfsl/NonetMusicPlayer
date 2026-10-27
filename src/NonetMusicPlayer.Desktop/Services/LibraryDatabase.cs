@@ -9,6 +9,9 @@ public sealed class LibraryDatabase(string path)
 {
     private const int ApplicationId = 0x4C4D5031;
     private readonly Dictionary<(string Kind, string Id), (int Order, object Value)> _known = [];
+    // 状态/统计与歌曲/歌单分区保存指纹，不重复缓存实体；进度事务只遍历自己的分区。
+    private readonly Dictionary<(string Kind, string Id), (int Order, object Value)> _knownPlayback = [];
+    private Dictionary<(string Kind, string Id), (int Order, object Value)> Known(string kind) => kind is "state" or "listening" ? _knownPlayback : _known;
     private bool _initialized;
     public int LastWrittenRows { get; private set; }
     public string Path { get; } = System.IO.Path.GetFullPath(path);
@@ -24,7 +27,7 @@ public sealed class LibraryDatabase(string path)
         for (var i = 0; !playbackOnly && i < state.Tracks.Count; i++)
         {
             var t = state.Tracks[i];
-            var value = (t.Title, t.Artist, t.Album, t.FilePath, t.Extension, t.FileSize, t.DurationSeconds, t.CoverPath, t.IsFavorite, t.ProviderId, t.ProviderTrackId, t.LyricsSourcePath, t.SourceDeviceKind);
+            var value = (t.Title, t.Artist, t.Album, t.FilePath, t.Extension, t.FileSize, t.DurationSeconds, t.CoverPath, t.IsFavorite, t.ProviderId, t.ProviderTrackId, t.LyricsSourcePath, t.SourceDeviceKind, t.LyricsDisabled);
             yield return new("track", t.Id, i, value, () => JsonSerializer.Serialize(t, AppStorage.Json));
         }
         for (var i = 0; !playbackOnly && i < state.Playlists.Count; i++)
@@ -67,7 +70,11 @@ public sealed class LibraryDatabase(string path)
         }
         if (state is null) throw new InvalidDataException("资料库缺少设置记录。");
         state.Tracks = tracks; state.Playlists = playlists; state.ListeningEntries = listening;
-        _known.Clear(); foreach (var document in Documents(state)) _known[(document.Kind, document.Id)] = (document.Order, document.Fingerprint);
+        _known.Clear(); _knownPlayback.Clear();
+        foreach (var document in Documents(state))
+        {
+            Known(document.Kind)[(document.Kind, document.Id)] = (document.Order, document.Fingerprint);
+        }
         _initialized = true;
         return state;
     }
@@ -86,19 +93,23 @@ public sealed class LibraryDatabase(string path)
         LastWrittenRows = 0;
         foreach (var document in present.Values)
         {
-            if (_known.TryGetValue((document.Kind, document.Id), out var prior) && prior.Order == document.Order && Equals(prior.Value, document.Fingerprint)) continue;
+            if (Known(document.Kind).TryGetValue((document.Kind, document.Id), out var prior) && prior.Order == document.Order && Equals(prior.Value, document.Fingerprint)) continue;
             write.Parameters[0].Value = document.Kind; write.Parameters[1].Value = document.Id; write.Parameters[2].Value = document.Order; write.Parameters[3].Value = document.Serialize(); write.ExecuteNonQuery(); LastWrittenRows++;
         }
         using var remove = connection.CreateCommand(); remove.Transaction = transaction; remove.CommandText = "DELETE FROM entities WHERE kind=$kind AND id=$id;"; remove.Parameters.AddWithValue("$kind", ""); remove.Parameters.AddWithValue("$id", "");
         // 完整恢复/迁移时缓存可能为空，从数据库补足删除集合，避免遗留旧实体。
-        var old = _known.Keys.Where(k => !playbackOnly || k.Kind is "state" or "listening").ToList();
+        var old = playbackOnly ? _knownPlayback.Keys.ToList() : _known.Keys.Concat(_knownPlayback.Keys).ToList();
         if (!_initialized) { using var existing = connection.CreateCommand(); existing.Transaction = transaction; existing.CommandText = "SELECT kind,id FROM entities;"; using var rows = existing.ExecuteReader(); while (rows.Read()) old.Add((rows.GetString(0), rows.GetString(1))); }
         foreach (var key in old.Where(k => !present.ContainsKey(k))) { remove.Parameters[0].Value = key.Kind; remove.Parameters[1].Value = key.Id; remove.ExecuteNonQuery(); LastWrittenRows++; }
         // 明细和汇总同一事务提交，失败时由调用方保留缓冲，不能只写入其中一部分。
         ListeningJournalStore.Write(connection, transaction, journal ?? []);
         transaction.Commit();
-        if (!playbackOnly) _known.Clear(); else foreach (var key in old.Where(k => !present.ContainsKey(k))) _known.Remove(key);
-        foreach (var document in present.Values) _known[(document.Kind, document.Id)] = (document.Order, document.Fingerprint);
+        if (!playbackOnly) _known.Clear();
+        _knownPlayback.Clear();
+        foreach (var document in present.Values)
+        {
+            Known(document.Kind)[(document.Kind, document.Id)] = (document.Order, document.Fingerprint);
+        }
         _initialized = true;
     }
     public void Backup(string destination)

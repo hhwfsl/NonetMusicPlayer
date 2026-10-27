@@ -86,7 +86,9 @@ public sealed partial class MainViewModel
                     }
                     TrimHistory();
                     StatusText = L10n.Format("Playback.Playing0CA729", candidate.FormatText, ModeDescription); Save();
-                    RefreshPlayingRows(); RequestPlayingTrackLocation();
+                    // 最近播放是历史引用的实时投影；成功播放后同步顺序，不导航或重建整页。
+                    if (Page == "history") ApplyFilterCore(incremental: true); else RefreshPlayingRows();
+                    RequestPlayingTrackLocation();
                     if (candidate.ProviderId is not null) _ = CompletePlaybackMetadataAsync(candidate, request, token);
                     return;
                 }

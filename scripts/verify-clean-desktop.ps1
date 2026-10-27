@@ -25,7 +25,9 @@ foreach ($taskRid in $Rids) {
         if ($taskSeen.Count -ne @($taskManifest.files.PSObject.Properties).Count) { throw '清单文件缺失。' }
         $taskExe = if ($taskRid.StartsWith('win-')) { 'Nonet.exe' } elseif ($taskRid.StartsWith('osx-')) { 'Contents/MacOS/Nonet' } else { 'Nonet' }
         $taskLicense = if ($taskRid.StartsWith('osx-')) { 'Contents/MacOS/LICENSE' } else { 'LICENSE' }
-        if (-not $taskSeen.Contains($taskExe) -or -not $taskSeen.Contains($taskLicense)) { throw '缺少 Nonet 可执行文件或 GPL 许可证。' }
+        $taskCrash = if ($taskRid.StartsWith('win-')) { 'NonetCrashHandler.exe' } elseif ($taskRid.StartsWith('osx-')) { 'Contents/MacOS/NonetCrashHandler' } else { 'NonetCrashHandler' }
+        if (-not $taskSeen.Contains($taskExe) -or -not $taskSeen.Contains($taskLicense) -or -not $taskSeen.Contains($taskCrash)) { throw '缺少 Nonet、崩溃观察器或 GPL 许可证。' }
+        if (-not $taskRid.StartsWith('win-') -and ($taskZip.GetEntry($taskCrash).ExternalAttributes -shr 16 -band 0x1FF) -ne 0x1ED) { throw '崩溃观察器缺少 POSIX 可执行权限。' }
         if (-not $taskRid.StartsWith('win-') -and ($taskZip.GetEntry($taskExe).ExternalAttributes -shr 16 -band 0x1FF) -ne 0x1ED) { throw '缺少 POSIX 可执行权限。' }
         if ($taskSeen | Where-Object { $_ -match '(^|/)VideoDecoder/|(^|/)ffmpeg(\.exe)?$|BackgroundDecoder' }) { throw '发布包不应包含已移除的视频背景解码器。' }
         $taskReader = [IO.StreamReader]::new($taskZip.GetEntry($taskLicense).Open())

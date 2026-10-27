@@ -1,4 +1,6 @@
 {
+  "MusicSearch.ImportFailed": { "zh-CN": "云端歌单导入失败，已导入的引用会保留。", "en-US": "Cloud playlist import failed. Imported references have been kept.", "ja-JP": "クラウドプレイリストの取り込みに失敗しました。取り込み済みの参照は保持されます。" },
+  "MusicSearch.MetadataPartial": { "zh-CN": "部分歌曲信息暂时无法获取（{0} 首），已导入的歌曲仍可使用。", "en-US": "Metadata is temporarily unavailable for {0} tracks. Imported tracks are still available.", "ja-JP": "{0} 曲の情報を一時的に取得できません。取り込み済みの曲は引き続き使用できます。" },
   "MusicSearch.Source": { "zh-CN": "搜索来源", "en-US": "Search source", "ja-JP": "検索元" },
   "MusicSearch.Placeholder": { "zh-CN": "搜索歌曲、艺术家", "en-US": "Search tracks and artists", "ja-JP": "曲・アーティストを検索" },
   "MusicSearch.Search": { "zh-CN": "搜索", "en-US": "Search", "ja-JP": "検索" },

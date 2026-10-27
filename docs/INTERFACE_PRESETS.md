@@ -2,6 +2,8 @@
 
 SDK 4.15，能力 `ui.composition.v1`。它扩展既有 `styles` 服务，不改变 Contract v1/v2、页面 Schema 或 SDK 程序集基线 4.0.0.0。
 
+普通导航动画可在风格顶层使用 `pageTransitions` 单独定义，无须替换布局。既有 `layout.motion` 字段继续有效，见 [页面过渡扩展](PAGE_TRANSITIONS.md)。
+
 ## 1. 运行模型
 
 界面方案沿用 `style.json`：配色、类型级样式和动画定义不变，新增可选 `layout`。只有风格的旧文件继续有效。文件是有界数据，不加载脚本、XAML、程序集、网络资源或任意本机路径。

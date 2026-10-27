@@ -30,7 +30,8 @@ internal static class MusicSearchChecks
         }
         var storage=new AppStorage(Path.Combine(root,"data"));using var vm=new MainViewModel(new MusicLibraryScanner(storage),new FakeAudio());
         vm.Settings.CloseToTray=false;vm.Settings.ConfirmClose=false;var window=new MainWindow { DataContext=vm,Width=1200,Height=800 };window.Show();
-        var plugin=vm.Plugins.Install(package);vm.Plugins.SetEnabled(plugin,true);vm.Navigate("library");Pump();
+        // 按实际插件中心操作路径切页，避免重复导航被有意忽略后检查旧首页快照。
+        vm.Navigate("plugins");var plugin=vm.Plugins.Install(package);vm.Plugins.SetEnabled(plugin,true);vm.Navigate("library");Pump();
         Wait(vm.Plugins.Extension(plugin).StartAsync());
         // 通用图片夹具独立于私人扫码业务，验证替换、无效输入与资源释放。
         using(var view=new ExtensionPageView(vm.Plugins,plugin,new() { Type="image",ImageDataBind="image",Width=96,Height=96 }))
@@ -41,7 +42,7 @@ internal static class MusicSearchChecks
             Wait(vm.Plugins.Extension(plugin).InvokeAsync("invalid-image",new()));Pump();Check(image.Source is null&&!vm.Plugins.Extension(plugin).IsDisposed,"Invalid image is harmless");
             imageWindow.Close();Pump();
         }
-        var selector=window.GetVisualDescendants().OfType<ComboBox>().Single(c=>c.Name=="MusicSearchSource");Check(selector.SelectedIndex==0&&selector.Items.Count==2,"Local default and optional source");
+        var selector=window.GetVisualDescendants().OfType<ComboBox>().Single(c=>c.Name=="MusicSearchSource");Check(selector.SelectedIndex==0&&selector.Items.Count==2,$"Local default and optional source: selected={selector.SelectedIndex}, items={selector.Items.Count}, enabled={plugin.Enabled}, sources={vm.Plugins.MusicSearchSources.Count}");
         Wait(vm.SearchMusicAsync(plugin.Id,"fixture"));Check(vm.Page=="cloud-search"&&vm.VisibleTracks.Count==1&&vm.State.Tracks.Count==0,"Search without automatic import");
         var cloud=vm.VisibleTracks.Single();Check(cloud.HasArtwork&&cloud.HasSearchCover&&File.Exists(cloud.CoverPath),"Search preview has a cover before playback");
         var playlist=vm.CreatePlaylist("Mixed source");vm.AddToPlaylist(playlist,[cloud]);Check(vm.State.Tracks.Single().ProviderTrackId=="remote-1"&&cloud.IsCloud,"Cloud ID persisted");
@@ -51,7 +52,7 @@ internal static class MusicSearchChecks
         vm.Save();Check(storage.Load().Tracks.Single().ProviderId==plugin.Id,"SQLite roundtrip");
         Wait(vm.SearchMusicAsync("","Cloud fixture"));Check(vm.Page=="songs"&&vm.VisibleTracks.Count==1,"Local collection search uses imported references");
         vm.Navigate("library");Pump();using(var bitmap=new RenderTargetBitmap(new PixelSize(1200,800))) { bitmap.Render(window);bitmap.Save(Path.Combine(root,"music-search.png"),PngBitmapEncoderOptions.Default); }
-        vm.DisablePlugin(plugin);vm.Navigate("library");Pump();Check(window.GetVisualDescendants().OfType<ComboBox>().Single(c=>c.Name=="MusicSearchSource").Items.Count==1,"Disabled source removed");
+        vm.Navigate("plugins");vm.DisablePlugin(plugin);vm.Navigate("library");Pump();Check(window.GetVisualDescendants().OfType<ComboBox>().Single(c=>c.Name=="MusicSearchSource").Items.Count==1,"Disabled source removed");
         Check(vm.State.Tracks.Count==1&&playlist.TrackIds.Count==1,"Disabling preserves playlist references");
         RunPaged(root,fixture,vm,window);
         window.Close();Pump();Console.WriteLine("PASS generic music search registration/UI, cloud playlist references/SQLite, refresh, catalog, local filter and disable; "+root);

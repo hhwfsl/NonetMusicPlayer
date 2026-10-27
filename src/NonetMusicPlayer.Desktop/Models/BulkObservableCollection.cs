@@ -15,6 +15,26 @@ public sealed class BulkObservableCollection<T> : ObservableCollection<T>
         OnPropertyChanged(new(nameof(Count))); OnPropertyChanged(new("Item[]"));
         OnCollectionChanged(new(NotifyCollectionChangedAction.Add, added, index));
     }
+    /// <summary>小范围顺序变化保留现有容器；大量增删或移动回退到一次快照重置。</summary>
+    public void SynchronizeOrder(IEnumerable<T> source)
+    {
+        var snapshot = source.Distinct().ToArray();
+        if (Math.Abs(snapshot.Length - Count) > 64) { ReplaceAll(snapshot); return; }
+        var retained = snapshot.ToHashSet(); var changes = 0;
+        for (var i = Count - 1; i >= 0; i--) if (!retained.Contains(this[i]))
+        {
+            if (++changes > 64) { ReplaceAll(snapshot); return; }
+            RemoveAt(i);
+        }
+        for (var i = 0; i < snapshot.Length; i++)
+        {
+            if (i < Count && EqualityComparer<T>.Default.Equals(this[i], snapshot[i])) continue;
+            if (++changes > 64) { ReplaceAll(snapshot); return; }
+            var oldIndex = IndexOf(snapshot[i]);
+            if (oldIndex >= 0) Move(oldIndex, i); else Insert(i, snapshot[i]);
+        }
+        while (Count > snapshot.Length) RemoveAt(Count - 1);
+    }
     public void ReplaceAll(IEnumerable<T> source)
     {
         var snapshot = source.ToArray();

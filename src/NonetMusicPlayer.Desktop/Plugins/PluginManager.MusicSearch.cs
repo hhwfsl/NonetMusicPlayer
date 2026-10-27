@@ -71,7 +71,7 @@ public sealed partial class PluginManager
     private static TrackItem CreateSourceTrack(PluginManifest plugin, ProviderTrack item)
     {
         MusicSearchContract.ValidateTrack(item);
-        return new(plugin.Id + ":" + item.Id, item.Title, item.Artist, item.Album, "", "." + item.Format, 0)
+        return new(plugin.Id + ":" + item.Id, item.Title, ViewModels.MainViewModel.GroupDisplayName("artist", item.Artist), ViewModels.MainViewModel.GroupDisplayName("album", item.Album), "", "." + item.Format, 0)
         { ProviderId = plugin.Id, ProviderTrackId = item.Id, DurationSeconds = item.DurationSeconds };
     }
     /// <summary>搜索缩略图在加入歌单时转存，临时缓存清理不影响持久引用。</summary>
@@ -122,18 +122,51 @@ public sealed partial class PluginManager
         PersistSearchCover(track);
     }
     /// <summary>先完整校验目录，再一次性建立歌单，失败不留下半个歌单。</summary>
-    public async Task<IReadOnlyList<TrackItem>> ReadMusicCatalogAsync(PluginManifest plugin, string catalogId, CancellationToken token = default)
+    public Task<IReadOnlyList<TrackItem>> ReadMusicCatalogAsync(PluginManifest plugin, string catalogId, CancellationToken token = default)
+        => ReadMusicCatalogAsync(plugin, catalogId, token, includeArtwork: true);
+    private async Task<IReadOnlyList<TrackItem>> ReadMusicCatalogAsync(PluginManifest plugin, string catalogId, CancellationToken token, bool includeArtwork)
     {
         if (catalogId.Length is 0 or > 300) throw new InvalidDataException("Invalid catalog ID.");
         var tracks = new List<TrackItem>(); var seen = new HashSet<string>(StringComparer.Ordinal); var cursor = "";
         do
         {
             if (!seen.Add(cursor)) throw new InvalidDataException("Repeated catalog cursor.");
-            var result = await CallMediaAsync(plugin, "catalog.list", new() { ["catalogId"] = catalogId, ["cursor"] = cursor }, token);
+            var result = await CallMediaAsync(plugin, "catalog.list", new() { ["catalogId"] = catalogId, ["cursor"] = cursor, ["includeArtwork"] = includeArtwork ? "true" : "false" }, token);
             var page = result.Deserialize(MusicSourceJson.Default.ProviderCatalog) ?? throw new InvalidDataException("Empty music catalog.");
             if (page.Tracks.Count > 1000 || tracks.Count + page.Tracks.Count > 50000 || page.NextCursor?.Length > 512) throw new InvalidDataException("Music catalog exceeds limit.");
-            tracks.AddRange(page.Tracks.Select(t => CreateSourceTrack(plugin, t))); cursor = page.NextCursor ?? "";
+            var batch = page.Tracks.Select(t => CreateSourceTrack(plugin, t)).ToArray();
+            if (includeArtwork) await PersistCatalogMetadataAsync(plugin, page.Tracks, batch, token);
+            tracks.AddRange(batch); cursor = page.NextCursor ?? "";
         } while (cursor.Length > 0);
         return tracks.DistinctBy(t => t.Id).ToArray();
     }
+    /// <summary>所有音源共用导入元数据落盘流程，不等待首次播放，也不保留整库 Base64。</summary>
+    private Task PersistCatalogMetadataAsync(PluginManifest plugin, IReadOnlyList<ProviderTrack> items, TrackItem[] tracks, CancellationToken token)
+        => Task.Run(() =>
+        {
+            var lyrics = _uiVm?.Lyrics ?? new LyricsService(_storage.DefaultLyricsFolder);
+            for (var i = 0; i < tracks.Length; i++)
+            {
+                token.ThrowIfCancellationRequested();
+                var item = items[i]; var track = tracks[i]; MusicSearchContract.ValidateTrack(item);
+                if (item.CoverBase64 is { Length: > 0 } cover)
+                {
+                    try
+                    {
+                        var path = Path.Combine(_storage.ArtworkFolder, MusicLibraryScanner.StableId(track.Id) + ".image"); PluginPathPolicy.RejectLinkedAncestors(path);
+                        if (!File.Exists(path))
+                        {
+                            using var image = BoundedPluginImage.Decode(cover, 512);
+                            var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                            try { image.Save(temporary, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); File.Move(temporary, path, false); }
+                            finally { if (File.Exists(temporary)) File.Delete(temporary); }
+                        }
+                        track.CoverPath = path;
+                    }
+                    catch (Exception error) when (error is InvalidDataException or FormatException or ArgumentException or IOException)
+                    { AppLog.Warning("MusicSource", "Catalog artwork unavailable: " + plugin.Id, error); }
+                }
+                if (item.Lyrics is { Length: > 0 } text && lyrics.ExistingPath(track.Id) is null) lyrics.SaveProvider(track.Id, text, item.LyricsTranslation);
+            }
+        }, token);
 }

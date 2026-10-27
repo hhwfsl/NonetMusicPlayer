@@ -8,10 +8,10 @@ namespace NonetMusicPlayer.Core.Plugins;
 public static class ExtensionContract
 {
     public const int Version = 2;
-    public static readonly string[] Capabilities = ["ui.tree.v2", "ui.select-options.v1", "statistics.charts.v1", "lyrics.v1", "dialogs.v1", "state.v1", "actions.v1", "events.v1", "commands.v1", "services.v1", "files.pick.v1", "ui.layout-bind.v1", "ui.context-menu.v1", "ui.controls.v1", "dialogs.prompt.v1", "approvals.v1", "ui.workspace.v1", "runtime.declarative.v1", "development.v1", "ui.assets.v1", "ui.composer.v1", "config.approval.v1", "interaction.v1", "ui.overlay.v1", "ui.large-text.v1", "ui.page-optional.v1", StyleSheetContract.Capability, InterfaceCompositionContract.Capability, InterfaceCompositionContract.PlaylistCardsCapability, UniversalExtensionContract.StartupCapability, UniversalExtensionContract.NetworkLibraryCapability, .. UniversalExtensionContract.Capabilities];
+    public static readonly string[] Capabilities = ["ui.tree.v2", "ui.visibility-actions.v1", "ui.select-options.v1", "statistics.charts.v1", "lyrics.v1", "dialogs.v1", "state.v1", "actions.v1", "events.v1", "commands.v1", "services.v1", "files.pick.v1", "ui.layout-bind.v1", "ui.context-menu.v1", "ui.controls.v1", "dialogs.prompt.v1", "approvals.v1", "ui.workspace.v1", "runtime.declarative.v1", "development.v1", "ui.assets.v1", "ui.composer.v1", "config.approval.v1", "interaction.v1", "ui.overlay.v1", "ui.large-text.v1", "ui.page-optional.v1", StyleSheetContract.Capability, PageTransitionContract.Capability, InterfaceCompositionContract.Capability, InterfaceCompositionContract.PlaylistCardsCapability, FileTransformContract.Capability, UniversalExtensionContract.StartupCapability, UniversalExtensionContract.NetworkLibraryCapability, .. UniversalExtensionContract.Capabilities];
     public static readonly string[] Slots = ["lyrics.more", "song.more", "playlist.more", "player.actions", "titlebar.actions", "home.cards", "overlay", "page.music", "page.lyrics", "page.songs", "page.history", "page.albums", "page.artists", "page.playlist", "page.statistics", .. UniversalExtensionContract.Slots];
     public static readonly string[] Permissions = ["process", "network", "navigation", "player-control", "music-read", "library-write",
-        "settings-write", "window-control", "plugins-control", "lyrics-write", "user-files", "in-process", "ui-extend", "plugin-services", "plugin-development", "workflow", "native-ui", "audio-tags", "audio-processing"];
+        "settings-write", "window-control", "plugins-control", "lyrics-write", "user-files", "in-process", "ui-extend", "plugin-services", "plugin-development", "workflow", "native-ui", "audio-tags", "audio-processing", "file-transform"];
     public static ExtensionPage ReadPage(Stream input)
     {
         using var buffer = new MemoryStream(); input.CopyTo(buffer);
@@ -45,6 +45,8 @@ public static class ExtensionContract
                 if (values.Length is not (1 or 2 or 4) || values.Any(value => !double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var size) || !double.IsFinite(size) || Math.Abs(size) > 512))
                     throw new InvalidDataException("Invalid layout spacing.");
             }
+            if (node.HideTargets is null || node.ShowTargets is null || node.HideTargets.Count > 32 || node.ShowTargets.Count > 32
+                || node.HideTargets.Concat(node.ShowTargets).Any(id => string.IsNullOrWhiteSpace(id) || id.Length > 100 || id.Any(c => !char.IsLetterOrDigit(c) && c is not ('-' or '_' or '.')))) throw new InvalidDataException("Invalid local visibility target.");
             if (node.PopupPlacement is not ("auto" or "top" or "bottom")) throw new InvalidDataException("Invalid select popup placement.");
             if (node.Asset.Length > 0) PluginPathPolicy.ValidateRelativePath(node.Asset);
             if (node.ImageDataBind.Length > 200 || node.ImageDataBind.Length > 0 && node.Type != "image") throw new InvalidDataException("Invalid image data binding.");
@@ -132,6 +134,11 @@ public sealed class ExtensionNode
     public bool Horizontal { get; set; }
     public bool Multiline { get; set; }
     public bool ScrollToEnd { get; set; }
+    /// <summary>界面自身的显示/隐藏操作先于 RPC 执行，不受网络事务占用会话的影响。</summary>
+    public List<string> HideTargets { get; set; } = [];
+    public List<string> ShowTargets { get; set; } = [];
+    /// <summary>只读文本获取焦点时保持所在滚动容器的位置。</summary>
+    public bool PreserveScroll { get; set; }
     public List<ExtensionNode> Children { get; set; } = [];
     public List<ExtensionNode> ContextActions { get; set; } = [];
     public ExtensionNode? Template { get; set; }

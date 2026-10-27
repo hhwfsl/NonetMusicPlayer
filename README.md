@@ -24,7 +24,7 @@
 
 | 产品 | 当前版本 | 发行说明 |
 | --- | --- | --- |
-| 桌面 | [0.4.0-beta.39](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.39) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
+| 桌面 | [0.4.0-beta.40](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.40) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
 | CLI | [0.4.0-beta.32](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.32) | Windows、Linux、macOS x64 |
 | Android | [0.3.0-beta.9](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/android-v0.3.0-beta.9) | API 28+；通用 APK；沿用既有测试签名 |
 
@@ -36,6 +36,7 @@
 | --- | --- |
 | 构建与语言 | .NET SDK 10.0.401，C#，目标 net10.0 |
 | 桌面界面 | Avalonia / Desktop / Fluent / Inter 12.1.1 |
+| 崩溃观察器 | C++17，Zig 0.15.2 交叉编译；独立本地进程 |
 | MVVM | CommunityToolkit.Mvvm 8.4.2 |
 | 音频 | SoundFlow 1.4.1，SoundFlow.Codecs.FFMpeg 1.4.0 |
 | 媒体标签 | TagLibSharp 2.3.0 |
@@ -48,6 +49,8 @@
 | Android 数据 / SDK | 系统 SQLite；compile / target / min SDK 为 36 / 36 / 28 |
 
 CLI 不引用 Avalonia，通过系统终端运行。插件 SDK 无图形、音频或外部 NuGet 依赖。实际依赖以各项目的 `.csproj` 为准；第三方许可见 [docs/licenses](docs/licenses)。
+
+桌面发行构建还需要 C/C++ 编译器；使用 `NONET_ZIG` 指定 Zig 路径。崩溃观察器的构建、平台行为与测试见 [native/NonetCrashHandler](native/NonetCrashHandler/README.md)。
 
 ## 📜 许可证
 

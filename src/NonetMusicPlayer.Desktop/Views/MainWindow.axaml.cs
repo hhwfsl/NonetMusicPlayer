@@ -216,9 +216,10 @@ public sealed partial class MainWindow : Window
     public void ShowPage()
     {
         if (_vm is null) return;
+        var previousPageId = _displayedPage;
         var navigated = _displayedPage != _vm.Page;
         var lyricsTransition = navigated && (_displayedPage == "lyrics" || _vm.Page == "lyrics") && IsVisible && WindowState != WindowState.Minimized;
-        _lyricsMotion.Cancel();
+        _pageMotion.Cancel(); _lyricsMotion.Cancel();
         var transitionLayer = (Grid)WindowSurface.Child!;
         var lyricsRegion = LyricsTransitionRegion();
         var previousPageSize = WindowSurface.Bounds.Size;
@@ -227,8 +228,10 @@ public sealed partial class MainWindow : Window
         SuspendElementExtensions();
         _displayedPage = _vm.Page;
         _activeMenu?.Close();
+        // 先释放上一页网格，再重算工具栏尺寸，避免导航时重新创建旧页面卡片。
+        DisposePage();
         if (_selectionPage != _vm.Page) { _selectionPage = _vm.Page; SetBatchMode(false); }
-        DisposePage(); BuildPlaylists(); BuildPluginNavigation(); BuildExtensionSlots();
+        BuildPlaylists(); BuildPluginNavigation(); BuildExtensionSlots();
         var slot = _vm.Page switch { "library" => "page.music", "songs" => "page.songs", "history" => "page.history",
             "albums" => "page.albums", "artists" => "page.artists", "statistics" => "page.statistics", _ => _vm.Page.StartsWith("playlist:") ? "page.playlist" : "" };
         var replacement = slot.Length > 0 ? ExtensionReplacement(slot) : null;
@@ -280,7 +283,11 @@ public sealed partial class MainWindow : Window
         {
             previousPage?.Dispose();
             if (navigated && IsVisible && WindowState != WindowState.Minimized)
-                _pageMotion.Enter(lyrics ? FullLyricsHost : alternate ? AlternatePage : LibraryPage, InterfaceMotionProfile?.PageDurationMs ?? 140);
+            {
+                if (lyrics || previousPageId == "lyrics")
+                    _pageMotion.Enter(lyrics ? FullLyricsHost : alternate ? AlternatePage : LibraryPage, InterfaceMotionProfile?.PageDurationMs ?? 140);
+                else _pageMotion.EnterPage(alternate ? AlternatePage : LibraryPage, ResolvePageTransition(previousPageId ?? "", _vm.Page));
+            }
         }
     }
     private void BuildPlaylists()
@@ -313,7 +320,7 @@ public sealed partial class MainWindow : Window
     private async Task AddFilesAsync()
     {
         if (_vm?.CurrentPlaylist is null) { _vm?.ReportWarning(L10n.T("Playlists.SelectAPlaylistBeforeAddingMusic")); return; }
-        var paths = await OpenFilesAsync(L10n.T("Library.AddMusicFiles"), Services.MusicLibraryScanner.SupportedExtensions.Select(x => "*" + x).ToArray());
+        var paths = await OpenFilesAsync(L10n.T("Library.AddMusicFiles"), _vm!.Plugins.InputFileExtensions.Select(x => "*" + x).ToArray());
         if (paths.Length > 0 && _vm is not null) await _vm.ImportAsync(paths, _vm.CurrentPlaylist?.IsSystem == true, _vm.CurrentPlaylist);
     }
     private async void AddFolder_Click(object? sender, RoutedEventArgs e) => await AddFolderAsync();
@@ -403,7 +410,7 @@ public sealed partial class MainWindow : Window
         var ids = _vm!.VisibleTracks.Where(t => selectedIds.Contains(t.Id)).Select(t => t.Id).ToArray(); if (ids.Length == 0) return;
         _dragging = true; var press = _dragPress; _dragPress = null;
         try { var transfer = new DataTransfer(); transfer.Add(DataTransferItem.CreateText("nonet-tracks:" + string.Join('\n', ids))); await DragDrop.DoDragDropAsync(press, transfer, DragDropEffects.Copy | DragDropEffects.Move); }
-        finally { _dragging = false; }
+        finally { _dragging = false; HideDropPreview(); }
     }
     private void DragOver(object? sender, DragEventArgs e) { var text = e.DataTransfer.TryGetText(); e.DragEffects = text?.StartsWith("nonet-playlist:") == true ? DragDropEffects.Move : e.DataTransfer.Contains(DataFormat.File) || text?.StartsWith("nonet-tracks:") == true ? DragDropEffects.Copy : DragDropEffects.None; UpdateDropPreview(e); e.Handled = true; }
     private async void Library_Drop(object? sender, DragEventArgs e) { if (e.Handled) return; e.Handled = true; if (TryReorderTracks(e)) return; await DropAsync(e, _vm?.CurrentPlaylist?.IsSystem == true, _vm?.CurrentPlaylist); }

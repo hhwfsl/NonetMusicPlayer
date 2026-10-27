@@ -288,11 +288,16 @@ public sealed partial class ExtensionSession : IDisposable
     }
     private async Task DisposeManagedAsync(string reason) { try { await ReleaseAudioAsync(); await _managed!.Instance.EventAsync(new(reason, new()), CancellationToken.None).AsTask().WaitAsync(TimeSpan.FromSeconds(2)); await _managed.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2)); } catch (Exception error) { AppLog.Warning("Extensions", "Managed cleanup failed.", error); } }
     public void Dispose() => Stop("lifecycle.shutdown");
-    public void Stop(string reason)
+    public void Stop(string reason, bool background = false)
     {
         if (_disposed) return; _disposed = true; _lifetime.Cancel();
-        if (_process is not null) { _process.NotifyLifecycle(Manifest, reason); _process.Dispose(); }
-        if (_managed is not null) _ = DisposeManagedAsync(reason);
+        if (_process is not null)
+        {
+            void StopProcess() { _process.NotifyLifecycle(Manifest, reason); _process.Dispose(); }
+            if (background) _ = Task.Run(StopProcess); else StopProcess();
+        }
+        // 析构回调可能在第一个 await 之前执行同步 I/O，不能在配置保存的 UI 线程调用。
+        if (_managed is not null) _ = Task.Run(() => DisposeManagedAsync(reason));
         if (_declarative is not null) _ = _declarative.DisposeAsync();
     }
 }

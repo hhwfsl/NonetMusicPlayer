@@ -35,6 +35,17 @@ internal static partial class ReleaseVerifier
             NativePump(() => window.StyleLayers.Catalog()["activeLayers"]!.AsArray().Count == 1);
             window.UpdateLayout();
             var startupSearchWidth = window.GetVisualDescendants().OfType<TextBox>().Single(c => c.Name == "HomeMusicSearch").Bounds.Width;
+            if (window.StyleLayers.Catalog()["pageTransitions"]?["capability"]?.GetValue<string>() != PageTransitionContract.Capability) throw new InvalidDataException("Published page transition capability missing.");
+            var motionSheet = new StyleSheet { Id = "release.navigation-motion", Name = "Navigation verification", PageTransitions = new() { Defaults = new() { Effect = "fade", DurationMs = 70, StartOpacity = .5 } } };
+            window.ApplyInterfaceLayers("release-motion", [motionSheet]);
+            var resolvedMotion = window.ResolvePageTransition("library", "history");
+            var motionJson = JsonSerializer.SerializeToNode(resolvedMotion, StyleSheetJson.Default.ResolvedPageTransition);
+            if (motionJson?["effect"]?.GetValue<string>() != "fade" || resolvedMotion.DurationMs != 70) throw new InvalidDataException("Published transition source generation / stack failed.");
+            var libraryTarget = window.FindControl<Grid>("LibraryPage")!; var originalOpacity = libraryTarget.Opacity;
+            vm.Navigate("history");
+            if (InterfaceMotion.IsEnabled && libraryTarget.Opacity >= originalOpacity) throw new InvalidDataException("Published page transition did not enter before the first frame.");
+            NativePump(() => Math.Abs(libraryTarget.Opacity - originalOpacity) < .001);
+            window.ApplyInterfaceLayers("release-motion", []); vm.Navigate("library"); window.UpdateLayout();
             vm.Navigate("history"); window.UpdateLayout(); vm.Navigate("library"); window.UpdateLayout();
             var returnedSearchWidth = window.GetVisualDescendants().OfType<TextBox>().Single(c => c.Name == "HomeMusicSearch").Bounds.Width;
             if (Math.Abs(startupSearchWidth - returnedSearchWidth) > .1) throw new InvalidDataException("Startup search width differs after navigation.");
@@ -54,7 +65,7 @@ internal static partial class ReleaseVerifier
             if (preview.Parent == parent) throw new InvalidDataException("Container did not expand.");
             vm.Navigate("settings"); NativePump(() => preview.Parent == parent);
             vm.DisablePlugin(plugin); window.ApplyInterfaceLayers("release-fixture", []); NativePump(() => window.StyleLayers.Catalog()["activeLayers"]!.AsArray().Count == 0);
-            AppStorage.AtomicWrite(Path.Combine(root, "result.txt"), "PASS\nActualPublishedHost=True\nStyleResources=True\nNativePage=True\nReparentRetainsNativePage=True\nTemplateParts=True\nContainerMorph=True\nNavigationRestoresParent=True\nResetRestoresAppearance=True\n");
+            AppStorage.AtomicWrite(Path.Combine(root, "result.txt"), "PASS\nActualPublishedHost=True\nPageTransitions=True\nTransitionSourceGeneration=True\nStyleResources=True\nNativePage=True\nReparentRetainsNativePage=True\nTemplateParts=True\nContainerMorph=True\nNavigationRestoresParent=True\nResetRestoresAppearance=True\n");
             return 0;
         }
         catch (Exception error) { AppStorage.AtomicWrite(Path.Combine(root, "result.txt"), "FAIL\n" + AppLog.Redact(error.ToString())); return 1; }

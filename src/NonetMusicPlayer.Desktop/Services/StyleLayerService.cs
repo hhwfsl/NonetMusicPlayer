@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using System.Buffers;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -57,6 +58,7 @@ public sealed class StyleLayerService : IDisposable
     public JsonObject Catalog() => new() { ["success"] = true, ["capability"] = StyleSheetContract.Capability,
         ["types"] = Array(StyleSheetContract.ControlTypes), ["properties"] = Array(StyleSheetContract.Properties),
         ["resources"] = Array(StyleSheetContract.ResourceNames), ["order"] = "layers are bottom-to-top; later owners win per property",
+        ["pageTransitions"] = PageTransitionContract.Catalog(),
         ["activeLayers"] = new JsonArray(_owners.SelectMany(o => o.Value.Select(s => (JsonNode)new JsonObject { ["owner"] = o.Key, ["id"] = s.Id, ["name"] = s.Name })).ToArray()) };
     private static JsonArray Array(IEnumerable<string> items) => new(items.Select(s => (JsonNode?)JsonValue.Create(s)).ToArray());
 
@@ -213,12 +215,22 @@ public sealed class StyleLayerService : IDisposable
     }
     private void Tick(object? sender, EventArgs args)
     {
-        foreach (var (channel, tween) in _animations.ToArray())
+        if (_animations.Count == 0) { _timer.Stop(); return; }
+        // 回调可能修改动画集合，仍使用快照语义；池化数组避免每帧创建新的快照数组。
+        var snapshot = ArrayPool<KeyValuePair<Channel, Tween>>.Shared.Rent(_animations.Count);
+        var count = 0;
+        foreach (var animation in _animations) snapshot[count++] = animation;
+        try
         {
-            var t = Math.Clamp((Environment.TickCount64 - tween.Started) / (double)tween.Duration, 0, 1);
-            channel.Set(Interpolate(tween.From, tween.To, Ease(t, tween.Curve)));
-            if (t >= 1) { _animations.Remove(channel); tween.Finished?.Invoke(); }
+            for (var i = 0; i < count; i++)
+            {
+                var (channel, tween) = snapshot[i];
+                var t = Math.Clamp((Environment.TickCount64 - tween.Started) / (double)tween.Duration, 0, 1);
+                channel.Set(Interpolate(tween.From, tween.To, Ease(t, tween.Curve)));
+                if (t >= 1) { _animations.Remove(channel); tween.Finished?.Invoke(); }
+            }
         }
+        finally { ArrayPool<KeyValuePair<Channel, Tween>>.Shared.Return(snapshot, clearArray: true); }
         if (_animations.Count == 0) _timer.Stop();
     }
     public static double Ease(double t, string curve = "parabolic") => curve switch { "linear" => t, "cubic-out" => 1 - Math.Pow(1 - t, 3), _ => 1 - (1 - t) * (1 - t) };

@@ -148,8 +148,8 @@ public sealed partial class PluginManager : IDisposable
         var persisted = Scrub(document.RootElement).AsObject(); PluginConfigSchema.RemoveSensitiveFields(schema, persisted); manifest.Configuration = persisted.ToJsonString();
         try { if (manifest.Enabled && manifest.Type is "ui" or "lyrics" or "agent") ReadUiPage(manifest); Save(); if (manifest.Type is "agent" or "extension") PluginConfigurationStore.Write(_storage.PluginsFolder, manifest, json, manifest.Configuration); }
         catch { manifest.ApprovalMode = priorApproval; manifest.Configuration = previous; manifest.AudioTagWriteConsent = priorTagConsent; if (priorSession is null) _sessionConfiguration.Remove(manifest.Id); else _sessionConfiguration[manifest.Id] = priorSession; Save(); throw; }
-        StopExtension(manifest.Id);
-        if (_clients.Remove(manifest.Id, out var client)) client.Dispose();
+        StopExtension(manifest.Id, background: true);
+        if (_clients.Remove(manifest.Id, out var client)) _ = Task.Run(client.Dispose);
         if (manifest.Type is "ui" or "lyrics" or "agent" or "extension") { NotifyUiUnavailable(manifest.Id); if (_pets.Remove(manifest.Id, out var pet)) pet.Close(); RefreshUiRuntime(manifest); }
         OperationCompleted?.Invoke(this, CommandResults.Completed("plugins.config"));
     }
@@ -263,7 +263,7 @@ public sealed partial class PluginManager : IDisposable
     }
     public void Dispose()
     {
-        DisposeUiRuntime();
+        CancelCatalogImports(); DisposeUiRuntime();
         foreach (var pair in _clients) { if (Installed.FirstOrDefault(p => p.Id == pair.Key) is { } manifest) pair.Value.NotifyLifecycle(manifest, "lifecycle.shutdown"); pair.Value.Dispose(); } _clients.Clear();
         foreach (var manifest in Installed.Where(p => p.Type is "ui" or "widget" or "lyrics" or "agent" or "extension")) NotifyUiUnavailable(manifest.Id);
         foreach (var manifest in Installed.Where(p => p.Enabled)) PublishLifecycle(manifest, "shutdown");

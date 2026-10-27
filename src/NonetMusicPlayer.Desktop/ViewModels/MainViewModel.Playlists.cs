@@ -30,20 +30,28 @@ public sealed partial class MainViewModel
         if (page == "temporary") return _temporaryTracks;
         var providers = Plugins.Installed.Where(p => p.Enabled).Select(p => p.Id).ToHashSet(StringComparer.Ordinal);
         bool Available(TrackItem t) => t.ProviderId is null || t.ProviderId.StartsWith("lan:", StringComparison.Ordinal) || providers.Contains(t.ProviderId);
-        var byId = TrackIndex();
-        var referenced = State.Playlists.SelectMany(p => p.TrackIds).ToHashSet(StringComparer.Ordinal);
-        var available = State.Tracks.Where(t => Available(t) && referenced.Contains(t.Id));
         var playlist = State.Playlists.FirstOrDefault(p => "playlist:" + p.Id == page || page == "favorites" && p.IsSystem);
-        IEnumerable<TrackItem> result = available;
-        if (playlist is not null) result = playlist.TrackIds.Select(id => byId.GetValueOrDefault(id)).OfType<TrackItem>().Where(Available);
-        else if (page == "history")
+        // 歌单和最近播放已有明确引用，不扫描其他歌单建立全库引用集合。
+        if (playlist is not null)
         {
+            var byId = TrackIndex();
+            return playlist.TrackIds.Select(id => byId.GetValueOrDefault(id)).OfType<TrackItem>().Where(Available);
+        }
+        IEnumerable<TrackItem> result;
+        if (page == "history")
+        {
+            var byId = TrackIndex();
             var recent = State.RecentTemporaryTracks.ToDictionary(t => t.Id, StringComparer.Ordinal);
             result = State.History.Select(id => byId.GetValueOrDefault(id) ?? recent.GetValueOrDefault(id)).OfType<TrackItem>().Where(Available);
         }
-        else if (page.StartsWith("album:", StringComparison.Ordinal)) result = available.Where(t => t.Album == page[6..]);
-        else if (page.StartsWith("artist:", StringComparison.Ordinal)) result = available.Where(t => t.Artist == page[7..]);
-        if (playlist is null && _sourceSorts.TryGetValue(page, out var sort))
+        else
+        {
+            var referenced = State.Playlists.SelectMany(p => p.TrackIds).ToHashSet(StringComparer.Ordinal);
+            result = State.Tracks.Where(t => Available(t) && referenced.Contains(t.Id));
+            if (page.StartsWith("album:", StringComparison.Ordinal)) { var album = page[6..]; result = result.Where(t => GroupDisplayName("album", t.Album) == album); }
+            else if (page.StartsWith("artist:", StringComparison.Ordinal)) { var artist = page[7..]; result = result.Where(t => GroupDisplayName("artist", t.Artist) == artist); }
+        }
+        if (_sourceSorts.TryGetValue(page, out var sort))
             result = sort switch { "artist" => result.OrderBy(t => t.Artist), "album" => result.OrderBy(t => t.Album), "duration" => result.OrderBy(t => t.DurationSeconds), _ => result.OrderBy(t => t.Title) };
         return result;
     }
@@ -96,6 +104,13 @@ public sealed partial class MainViewModel
     }
     private void ObserveTracks()
     {
+        // 纯筛选通常没有结构变化；复用事件订阅及 ID 索引，仍检测同数量替换和原位 ID 变化。
+        if (_observedTracks.Count == State.Tracks.Count && State.Tracks.All(_observedTracks.Contains))
+        {
+            if (ReferenceEquals(_indexedTracks, State.Tracks)
+                && State.Tracks.Any(t => !_trackIndex.TryGetValue(t.Id, out var indexed) || !ReferenceEquals(indexed, t))) _indexedTracks = null;
+            return;
+        }
         _indexedTracks = null;
         var present = State.Tracks.ToHashSet();
         foreach (var removed in _observedTracks.Where(t => !present.Contains(t)).ToArray()) { removed.PropertyChanged -= TrackChanged; _observedTracks.Remove(removed); }
@@ -246,11 +261,20 @@ public sealed partial class MainViewModel
     }
     private void EnsureStored(IEnumerable<TrackItem> tracks)
     {
-        var ids = State.Tracks.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
+        var stored = new Dictionary<string, TrackItem>(State.Tracks.Count, StringComparer.Ordinal);
+        foreach (var item in State.Tracks) stored.TryAdd(item.Id, item);
         foreach (var track in tracks)
         {
             Plugins.PersistSearchCover(track);
-            if (ids.Add(track.Id)) State.Tracks.Insert(0, track);
+            if (stored.TryAdd(track.Id, track)) State.Tracks.Insert(0, track);
+            else if (track.IsCloud && stored[track.Id] is { } existing && existing.ProviderId == track.ProviderId)
+            {
+                // 再次导入目录可补齐原来缺少的封面，但不能覆盖用户手动选择的封面路径。
+                if (existing.CoverPath is null && track.CoverPath is not null) { existing.CoverPath = track.CoverPath; existing.RefreshArtwork(); }
+                if (existing.DurationSeconds <= 0 && track.DurationSeconds > 0) existing.DurationSeconds = track.DurationSeconds;
+                if (string.IsNullOrWhiteSpace(existing.Artist) && !string.IsNullOrWhiteSpace(track.Artist)) existing.Artist = track.Artist;
+                if (string.IsNullOrWhiteSpace(existing.Album) && !string.IsNullOrWhiteSpace(track.Album)) existing.Album = track.Album;
+            }
             if (PlayingSourcePage == "temporary" && _temporaryTracks.Any(t => t.Id == track.Id))
             {
                 _countedTemporaryIds.Add(track.Id);

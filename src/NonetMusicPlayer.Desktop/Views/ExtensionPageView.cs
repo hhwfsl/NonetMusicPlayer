@@ -24,6 +24,8 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
     private readonly Dictionary<string, JsonNode?> _inputs;
     private readonly List<Action<JsonObject>> _bindings = [];
     private bool _disposed, _applyInputs;
+    private readonly HashSet<string> _hiddenControls = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Control> _namedControls = new(StringComparer.Ordinal);
     private ContextMenu? _activeContextMenu;
     public ExtensionPageView(PluginManager manager, PluginManifest manifest, ExtensionNode? root = null)
     {
@@ -51,6 +53,11 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
     private async Task Invoke(ExtensionNode node, JsonNode? item, string? action = null)
     {
         if (_disposed) return;
+        // 本地可见性不经过插件锁；导入、下载等后台动作不能阻塞关闭一个结果面板。
+        foreach (var id in node.HideTargets) { _hiddenControls.Add(id); if (_namedControls.TryGetValue(id, out var target)) target.IsVisible = false; }
+        foreach (var id in node.ShowTargets) _hiddenControls.Remove(id);
+        if (node.ShowTargets.Count > 0) Refresh(_session.Frame);
+        if ((action ?? node.Action).Length == 0) return;
         var values = new JsonObject();
         foreach (var pair in _inputs) values[pair.Key] = pair.Value?.DeepClone();
         values["parameter"] = node.Parameter.StartsWith("item.", StringComparison.Ordinal)
@@ -258,7 +265,8 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
             default:
                 TextBlock text = node.Type == "selectable-text" ? new SelectableTextBlock() : new TextBlock();
                 text.Text = node.Text; text.TextWrapping = TextWrapping.Wrap; text.FontSize = node.FontSize; text.Foreground = Ui.Brush("TextPrimaryBrush");
-                if (node.Bind.Length > 0) bindings.Add(state => text.Text = String(Value(node.Bind, state, item)));
+                if (node.Bind.Length > 0) bindings.Add(state => { var value = String(Value(node.Bind, state, item)); if (text.Text != value) text.Text = value; });
+                if (node.PreserveScroll && text is SelectableTextBlock) text.AddHandler(Control.RequestBringIntoViewEvent, (_, e) => e.Handled = true);
                 control = text; break;
         }
         if (node.ContextActions.Count > 0)
@@ -280,11 +288,12 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
         FullTextToolTips.SetEnabled(control, false);
         if (node.Type == "input") ToolTip.SetTip(control, null);
         control.Name = node.Id.Length > 0 ? node.Id : null;
+        if (node.Id.Length > 0) _namedControls[node.Id] = control;
         control.Margin = Thickness.Parse(node.Margin);
         control.HorizontalAlignment = node.Align switch { "left" => HorizontalAlignment.Left, "right" => HorizontalAlignment.Right, "center" => HorizontalAlignment.Center, _ => HorizontalAlignment.Stretch };
         if (node.Width > 0) control.Width = node.Width; if (node.Height > 0) control.Height = node.Height;
         Grid.SetRow(control, node.Row); Grid.SetColumn(control, node.Column);
-        if (node.VisibleIf.Length > 0) bindings.Add(state => control.IsVisible = Value(node.VisibleIf, state, item)?.GetValue<bool>() == true);
+        if (node.VisibleIf.Length > 0 || node.Id.Length > 0) bindings.Add(state => control.IsVisible = !_hiddenControls.Contains(node.Id) && (node.VisibleIf.Length == 0 || Value(node.VisibleIf, state, item)?.GetValue<bool>() == true));
         return control;
     }
     private void Refresh(ExtensionFrame frame)

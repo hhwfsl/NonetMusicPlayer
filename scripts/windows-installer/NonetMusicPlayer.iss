@@ -67,6 +67,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "{#PackageDirectory}\Nonet.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PackageDirectory}\NonetCrashHandler.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PackageDirectory}\e_sqlite3.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PackageDirectory}\libHarfBuzzSharp.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PackageDirectory}\libSkiaSharp.dll"; DestDir: "{app}"; Flags: ignoreversion

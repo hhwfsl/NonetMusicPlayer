@@ -146,9 +146,19 @@ public static class AppBackgroundService
         width = codec.Info.Width; height = codec.Info.Height; return File.OpenRead(path);
     }
     public static void Clear() { lock (Gate) { _bitmap?.Dispose(); _bitmap = null; _path = null; _length = 0; } }
+    /// <summary>保留绘制代理与文件身份，仅归还可重建的像素；下次绘制按需恢复，不重建页面。</summary>
+    public static void TrimMemory() { lock (Gate) { _bitmap?.Dispose(); _bitmap = null; } }
     private sealed class Proxy(string path, Size size) : IImage
     {
         public Size Size => size;
-        public void Draw(DrawingContext context, Rect sourceRect, Rect destRect) { lock (Gate) { if (_bitmap is not null && _path == path) context.DrawImage(_bitmap, sourceRect, destRect); } }
+        public void Draw(DrawingContext context, Rect sourceRect, Rect destRect)
+        {
+            lock (Gate)
+            {
+                if (_path != path) return;
+                if (_bitmap is null) GetImage(path);
+                if (_bitmap is not null && _path == path) context.DrawImage(_bitmap, sourceRect, destRect);
+            }
+        }
     }
 }

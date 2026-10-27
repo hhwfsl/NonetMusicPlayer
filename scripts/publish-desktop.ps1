@@ -54,6 +54,9 @@ foreach ($target in $targets) {
     if ($LASTEXITCODE -ne 0) { throw "Restore failed for $($target.Rid)" }
     dotnet publish $projectPath -c $Configuration -r $target.Rid --no-restore --self-contained true -o $binary -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimMode=partial -p:DebugType=None -p:DebugSymbols=false -p:EnableCompressionInSingleFile=true
     if ($LASTEXITCODE -ne 0) { throw "Publish failed for $($target.Rid); old package preserved." }
+    & (Join-Path $PSScriptRoot 'build-crash-handler.ps1') -Rids @($target.Rid)
+    $crashName = if ($target.Name -eq 'windows') { 'NonetCrashHandler.exe' } else { 'NonetCrashHandler' }
+    Copy-Item -LiteralPath (Join-Path $artifactRoot "native/NonetCrashHandler/$($target.Rid)/$crashName") -Destination (Join-Path $binary $crashName)
     Get-ChildItem -LiteralPath $binary -File | Where-Object { $_.Name -match '\.(pdb|xml|deps\.json|runtimeconfig\.dev\.json)$' } | Remove-Item -Force
     if ($target.Name -eq "windows") {
         # Program selects software-only drawing on Windows, so the ANGLE binary is unused.
@@ -109,7 +112,7 @@ foreach ($target in $targets) {
         Write-Host "Clean staging retained: $package"
         continue
     }
-    & (Join-Path $PSScriptRoot 'package-desktop-update.ps1') -PackageDirectory $package -Rid $target.Rid -Version $version
+    & (Join-Path $PSScriptRoot 'package-desktop-update.ps1') -PackageDirectory $package -Rid $target.Rid -Version $version -OutputDirectory (Join-Path $desktopPublishRoot 'archives')
     $output = Assert-ChildPath (Join-Path $desktopPublishRoot $target.Folder) $desktopPublishRoot
     [IO.Directory]::CreateDirectory($desktopPublishRoot) | Out-Null
     if (Test-Path -LiteralPath $output) {

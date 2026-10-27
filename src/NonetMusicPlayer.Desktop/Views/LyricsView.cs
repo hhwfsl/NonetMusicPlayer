@@ -30,6 +30,7 @@ public sealed class LyricsView : UserControl, IDisposable
     private readonly TextBlock _title, _artist, _empty;
     private readonly Button _seek;
     private readonly NonetMusicPlayer.Desktop.Models.BulkObservableCollection<LyricLine> _displayLines = [];
+    private readonly HashSet<KaraokeLine> _realizedLines = [];
     private double[] _rowHeights = [], _rowOffsets = [];
     private double _measuredWidth;
     private const double LyricRowHeight = 112;
@@ -132,7 +133,7 @@ public sealed class LyricsView : UserControl, IDisposable
     public bool IsPreviewing => _previewing;
     private void SettingsChanged(object? sender, EventArgs e)
     {
-        foreach (var text in _list.GetVisualDescendants().OfType<KaraokeLine>())
+        foreach (var text in _realizedLines)
             if (text.Tag is ValueTuple<LyricLine, bool> tag)
             {
                 text.TextColor = PresentationColor(_owner.InterfaceLyricsProfile?.ActiveColor, "AccentBrush");
@@ -148,10 +149,21 @@ public sealed class LyricsView : UserControl, IDisposable
         var translation = new KaraokeLine { Tag = (line, true), TextSize = 17, TextColor = original.TextColor, PendingColor = PresentationColor(_owner.InterfaceLyricsProfile?.TranslationColor, "TextMutedBrush") };
         translation.UpdateTimed(line?.Translation ?? "", line?.TranslationWords ?? [], _vm.PlaybackPosition, false);
         translation.IsVisible = !string.IsNullOrWhiteSpace(line?.Translation);
+        // 虚拟化行随视觉树挂载/卸载维护集合，逐字时钟无需反复遍历整棵控件树。
+        foreach (var text in new[] { original, translation })
+        {
+            text.AttachedToVisualTree += LyricLineAttached;
+            text.DetachedFromVisualTree += LyricLineDetached;
+        }
         var lines = Ui.Stack(original, translation); lines.Spacing = 7; lines.VerticalAlignment = VerticalAlignment.Center;
         var index = line is null ? -1 : _vm.LyricLines.IndexOf(line);
         return new Border { Name = "LyricRow", Height = index >= 0 && index < _rowHeights.Length ? _rowHeights[index] : LyricRowHeight, Padding = new Thickness(24, 5), Child = lines };
     }
+    private void LyricLineAttached(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        if (!_disposed && sender is KaraokeLine line) { _realizedLines.Add(line); UpdateWordColor(line, PlaybackWordTime()); }
+    }
+    private void LyricLineDetached(object? sender, VisualTreeAttachmentEventArgs e) { if (sender is KaraokeLine line) _realizedLines.Remove(line); }
     private void LanguageChanged(object? sender, EventArgs e) => UpdateText();
     private static Color PresentationColor(string? value, string fallback) => string.IsNullOrEmpty(value) ? (Ui.Brush(fallback) as ISolidColorBrush)?.Color ?? Colors.White : value.StartsWith('@') ? (Ui.Brush(value[1..]) as ISolidColorBrush)?.Color ?? Colors.White : Color.Parse(value);
     private void UpdateText()
@@ -283,13 +295,15 @@ public sealed class LyricsView : UserControl, IDisposable
     private void RefreshWordColors()
     {
         if (_disposed || !IsVisible) return;
-        var time = _wordSample + (_vm.IsPlaying ? Math.Min(.2, Stopwatch.GetElapsedTime(_wordSampleAt).TotalSeconds) : 0) + _vm.Settings.LyricOffset;
-        foreach (var text in _list.GetVisualDescendants().OfType<KaraokeLine>())
-            if (text.Tag is ValueTuple<LyricLine, bool> tag)
-            {
-                var active = _activeIndex >= 0 && _activeIndex < _vm.LyricLines.Count && ReferenceEquals(_vm.LyricLines[_activeIndex], tag.Item1);
-                text.UpdateTimed(tag.Item2 ? tag.Item1.Translation : tag.Item1.Text, [], time, active, LyricsService.LineCharacterProgress(tag.Item1, time, tag.Item2));
-            }
+        var time = PlaybackWordTime();
+        foreach (var text in _realizedLines) UpdateWordColor(text, time);
+    }
+    private double PlaybackWordTime() => _wordSample + (_vm.IsPlaying ? Math.Min(.2, Stopwatch.GetElapsedTime(_wordSampleAt).TotalSeconds) : 0) + _vm.Settings.LyricOffset;
+    private void UpdateWordColor(KaraokeLine text, double time)
+    {
+        if (text.Tag is not ValueTuple<LyricLine, bool> tag || tag.Item1 is null) return;
+        var active = _activeIndex >= 0 && _activeIndex < _vm.LyricLines.Count && ReferenceEquals(_vm.LyricLines[_activeIndex], tag.Item1);
+        text.UpdateTimed(tag.Item2 ? tag.Item1.Translation : tag.Item1.Text, [], time, active, active ? LyricsService.LineCharacterProgress(tag.Item1, time, tag.Item2) : 0);
     }
     private void AnimateScroll()
     {
@@ -401,5 +415,6 @@ public sealed class LyricsView : UserControl, IDisposable
         _previewSettled.Stop(); _resumeFollow.Stop(); _smoothScroll.Stop(); _wordFrames.Stop();
         if (_scroll is not null) _scroll.ScrollChanged -= ScrollChanged;
         _cover.Source = null; _list.ItemsSource = null; _displayLines.Clear();
+        _realizedLines.Clear();
     }
 }

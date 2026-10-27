@@ -120,7 +120,7 @@ public sealed partial class MainWindow
             if (press is null || dragging || !e.GetCurrentPoint(button).Properties.IsLeftButtonPressed || Math.Abs(delta.X) + Math.Abs(delta.Y) < 8) return;
             dragging = true; var saved = press; press = null; e.Handled = true;
             try { var data = new DataTransfer(); data.Add(DataTransferItem.CreateText("nonet-playlist:" + playlist.Id)); await DragDrop.DoDragDropAsync(saved, data, DragDropEffects.Move); }
-            finally { dragging = false; }
+            finally { dragging = false; HideDropPreview(); }
         }, RoutingStrategies.Tunnel, true);
         DragDrop.SetAllowDrop(button, true);
         button.AddHandler(DragDrop.DropEvent, async (_, e) =>

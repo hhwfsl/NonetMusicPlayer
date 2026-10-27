@@ -41,6 +41,8 @@ public sealed class PluginManifest
     /// <summary>可选、有限时的流程决策；只声明需要的钩子，未声明时没有开销。</summary>
     public List<string> Hooks { get; set; } = [];
     public List<string> ProvidedServices { get; set; } = [];
+    /// <summary>由用户显式导入/拖入时允许交给转换服务的扩展名；旧插件默认不参与。</summary>
+    public List<string> FileExtensions { get; set; } = [];
     /// <summary>可选注册音乐主页搜索来源；来源身份始终使用插件的稳定 ID。</summary>
     public MusicSearchSource? MusicSearch { get; set; }
     public List<ExtensionContribution> Contributions { get; set; } = [];
@@ -57,6 +59,10 @@ public sealed class PluginManifest
     public void Validate()
     {
         Author = string.IsNullOrWhiteSpace(Author) ? "Author" : Author.Trim();
+        FileExtensions ??= []; ProvidedServices ??= []; RequiredCapabilities ??= []; Permissions ??= []; FileTransformContract.ValidateExtensions(FileExtensions);
+        if (FileExtensions.Count > 0 && (ContractVersion != 2 || Type != "extension" || Runtime == "declarative"
+            || !ProvidedServices.Contains(FileTransformContract.Service) || !RequiredCapabilities.Contains(FileTransformContract.Capability)
+            || !Permissions.Contains("user-files") || !Permissions.Contains("file-transform"))) throw new InvalidDataException("File transform permission and capability required.");
         Hooks ??= []; ProvidedServices ??= []; RequiredCapabilities ??= []; Events ??= []; Contributions ??= []; Permissions ??= []; EntryPoints ??= []; Tokens ??= []; Widgets ??= []; MenuContributions ??= []; Configuration ??= "{}";
         if (AutoStart && (ContractVersion != 2 || Type != "extension" || !RequiredCapabilities.Contains("runtime.startup.v1"))) throw new InvalidDataException("Automatic startup requires runtime.startup.v1.");
         if (NativePage && (!HasPage || ContractVersion != 2 || Type != "extension" || Runtime != "managed" || !Permissions.Contains("native-ui") || !RequiredCapabilities.Contains("ui.native.v1"))) throw new InvalidDataException("Native page requires a trusted managed UI extension.");
