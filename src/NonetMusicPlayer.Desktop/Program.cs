@@ -19,6 +19,7 @@ internal static class Program
         {
             // 更新助手不初始化 Avalonia，也不竞争主程序的单实例锁。
             if (args.Length == 2 && args[0] == "--apply-update") return UpdateInstaller.RunHelper(args[1]);
+            if (args.Length == 2 && args[0] == "--verify-window-restore") return ReleaseVerifier.RunWindowRestore(args[1]);
             if (args.Length == 2 && args[0] == "--verify-listening-history") return ReleaseVerifier.RunListening(args[1]);
             if (args.Length == 3 && args[0] == "--verify-release") return Services.ReleaseVerifier.Run(args[1], args[2]);
             if (args.Length == 4 && args[0] == "--verify-provider") return Services.ReleaseVerifier.RunProvider(args[1], args[2], args[3]);

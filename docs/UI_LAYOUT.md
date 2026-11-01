@@ -51,6 +51,10 @@ placement 支持 append/prepend（Panel 内）、before/after（Panel 子项旁�
 
 旧 ui read/apply/reset 和 schema 1/2 解析器仅作为插件兼容适配器保留，运行期间在内存应用，停止该插件恢复宿主布局；不再作为用户文件配置功能。新插件应使用控件服务或区域/页面贡献。Contract v1/v2、页面 Schema 与 SDK AssemblyVersion 4.0.0.0 不变。
 
+## 分类页标题工具栏
+
+`CatalogSearchHeader` 包含名称搜索及歌单的新建入口，`CatalogSearch` 为编辑器，`CatalogSearchButton`、`CatalogSearchClear` 为图标按钮，`CatalogCreatePlaylist` 为新建歌单按钮。`PageBackToTop` 位于它们右侧。专辑、艺术家与歌单搜索互相独立，不改变歌曲过滤条件。原版和 `interface:playlists` 共用这一工具栏。
+
 ## 动画
 
 按控件类型定制外观、状态过渡与变形动画使用 SDK 4.14 的可选 `ui.styles.v1`，详见 [风格扩展协议](STYLE_EXTENSIONS.md)。这与具体控件的布局覆盖分开：风格可以叠加，同属性由上层覆盖，关闭后恢复底层定义；不需要枚举每个 Button 或 ToggleSwitch 实例。

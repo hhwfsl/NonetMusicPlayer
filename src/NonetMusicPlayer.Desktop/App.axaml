@@ -445,6 +445,43 @@
             <Setter Property="Width" Value="12" />
             <Setter Property="MinWidth" Value="12" />
         </Style>
+        <!-- 保留原生滚动语义和触摸热区，只替换细圆角滑块；方案仍可覆盖主题资源和选择器。 -->
+        <Style Selector="ScrollBar">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="ScrollBar /template/ RepeatButton#PART_LineUpButton, ScrollBar /template/ RepeatButton#PART_LineDownButton">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="ScrollBar /template/ Rectangle#TrackRect">
+            <Setter Property="Fill" Value="Transparent" />
+            <Setter Property="StrokeThickness" Value="0" />
+        </Style>
+        <Style Selector="ScrollBar /template/ Thumb">
+            <Setter Property="Background" Value="{DynamicResource DividerBrush}" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="RenderTransform" Value="none" />
+            <Setter Property="Template">
+                <ControlTemplate><Border Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}" /></ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ScrollBar:vertical /template/ Thumb">
+            <Setter Property="Width" Value="6" />
+            <Setter Property="MinHeight" Value="28" />
+        </Style>
+        <Style Selector="ScrollBar:horizontal /template/ Thumb">
+            <Setter Property="Height" Value="6" />
+            <Setter Property="MinWidth" Value="28" />
+        </Style>
+        <Style Selector="ScrollBar:pointerover /template/ Thumb">
+            <Setter Property="Background" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+        <Style Selector="ScrollBar /template/ Thumb:pressed">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+        </Style>
+        <Style Selector="Window.touch ScrollBar:vertical /template/ Thumb">
+            <Setter Property="Width" Value="9" />
+        </Style>
         <Style Selector="Slider">
             <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
             <Setter Property="MinHeight" Value="32" />

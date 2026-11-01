@@ -80,7 +80,7 @@ public sealed partial class MainWindow
     private Control HomePlaylists()
     {
         var vm = _vm!;
-        var items = vm.Playlists.Take(4).ToArray();
+        var items = vm.MostVisitedPlaylists().ToArray();
         var columns = items.Length < 2 ? 1 : 2; var rows = Math.Max(1, (int)Math.Ceiling(items.Length / (double)columns));
         var grid = new UniformGrid { Columns = columns, Rows = rows };
         var covers = new List<Control>(); var buttons = new List<Button>();

@@ -146,6 +146,7 @@ public sealed partial class MainWindow
         {
             case "action":
                 if (node.Target is not ("playlist.create" or "player.play-pause" or "player.previous" or "player.next" or "lyrics.toggle")) throw new InvalidDataException("Not an existing presentation action.");
+                if (node.Target == "playlist.create" && _vm.Page == "interface:playlists") return new Border { IsVisible = false };
                 var action = Ui.Button(node.Label, () =>
                 {
                     switch (node.Target)

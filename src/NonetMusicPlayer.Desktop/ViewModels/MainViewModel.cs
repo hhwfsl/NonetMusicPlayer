@@ -195,6 +195,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         if (Page == page) return;
         // 浮层/后台扩展没有独立页面，导航命令不能为其创建空白页。
         if (page.StartsWith("plugin:", StringComparison.Ordinal) && Plugins.Installed.Any(p => p.Id == page[7..] && !p.HasPage)) return;
+        RecordPlaylistVisit(page);
         Page = page; SearchText = "";
         LeaveMusicSearch(Page);
         PageTitle = title ?? LocalizedTitleForPage(Page);

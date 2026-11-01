@@ -9,6 +9,8 @@ namespace NonetMusicPlayer.Desktop.Models;
 public sealed class AppState
 {
     public int SchemaVersion { get; set; } = 1;
+    /// <summary>仅记录真正进入歌单的访问；旧数据没有记录时保持原有歌单顺序。</summary>
+    public Dictionary<string, PlaylistVisit> PlaylistVisits { get; set; } = new(StringComparer.Ordinal);
     public string? ManagedDataRoot { get; set; }
     public List<TrackItem> Tracks { get; set; } = [];
     public List<string> MusicFolders { get; set; } = [];
@@ -28,6 +30,11 @@ public sealed class AppState
     public List<HourlyListeningEntry> HourlyListeningEntries { get; set; } = [];
     public Dictionary<string, string> GroupCovers { get; set; } = new(StringComparer.Ordinal);
     public HashSet<string> SoftwareDefaultGroupCovers { get; set; } = new(StringComparer.Ordinal);
+}
+public sealed class PlaylistVisit
+{
+    public long Count { get; set; }
+    public DateTimeOffset LastVisitedUtc { get; set; }
 }
 public sealed partial class Playlist : ObservableObject
 {

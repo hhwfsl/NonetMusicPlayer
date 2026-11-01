@@ -138,6 +138,8 @@ public sealed class StyleLayerService : IDisposable
     }
     private void Track(Control control)
     {
+        // 内置作用域只标记滚动条祖先，风格可以改滑块而不误改播放进度柄。
+        if (control is ScrollBar && !control.Classes.Contains("nonet-scrollbar")) control.Classes.Add("nonet-scrollbar");
         if (_disposed || _controls.ContainsKey(control) || control is TopLevel || control.Name == "WindowSurface" || control.Name?.StartsWith("NonetMorph", StringComparison.Ordinal) == true) return;
         var rules = Sheets.SelectMany(s => s.Rules).Where(r => MatchesType(control, r, ignoreClasses: true)).ToList();
         if (rules.Count == 0) return;
@@ -163,7 +165,7 @@ public sealed class StyleLayerService : IDisposable
         var subject = rule.Part.Length > 0 ? control.TemplatedParent as Control ?? control : control;
         return rule.States.All(s => s switch
         {
-            "pointerover" => subject.IsPointerOver, "pressed" => subject is Button button && button.IsPressed,
+            "pointerover" => subject.IsPointerOver, "pressed" => subject is Button button && button.IsPressed || subject is Thumb thumb && thumb.Classes.Contains(":pressed"),
             "checked" => subject is ToggleButton toggle && toggle.IsChecked == true || subject is ToggleSwitch sw && sw.IsChecked == true,
             "disabled" => !subject.IsEffectivelyEnabled, "focus" => subject.IsKeyboardFocusWithin, _ => false
         });

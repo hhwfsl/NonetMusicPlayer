@@ -34,6 +34,7 @@ public sealed partial class MainWindow : Window
         InputCommitService.Install(this);
         InputCommitService.Bind(LibrarySearch, text => { if (_vm is not null) _vm.SearchText = text; });
         InitializeTrayLifecycle();
+        InitializeWindowRestore();
         InitializeViewportContinuity();
         InitializeWindowPlacement();
         DataContextChanged += (_, _) => AttachViewModel();
@@ -193,7 +194,7 @@ public sealed partial class MainWindow : Window
         foreach (var label in TrackHeader.Children.OfType<TextBlock>().Where(c => Grid.GetColumn(c) is 4 or 5)) label.IsVisible = !hideMetadata;
         TrackHeader.ColumnDefinitions[7].Width = new GridLength(_vm?.Settings.TouchMode == true ? 176 : 144);
         RefreshNavigationMetrics();
-        UpdateGroupColumns(contentWidth); PositionFullLyrics();
+        UpdateGroupColumns(contentWidth); UpdateCatalogSearchWidth(); PositionFullLyrics();
         PositionPlayerResizeGrip();
     }
     private void RefreshNavigationMetrics()
@@ -242,7 +243,7 @@ public sealed partial class MainWindow : Window
         LibraryActions.IsVisible = !alternate; SearchContainer.IsVisible = !alternate; TrackCountLabel.IsVisible = !alternate;
         UserManualButton.IsVisible = _vm.Page == "settings";
         PageBackToTop.IsVisible = _vm.Page is "plugins" or "statistics" or "albums" or "artists" or "playlists";
-        BuildMusicSearchHeader();
+        BuildMusicSearchHeader(); BuildCatalogSearchHeader(navigated);
         BuildPlaylistHeader(); UpdateSelectionToolbar();
         if (_vm.Page.StartsWith("plugin:") && _vm.Plugins.Installed.FirstOrDefault(p => "plugin:" + p.Id == _vm.Page && p.Type == "extension") is { } extension)
             PageHeading.IsVisible = !_vm.Plugins.LoadExtensionPage(extension).OwnsHeader;
@@ -258,6 +259,7 @@ public sealed partial class MainWindow : Window
         { nav.Classes.Set("selected", nav.Tag?.ToString() == _vm.Page); }
         Dispatcher.UIThread.Post(Responsive, Avalonia.Threading.DispatcherPriority.Loaded);
         LocatePlayingTrack(this, EventArgs.Empty);
+        ApplyCatalogQuery(initial: true);
         RefreshElementExtensions();
         var lyricsReady = true;
         if (lyrics)

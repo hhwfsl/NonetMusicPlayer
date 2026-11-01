@@ -240,7 +240,7 @@ public sealed partial class MainViewModel
         if (playlist.IsSystem) { ReportWarning(L10n.T("Playlists.LikedSongsIsABuiltInPlaylistAndCannot")); return; }
         var index = State.Playlists.IndexOf(playlist); if (index < 0) return;
         var undoCount = _undo.Count;
-        State.Playlists.Remove(playlist); Playlists.Remove(playlist);
+        State.Playlists.Remove(playlist); State.PlaylistVisits.Remove(playlist.Id); Playlists.Remove(playlist);
         _undo.Push(() => { State.Playlists.Insert(Math.Min(index, State.Playlists.Count), playlist); Playlists.Insert(Math.Min(index, Playlists.Count), playlist); });
         if (PlayingPlaylistId == playlist.Id) { PlayingSourcePage = "library"; _explicitQueueIds = null; _playingList = SourceTracks("library").ToList(); }
         PruneUnreferencedTracks();

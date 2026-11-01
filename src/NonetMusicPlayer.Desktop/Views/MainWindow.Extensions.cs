@@ -64,7 +64,7 @@ public sealed partial class MainWindow
     private Control Groups(bool artists)
     {
         if (_vm is null) return Ui.Text("");
-        var groups = _vm.VisibleTracks.GroupBy(t => MainViewModel.GroupDisplayName(artists ? "artist" : "album", artists ? t.Artist : t.Album)).OrderBy(g => g.Key).Select(g => new MusicGroup(g.Key, g.ToArray())).ToArray();
+        var groups = _vm.VisibleTracks.GroupBy(t => MainViewModel.GroupDisplayName(artists ? "artist" : "album", artists ? t.Artist : t.Album)).Where(g => CatalogMatches(g.Key, _catalogQuery)).OrderBy(g => g.Key).Select(g => new MusicGroup(g.Key, g.ToArray())).ToArray();
         var page = new Grid { RowDefinitions = new("Auto,*") };
         var back = Ui.Button("Home.Back", () => _vm.Navigate(_groupsReturnPage));
         back.Name = "GroupsBack"; back.Content = Ui.Actions(new VectorIcon { Kind = IconKind.Back }, Ui.Text("Home.Back"));
@@ -75,7 +75,7 @@ public sealed partial class MainWindow
         Grid.SetColumn(top, 1); header.Children.Add(top); page.Children.Add(header);
         if (groups.Length == 0)
         {
-            var empty = Ui.Card(L10n.T("Library.NoMusicYet"), Ui.Text(L10n.T("Playlists.AddMusicToAPlaylistToSeeAlbumsAnd"), 13, true));
+            var empty = _catalogQuery.Length > 0 ? Ui.Card("MusicSearch.NoCatalogResults", Ui.Text("MusicSearch.TryAnotherName", 13, true)) : Ui.Card(L10n.T("Library.NoMusicYet"), Ui.Text(L10n.T("Playlists.AddMusicToAPlaylistToSeeAlbumsAnd"), 13, true));
             Grid.SetRow(empty, 1); page.Children.Add(empty); return page;
         }
         var type = artists ? "artist" : "album";

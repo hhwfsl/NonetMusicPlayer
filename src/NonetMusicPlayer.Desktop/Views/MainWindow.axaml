@@ -280,6 +280,7 @@
                                                     Text="{Binding TrackCountText}" />
                                             </StackPanel>
                                             <ContentControl x:Name="MusicSearchHeader" Grid.Column="1" IsVisible="False" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                            <ContentControl x:Name="CatalogSearchHeader" Grid.Column="1" IsVisible="False" Margin="0,0,8,0" VerticalAlignment="Center" />
                                             <Button x:Name="PageBackToTop" Grid.Column="2" IsVisible="False"
                                                     Width="44" Height="44" Classes="transport" Click="PageBackToTop_Click"
                                                     AutomationProperties.Name="{ui:Loc Key='Common.BackToTop'}"

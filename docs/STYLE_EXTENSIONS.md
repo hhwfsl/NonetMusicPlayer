@@ -7,6 +7,8 @@ SDK 4.14，能力 `ui.styles.v1`，服务 `styles`。Contract v1/v2、页面 Sch
 
 可选补充：类型目录支持 `NumericUpDown`，可通过 `part: PART_TextBox` 处理内部编辑器，避免独立输入框风格遮挡步进按钮。`morph.windowEnabled:false` 只关闭窗口最大化/还原的变形，保留容器与歌词转场；省略时沿用旧行为。此开关按字段参与风格叠加。
 
+滚动条可使用 `ScrollBar` 与 `Thumb` 类型。内置 `nonet-scrollbar` 作用域标记滚动条及其模板后代；例如 `{"type":"Thumb","scope":"nonet-scrollbar","setters":{"width":8,"cornerRadius":8}}` 仅修改滚动条滑块，避免影响音量和播放进度柄。拖动滑块可用 `pressed` 状态。停用后恢复宿主属性，原协议和程序集基线不变。
+
 ## 1. 最小接入
 
 在扩展清单中声明 `ui-extend` 与所需能力；使用原生页面时另需 `native-ui`、`in-process`、`ui.native.v1`。

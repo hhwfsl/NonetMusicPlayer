@@ -51,9 +51,7 @@ public sealed partial class MainWindow
     }
     public void RestoreFromTray()
     {
-        if (!IsVisible) Show();
-        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
-        RestoreVisualMemory(); Activate();
+        RestoreWindowCore();
     }
     public void ExitApplication()
     {

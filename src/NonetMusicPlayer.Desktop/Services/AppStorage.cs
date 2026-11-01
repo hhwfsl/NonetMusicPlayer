@@ -135,6 +135,9 @@ public sealed class AppStorage
     }
     public static void MigrateState(AppState state)
     {
+        var playlistIds = state.Playlists.Select(p => p.Id).ToHashSet(StringComparer.Ordinal);
+        state.PlaylistVisits = (state.PlaylistVisits ?? []).Where(pair => pair.Value is not null && playlistIds.Contains(pair.Key))
+            .ToDictionary(pair => pair.Key, pair => new PlaylistVisit { Count = Math.Max(0, pair.Value.Count), LastVisitedUtc = pair.Value.LastVisitedUtc }, StringComparer.Ordinal);
         state.RecentTemporaryTracks ??= [];
         var historyIds = state.History.ToHashSet(StringComparer.Ordinal);
         state.RecentTemporaryTracks = state.RecentTemporaryTracks.Where(t => t is not null && !string.IsNullOrWhiteSpace(t.Id) && historyIds.Contains(t.Id)).DistinctBy(t => t.Id).Take(state.Settings.HistoryLimit).ToList();
