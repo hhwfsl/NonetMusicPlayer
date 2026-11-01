@@ -107,8 +107,9 @@
                                 BorderBrush="{DynamicResource DividerBrush}"
                                 BorderThickness="0,0,1,0">
                                 <Grid Margin="14,14,14,14" RowDefinitions="*,Auto">
-                                    <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Disabled">
-                                        <StackPanel Spacing="4">
+                                    <!-- 为覆盖式滚动条及触摸热区留出独立空间，避免导航高亮延伸到滚动条下方。 -->
+                                    <ScrollViewer x:Name="SidebarScrollViewer" Grid.Row="0" Padding="0,0,20,0" HorizontalScrollBarVisibility="Disabled">
+                                        <StackPanel x:Name="SidebarScrollContent" Spacing="4">
                                             <Button
                                                 x:Name="MyMusicHeading"
                                                 Classes="section-heading"

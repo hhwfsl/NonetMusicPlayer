@@ -8,6 +8,7 @@ internal static class Program
             var output = args.FirstOrDefault() ?? "artifacts/plugin-ui-checks";
             if (args.Length == 4 && args[0] == "--crash-observer-child") return CrashHandlerChecks.Child(args[1], args[2], args[3]);
             if (Array.IndexOf(args, "--crash-handler") is var crashIndex && crashIndex >= 0) { CrashHandlerChecks.Run(output, args[crashIndex + 1]); return 0; }
+            if (args.Contains("--sidebar-scrollbar")) { SidebarScrollbarChecks.Run(output); return 0; }
             if (args.Contains("--catalog-overview")) { CatalogOverviewChecks.Run(output, Array.IndexOf(args, "--style-file") is var catalogFile && catalogFile >= 0 ? args[catalogFile + 1] : null); return 0; }
             if (args.Contains("--catalog-navigation")) { CatalogNavigationChecks.Run(output, Array.IndexOf(args, "--style-file") is var catalogStyle && catalogStyle >= 0 ? args[catalogStyle + 1] : null); return 0; }
             if (args.Contains("--source-lifecycle")) { SourceLifecycleChecks.Run(output); return 0; }
