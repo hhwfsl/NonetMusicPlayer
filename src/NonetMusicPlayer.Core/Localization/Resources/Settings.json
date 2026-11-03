@@ -1,4 +1,19 @@
 {
+  "Settings.RestoreDefaultWindowSize": {
+    "zh-CN": "恢复默认窗口大小",
+    "en-US": "Restore default window size",
+    "ja-JP": "ウィンドウを標準サイズに戻す"
+  },
+  "Settings.WindowSize": {
+    "zh-CN": "窗口大小",
+    "en-US": "Window size",
+    "ja-JP": "ウィンドウサイズ"
+  },
+  "Settings.WindowSizeMemoryHint": {
+    "zh-CN": "记住调整后的窗口大小，每次启动居中显示；恢复默认时同时居中。",
+    "en-US": "Remember the resized window and center it on each launch. Restoring the default size also centers it.",
+    "ja-JP": "変更したサイズを記憶し、起動時は中央に表示します。標準サイズに戻すときも中央に配置します。"
+  },
   "Settings.InterfaceOwned": {
     "zh-CN": "此项由界面方案“{0}”临时接管。原设置未更改，关闭方案后恢复。",
     "en-US": "Temporarily controlled by interface preset '{0}'. Your saved value is unchanged and returns when the preset is disabled.",
@@ -355,9 +370,14 @@
     "ja-JP": "UI カスタマイズ・JSON レイアウト"
   },
   "Settings.TheCustomLayoutDoesNotFitThisWindowUsing": {
-    "zh-CN": "自定义布局不适合当前窗口，临时使用默认布局（配置文件保留）：",
-    "en-US": "The custom layout does not fit this window. Using the default layout temporarily; the configuration is preserved:",
-    "ja-JP": "カスタムレイアウトが現在のウィンドウに収まりません。一時的に既定のレイアウトを使用します。設定ファイルは保持されます："
+    "zh-CN": "当前自定义播放栏超出可用区域，已临时使用默认排布，原配置保留。",
+    "en-US": "The custom player bar exceeds the available space. The default arrangement is being used temporarily; your configuration is preserved.",
+    "ja-JP": "カスタム再生バーが表示領域を超えたため、一時的に標準の配置を使用します。元の設定は保持されます。"
+  },
+  "Settings.PlayerLayoutAdjustedForWindow": {
+    "zh-CN": "播放栏超出可用区域，已重新应用内置排布。",
+    "en-US": "The player bar exceeded the available space. The built-in arrangement has been reapplied.",
+    "ja-JP": "再生バーが表示領域を超えたため、内蔵の配置を再適用しました。"
   },
   "Settings.TheCustomLayoutDoesNotFitThisWindowUsing39F620": {
     "zh-CN": "自定义布局不适合当前窗口，临时使用默认布局（配置文件保留）：{0}",

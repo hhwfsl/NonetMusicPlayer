@@ -83,6 +83,7 @@ public sealed partial class MainWindow : Window
         _desktopLyrics?.Dispose(); _taskbar?.Dispose();
         _styleMorph.Cancel(); _styleLayers?.Dispose(); _styleLayers = null;
         _vm = DataContext as MainViewModel; AttachQueueOwner(_vm); if (_vm is null) return;
+        RestoreRememberedWindowSize();
         _vm.ConfirmLanConnection = ConfirmLanConnectionAsync;
         _vm.LanChanged += LanNavigationChanged;
         _vm.LanDisconnectNotice += LanDisconnectedNotification;
@@ -173,7 +174,13 @@ public sealed partial class MainWindow : Window
         UpdateMusicSearchHeaderWidth();
         var contentWidth = Workspace.Children.OfType<LayoutWidget>().FirstOrDefault(w => w.Key == "Content")?.Bounds.Width ?? ViewportWidth;
         var narrow = contentWidth < 1000;
-        SearchContainer.Width = Math.Min(300, Math.Max(125, contentWidth - (_vm?.CurrentPlaylist is null ? 150 : 260) - (TracksList.BatchMode ? 430 : 0)));
+        // 批量状态在空间不足时独占状态行，搜索和操作按钮按实际剩余宽度统一排版。
+        var separateSelection = SelectionToolbar.IsVisible && (LibraryActions.Bounds.Width > 0 ? LibraryActions.Bounds.Width : contentWidth) < 680;
+        LibraryActions.ColumnDefinitions = new(separateSelection ? "*" : "Auto,*");
+        LibraryActions.RowDefinitions = new(separateSelection ? "Auto,Auto" : "Auto");
+        LibraryActions.ColumnSpacing = SelectionToolbar.IsVisible && !separateSelection ? 12 : 0;
+        Grid.SetColumn(LibraryActionsFlow, separateSelection ? 0 : 1); Grid.SetRow(LibraryActionsFlow, separateSelection ? 1 : 0);
+        LibraryActionsFlow.Margin = new(0, separateSelection ? 8 : 0, 0, 0);
         var hideMetadata = contentWidth < 740;
         var showArtwork = contentWidth >= 360; var showDuration = contentWidth >= 400;
         Application.Current!.Resources["TrackArtworkColumnWidth"] = new GridLength(showArtwork ? 48 : 0);
@@ -183,7 +190,6 @@ public sealed partial class MainWindow : Window
         TrackHeader.ColumnDefinitions[2].Width = new GridLength(showArtwork ? 48 : 0);
         TrackHeader.ColumnDefinitions[6].Width = new GridLength(showDuration ? 56 : 0);
         foreach (var label in TrackHeader.Children.OfType<TextBlock>().Where(c => Grid.GetColumn(c) is 2 or 6)) label.IsVisible = Grid.GetColumn(label) == 2 ? showArtwork : showDuration;
-        foreach (var button in LibraryActionsFlow.Children.OfType<Button>()) button.Margin = new(6, 0, 0, 0);
         LibraryAddFiles.IsVisible = LibraryAddFolder.IsVisible = _vm?.CurrentPlaylist is not null;
         PageContentGrid.Margin = ViewportHeight < 620 ? new(18, 12, 18, 6) : new(30, 24, 30, 12);
         LibraryActions.Margin = ViewportHeight < 620 ? new(0, 8, 0, 0) : new(0, 18, 0, 0);
@@ -549,6 +555,8 @@ public sealed partial class MainWindow : Window
     }
     private void ResizeBorder_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        // 触摸和笔已由窗口级捕获处理，鼠标保留系统原生边缘缩放。
+        if (e.Pointer.Type is PointerType.Touch or PointerType.Pen) return;
         if (WindowState != WindowState.Normal || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed || sender is not Border border) return;
         var edge = border.Tag switch { "Top" => WindowEdge.North, "Bottom" => WindowEdge.South, "Left" => WindowEdge.West, "Right" => WindowEdge.East, "TopLeft" => WindowEdge.NorthWest, "TopRight" => WindowEdge.NorthEast, "BottomLeft" => WindowEdge.SouthWest, _ => WindowEdge.SouthEast };
         BeginResizeDrag(edge, e); e.Handled = true;

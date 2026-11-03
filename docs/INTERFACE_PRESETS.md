@@ -67,6 +67,8 @@ var response = await context.RequestFromUserAsync("styles", new JsonObject
 
 `layout.settings` 每个键同时表示“禁用对应用户编辑器”和“界面运行时使用此方案的值”。用户保存的值不被替换，设置页仍显示原值，并说明当前由哪个方案接管。关闭方案后解除禁用，原值立即生效。拖动调整被接管的区域尺寸也会禁用。
 
+主窗口记忆宽高及“恢复默认窗口大小”属于宿主偏好，不新增方案可接管键；完整方案启用时按钮仍可用。启动会先恢复保存的逻辑尺寸再准备界面首帧，始终按当前主屏居中；方案应继续按实际窗口尺寸响应，不依赖固定启动大小或上次窗口位置。现有 Contract、Schema 和字段默认值保持兼容。
+
 可用键：`navigationRight`、`playerTop`、`sidebarWidth`、`playerHeight`、`myMusicExpanded`、`pluginsExpanded`、`playlistsExpanded`、`controlCornerRadius`、`fontSize`、`theme`、`accent`、`accentFromBackground`、`uiOpacity`、`titleBarOpacity`、`navigationOpacity`、`contentOpacity`、`playerOpacity`、`backgroundImageOpacity`、`backgroundImageStretch`、`titleButtonsOnLeft`。
 
 仅允许视觉参数，不接受音量、音频设备、网络授权、数据路径、文件权限或插件审批。布尔键必须是 JSON 布尔值；尺寸、透明度和颜色按 SDK 校验范围填写。未声明的键不受方案控制。用户通过终端改变原偏好不会改变方案的有效值；这些偏好在关闭方案后生效。

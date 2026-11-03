@@ -67,10 +67,15 @@ public sealed partial class MainWindow
         if (!TracksList.BatchMode && SelectedTracks.Length > 0) TracksList.SelectedItems?.Clear();
         var count = SelectedTracks.Length;
         SelectionCountText.Text = L10n.Format("Common.Selected", count);
+        ToolTip.SetTip(SelectionCountText, SelectionCountText.Text);
         BatchActionsButton.IsEnabled = count > 0;
         var all = count > 0 && count == (_vm?.VisibleTracks.Count ?? 0);
         SelectionToggle.IsChecked = count == 0 ? false : all ? true : null;
-        SelectionToggle.Content = L10n.T(all ? L10n.T("Playlists.ClearSelection") : count == 0 ? L10n.T("Playlists.SelectAll") : L10n.T("Playlists.PartiallySelectedSelectAll"));
+        // 部分选中由三态框和数量表达，简短动作标签避免窄窗口挤出右侧批量操作。
+        SelectionToggle.Content = L10n.T(all ? "Playlists.ClearSelection" : "Playlists.SelectAll");
+        var selectionHint = L10n.T(all ? "Playlists.ClearSelection" : count == 0 ? "Playlists.SelectAll" : "Playlists.PartiallySelectedSelectAll");
+        ToolTip.SetTip(SelectionToggle, selectionHint);
+        Avalonia.Automation.AutomationProperties.SetName(SelectionToggle, selectionHint);
         SelectionToggle.IsEnabled = _vm?.VisibleTracks.Count > 0;
         }
         finally { _updatingSelection = false; }

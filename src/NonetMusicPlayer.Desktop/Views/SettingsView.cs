@@ -249,7 +249,7 @@ public sealed class SettingsView : UserControl, IDisposable
         var location = _layoutCard.TranslatePoint(default, (Visual)_scroll.Content!); _scroll.Offset = new Avalonia.Vector(0, location?.Y ?? 0);
     }, Avalonia.Threading.DispatcherPriority.Loaded);
 
-    // 布局定制由插件承担；设置仅保留两个常用位置偏好，不再提供 JSON 文件编辑入口。
+    // 布局定制由插件承担；主窗口尺寸属于用户偏好，不受界面方案接管。
     private static Border LayoutCard(MainWindow owner, MainViewModel vm)
     {
         var s = vm.Settings;
@@ -261,9 +261,12 @@ public sealed class SettingsView : UserControl, IDisposable
             L10n.T(s.PlayerTop ? "Layout.Top" : "Layout.Bottom"),
             value => { s.PlayerTop = value == L10n.T("Layout.Top"); vm.ApplySettings(); });
         player.Name = "PlayerPosition";
+        var resetWindow = Ui.Button("Settings.RestoreDefaultWindowSize", owner.RestoreDefaultWindowSize);
+        resetWindow.Name = "RestoreDefaultWindowSize";
         return Ui.Card(L10n.T("Layout.Title"),
             Ui.SettingRow("navigationRight", L10n.T("Layout.NavigationPosition"), L10n.T("Layout.NavigationPositionHint"), navigation),
-            Ui.SettingRow("playerTop", L10n.T("Layout.PlayerPosition"), L10n.T("Layout.PlayerPositionHint"), player));
+            Ui.SettingRow("playerTop", L10n.T("Layout.PlayerPosition"), L10n.T("Layout.PlayerPositionHint"), player),
+            Ui.Row(L10n.T("Settings.WindowSize"), L10n.T("Settings.WindowSizeMemoryHint"), resetWindow));
     }
     private void RefreshDevices(object? sender, EventArgs e)
     {

@@ -101,6 +101,9 @@ public sealed class AppSettings
     public int HistoryLimit { get; set; } = 1000;
     public double SidebarWidth { get; set; } = 208;
     public double PlayerHeight { get; set; } = 96;
+    /// <summary>主窗口仅记住普通状态的逻辑尺寸；旧数据为空时按当前屏幕计算，不保存位置。</summary>
+    public double? WindowWidth { get; set; }
+    public double? WindowHeight { get; set; }
     public bool NavigationRight { get; set; }
     public bool PlayerTop { get; set; }
     public bool ConfirmClose { get; set; }
@@ -138,6 +141,10 @@ public sealed class AppSettings
         if (!double.IsFinite(FontSize)) FontSize = 13;
         if (!double.IsFinite(SidebarWidth)) SidebarWidth = 208;
         if (!double.IsFinite(PlayerHeight)) PlayerHeight = 96;
+        if (WindowWidth is not { } windowWidth || WindowHeight is not { } windowHeight
+            || !double.IsFinite(windowWidth) || !double.IsFinite(windowHeight)
+            || windowWidth is < 320 or > 32768 || windowHeight is < 320 or > 32768)
+            WindowWidth = WindowHeight = null;
         UiOpacity = double.IsFinite(UiOpacity) ? Math.Clamp(UiOpacity, .35, 1) : 1;
         if (!double.IsFinite(LyricOffset)) LyricOffset = 0;
         if (Theme is not ("Dark" or "Light" or "System")) Theme = "System";

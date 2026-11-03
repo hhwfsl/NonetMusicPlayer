@@ -15,9 +15,11 @@ public sealed partial class MainWindow
     private bool _movingTitle, _awaitingMovePointer, _nativeTitleMove;
     private NativePoint? _titleReleasePoint;
     private TouchWindowMover? _touchTitleMover;
+    private TouchWindowResizer? _touchWindowResizer;
     private void InitializeTitleInteraction()
     {
         _touchTitleMover = new TouchWindowMover(this);
+        _touchWindowResizer = new TouchWindowResizer(this);
         foreach (var border in ((Avalonia.Controls.Grid)Content!).Children.OfType<Border>().Where(b => b.Tag is string)) _resizeCursors[border] = border.Cursor;
         AddHandler(PointerMovedEvent, (_, e) =>
         {
@@ -36,6 +38,7 @@ public sealed partial class MainWindow
             if (_titleMessageHook is not null) Win32Properties.RemoveWndProcHookCallback(this, _titleMessageHook);
             _titleMoveCursor.Dispose();
             _touchTitleMover.Dispose();
+            _touchWindowResizer.Dispose();
         };
     }
     private void ApplyTitleButtons()
