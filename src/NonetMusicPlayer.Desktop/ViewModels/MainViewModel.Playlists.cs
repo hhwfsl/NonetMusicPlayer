@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Security.Cryptography;
 using System.Text;
 using Avalonia.Media.Imaging;
@@ -100,7 +100,16 @@ public sealed partial class MainViewModel
     private void RefreshSourceQueue()
     {
         if (_lyricsPlaybackLease is { } lease) { _playingList = [lease.Track]; return; }
-        if (PlayingPlaylistId is not null) _playingList = SourceTracks(PlayingSourcePage).Where(t => _explicitQueueIds is null || _explicitQueueIds.Contains(t.Id)).ToList();
+        if (PlayingPlaylistId is not null)
+        {
+            var source = SourceTracks(PlayingSourcePage).Where(t => _explicitQueueIds is null || _explicitQueueIds.Contains(t.Id)).ToDictionary(t => t.Id);
+            var queued = _playingList.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
+            // 歌单编辑保留已排好的随机顺序，新增歌曲只加入队尾。
+            _playingList = Settings.PlayMode == PlayMode.Shuffle
+                ? _playingList.Where(t => source.ContainsKey(t.Id)).Select(t => source[t.Id]).Concat(source.Values.Where(t => !queued.Contains(t.Id))).ToList()
+                : source.Values.ToList();
+        }
+        NotifyPlaybackQueueChanged();
     }
     private void ObserveTracks()
     {

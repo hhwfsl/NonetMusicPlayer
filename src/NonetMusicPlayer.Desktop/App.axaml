@@ -274,6 +274,14 @@
             <Setter Property="CornerRadius" Value="15" />
             <Setter Property="Background" Value="Transparent" />
         </Style>
+        <!-- 浮层开关独立于导航选中态；移开指针后仍清楚显示当前展开的按钮。 -->
+        <Style Selector="Button.popup-open, ComboBox.popup-open">
+            <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+        </Style>
+        <Style Selector="Button.popup-open /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+        </Style>
         <Style Selector="Grid.track-row.playing">
             <Setter Property="Background" Value="Transparent" />
         </Style>

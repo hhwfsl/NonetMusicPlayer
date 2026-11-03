@@ -1,4 +1,4 @@
-<Window
+﻿<Window
     x:Class="NonetMusicPlayer.Desktop.Views.MainWindow"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -926,6 +926,11 @@
                                                 Click="DesktopLyrics_Click"
                                                 ToolTip.Tip="{ui:Loc Key='Lyrics.ShowHideDesktopLyrics'}">
                                                 <ui:VectorIcon Kind="Lyrics" />
+                                            </Button>
+                                            <Button x:Name="PlayerQueue" Grid.Column="6" Classes="player-tool"
+                                                    Click="PlayerQueue_Click" AutomationProperties.Name="{ui:Loc Key='Playback.Queue'}"
+                                                    ToolTip.Tip="{ui:Loc Key='Playback.Queue'}">
+                                                <ui:VectorIcon Kind="Queue" />
                                             </Button>
                                             <Button x:Name="PlayerExtensionsButton" Grid.Column="6" Classes="player-tool" IsVisible="False" ToolTip.Tip="{ui:Loc Key='Common.More'}">
                                                 <ui:VectorIcon Kind="Plugins" />

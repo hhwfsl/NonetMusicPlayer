@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -119,7 +119,7 @@ public sealed partial class MainViewModel
         _updatingPosition = true;
         try { PlaybackDuration = Math.Max(1, Math.Max(CurrentTrack?.DurationSeconds ?? 0, State.LastPosition)); PlaybackPosition = CurrentTrack is null ? 0 : Math.Clamp(State.LastPosition, 0, PlaybackDuration); }
         finally { _updatingPosition = false; }
-        _audioLoaded = false; _resumePending = CurrentTrack is not null; _playingList = SourceTracks(PlayingSourcePage).ToList();
+        _audioLoaded = false; _resumePending = CurrentTrack is not null; _playingList = OrderPlaybackQueue(SourceTracks(PlayingSourcePage), CurrentTrack); NotifyPlaybackQueueChanged();
         _sessionListeningSeconds = 0; _sessionCounted = false; ResetListeningAnchor();
         Volume = Settings.Volume; ApplySettings(); Navigate(PlayingSourcePage); StatisticsChanged?.Invoke(this, EventArgs.Empty); Save();
         var journalBackup = Path.Combine(archive, "selected.library.db"); Storage.RestoreListeningJournal(File.Exists(journalBackup) ? journalBackup : null);

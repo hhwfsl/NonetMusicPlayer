@@ -26,7 +26,9 @@ Startup opens Music, a single-screen overview of collection counts, listening ti
 
 A floating drag hint identifies temporary playback, the receiving playlist, lyric association or reordering. Leaving the window clears the hint without changing source files.
 
-Shuffle reduces the probability of previously selected songs without excluding them. With at least two distinct songs, the next random choice cannot be the current song. Weight history is session-local and does not change playlist ordering.
+Desktop shuffle randomizes the current playback source once and plays that queue in order. Previous walks backwards; wrapping keeps the same order. Manually selecting any song, including the current song, creates a fresh queue starting with it. Automatic advance, pause/resume and error recovery preserve the queue. The original playlist order stays intact.
+
+The queue button to the right of desktop lyrics opens a floating playback list. Click a song to play it. Click outside, click the button again or press Escape to close. Opening and closing can reverse during animation; the list adapts to the top player bar, smaller windows and both themes.
 
 ## Player terminal and independent CLI
 
@@ -174,3 +176,7 @@ Settings → Appearance accepts PNG, JPG, JPEG, still WebP and BMP backgrounds, 
 Start at Login in Settings → Playback is off by default. Enabling it registers Nonet for the current user's desktop login. Disabling it or resetting settings removes that entry. System startup management and security policies remain effective.
 
 Use the sidebar playlist add button, then Create from Folders, to select multiple folders. Each folder becomes a separate playlist named after that folder; supported audio is imported recursively with covers and matching local lyrics. Empty folders create empty playlists. Canceling the picker creates nothing; canceling an active import retains playlists already created. Source audio is never deleted.
+
+Maximize and restore switch immediately. Lyrics preserve the previous page title and slide vertically from the player bar edge facing the lyrics area. Mode, More, volume and calendar popovers close on another click of their button or an outside click; the calendar scrolls within shorter windows.
+
+Lyrics now slide vertically from the player edge facing the lyrics area, keeping their original size. Popover buttons remain selected while open. The queue survives layout recomposition and navigation, including Qinglan 2.0.7; reimport the updated preset to replace its old copy.

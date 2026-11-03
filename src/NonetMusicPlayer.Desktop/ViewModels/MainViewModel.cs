@@ -21,8 +21,6 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     private readonly SemaphoreSlim _playGate = new(1);
     private readonly Stack<Action> _undo = new();
     private List<TrackItem> _playingList = [];
-    // 此实例覆盖当前会话的各歌单，切换页面不会清空随机历史。
-    private readonly Core.Playback.WeightedShuffleSelector _shuffle = new();
     private List<TrackItem> _temporaryTracks = [];
     private readonly HashSet<string> _countedTemporaryIds = new(StringComparer.Ordinal);
     private HashSet<string>? _explicitQueueIds;
@@ -111,7 +109,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         PlaybackPosition = CurrentTrack is null ? 0 : Math.Clamp(State.LastPosition, 0, PlaybackDuration);
         _updatingPosition = false;
         _resumePending = CurrentTrack is not null;
-        _playingList = SourceTracks(PlayingSourcePage).ToList();
+        _playingList = OrderPlaybackQueue(SourceTracks(PlayingSourcePage), CurrentTrack);
         // 播放队列可以恢复，但临时搜索页与上次播放来源不应成为启动导航。
         Page = "library"; PageTitle = LocalizedTitleForPage(Page);
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(100), DispatcherPriority.Normal, Tick); _timer.Start();
@@ -198,7 +196,8 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         RecordPlaylistVisit(page);
         Page = page; SearchText = "";
         LeaveMusicSearch(Page);
-        PageTitle = title ?? LocalizedTitleForPage(Page);
+        // 歌词作为覆盖层展开，背景页面标题保持原值，不能在转场截图前变成“正在播放”。
+        if (Page != "lyrics") PageTitle = title ?? LocalizedTitleForPage(Page);
         OnPropertyChanged(nameof(CurrentPlaylist));
         ApplyFilter(); ViewChanged?.Invoke(this, EventArgs.Empty);
         NavigationRequested?.Invoke(this, EventArgs.Empty);
@@ -358,7 +357,12 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     {
         if (RejectLyricsPlaybackChange()) return;
         if (!Enum.IsDefined(mode)) return;
+        if (Settings.PlayMode == mode) return;
         Settings.PlayMode = mode;
+        // 切换随机模式只重排当前播放范围，不受正在浏览的页面影响。
+        var queueIds = _playingList.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
+        _playingList = OrderPlaybackQueue(mode == PlayMode.Shuffle ? _playingList : SourceTracks(PlayingSourcePage).Concat(_playingList).Where(t => queueIds.Contains(t.Id)), CurrentTrack);
+        NotifyPlaybackQueueChanged();
         OnPropertyChanged(nameof(ModeText)); OnPropertyChanged(nameof(ModeIcon)); OnPropertyChanged(nameof(ModeDescription));
         Save(); StatusText = L10n.Format("Playback.PlaybackMode12A803", ModeDescription);
         CompleteOperation("player.mode");
@@ -389,15 +393,8 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         var index = _playingList.FindIndex(t => t.Id == (_requestedTrack ?? CurrentTrack)?.Id);
         if (automatic && Settings.PlayMode == PlayMode.RepeatOne) { await StartTrackAsync(CurrentTrack, _playingList.ToArray(), PlayingSourcePage, 0, true); return; }
         var target = index < 0 ? direction > 0 ? 0 : _playingList.Count - 1 : index + direction;
-        if (Settings.PlayMode == PlayMode.Shuffle)
-        {
-            var selected = _shuffle.Choose(_playingList.Select(t => t.Id), CurrentTrack?.Id);
-            target = _playingList.FindIndex(t => t.Id == selected);
-        }
-        else if (target < 0 || target >= _playingList.Count)
-        {
-            target = (target + _playingList.Count) % _playingList.Count;
-        }
+        // 随机模式也沿已生成的队列前进、后退，循环结束前不会重新抽选歌曲。
+        target = (target % _playingList.Count + _playingList.Count) % _playingList.Count;
         await StartTrackAsync(_playingList[target], _playingList.ToArray(), PlayingSourcePage, 0, true);
         if (IsPlaying) CompleteOperation(direction < 0 ? "player.previous" : "player.next");
     }

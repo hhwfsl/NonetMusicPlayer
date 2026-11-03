@@ -2,8 +2,11 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Primitives.PopupPositioning;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using NonetMusicPlayer.Desktop.Services;
 using NonetMusicPlayer.Desktop.Views;
 
@@ -25,7 +28,10 @@ public sealed class StatisticsDatePicker : UserControl
     private readonly TextBlock _label = new();
     private readonly StackPanel _month = new() { Spacing = 12 };
     private readonly Flyout _flyout;
+    private readonly ScrollViewer _calendarScroll;
     private DateTime _displayMonth;
+    private bool _openIntent;
+    private TopLevel? _inputRoot;
     public Control CalendarContent => _month;
     public StatisticsDatePicker()
     {
@@ -34,11 +40,38 @@ public sealed class StatisticsDatePicker : UserControl
         _label.VerticalAlignment = VerticalAlignment.Center; grid.Children.Add(_label);
         var icon = new VectorIcon { Kind = IconKind.Calendar, Width = 20, Height = 20 }; Grid.SetColumn(icon, 1); grid.Children.Add(icon); _button.Content = grid;
         Content = _button;
-        _flyout = new Flyout { Content = new Border { Name = "StatisticsCalendar", Width = 310, Padding = new(16), CornerRadius = new(16), Background = Ui.Brush("SurfaceBrush"), Child = _month }, Placement = PlacementMode.BottomEdgeAlignedRight };
+        _calendarScroll = new ScrollViewer { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Content = new Border { Name = "StatisticsCalendar", Width = 310, Padding = new(16), CornerRadius = new(16), Background = Ui.Brush("SurfaceBrush"), Child = _month } };
+        _flyout = new Flyout { Content = _calendarScroll, Placement = PlacementMode.BottomEdgeAlignedRight,
+            PlacementConstraintAdjustment = PopupPositionerConstraintAdjustment.FlipY | PopupPositionerConstraintAdjustment.SlideX | PopupPositionerConstraintAdjustment.ResizeY };
         _flyout.FlyoutPresenterClasses.Add("statistics-calendar");
-        _button.Click += (_, _) => { var selected = ClampDate(SelectedDate ?? DateTime.Today); _displayMonth = new DateTime(selected.Year, selected.Month, 1); RenderMonth(); _flyout.ShowAt(_button); };
+        PopupSurfaceMotion.Attach(_flyout);
+        _button.Click += (_, _) =>
+        {
+            // 轻触关闭可能先于 Click 完成，使用按键开关意图避免同一次点击重新打开日历。
+            if (_openIntent || _flyout.IsOpen) { _openIntent = false; _flyout.Hide(); return; }
+            _openIntent = true; var selected = ClampDate(SelectedDate ?? DateTime.Today);
+            // 矮窗口中限制日历高度并允许内部滚动，不能让自动滑移把浮层盖在原按钮上。
+            if (TopLevel.GetTopLevel(_button) is { } root && _button.TranslatePoint(default, root) is { } origin)
+                _calendarScroll.MaxHeight = Math.Max(100, Math.Max(origin.Y, root.Bounds.Height - origin.Y - _button.Bounds.Height) - 48);
+            _displayMonth = new DateTime(selected.Year, selected.Month, 1); RenderMonth(); _flyout.ShowAt(_button);
+        };
+        AttachedToVisualTree += (_, _) =>
+        {
+            _inputRoot = TopLevel.GetTopLevel(this);
+            _inputRoot?.AddHandler(PointerPressedEvent, RootPressed, RoutingStrategies.Tunnel, true);
+        };
+        DetachedFromVisualTree += (_, _) =>
+        {
+            _inputRoot?.RemoveHandler(PointerPressedEvent, RootPressed); _inputRoot = null; _openIntent = false; _flyout.Hide();
+        };
+        _month.AddHandler(KeyDownEvent, (_, e) => { if (e.Key == Key.Escape) _openIntent = false; }, RoutingStrategies.Tunnel, true);
         _label.Text = DateTime.Today.ToString("d", L10n.Culture);
         _label.TextTrimming = TextTrimming.CharacterEllipsis;
+    }
+    private void RootPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!new Rect(_button.Bounds.Size).Contains(e.GetPosition(_button))) _openIntent = false;
     }
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
@@ -82,7 +115,7 @@ public sealed class StatisticsDatePicker : UserControl
         {
             if (index > (DateTime.MaxValue.Date - first).Days) continue;
             var day = first.AddDays(index); var selected = day == (SelectedDate ?? DateTime.Today).Date;
-            var button = Ui.Button(day.Day.ToString(CultureInfo.CurrentCulture), () => { SelectedDate = day; _flyout.Hide(); });
+            var button = Ui.Button(day.Day.ToString(CultureInfo.CurrentCulture), () => { _openIntent = false; SelectedDate = day; _flyout.Hide(); });
             button.Name = "StatisticsDay_" + day.ToString("yyyyMMdd"); button.MinWidth = button.MinHeight = 0; button.Height = 36; button.Padding = new(0); button.CornerRadius = new(10);
             button.Classes.Add(selected ? "primary" : "quiet"); button.Opacity = day.Month == _displayMonth.Month ? 1 : .4;
             button.IsEnabled = day.Year >= MinimumYear && day.Year <= MaximumYear;

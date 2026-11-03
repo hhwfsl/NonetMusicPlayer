@@ -60,3 +60,9 @@ placement 支持 append/prepend（Panel 内）、before/after（Panel 子项旁�
 按控件类型定制外观、状态过渡与变形动画使用 SDK 4.14 的可选 `ui.styles.v1`，详见 [风格扩展协议](STYLE_EXTENSIONS.md)。这与具体控件的布局覆盖分开：风格可以叠加，同属性由上层覆盖，关闭后恢复底层定义；不需要枚举每个 Button 或 ToggleSwitch 实例。
 
 页面实际切换时进行 140 ms 短淡入，三个播放按钮使用 90 ms 按压反馈。不为播放进度、歌词滚动、长列表滚动、焦点恢复创建动画。Windows 系统关闭界面动画时自动停用；任意平台可用 NONET_REDUCED_MOTION=1 禁用。动画不改变命中区域和排版尺寸。
+
+
+桌面播放栏新增稳定命名控件 `PlayerQueue`，完整方案可用既有 ref 节点将它放在 `PlayerDesktopLyrics` 右侧。旧方案和 Schema 继续兼容。歌词转场读取实际 `PlayerSurface` 朝向内容区的边缘作为裁剪起点，方案无需指定封面锚点；最大化与还原始终直接执行系统状态切换。
+
+
+本轮播放列表保存在窗口独立覆盖层，不属于方案可重建的 ShellLayout；反复导航、启停/重载方案不会丢失浮层。原生浮窗外部点击先结束旧弹层，再交给目标按钮；展开期间按钮带有 `popup-open` 类。

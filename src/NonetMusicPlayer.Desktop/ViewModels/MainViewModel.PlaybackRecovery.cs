@@ -1,4 +1,4 @@
-using NonetMusicPlayer.Desktop.Models;
+﻿using NonetMusicPlayer.Desktop.Models;
 using NonetMusicPlayer.Desktop.Services;
 
 namespace NonetMusicPlayer.Desktop.ViewModels;
@@ -45,6 +45,8 @@ public sealed partial class MainViewModel
             if (_explicitQueueIds is not null) queue = queue.Where(t => _explicitQueueIds.Contains(t.Id)).ToArray();
             _playingList = queue.DistinctBy(t => t.Id).ToList();
             if (_playingList.All(t => t.Id != track.Id)) _playingList.Add(track);
+            if (!preserveQueueScope) _playingList = OrderPlaybackQueue(_playingList, track);
+            NotifyPlaybackQueueChanged();
             _explicitQueueIds?.Add(track.Id);
             PlayingSourcePage = NormalizeSourcePage(sourcePage);
             _loadingAudio = true; _audioLoaded = false; IsPlaying = false;
@@ -141,11 +143,6 @@ public sealed partial class MainViewModel
     {
         var candidates = _playingList.Where(t => !_failedPlaybackIds.Contains(t.Id)).ToArray();
         if (candidates.Length == 0) return null;
-        if (Settings.PlayMode == PlayMode.Shuffle)
-        {
-            var selected = _shuffle.Choose(candidates.Select(t => t.Id), failed?.Id);
-            return candidates.First(t => t.Id == selected);
-        }
         var start = _playingList.FindIndex(t => t.Id == failed?.Id);
         for (var offset = 1; offset <= _playingList.Count; offset++)
         {

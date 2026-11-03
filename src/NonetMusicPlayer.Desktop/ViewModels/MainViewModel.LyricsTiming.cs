@@ -1,4 +1,4 @@
-using NonetMusicPlayer.Desktop.Models;
+﻿using NonetMusicPlayer.Desktop.Models;
 
 namespace NonetMusicPlayer.Desktop.ViewModels;
 
@@ -17,7 +17,7 @@ public sealed partial class MainViewModel
         if (_disposed || _loadingAudio || _switchingOutput || _lyricsPlaybackLease is not null)
             throw new InvalidOperationException(L10n.T("LyricsTiming.Busy"));
         var lease = new LyricsPlaybackLease(this, pluginId, track, _playingList.ToArray(), _explicitQueueIds?.ToArray(), Settings.PlayMode, PlayingSourcePage);
-        _lyricsPlaybackLease = lease; _playingList = [track]; _explicitQueueIds = [track.Id];
+        _lyricsPlaybackLease = lease; _playingList = [track]; _explicitQueueIds = [track.Id]; NotifyPlaybackQueueChanged();
         OnPropertyChanged(nameof(IsLyricsTimingActive)); return lease;
     }
 
@@ -72,7 +72,7 @@ public sealed partial class MainViewModel
                 owner.UpdateListeningStatistics();
                 if (!owner._loadingAudio) { try { owner._audio.Pause(); } catch (Exception error) { AppLog.Warning("LyricsTiming", "结束标注时暂停失败", error); } }
                 owner.IsPlaying = false; owner.ResetListeningAnchor();
-                owner._playingList = _queue.ToList(); owner._explicitQueueIds = _scope?.ToHashSet(StringComparer.Ordinal);
+                owner._playingList = _queue.ToList(); owner.NotifyPlaybackQueueChanged(); owner._explicitQueueIds = _scope?.ToHashSet(StringComparer.Ordinal);
                 owner.Settings.PlayMode = _mode; owner.PlayingSourcePage = _source;
                 owner.OnPropertyChanged(nameof(IsLyricsTimingActive)); owner.OnPropertyChanged(nameof(ModeText)); owner.OnPropertyChanged(nameof(ModeIcon)); owner.OnPropertyChanged(nameof(ModeDescription));
                 owner.Save();

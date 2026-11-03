@@ -21,7 +21,7 @@ public sealed partial class MainViewModel
     /// <summary>刷新界面翻译，不修改音乐元数据、用户内容或播放状态。</summary>
     public void RefreshLocalizedText()
     {
-        if (!Page.StartsWith("plugin:", StringComparison.Ordinal)) PageTitle = LocalizedTitleForPage(Page);
+        if (Page != "lyrics" && !Page.StartsWith("plugin:", StringComparison.Ordinal)) PageTitle = LocalizedTitleForPage(Page);
         foreach (var name in new[] { nameof(TrackCountText), nameof(EmptyStateTitle), nameof(EmptyStateDescription),
             nameof(CurrentTitle), nameof(CurrentArtist), nameof(ModeText), nameof(ModeDescription) })
             OnPropertyChanged(name);

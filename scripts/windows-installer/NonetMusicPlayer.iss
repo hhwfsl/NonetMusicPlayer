@@ -88,16 +88,23 @@ Type: files; Name: "{app}\VideoDecoder\NOTICE.txt"
 Type: dirifempty; Name: "{app}\VideoDecoder"
 
 [Icons]
-Name: "{group}\Nonet"; Filename: "{app}\Nonet.exe"; WorkingDir: "{app}"
-Name: "{autodesktop}\Nonet"; Filename: "{app}\Nonet.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{group}\Nonet"; Filename: "{app}\Nonet.exe"; WorkingDir: "{app}"; Check: not IsInstallerQA
+Name: "{autodesktop}\Nonet"; Filename: "{app}\Nonet.exe"; WorkingDir: "{app}"; Tasks: desktopicon; Check: not IsInstallerQA
 
 [Run]
 Filename: "{app}\Nonet.exe"; Description: "{cm:LaunchProgram,Nonet}"; Flags: nowait postinstall skipifsilent unchecked
 
 [Code]
+// 隔离安装验收兼容新旧开关，使用独立安装身份并禁止生成正式快捷方式。
+function IsInstallerQA: Boolean;
+begin
+  Result := (ExpandConstant('{param:LMPQA|0}') = '1') or
+    (ExpandConstant('{param:NonetInstallerQA|0}') = '1');
+end;
+
 function InstallationId(Param: String): String;
 begin
-  if ExpandConstant('{param:LMPQA|0}') = '1' then
+  if IsInstallerQA then
     Result := 'NonetMusicPlayer.InstallerQA{#InstallationSuffix}'
   else
     Result := 'NonetMusicPlayer.Desktop{#InstallationSuffix}';

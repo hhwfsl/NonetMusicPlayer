@@ -5,7 +5,7 @@
 
 SDK 4.14，能力 `ui.styles.v1`，服务 `styles`。Contract v1/v2、页面 Schema 与 SDK AssemblyVersion 4.0.0.0 不变；旧插件不需要修改或重新打包。
 
-可选补充：类型目录支持 `NumericUpDown`，可通过 `part: PART_TextBox` 处理内部编辑器，避免独立输入框风格遮挡步进按钮。`morph.windowEnabled:false` 只关闭窗口最大化/还原的变形，保留容器与歌词转场；省略时沿用旧行为。此开关按字段参与风格叠加。
+可选补充：类型目录支持 `NumericUpDown`，可通过 `part: PART_TextBox` 处理内部编辑器，避免独立输入框风格遮挡步进按钮。窗口最大化与还原统一直接执行系统状态切换；旧 `morph.windowEnabled` 字段仍兼容读取，不再触发窗口客户区变形。容器与歌词转场保持独立。
 
 滚动条可使用 `ScrollBar` 与 `Thumb` 类型。内置 `nonet-scrollbar` 作用域标记滚动条及其模板后代；例如 `{"type":"Thumb","scope":"nonet-scrollbar","setters":{"width":8,"cornerRadius":8}}` 仅修改滚动条滑块，避免影响音量和播放进度柄。拖动滑块可用 `pressed` 状态。停用后恢复宿主属性，原协议和程序集基线不变。
 
@@ -100,7 +100,7 @@ await context.RequestFromUserAsync("styles", new JsonObject
 - `durationMs` 控制状态属性过渡，范围 0–2000；0 表示立即应用。
 - `curve` 支持 `parabolic`（`1-(1-t)^2`）、`linear`、`cubic-out`。抛物线缓动不越过终点。
 - `motion` 可为原本没有动画的控件加入按压/悬停缩放和进场位移，保留原控件业务、命令、焦点与无障碍功能。缩放限 0.8–1.1，位移限 ±80 DIP。
-- `morph` 为窗口最大化/还原及容器展开提供快照变形。位置、尺寸和圆角共享一个时钟，路径弯曲项为 `4*arc*t*(1-t)`。容器展开后承载的是真实控件，可交互，不是静态截图；退出恢复原父级与排列位置。
+- `morph` 为容器展开提供快照变形。位置、尺寸和圆角共享一个时钟，路径弯曲项为 `4*arc*t*(1-t)`。容器展开后承载的是真实控件，可交互，不是静态截图；退出恢复原父级与排列位置。
 - 原生窗口状态和尺寸由操作系统决定；动画呈现在应用客户区，系统边界和合成器行为因平台而异，不承诺改写 Wayland 等系统的窗口管理动画。
 - 快照最多 200 万像素，完成、取消、停用和关闭时释放。连续操作取消过期转场，不冻结播放时钟。系统减少动画设置和 `NONET_REDUCED_MOTION=1` 优先，关闭时直接切换。
 - `backgroundBlur` 范围 0–40，仅模糊应用背景图片，不模糊文字或整个面板。无背景图时保留普通底色，不能将纯色背景误称为真实桌面背板模糊。
@@ -132,3 +132,9 @@ await context.RequestFromUserAsync("styles", new JsonObject
 ```
 
 实现依据：[Avalonia 属性优先级](https://docs.avaloniaui.net/docs/properties/value-precedence)、[动画与过渡](https://docs.avaloniaui.net/docs/graphics-animation/control-transitions)。
+
+
+桌面浮层统一使用有限时长的抛物线入场及收起反馈，支持外部点击和按钮再次点击关闭。播放列表容器提供 `nonet-floating-surface` 类；完整播放栏布局可通过已有通用 ref 节点引用 `PlayerQueue`，放在 `PlayerDesktopLyrics` 右侧。旧方案不强制新增引用，Schema、Contract 与程序集身份保持不变。歌词从实际 `PlayerSurface` 朝向歌词区的边缘垂直滑入，保留背景页面标题，并在同一 UI 帧移除旧底图及交接真实歌词。
+
+
+本轮播放列表保存在窗口独立覆盖层，不属于方案可重建的 ShellLayout；反复导航、启停/重载方案不会丢失浮层。原生浮窗外部点击先结束旧弹层，再交给目标按钮；展开期间按钮带有 `popup-open` 类。

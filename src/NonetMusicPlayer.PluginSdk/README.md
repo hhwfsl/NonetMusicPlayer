@@ -33,3 +33,10 @@ SDK 3.1 新增 `lyrics` 独立进程插件、`lyrics-search` 页面部件与 `ly
 SDK 3.3 新增可选 `platform` 清单字段与 `PluginPlatformPolicy`。打包器使用 `--rid win-x64 / osx-x64 / linux-x64` 分别生成本机平台包；安装与更新只保留当前平台和共享资源。SDK 保留原四参数 `PluginPackageBuilder.Pack` API，新增含 `rid` 的五参数重载；旧多平台包和旧 Contract v1 继续兼容。
 
 独立进程入口可使用 Native AOT 发布，宿主仍通过相同 JSON-RPC 调用，不增加 Contract、SDK 版本或新的运行时权限。协议序列化采用显式源生成类型，构建和链接在目标系统进行；仅打包本机必要原生文件和许可。SDK 不承诺所有验证/开发工具方法均适用于 AOT，入口只引用所需 DTO/API，并处理裁剪分析警告。详细构建、兼容和验证要求见插件开发文档第 16 节。
+
+
+桌面宿主的 `queue.list` 返回实际播放队列；随机模式预先洗牌，手动重新选歌重建顺序，自动前进/后退及故障跳过沿该顺序运行。播放列表浮层与内置变形、歌词渲染改进不新增必需 Contract 或能力，旧插件继续使用原有命令。详见 [桌面动画与播放队列](../../docs/DESKTOP_MOTION_AND_QUEUE.md)。
+
+桌面浮层与歌词转场改进不新增必需能力。完整界面方案可将已有通用 ref 指向 `PlayerQueue`，浮层表面可匹配 `nonet-floating-surface`；窗口最大化/还原始终直接执行，旧 morph.windowEnabled 字段继续兼容。
+
+浮窗展开状态通过可选 `popup-open` 类呈现，不新增必需能力。队列覆盖层不参与 ShellLayout 重组；歌词采用播放栏边缘裁剪下的固定尺寸垂直滑动，旧歌词圆角配置继续兼容读取但不用于缩放变形。

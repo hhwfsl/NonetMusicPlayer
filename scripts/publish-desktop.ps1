@@ -50,9 +50,10 @@ function Write-MacIcon([string]$Destination) {
 foreach ($target in $targets) {
     $stage = Assert-ChildPath (Join-Path $artifactRoot ("publish-stage-" + $target.Rid + "-" + $timestamp)) $artifactRoot
     $binary = Join-Path $stage "binary"
-    dotnet restore $projectPath --configfile (Join-Path $repositoryRoot "NuGet.Config") -r $target.Rid --disable-parallel
+    # 串行 MSBuild 节点与独立编译器避免受限环境中的命名管道竞争，六个 RID 仍逐一验证。
+    dotnet restore $projectPath --configfile (Join-Path $repositoryRoot "NuGet.Config") -r $target.Rid --disable-parallel -m:1 -p:BuildInParallel=false
     if ($LASTEXITCODE -ne 0) { throw "Restore failed for $($target.Rid)" }
-    dotnet publish $projectPath -c $Configuration -r $target.Rid --no-restore --self-contained true -o $binary -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimMode=partial -p:DebugType=None -p:DebugSymbols=false -p:EnableCompressionInSingleFile=true
+    dotnet publish $projectPath -c $Configuration -r $target.Rid --no-restore --self-contained true -o $binary -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimMode=partial -p:DebugType=None -p:DebugSymbols=false -p:EnableCompressionInSingleFile=true -m:1 -p:UseSharedCompilation=false -p:BuildInParallel=false
     if ($LASTEXITCODE -ne 0) { throw "Publish failed for $($target.Rid); old package preserved." }
     & (Join-Path $PSScriptRoot 'build-crash-handler.ps1') -Rids @($target.Rid)
     $crashName = if ($target.Name -eq 'windows') { 'NonetCrashHandler.exe' } else { 'NonetCrashHandler' }

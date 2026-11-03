@@ -54,7 +54,7 @@
 
 选择器支持完整页面 ID 或单个结尾 `*`，默认 `from`、`to` 为 `*`。常用 ID 为 `library`、`songs`、`history`、`playlists`、`albums`、`artists`、`statistics`、`devices`、`settings`、`plugins`、`terminal`、`cloud-search`；分类或扩展页面可使用 `playlist:*`、`album:*`、`artist:*`、`plugin:*`、`interface:*`、`lan:*`。
 
-歌词页继续使用专用的展开/收回过渡；由已有 `layout.motion.lyricsDurationMs`、`lyricsCornerRadius` 控制，普通页面规则不会与它叠加。已有 `layout.motion.pageDurationMs` 仍有效，在所在风格的 `pageTransitions` 之前参与时长叠加。
+歌词页使用从实际播放栏朝向内容区的边缘向歌词区垂直滑入、反向滑出；整张歌词图保持尺寸与横向位置，只改变 Y 轴平移，快速反向导航从当前进度继续。最大化与还原直接切换系统状态，旧 windowEnabled 字段继续兼容读取，但不启用窗口客户区动画。容器仍支持内置变形及显式 enabled=false，减少动画偏好优先。播放列表浮层使用可反向的实时缩放/淡入，保留真实列表输入，不创建页面导航。详见 [桌面动画与播放队列](DESKTOP_MOTION_AND_QUEUE.md)。歌词过渡由已有 `layout.motion.lyricsDurationMs` 控制；`lyricsCornerRadius` 保持兼容读取，垂直滑动不做圆角变形，普通页面规则不会与它叠加。已有 `layout.motion.pageDurationMs` 仍有效，在所在风格的 `pageTransitions` 之前参与时长叠加。
 
 ## 插件调用
 
@@ -73,3 +73,6 @@
 `operation: "reset"` 只移除调用插件的层。插件停用或卸载由宿主撤销其覆盖，下层风格和默认配置自动恢复。
 
 使用 SDK 的 `StyleSheetContract.Read/Validate` 验证文件，通过 `StyleSheetJson.Default.StyleSheet` 或 `ListStyleSheet` 源生成序列化，避免复制协议实现。
+
+
+本轮播放列表保存在窗口独立覆盖层，不属于方案可重建的 ShellLayout；反复导航、启停/重载方案不会丢失浮层。原生浮窗外部点击先结束旧弹层，再交给目标按钮；展开期间按钮带有 `popup-open` 类。

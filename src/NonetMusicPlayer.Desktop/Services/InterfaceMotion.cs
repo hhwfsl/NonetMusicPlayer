@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Animation.Easings;
@@ -15,6 +15,7 @@ namespace NonetMusicPlayer.Desktop.Services;
 /// <summary>仅播放有限时长的微动画，不参与歌词、进度和长列表布局，不创建后台定时器。</summary>
 public sealed class InterfaceMotion : IDisposable
 {
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Button, object> Installed = new();
     private Action? _cancel;
     private int _generation;
     public bool IsRunning => _cancel is not null;
@@ -24,15 +25,18 @@ public sealed class InterfaceMotion : IDisposable
         if (!IsEnabled) return;
         foreach (var button in buttons)
         {
+            if (Installed.TryGetValue(button, out _)) continue;
+            Installed.Add(button, new object());
             var transform = new ScaleTransform(1, 1) { Transitions = new Transitions
             {
-                new DoubleTransition { Property = ScaleTransform.ScaleXProperty, Duration = TimeSpan.FromMilliseconds(90) },
-                new DoubleTransition { Property = ScaleTransform.ScaleYProperty, Duration = TimeSpan.FromMilliseconds(90) }
+                new DoubleTransition { Property = ScaleTransform.ScaleXProperty, Duration = TimeSpan.FromMilliseconds(140), Easing = new QuadraticEaseOut() },
+                new DoubleTransition { Property = ScaleTransform.ScaleYProperty, Duration = TimeSpan.FromMilliseconds(140), Easing = new QuadraticEaseOut() }
             } };
             button.RenderTransform = transform; button.RenderTransformOrigin = RelativePoint.Center;
             void Scale(double value) { var target = StyleLayerService.OwnsMotion(button) ? 1 : value; transform.ScaleX = target; transform.ScaleY = target; }
             button.AddHandler(InputElement.PointerPressedEvent, (_, _) => Scale(.94), RoutingStrategies.Tunnel);
-            button.AddHandler(InputElement.PointerReleasedEvent, (_, _) => Scale(1), RoutingStrategies.Tunnel, true);
+            button.PointerEntered += (_, _) => Scale(1.035);
+            button.AddHandler(InputElement.PointerReleasedEvent, (_, _) => Scale(button.IsPointerOver ? 1.035 : 1), RoutingStrategies.Tunnel, true);
             button.PointerCaptureLost += (_, _) => Scale(1);
             button.PointerExited += (_, _) => Scale(1);
         }

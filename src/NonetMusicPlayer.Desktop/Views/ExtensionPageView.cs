@@ -223,7 +223,7 @@ public sealed class ExtensionPageView : UserControl, IDisposable, IPluginKeyboar
                         : Ui.Actions(new VectorIcon { Kind = icon, Width = 18, Height = 18 }, label) : label;
                 var button = new Button { Content = buttonContent, HorizontalContentAlignment = HorizontalAlignment.Stretch, MinHeight = 36 };
                 ToolTip.SetTip(button, node.Tooltip.Length > 0 ? node.Tooltip : node.Text);
-                button.Click += async (_, _) => { if (node.OpenMenuOnClick && button.ContextMenu is { } menu) menu.Open(button); else await Invoke(node, item); };
+                button.Click += async (_, _) => { if (node.OpenMenuOnClick && button.ContextMenu is { } menu) { if (menu.IsOpen) menu.Close(); else menu.Open(button); } else await Invoke(node, item); };
                 if (node.Bind.Length > 0) bindings.Add(state => { label.Text = String(Value(node.Bind, state, item)); ToolTip.SetTip(button, node.Tooltip.Length > 0 ? node.Tooltip : label.Text); });
                 control = button; break;
             case "toggle":

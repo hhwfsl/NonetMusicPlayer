@@ -28,9 +28,13 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        InitializePlaybackQueue();
+        InitializeMenuToggle();
+        foreach (var button in new[] { PlayerVolume, PlayerExtensionsButton, TitleExtensionsButton })
+            if (button.Flyout is PopupFlyoutBase flyout) PopupSurfaceMotion.Attach(flyout);
         PropertyChanged += (_, change) => { if (change.Property == WindowStateProperty && WindowState == WindowState.Minimized) { ++_windowMorphRequest; _styleMorph.Cancel(); } };
         Closed += (_, _) => { _restoreExpandedStyleControl?.Invoke(); _styleMorph.Dispose(); _styleLayers?.Dispose(); };
-        InterfaceMotion.InstallTransport(PlayerPrevious, PlayerPlay, PlayerNext);
+        InterfaceMotion.InstallTransport(PlayerPrevious, PlayerPlay, PlayerNext, PlayerMode, PlayerFavorite, PlayerMore, PlayerVolume, PlayerDesktopLyrics, PlayerQueue);
         InputCommitService.Install(this);
         InputCommitService.Bind(LibrarySearch, text => { if (_vm is not null) _vm.SearchText = text; });
         InitializeTrayLifecycle();
@@ -78,7 +82,7 @@ public sealed partial class MainWindow : Window
         if (_vm is not null) { DetachPlayerCommands(); _vm.Plugins.DetachHost(this); _vm.MusicSearchChanged -= MusicSearchStateChanged; _vm.ViewChanged -= ViewChanged; _vm.NavigationRequested -= ResetSongPagePosition; _vm.SettingsChanged -= SettingsChanged; _vm.LocatePlayingTrack -= LocatePlayingTrack; _vm.UserNotification -= UserNotification; }
         _desktopLyrics?.Dispose(); _taskbar?.Dispose();
         _styleMorph.Cancel(); _styleLayers?.Dispose(); _styleLayers = null;
-        _vm = DataContext as MainViewModel; if (_vm is null) return;
+        _vm = DataContext as MainViewModel; AttachQueueOwner(_vm); if (_vm is null) return;
         _vm.ConfirmLanConnection = ConfirmLanConnectionAsync;
         _vm.LanChanged += LanNavigationChanged;
         _vm.LanDisconnectNotice += LanDisconnectedNotification;
@@ -219,8 +223,9 @@ public sealed partial class MainWindow : Window
         if (_vm is null) return;
         var previousPageId = _displayedPage;
         var navigated = _displayedPage != _vm.Page;
+        if (navigated) _menuToggleAnchor = null;
         var lyricsTransition = navigated && (_displayedPage == "lyrics" || _vm.Page == "lyrics") && IsVisible && WindowState != WindowState.Minimized;
-        _pageMotion.Cancel(); _lyricsMotion.Cancel();
+        _pageMotion.Cancel(); if (lyricsTransition) _lyricsMotion.Interrupt(); else _lyricsMotion.Cancel();
         var transitionLayer = (Grid)WindowSurface.Child!;
         var lyricsRegion = LyricsTransitionRegion();
         var previousPageSize = WindowSurface.Bounds.Size;
@@ -278,7 +283,7 @@ public sealed partial class MainWindow : Window
         {
             _pageMotion.Cancel();
             try { var origin = transitionLayer.TranslatePoint(default, WindowSurface) ?? default;
-                _lyricsMotion.Begin(transitionLayer, FullLyricsHost, lyricsSnapshot, lyricsRegion, new Vector(origin.X, origin.Y), lyrics, InterfaceSettings.PlayerTop, InterfaceMotionProfile, previousPage, previousPageSize); }
+                _lyricsMotion.Begin(transitionLayer, FullLyricsHost, lyricsSnapshot, lyricsRegion, new Vector(origin.X, origin.Y), lyrics, InterfaceSettings.PlayerTop, InterfaceMotionProfile, previousPage, previousPageSize, new Rect(PlayerSurface.TranslatePoint(default, WindowSurface) ?? default, PlayerSurface.Bounds.Size)); }
             catch (Exception error) { previousPage?.Dispose(); AppLog.Warning("UI", "Lyrics transition skipped", error); }
         }
         else
@@ -526,7 +531,13 @@ public sealed partial class MainWindow : Window
     private void CloseWindow_Click(object? sender, RoutedEventArgs e) => Close();
     private void MinimizeWindow_Click(object? sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void MaximizeWindow_Click(object? sender, RoutedEventArgs e) => ToggleMaximize();
-    private void ToggleMaximize() => _ = MaximizeWithStyleAsync();
+    // 最大化与还原直接交给窗口系统，风格方案不能再为这两个动作附加客户区动画。
+    private void ToggleMaximize()
+    {
+        ++_windowMorphRequest; _styleMorph.Cancel(); _lyricsMotion.Cancel();
+        _restoreExpandedStyleControl?.Invoke();
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    }
     private async void ConfirmClosing(object? sender, WindowClosingEventArgs e)
     {
         if (_vm?.IsMigratingData == true) { e.Cancel = true; _vm.ReportWarning(L10n.T("Storage.AppDataIsBeingCopiedWaitForCompletionBefore")); return; }

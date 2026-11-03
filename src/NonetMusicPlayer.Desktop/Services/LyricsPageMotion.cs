@@ -15,8 +15,11 @@ namespace NonetMusicPlayer.Desktop.Services;
 public sealed class LyricsPageMotion : IDisposable
 {
     public const int MaximumSnapshotPixels = 2_000_000;
+    private readonly RetargetableMotion _slide = new();
     private Action? _cancel;
-    public bool IsRunning { get; private set; }
+    private double? _interrupted;
+    private int _generation;
+    public bool IsRunning => _cancel is not null;
     public static Bitmap? Capture(Control source, Rect region, double? renderScaling = null)
     {
         if (!InterfaceMotion.IsEnabled || source.Bounds.Width < 1 || source.Bounds.Height < 1 || region.Width < 1 || region.Height < 1) return null;
@@ -46,92 +49,62 @@ public sealed class LyricsPageMotion : IDisposable
         => Begin(layer, host, snapshot, region, layerOffset, opening, playerTop, null);
     public void Begin(Grid layer, ContentControl host, Bitmap snapshot, Rect region, Vector layerOffset, bool opening, bool playerTop, InterfaceMotionProfile? profile)
         => Begin(layer, host, snapshot, region, layerOffset, opening, playerTop, profile, null, default);
-    public void Begin(Grid layer, ContentControl host, Bitmap snapshot, Rect region, Vector layerOffset, bool opening, bool playerTop, InterfaceMotionProfile? profile, Bitmap? previousPage, Size previousPageSize)
+    public void Begin(Grid layer, ContentControl host, Bitmap snapshot, Rect region, Vector layerOffset, bool opening, bool playerTop, InterfaceMotionProfile? profile, Bitmap? previousPage, Size previousPageSize, Rect? playerRegion = null)
     {
-        Cancel();
-        if (!InterfaceMotion.IsEnabled) { snapshot.Dispose(); previousPage?.Dispose(); return; }
-        var token = new CancellationTokenSource();
-        var image = new Image { Source = snapshot, Stretch = Stretch.Fill, IsHitTestVisible = false };
-        var overlay = new Border { Name = "LyricsTransitionOverlay", Child = image, ClipToBounds = true,
-            IsHitTestVisible = false, Margin = new Thickness(region.X - layerOffset.X, region.Y - layerOffset.Y, 0, 0),
-            Width = region.Width, Height = region.Height, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top, ZIndex = 30 };
-        Grid.SetRowSpan(overlay, 2);
-        var distance = region.Height * (playerTop ? -1 : 1);
-        // 动画第一次采样前也必须处于起点，不能先闪现完整歌词页再被首帧移走。
-        var transform = new TranslateTransform(0, opening ? distance : 0);
-        overlay.CornerRadius = new(opening ? profile?.LyricsCornerRadius ?? 0 : 0);
+        var start = _interrupted ?? (opening ? 0 : 1);
+        _interrupted = null; Cancel();
+        if (!InterfaceMotion.IsEnabled || profile?.LyricsDurationMs == 0) { snapshot.Dispose(); previousPage?.Dispose(); return; }
+        var generation = ++_generation;
+        var player = playerRegion ?? new Rect(region.X, playerTop ? region.Y - 96 : region.Bottom, region.Width, 96);
+        // 只在播放栏朝向内容区的边缘裁剪；整张歌词图保持原尺寸，仅沿 Y 轴平移。
+        var top = playerTop ? Math.Max(region.Y, player.Bottom) : region.Y;
+        var bottom = playerTop ? region.Bottom : Math.Min(region.Bottom, player.Y);
+        var full = new Rect(region.X - layerOffset.X, top - layerOffset.Y, region.Width, Math.Max(1, bottom - top));
+        var image = new Image { Source = snapshot, Stretch = Stretch.Fill, Width = full.Width, Height = full.Height, IsHitTestVisible = false };
+        var transform = new TranslateTransform(); image.RenderTransform = transform;
+        var overlay = new Border { Name = "LyricsTransitionOverlay", Width = full.Width, Height = full.Height,
+            Margin = new Thickness(full.X, full.Y, 0, 0), HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top, IsHitTestVisible = false, ClipToBounds = true, Child = image, ZIndex = 1000 };
+        Grid.SetRowSpan(overlay, 100); Grid.SetColumnSpan(overlay, 100);
         Border? backdrop = null;
         if (opening && previousPage is not null)
         {
-            var oldImage = new Image { Source = previousPage, Width = previousPageSize.Width, Height = previousPageSize.Height,
-                Stretch = Stretch.Fill, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
-                RenderTransform = new TranslateTransform(-region.X, -region.Y) };
-            backdrop = new Border { Name = "LyricsTransitionBackdrop", Child = oldImage, ClipToBounds = true, IsHitTestVisible = false,
-                Width = region.Width, Height = region.Height, Margin = overlay.Margin,
-                HorizontalAlignment = overlay.HorizontalAlignment, VerticalAlignment = overlay.VerticalAlignment, ZIndex = 29 };
-            Grid.SetRowSpan(backdrop, 2);
+            backdrop = new Border { Name = "LyricsTransitionBackdrop", Child = new Image { Source = previousPage, Stretch = Stretch.Fill },
+                Width = previousPageSize.Width, Height = previousPageSize.Height, Margin = new Thickness(-layerOffset.X, -layerOffset.Y, 0, 0),
+                HorizontalAlignment = overlay.HorizontalAlignment, VerticalAlignment = overlay.VerticalAlignment, IsHitTestVisible = false, ZIndex = 999 };
+            Grid.SetRowSpan(backdrop, 100); Grid.SetColumnSpan(backdrop, 100); layer.Children.Add(backdrop);
         }
-        IDisposable? opacityLease = null, inputLease = null;
-        image.RenderTransform = transform;
-        var completed = false;
+        IDisposable? opacity = null, input = null; var finished = false;
+        void Draw(double value) => transform.Y = (playerTop ? -1 : 1) * full.Height * (1 - value);
         void Finish()
         {
-            if (completed) return; completed = true;
-            opacityLease?.Dispose(); inputLease?.Dispose(); layer.Children.Remove(overlay); image.Source = null; snapshot.Dispose();
-            if (backdrop is not null) { layer.Children.Remove(backdrop); if (backdrop.Child is Image prior) prior.Source = null; }
-            previousPage?.Dispose();
-            IsRunning = false; _cancel = null;
+            if (finished) return; finished = true; _slide.Changed -= Draw;
+            // 真实歌词、旧页底图和快照在同一个 UI 事务中交接，不透出旧页的一帧。
+            opacity?.Dispose(); input?.Dispose();
+            if (backdrop is not null) { layer.Children.Remove(backdrop); if (backdrop.Child is Image old) old.Source = null; }
+            layer.Children.Remove(overlay); image.Source = null; snapshot.Dispose(); previousPage?.Dispose();
+            if (_generation == generation) _cancel = null;
         }
-        try
+        _slide.MoveAsync(start, 0).GetAwaiter().GetResult(); Draw(start); layer.Children.Add(overlay);
+        if (opening)
         {
-            if (backdrop is not null) layer.Children.Add(backdrop);
-            layer.Children.Add(overlay);
-            if (opening)
-            {
-                // 真正的歌词页继续接收时钟和定位更新，只暂时隐藏绘制，避免停用视图造成定位丢失。
-                opacityLease = host.Bind(Visual.OpacityProperty, new ConstantValue(0d), BindingPriority.Animation);
-                inputLease = host.Bind(Avalonia.Input.InputElement.IsHitTestVisibleProperty, new ConstantValue(false), BindingPriority.Animation);
-            }
-            IsRunning = true;
-            _cancel = () => { token.Cancel(); Finish(); };
-            _ = Animate();
+            opacity = host.Bind(Visual.OpacityProperty, new ConstantValue(0d), BindingPriority.Animation);
+            input = host.Bind(Avalonia.Input.InputElement.IsHitTestVisibleProperty, new ConstantValue(false), BindingPriority.Animation);
         }
-        catch { Finish(); token.Dispose(); throw; }
-        async Task Animate()
+        _slide.Changed += Draw;
+        _cancel = () => { _slide.Cancel(); Finish(); };
+        _ = Run();
+        async Task Run()
         {
-            // 结束值必须保持到快照交接完成；解绑回到起点会产生收起/展开各一帧的闪回。
-            var animation = new Animation { FillMode = FillMode.Forward, Duration = TimeSpan.FromMilliseconds(profile?.LyricsDurationMs ?? (opening ? 240 : 200)), Easing = new CubicEaseOut(), Children =
-            {
-                new KeyFrame { Cue = new Cue(0), Setters = { new Setter(TranslateTransform.YProperty, opening ? distance : 0d) } },
-                new KeyFrame { Cue = new Cue(1), Setters = { new Setter(TranslateTransform.YProperty, opening ? 0d : distance) } }
-            } };
-            // Avalonia 的 TransformAnimator 以 Visual 为目标，再定位其 TranslateTransform。
-            try
-            {
-                if (profile is null) await animation.RunAsync(image, token.Token);
-                else
-                {
-                    var radius = profile.LyricsCornerRadius ?? 16;
-                    var rounding = new Animation { FillMode = FillMode.Forward, Duration = animation.Duration, Easing = new CubicEaseOut(), Children =
-                    {
-                        new KeyFrame { Cue = new Cue(0), Setters = { new Setter(Border.CornerRadiusProperty, new CornerRadius(opening ? radius : 0)) } },
-                        new KeyFrame { Cue = new Cue(1), Setters = { new Setter(Border.CornerRadiusProperty, new CornerRadius(opening ? 0 : radius)) } }
-                    } };
-                    await Task.WhenAll(animation.RunAsync(image, token.Token), rounding.RunAsync(overlay, token.Token));
-                }
-            }
-            catch (OperationCanceledException) { }
-            catch (Exception error) { AppLog.Warning("UI", "Lyrics transition skipped", error); }
-            finally
-            {
-                if (Dispatcher.UIThread.CheckAccess()) Finish(); else await Dispatcher.UIThread.InvokeAsync(Finish);
-                token.Dispose();
-            }
+            try { await _slide.MoveAsync(opening ? 1 : 0, profile?.LyricsDurationMs ?? 300); }
+            catch (Exception error) { AppLog.Warning("UI", "歌词垂直转场已结束", error); }
+            finally { await Dispatcher.UIThread.InvokeAsync(Finish); }
         }
     }
-    public void Cancel() => _cancel?.Invoke();
-    public void Dispose() => Cancel();
+    /// <summary>快速反向切换只保存垂直进度，不截取已经移动的图像再二次缩放。</summary>
+    public void Interrupt() { var value = IsRunning ? _slide.Value : (double?)null; Cancel(); _interrupted = value; }
+    public void Cancel() { _interrupted = null; var cancel = _cancel; _cancel = null; cancel?.Invoke(); }
+    public void Dispose() { Cancel(); _slide.Dispose(); }
     private sealed class ConstantValue(object value) : IObservable<object>
     {
         public IDisposable Subscribe(IObserver<object> observer) { observer.OnNext(value); return new ElementLayoutService.ActionLease(() => { }); }

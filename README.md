@@ -1,5 +1,8 @@
 # 🎵 Nonet Music Player
 
+桌面播放栏的桌面歌词按钮右侧提供播放列表浮层，可直接查看实际播放顺序并点歌；点击外部、再次点击按钮或按 Esc 收起。随机播放先洗牌再顺序播放，上一首沿队列回退，手动重选歌曲会重新洗牌。最大化和还原直接执行；容器使用抛物线变形，歌词固定尺寸从播放栏朝向内容区的边缘垂直滑入滑出并保留背景标题，菜单、音量和日历浮层支持外部/按钮关闭及快速开合，展开按钮保持选中；系统减少动画偏好仍优先。详见 [桌面动画与播放队列](docs/DESKTOP_MOTION_AND_QUEUE.md)。
+
+
 > [!WARNING]
 > 本项目由 AI 完成，尚未经过独立人工代码 review。已在 Windows 和 Android 15 模拟器验证；macOS 和 Linux 仅生成交叉构建产物，未做对应系统实机测试。当前为预发布版本，使用前请备份数据，参与开发前请审查相关代码。
 
@@ -24,7 +27,7 @@
 
 | 产品 | 当前版本 | 发行说明 |
 | --- | --- | --- |
-| 桌面 | [0.4.0-beta.42](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.42) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
+| 桌面 | [0.4.0-beta.43](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.43) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
 | CLI | [0.4.0-beta.32](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.32) | Windows、Linux、macOS x64 |
 | Android | [0.3.0-beta.10](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/android-v0.3.0-beta.10) | API 28+；通用 APK；沿用既有测试签名 |
 

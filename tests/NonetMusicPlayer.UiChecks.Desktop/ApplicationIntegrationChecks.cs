@@ -29,6 +29,7 @@ internal static class ApplicationIntegrationChecks
         var output = Path.GetFullPath(args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal)) ?? "artifacts/ui-checks");
         var data = Path.Combine(output, "test-data-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(output);
+        if (args.Contains("--dropdown-only")) { DropdownInteractionChecks.Run(); return; }
         if (args.Contains("--memory-navigation-only")) { MemoryNavigationChecks.Run(output); return; }
         if (args.Contains("--memory-audio-only")) { MemoryAudioChecks.Run(output, exerciseMinimize: true); return; }
         if (args.Contains("--experience-revision-only")) { ExperienceRevisionChecks.Run(output); return; }
@@ -40,6 +41,8 @@ internal static class ApplicationIntegrationChecks
             using var original = new Bitmap(input); using var scaled = original.CreateScaledBitmap(new PixelSize(256, 256), BitmapInterpolationMode.HighQuality);
             scaled.Save(Path.Combine(output, "app-icon-256.png"), PngBitmapEncoderOptions.Default); Console.WriteLine("Exported exact supplied icon for macOS packaging."); return;
         }
+        if (args.Contains("--queue-motion-only")) { QueueAndMotionChecks.Run(output); return; }
+        if (args.Contains("--surface-revision-only")) { SurfaceRevisionChecks.Run(output, args.FirstOrDefault(a => a.StartsWith("--style="))?[8..]); return; }
         LayoutChecks.Run(output);
         LogChecks.Run(output);
         PlaybackRecoveryChecks.Run(output);

@@ -1,4 +1,4 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
@@ -84,6 +84,7 @@ public sealed partial class MainWindow
         foreach (var control in _playerControls.Where(p => p.Key != "progress").Select(p => p.Value))
             if (control.Parent is Panel parent) parent.Children.Remove(control);
         if (PlayerDesktopLyrics.Parent is Panel desktopParent) desktopParent.Children.Remove(PlayerDesktopLyrics);
+        if (PlayerQueue.Parent is Panel queueParent) queueParent.Children.Remove(PlayerQueue);
         PlayerColumns.Children.Clear();
         FillGrid(PlayerColumns, document.Player);
         if (PlayerVolume.Parent is Grid options)
@@ -91,6 +92,9 @@ public sealed partial class MainWindow
             options.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(40)));
             Grid.SetColumn(PlayerDesktopLyrics, options.ColumnDefinitions.Count - 1); Grid.SetRow(PlayerDesktopLyrics, Grid.GetRow(PlayerVolume));
             PlayerDesktopLyrics.Width = PlayerDesktopLyrics.Height = 40; options.Children.Add(PlayerDesktopLyrics);
+            options.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(40)));
+            Grid.SetColumn(PlayerQueue, options.ColumnDefinitions.Count - 1); Grid.SetRow(PlayerQueue, Grid.GetRow(PlayerVolume));
+            PlayerQueue.Width = PlayerQueue.Height = 40; options.Children.Add(PlayerQueue);
         }
         if (compact && PlayerColumns.ColumnDefinitions.Count == 3)
         {
@@ -99,17 +103,17 @@ public sealed partial class MainWindow
             {
                 if (grid.Children.Contains(PlayerPrevious)) grid.ColumnDefinitions = new("44,44,44");
                 if (grid.Children.Contains(PlayerTime)) {
-                    grid.ColumnDefinitions = new(ultraCompact ? "44,44,44" : "44,44,44,44,44"); grid.RowDefinitions = new(ultraCompact ? "44,44,20" : "44,20");
-                    Grid.SetRow(PlayerTime, ultraCompact ? 2 : 1); Grid.SetColumn(PlayerTime, 0); Grid.SetColumnSpan(PlayerTime, ultraCompact ? 3 : 5);
+                    grid.ColumnDefinitions = new(ultraCompact ? "44,44,44" : "44,44,44,44,44,44"); grid.RowDefinitions = new(ultraCompact ? "44,44,20" : "44,20");
+                    Grid.SetRow(PlayerTime, ultraCompact ? 2 : 1); Grid.SetColumn(PlayerTime, 0); Grid.SetColumnSpan(PlayerTime, ultraCompact ? 3 : 6);
                     var index = 0;
-                    foreach (var control in new[] { PlayerMode, PlayerFavorite, PlayerMore, PlayerVolume, PlayerDesktopLyrics })
+                    foreach (var control in new[] { PlayerMode, PlayerFavorite, PlayerMore, PlayerVolume, PlayerDesktopLyrics, PlayerQueue })
                     { Grid.SetRow(control, ultraCompact ? index / 3 : 0); Grid.SetColumn(control, ultraCompact ? index % 3 : index); index++; }
                 }
                 if (ultraCompact && grid.Children.Contains(PlayerArtwork)) grid.ColumnDefinitions = new("56,*");
             }
             if (ultraCompact) { PlayerArtwork.Width = PlayerArtwork.Height = 48; PlayerTitle.FontSize = 16; PlayerArtist.FontSize = 13; }
             foreach (var id in new[] { "previous", "play", "next" }) { _playerControls[id].Width = 44; _playerControls[id].Height = 44; }
-            foreach (var control in new[] { PlayerMode, PlayerFavorite, PlayerMore, PlayerVolume, PlayerDesktopLyrics }) { control.Width = 44; control.Height = 44; }
+            foreach (var control in new[] { PlayerMode, PlayerFavorite, PlayerMore, PlayerVolume, PlayerDesktopLyrics, PlayerQueue }) { control.Width = 44; control.Height = 44; }
         }
         if (document.Player.Items.Any(i => i.Id == "progress" && i.Row == 0) && document.Player.Items.Where(i => i.Id != "progress").All(i => i.Row > 0)) PlayerColumns.RowDefinitions[0].Height = new GridLength(0);
         if (fallback || LayoutConfiguration.AppliedJson == UiLayoutService.DefaultJson) PositionPlayerResizeGrip(true);

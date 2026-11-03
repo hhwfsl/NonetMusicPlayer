@@ -16,7 +16,18 @@ namespace NonetMusicPlayer.Desktop.Services;
 public sealed class StyleMorphMotion : IDisposable
 {
     private Action? _cancel;
+    private Border? _overlay;
+    private Control? _hidden;
+    private Rect _bounds;
+    private double _radius;
     public bool IsRunning => _cancel is not null;
+    /// <summary>打断前保存呈现中的矩形与圆角，反向动作从这一帧继续。</summary>
+    public (Bitmap Snapshot, Rect Bounds, double Radius)? CapturePresentation()
+    {
+        if (_overlay is null) return null;
+        var image = LyricsPageMotion.Capture(_overlay, new(_overlay.Bounds.Size));
+        return image is null ? null : (image, _bounds, _radius);
+    }
     public static (Rect Bounds, double Radius) Sample(Rect from, Rect to, double startRadius, double endRadius, double arc, double progress)
     {
         var t = Math.Clamp(progress, 0, 1); var p = StyleLayerService.Ease(t);
@@ -29,9 +40,11 @@ public sealed class StyleMorphMotion : IDisposable
         var bitmap = LyricsPageMotion.Capture(source, new(source.Bounds.Size));
         return bitmap is null ? Task.CompletedTask : RunAsync(layer, source, bitmap, from, to, profile, profile.CornerRadius, profile.CornerRadius, token);
     }
-    public Task RunAsync(Grid layer, Control hidden, Bitmap snapshot, Rect from, Rect to, ResolvedStyleMorph profile, double startRadius, double endRadius, CancellationToken token = default)
+    public Task RunAsync(Grid layer, Control hidden, Bitmap snapshot, Rect from, Rect to, ResolvedStyleMorph profile, double startRadius, double endRadius, CancellationToken token = default, bool crossFade = true, Action? onCompleted = null)
     {
+        var current = ReferenceEquals(hidden, _hidden) ? CapturePresentation() : null;
         Cancel();
+        if (current is { } frame) { snapshot.Dispose(); snapshot = frame.Snapshot; from = frame.Bounds; startRadius = frame.Radius; }
         if (!InterfaceMotion.IsEnabled || !profile.Enabled || profile.DurationMs == 0 || token.IsCancellationRequested) { snapshot.Dispose(); return Task.CompletedTask; }
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var image = new Image { Name = "NonetMorphImage", Source = snapshot, Stretch = Stretch.Fill };
@@ -41,29 +54,31 @@ public sealed class StyleMorphMotion : IDisposable
             HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, ZIndex = 1000 };
         Grid.SetRowSpan(overlay, 100); Grid.SetColumnSpan(overlay, 100);
         var animationStop = CancellationTokenSource.CreateLinkedTokenSource(token);
-        IDisposable? hide = null, input = null; var registration = default(CancellationTokenRegistration); var finished = false;
+        IDisposable? hide = null; var registration = default(CancellationTokenRegistration); var finished = false;
         void Finish()
         {
             if (finished) return; finished = true; registration.Dispose();
-            hide?.Dispose(); input?.Dispose(); layer.Children.Remove(overlay); image.Source = null; snapshot.Dispose();
+            hide?.Dispose(); layer.Children.Remove(overlay); _overlay = null; _hidden = null; image.Source = null; snapshot.Dispose();
             _cancel = null; completion.TrySetResult();
         }
         void Draw(double progress)
         {
             var sample = Sample(from, to, startRadius, endRadius, profile.Arc, progress);
+            _bounds = sample.Bounds; _radius = sample.Radius;
             overlay.Width = sample.Bounds.Width; overlay.Height = sample.Bounds.Height;
             overlay.Margin = new(sample.Bounds.X, sample.Bounds.Y, 0, 0);
             overlay.CornerRadius = new(sample.Radius);
             geometry.Rect = new(sample.Bounds.Size); geometry.RadiusX = geometry.RadiusY = sample.Radius;
             // 末段交接到真实布局，避免快照中的文字被放大后突然跳回正常字号。
-            var blend = Math.Clamp((progress - .65) / .35, 0, 1);
+            var blend = crossFade ? Math.Clamp((progress - .65) / .35, 0, 1) : 0;
             contentOpacity.Set(blend); overlay.Opacity = 1 - blend;
         }
         try
         {
+            _overlay = overlay; _hidden = hidden;
             Draw(0); layer.Children.Add(overlay);
             hide = hidden.Bind(Visual.OpacityProperty, contentOpacity, BindingPriority.Animation);
-            input = hidden.Bind(Avalonia.Input.InputElement.IsHitTestVisibleProperty, new Constant(false), BindingPriority.Animation);
+            // 保留真实控件输入，关闭、还原和反向展开可在动画中立即响应。
             overlay.Changed = Draw;
             _cancel = () => { animationStop.Cancel(); Finish(); };
             registration = token.Register(() => Dispatcher.UIThread.Post(Finish));
@@ -78,7 +93,7 @@ public sealed class StyleMorphMotion : IDisposable
                 new KeyFrame { Cue = new Cue(0), Setters = { new Setter(MorphOverlay.ProgressProperty, 0d) } },
                 new KeyFrame { Cue = new Cue(1), Setters = { new Setter(MorphOverlay.ProgressProperty, 1d) } }
             } };
-            try { await animation.RunAsync(overlay, animationStop.Token); }
+            try { await animation.RunAsync(overlay, animationStop.Token); if (!finished && !animationStop.IsCancellationRequested) onCompleted?.Invoke(); }
             catch (OperationCanceledException) { }
             catch (Exception error) { AppLog.Warning("Styles", "Morph animation skipped", error); }
             finally { overlay.Changed = null; if (Dispatcher.UIThread.CheckAccess()) Finish(); else await Dispatcher.UIThread.InvokeAsync(Finish); animationStop.Dispose(); }

@@ -1,4 +1,8 @@
-{
+﻿{
+  "Playback.Queue": { "zh-CN": "播放列表", "en-US": "Playback queue", "ja-JP": "再生キュー" },
+  "Playback.QueueCount": { "zh-CN": "播放列表 · {0}", "en-US": "Playback queue · {0}", "ja-JP": "再生キュー · {0}" },
+  "Playback.QueueEmpty": { "zh-CN": "选择歌曲后，将在这里显示播放顺序", "en-US": "Choose a song to see the playback order here", "ja-JP": "曲を選ぶと、ここに再生順が表示されます" },
+  "Playback.QueueHint": { "zh-CN": "按列表顺序播放 · 点击歌曲立即播放", "en-US": "Plays in order · Click a song to play", "ja-JP": "リスト順に再生 · 曲をクリックして再生" },
   "Playback.Play": {
     "zh-CN": "播放",
     "en-US": "Play",

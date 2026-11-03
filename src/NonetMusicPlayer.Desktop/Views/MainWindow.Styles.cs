@@ -25,7 +25,8 @@ public sealed partial class MainWindow
     }
     public async Task MorphContainerAsync(Control control, CancellationToken token = default)
     {
-        if (StyleLayers.Morph is not { Enabled: true } profile || Content is not Grid root) return;
+        var profile = StyleLayers.Morph ?? new ResolvedStyleMorph(true, 380, 24, 24);
+        if (!profile.Enabled || Content is not Grid root) return;
         _restoreExpandedStyleControl?.Invoke(); _styleMorph.Cancel();
         if (control.Parent is not Panel parent || control is MainWindow || control.Name == "WindowSurface") throw new InvalidDataException("Container expansion requires a Panel child.");
         var position = control.TranslatePoint(default, root) ?? default;
@@ -62,29 +63,6 @@ public sealed partial class MainWindow
         if (bitmap is not null) await _styleMorph.RunAsync(root, full, bitmap, from, new(full.TranslatePoint(default, root) ?? default, full.Bounds.Size), profile, profile.CornerRadius, profile.CornerRadius, token);
         if (token.IsCancellationRequested) Restore();
         else if (!restored) close.Focus();
-    }
-    private async Task MaximizeWithStyleAsync()
-    {
-        var request = ++_windowMorphRequest;
-        if (StyleLayers.Morph is not { Enabled: true } profile || !StyleLayers.WindowMorphEnabled || !InterfaceMotion.IsEnabled || Content is not Grid root)
-        { WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized; return; }
-        try
-        {
-            _styleMorph.Cancel();
-            _restoreExpandedStyleControl?.Invoke();
-            var oldPosition = Position; var oldSize = ClientSize; var oldScaling = RenderScaling; var oldRadius = WindowSurface.CornerRadius.TopLeft;
-            var snapshot = LyricsPageMotion.Capture(WindowSurface, new(WindowSurface.Bounds.Size));
-            var wasMaximized = WindowState == WindowState.Maximized;
-            WindowState = wasMaximized ? WindowState.Normal : WindowState.Maximized;
-            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded);
-            UpdateLayout();
-            if (snapshot is null) return;
-            if (request != _windowMorphRequest || WindowState == WindowState.Minimized) { snapshot.Dispose(); return; }
-            var from = new Avalonia.Rect((oldPosition.X - Position.X) / RenderScaling, (oldPosition.Y - Position.Y) / RenderScaling,
-                oldSize.Width * oldScaling / RenderScaling, oldSize.Height * oldScaling / RenderScaling);
-            await _styleMorph.RunAsync(root, WindowSurface, snapshot, from, new(root.Bounds.Size), profile, oldRadius, WindowSurface.CornerRadius.TopLeft);
-        }
-        catch (Exception error) { AppLog.Warning("Styles", "Window morph skipped", error); }
     }
     private sealed class StyleConstant(object value) : IObservable<object>
     { public IDisposable Subscribe(IObserver<object> observer) { observer.OnNext(value); return new ElementLayoutService.ActionLease(() => { }); } }

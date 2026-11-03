@@ -34,8 +34,10 @@ public sealed class LyricsView : UserControl, IDisposable
     private double[] _rowHeights = [], _rowOffsets = [];
     private double _measuredWidth;
     private const double LyricRowHeight = 112;
-    private readonly DispatcherTimer _smoothScroll = new() { Interval = TimeSpan.FromMilliseconds(16) };
-    private readonly DispatcherTimer _wordFrames = new() { Interval = TimeSpan.FromMilliseconds(33) };
+    // 单个渲染帧回调同时驱动滚动和逐字填色，避免 16/33/100 ms 三个时钟互相错拍。
+    private bool _framePending, _scrollAnimating;
+    private double _scrollVelocity, _animationDuration = .42, _lastPlaybackSample;
+    private long _lastScrollFrame;
     private double _wordSample;
     private long _wordSampleAt;
     private long _animationStarted;
@@ -91,8 +93,7 @@ public sealed class LyricsView : UserControl, IDisposable
             }) { Setters = { new Setter(BackgroundProperty, Brushes.Transparent), new Setter(Border.BorderBrushProperty, Brushes.Transparent), new Setter(Border.BorderThicknessProperty, new Thickness(0)) } });
         _list.Styles.Add(new Style(selector => selector.OfType<ListBoxItem>().Class(":selected").Descendant().OfType<TextBlock>().Class("lyric-original"))
         { Setters = { new Setter(TextBlock.ForegroundProperty, Ui.Brush("AccentBrush")), new Setter(TextBlock.FontWeightProperty, FontWeight.SemiBold) } });
-        _smoothScroll.Tick += (_, _) => AnimateScroll();
-        _wordFrames.Tick += (_, _) => RefreshWordColors(); _wordFrames.Start();
+
         _list.AddHandler(PointerWheelChangedEvent, (_, e) => { if (e.Delta.Y != 0) MovePreview(e.Delta.Y > 0 ? -1 : 1); e.Handled = true; }, RoutingStrategies.Tunnel, true);
         _list.AddHandler(PointerPressedEvent, LyricPointerPressed, RoutingStrategies.Tunnel, true);
         _list.AddHandler(PointerMovedEvent, LyricPointerMoved, RoutingStrategies.Tunnel, true);
@@ -123,6 +124,7 @@ public sealed class LyricsView : UserControl, IDisposable
             // 主窗口已准备好首帧时不重新排队定位，否则会在转场后再次滚动。
             if (!_entrancePrepared) PrepareEntrance();
             else FollowPosition();
+            ScheduleFrame();
         }, DispatcherPriority.Loaded);
         _list.PointerCaptureLost += (_, _) => { if (_lastTouch is null) return; _lastTouch = null; _touchScrolling = false; if (_previewing) FindPreviewLine(); };
         vm.PropertyChanged += Changed; vm.LyricLines.CollectionChanged += LyricsChanged;
@@ -188,6 +190,8 @@ public sealed class LyricsView : UserControl, IDisposable
     {
         if (e.PropertyName is nameof(MainViewModel.CurrentTrack) or nameof(MainViewModel.CurrentArtwork)) UpdateTrack();
         if (e.PropertyName == nameof(MainViewModel.PlaybackPosition)) FollowPosition();
+        if (e.PropertyName == nameof(MainViewModel.IsPlaying))
+        { _wordSample = _vm.PlaybackPosition; _wordSampleAt = Stopwatch.GetTimestamp(); RefreshWordColors(); ScheduleFrame(); }
     }
     private void UpdateTrack()
     {
@@ -228,8 +232,20 @@ public sealed class LyricsView : UserControl, IDisposable
     }
     private void FollowPosition()
     {
-        _wordSample = _vm.PlaybackPosition; _wordSampleAt = Stopwatch.GetTimestamp(); RefreshWordColors();
-        var time = _vm.PlaybackPosition + _vm.Settings.LyricOffset;
+        var actual = _vm.PlaybackPosition;
+        var predicted = PlaybackWordTime() - _vm.Settings.LyricOffset;
+        // 小幅后端采样抖动不让填色倒退；主动回退或大幅跳转立即采用真实位置。
+        _wordSample = !_vm.IsPlaying || actual < _lastPlaybackSample - .025 || Math.Abs(predicted - actual) > .3
+            ? actual : Math.Clamp(predicted, actual, actual + .12);
+        _lastPlaybackSample = actual; _wordSampleAt = Stopwatch.GetTimestamp();
+        FollowLyricTime(PlaybackWordTime()); RefreshWordColors(); ScheduleFrame();
+    }
+    private void FollowLyricTime(double time)
+    {
+        // 正常帧停留在同一句时无需重扫整份歌词；跨行或跳转才重新定位。
+        if (_activeIndex >= 0 && _activeIndex < _vm.LyricLines.Count
+            && _vm.LyricLines[_activeIndex].Seconds <= time
+            && (_activeIndex + 1 >= _vm.LyricLines.Count || _vm.LyricLines[_activeIndex + 1].Seconds > time)) return;
         var index = -1;
         for (var i = 0; i < _vm.LyricLines.Count; i++) if (_vm.LyricLines[i].Timed && _vm.LyricLines[i].Seconds <= time) index = i;
         index = _vm.LyricLines.Count == 0 ? -1 : Math.Max(0, index);
@@ -249,7 +265,7 @@ public sealed class LyricsView : UserControl, IDisposable
             if (_scroll.Viewport.Height <= 0 || _scroll.Extent.Height <= 0) return;
             if (_initialCenter)
             {
-                _smoothScroll.Stop(); _list.ScrollIntoView(index); _list.UpdateLayout();
+                StopScroll(); _list.ScrollIntoView(index); _list.UpdateLayout();
                 _scroll.Offset = new Vector(0, ActiveCenterOffset(index)); _initialCenter = false;
             }
             else StartScroll(ActiveCenterOffset(index));
@@ -259,7 +275,7 @@ public sealed class LyricsView : UserControl, IDisposable
     internal bool PrepareEntrance()
     {
         if (_disposed || _preparingEntrance) return false;
-        _preparingEntrance = true; ++_centerRequest; _smoothScroll.Stop();
+        _preparingEntrance = true; ++_centerRequest; StopScroll();
         try
         {
             AttachScroll(); FollowPosition();
@@ -288,7 +304,7 @@ public sealed class LyricsView : UserControl, IDisposable
     /// <summary>恢复焦点立即定位真实当前行，取消失焦前的歌词预览等待。</summary>
     public void RestorePlaybackFocus()
     {
-        _previewSettled.Stop(); _resumeFollow.Stop(); _smoothScroll.Stop(); _previewing = false; _seek.IsVisible = false;
+        _previewSettled.Stop(); _resumeFollow.Stop(); StopScroll(); _previewing = false; _seek.IsVisible = false;
         if (_lyricsRefreshPending) { _lyricsRefreshPending = false; RebuildLyrics(); }
         _initialCenter = true; _activeIndex = -1; AttachScroll(); ResizeLayout(); FollowPosition();
     }
@@ -305,21 +321,50 @@ public sealed class LyricsView : UserControl, IDisposable
         var active = _activeIndex >= 0 && _activeIndex < _vm.LyricLines.Count && ReferenceEquals(_vm.LyricLines[_activeIndex], tag.Item1);
         text.UpdateTimed(tag.Item2 ? tag.Item1.Translation : tag.Item1.Text, [], time, active, active ? LyricsService.LineCharacterProgress(tag.Item1, time, tag.Item2) : 0);
     }
+    /// <summary>使用屏幕渲染节奏，暂停且不滚动时停止请求帧；页面释放后回调不再重排。</summary>
+    private void ScheduleFrame()
+    {
+        if (_framePending || _disposed || !IsVisible || !_owner.IsVisible || _owner.WindowState == WindowState.Minimized
+            || !(_scrollAnimating || _vm.IsPlaying && _vm.LyricLines.Count > 0)) return;
+        var top = TopLevel.GetTopLevel(this); if (top is null) return;
+        _framePending = true;
+        top.RequestAnimationFrame(_ =>
+        {
+            _framePending = false;
+            if (_disposed || !IsVisible || !_owner.IsVisible || _owner.WindowState == WindowState.Minimized) return;
+            if (_scrollAnimating) AnimateScroll();
+            FollowLyricTime(PlaybackWordTime()); RefreshWordColors(); ScheduleFrame();
+        });
+    }
+    private void StopScroll() { _scrollAnimating = false; _scrollVelocity = 0; }
     private void AnimateScroll()
     {
-        if (_disposed || _scroll is null || _touchScrolling) { _smoothScroll.Stop(); return; }
-        var amount = Math.Clamp(Stopwatch.GetElapsedTime(_animationStarted).TotalMilliseconds / 300, 0, 1);
-        var eased = 1 - Math.Pow(1 - amount, 3);
-        _scroll.Offset = new Vector(0, _animationFrom + (_animationTo - _animationFrom) * eased);
-        if (amount >= 1) { _smoothScroll.Stop(); if (_previewing) ShowPreviewSeek(); }
+        if (_disposed || _scroll is null || _touchScrolling) { StopScroll(); return; }
+        var amount = Math.Clamp(Stopwatch.GetElapsedTime(_animationStarted).TotalSeconds / _animationDuration, 0, 1);
+        var t2 = amount * amount; var t3 = t2 * amount;
+        // Hermite 曲线保留打断时的速度并在终点减速到零，虚拟化修正不会让滚动反复起步。
+        var next = (2 * t3 - 3 * t2 + 1) * _animationFrom + (t3 - 2 * t2 + amount) * _animationInitialVelocity * _animationDuration + (-2 * t3 + 3 * t2) * _animationTo;
+        var now = Stopwatch.GetTimestamp(); var dt = Stopwatch.GetElapsedTime(_lastScrollFrame, now).TotalSeconds;
+        if (dt > 0) _scrollVelocity = (next - _scroll.Offset.Y) / dt;
+        _lastScrollFrame = now; _scroll.Offset = new Vector(0, next);
+        if (amount >= 1) { StopScroll(); if (_previewing) ShowPreviewSeek(); }
     }
+    private double _animationInitialVelocity;
     private double RowHeight(int index) => index >= 0 && index < _rowHeights.Length ? _rowHeights[index] : LyricRowHeight;
     private double RowOffset(int index) => index >= 0 && index < _rowOffsets.Length ? _rowOffsets[index] : index * LyricRowHeight;
     private double CenterOffset(int index) => Math.Clamp(_spacerHeight + RowOffset(index) + RowHeight(index) / 2 - (_scroll?.Viewport.Height ?? 0) / 2, 0, Math.Max(0, (_scroll?.Extent.Height ?? 0) - (_scroll?.Viewport.Height ?? 0)));
     private void StartScroll(double target)
     {
         if (_scroll is null) return;
-        _animationFrom = _scroll.Offset.Y; _animationTo = target; _animationStarted = Stopwatch.GetTimestamp(); _smoothScroll.Start();
+        if (_scrollAnimating && Math.Abs(target - _animationTo) < .75) return;
+        var distance = target - _scroll.Offset.Y;
+        if (!InterfaceMotion.IsEnabled || Math.Abs(distance) < .5)
+        { StopScroll(); _scroll.Offset = new Vector(0, target); if (_previewing) ShowPreviewSeek(); return; }
+        _animationDuration = Math.Clamp(.30 + Math.Abs(distance) / 1500, .34, .52);
+        _animationInitialVelocity = Math.Sign(_scrollVelocity) == Math.Sign(distance)
+            ? Math.Sign(distance) * Math.Min(Math.Abs(_scrollVelocity), 3 * Math.Abs(distance) / _animationDuration) : 0;
+        _animationFrom = _scroll.Offset.Y; _animationTo = target;
+        _animationStarted = _lastScrollFrame = Stopwatch.GetTimestamp(); _scrollAnimating = true; ScheduleFrame();
     }
     private int NearestIndex()
     {
@@ -357,7 +402,7 @@ public sealed class LyricsView : UserControl, IDisposable
         if (_vm.LyricLines.Count == 0) return;
         AttachScroll(); if (!_previewing) _previewIndex = NearestIndex();
         _previewing = true; _previewLine = null; _seek.IsVisible = false;
-        _smoothScroll.Stop();
+        StopScroll();
         _previewSettled.Stop(); _previewSettled.Start(); _resumeFollow.Stop(); _resumeFollow.Start();
     }
     private void FindPreviewLine()
@@ -412,7 +457,7 @@ public sealed class LyricsView : UserControl, IDisposable
         if (_disposed) return; _disposed = true;
         _vm.PropertyChanged -= Changed; _vm.LyricLines.CollectionChanged -= LyricsChanged; L10n.LanguageChanged -= LanguageChanged;
         _vm.SettingsChanged -= SettingsChanged;
-        _previewSettled.Stop(); _resumeFollow.Stop(); _smoothScroll.Stop(); _wordFrames.Stop();
+        _previewSettled.Stop(); _resumeFollow.Stop(); StopScroll();
         if (_scroll is not null) _scroll.ScrollChanged -= ScrollChanged;
         _cover.Source = null; _list.ItemsSource = null; _displayLines.Clear();
         _realizedLines.Clear();

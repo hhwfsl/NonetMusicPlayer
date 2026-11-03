@@ -21,6 +21,7 @@ public sealed partial class App : Application
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
+        PopupSurfaceMotion.Install();
         AppLog.DefaultRootResolver = AppStorage.ResolveRoot;
         // 仅调整字符串的宽度呈现方式，命令、无障碍及选择语义保持不变。
         DataTemplates.Add(new Avalonia.Controls.Templates.FuncDataTemplate<string>((text, _) =>
