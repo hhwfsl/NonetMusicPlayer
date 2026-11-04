@@ -226,7 +226,8 @@ public sealed partial class MainWindow
         var tolerance = 1 / RenderScaling + 0.000001;
         foreach (var widget in Workspace.Children.OfType<Controls.LayoutWidget>())
         {
-            var min = widget.Key switch { "Navigation" => new Size(150, Bounds.Height < 600 ? 200 : 240), "Content" => new Size(Math.Min(330, Math.Max(200, Bounds.Width - 220)), Bounds.Height < 600 ? 180 : 300), _ => new Size(Math.Min(Bounds.Width - 2, Bounds.Width < 1000 ? 600 : 880), 96) };
+            // 系统贴靠的短窗口使用可滚动内容与统一导航，工作区下限随这两种布局收敛。
+            var min = widget.Key switch { "Navigation" => new Size(150, Bounds.Height < 440 ? 128 : Bounds.Height < 600 ? 200 : 240), "Content" => new Size(Math.Min(330, Math.Max(200, Bounds.Width - 220)), Bounds.Height < 440 ? 128 : Bounds.Height < 600 ? 180 : 300), _ => new Size(Math.Min(Bounds.Width - 2, Bounds.Width < 1000 ? 600 : 880), 96) };
             if (widget.Bounds.Width + tolerance < min.Width || widget.Bounds.Height + tolerance < min.Height)
                 throw new InvalidDataException(L10n.Format("Common.WorkspaceIsTooSmallAtLeastPixelsAreRequired", widget.Key, min.Width, min.Height));
         }

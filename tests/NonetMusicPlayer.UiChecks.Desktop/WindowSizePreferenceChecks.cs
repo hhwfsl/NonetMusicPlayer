@@ -22,8 +22,13 @@ internal static class WindowSizePreferenceChecks
         Size remembered;
         using (var vm = Create(root))
         {
+            // 用户可能已保存上一轮过小的窗口；冷启动必须按恢复后的下限约束并居中。
+            vm.Settings.WindowWidth = 480; vm.Settings.WindowHeight = 320;
             var window = Open(vm, styleFile); Pump(window, 120); Centered(window, "first launch");
             var area = window.Screens.Primary!.WorkingArea.Size.ToSize(window.Screens.Primary.Scaling);
+            var minimum = WindowPlacementService.MinimumSize(area);
+            // 原生边框与 DPI 取整可能进一步增大跟踪高度；验证实际客户区不会低于既有下限。
+            Require(window.MinWidth == minimum.Width && window.MinHeight == minimum.Height && window.ClientSize.Width >= minimum.Width && window.ClientSize.Height >= minimum.Height, $"Previously saved undersized window respects the restored minimum: actual={window.ClientSize}, minimum={minimum}");
             var target = WindowPlacementService.FitSize(new(950, 610), area);
             window.Width = target.Width; window.Height = target.Height; Pump(window, 800);
             remembered = window.ClientSize;
@@ -84,6 +89,8 @@ internal static class WindowSizePreferenceChecks
         old.WindowWidth = double.NaN; old.WindowHeight = 600; old.Validate();
         Require(old.WindowWidth is null && old.WindowHeight is null, "Malformed dimensions fall back to defaults");
         SameSize(WindowPlacementService.StartupSize(new(1280, 720), 900, 600), new(900, 600), "Valid preferences are used");
+        SameSize(WindowPlacementService.StartupSize(new(1280, 720), 480, 320), new(640, 480), "Undersized preferences cannot lower the established 640x480 minimum");
+        SameSize(WindowPlacementService.MinimumSize(new(600, 400)), new(568, 368), "Small displays retain the existing work-area fitting policy");
         SameSize(WindowPlacementService.StartupSize(new(1024, 700), 3000, 2000), new(1016, 692), "Preferences fit a smaller screen");
         Require(WindowPlacementService.CenterPosition(new(-1920, 40, 1920, 1040), new(960, 600), 1) == new PixelPoint(-1440, 260), "Negative monitor coordinates are supported");
         Require(WindowPlacementService.CenterPosition(new(200, 50, 1920, 1080), new(800, 600), 1.5) == new PixelPoint(560, 140), "Centering accounts for display scaling");

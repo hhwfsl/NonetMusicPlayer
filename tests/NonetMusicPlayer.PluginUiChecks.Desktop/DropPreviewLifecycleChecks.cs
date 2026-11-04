@@ -42,7 +42,8 @@ internal static class DropPreviewLifecycleChecks
             Show();
             player.RaiseEvent(new DragEventArgs(DragDrop.DragLeaveEvent, data, player, new(10, 10), KeyModifiers.None) { Source = player });
             Over(tracks); Pump();
-            Require(Hint().IsVisible, "A newer target preview survives an earlier leave callback");
+            Require(!Hint().IsVisible, "Sorting tracks clears the previous player hint without showing a reorder prompt");
+            Over(player); Pump(); Require(Hint().IsVisible, "Returning to player still shows the playback hint");
             window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null); Pump();
             Require(!Hint().IsVisible, "Escape clears the preview");
             Show();

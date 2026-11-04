@@ -9,6 +9,7 @@ public static class WindowPlacementService
         Math.Min(1360, Math.Max(320, workArea.Width * .90)),
         Math.Min(860, Math.Max(320, workArea.Height * .90)));
     public static Size MinimumSize(Size workArea) => new(
+        // 恢复既有 640×480 下限；仅工作区本身较小时收敛，不为系统分屏主动降低尺寸。
         Math.Min(640, Math.Max(320, workArea.Width - 32)),
         Math.Min(480, Math.Max(320, workArea.Height - 32)));
 

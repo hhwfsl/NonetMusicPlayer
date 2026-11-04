@@ -87,7 +87,9 @@ public sealed class WorkspacePanel : Panel
             var info = size.Width < 1050 ? 240d : 280d; var options = size.Width < 1050 ? 228d : 260d;
             return key switch { "Player.Info" => new Rect(0, 0, info, size.Height), "Player.Transport" => new Rect(info, 0, Math.Max(1, size.Width - info - options), size.Height), _ => new Rect(Math.Max(0, size.Width - options), 0, options, size.Height) };
         }
-        var player = Math.Min(Math.Max(Profile.PlayerHeight, size.Width < 640 ? 128 : Profile.TouchMode ? 110 : 96), size.Height * .4);
+        // 贴靠后的短窗口也必须保留播放器最小高度，不能被百分比上限反向压小并裁掉时间/按钮。
+        var minimumPlayer = size.Width < 640 ? 128 : Profile.TouchMode ? 110 : 96;
+        var player = Math.Min(Math.Max(Profile.PlayerHeight, minimumPlayer), Math.Max(minimumPlayer, size.Height * .4));
         var sidebar = Math.Min(size.Width < 640 ? 170 : Profile.SidebarWidth, size.Width * .4);
         var bodyY = Profile.PlayerTop ? player : 0;
         return key switch

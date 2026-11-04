@@ -18,7 +18,7 @@ internal static class CalendarAndWindowLifecycleChecks
 {
     public static void Run(MainWindow owner, MainViewModel vm, string output)
     {
-        Require(owner.FindControl<TextBlock>("ApplicationVersionLabel")!.Text == vm.VersionText && !string.IsNullOrEmpty(vm.VersionText), "Title version follows assembly metadata, not a hardcoded prior release");
+        Require(!owner.FindControl<TextBlock>("ApplicationVersionLabel")!.IsVisible && !string.IsNullOrEmpty(vm.VersionText), "Title hides the legacy version anchor while About retains assembly metadata");
         vm.Navigate("statistics"); Pump(owner);
         var picker = owner.GetVisualDescendants().OfType<StatisticsDatePicker>().Single();
         for (var iteration = 0; iteration < 4; iteration++)

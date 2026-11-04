@@ -6,6 +6,9 @@ namespace NonetMusicPlayer.Core.Commands;
 /// <summary>规范化后的播放器命令；参数永远作为数据处理，不进入系统 Shell。</summary>
 public sealed record PlayerCommand(string Name, IReadOnlyList<string> Arguments, bool Confirmed = false, bool Declined = false);
 
+/// <summary>区分未知命令和引号、参数等语法错误，保留 FormatException 的旧宿主兼容行为。</summary>
+internal sealed class UnknownCommandException(string message) : FormatException(message);
+
 /// <summary>统一的操作结果。UI 操作和命令行操作写入同一个结果流。</summary>
 public sealed record CommandResult(string Operation, bool Success, string Message, JsonNode? Data = null, bool RequiresConfirmation = false);
 
@@ -70,9 +73,9 @@ public static class CommandLineParser
         else
         {
             if (selector.StartsWith('-') || selector.Contains('.') || tokens.Count <= commandStart + 1)
-                throw new FormatException("nonet help");
+                throw new UnknownCommandException("nonet help");
             var category = selector; var action = tokens[commandStart + 1].ToLowerInvariant(); argumentStart = commandStart + 2;
-            if (action.Contains('.') || action.StartsWith('-')) throw new FormatException("nonet help");
+            if (action.Contains('.') || action.StartsWith('-')) throw new UnknownCommandException("nonet help");
             name = (category, action) switch
             {
                 ("player", "status") => "status", ("statistics", "show") => "statistics",

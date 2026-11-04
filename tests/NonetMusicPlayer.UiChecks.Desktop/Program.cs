@@ -7,6 +7,12 @@ internal static class Program
     {
         try
         {
+            if (args.Contains("--native-window-ux"))
+            {
+                AppBuilder.Configure<NonetMusicPlayer.Desktop.App>().UsePlatformDetect().With(new Win32PlatformOptions { RenderingMode = [Win32RenderingMode.Software] }).WithInterFont().SetupWithoutStarting();
+                var output = Path.GetFullPath(args.FirstOrDefault(a => !a.StartsWith("--")) ?? "artifacts/native-window-ux"); Directory.CreateDirectory(output);
+                NativeWindowUxChecks.Run(output, args.FirstOrDefault(a => a.StartsWith("--style="))?[8..], args.Contains("--preview")); return 0;
+            }
             if (args.Contains("--native-window-size"))
             {
                 AppBuilder.Configure<NonetMusicPlayer.Desktop.App>().UsePlatformDetect()

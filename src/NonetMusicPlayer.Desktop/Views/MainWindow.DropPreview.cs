@@ -53,7 +53,8 @@ public sealed partial class MainWindow
         else if (!player && playlist is not null)
         {
             if (payload.StartsWith("nonet-tracks:", StringComparison.Ordinal))
-                message = navigation is null && ancestors.Any(c => c.Name == "TracksList") ? L10n.T("Home.DropReorder") : L10n.Format("Home.DropAdd", PlaylistName(playlist), L10n.Format("Home.DropItems", payload.Split('\n').Length));
+                // 列表内拖动排序无需浮层提示；切换到此目标时也收起之前的播放/导入提示。
+                message = navigation is null && ancestors.Contains(TracksList) ? null : L10n.Format("Home.DropAdd", PlaylistName(playlist), L10n.Format("Home.DropItems", payload.Split('\n').Length));
             else if (paths.Length > 0) message = L10n.Format("Home.DropAdd", PlaylistName(playlist), name);
         }
         if (message is null) { HideDropPreview(); return; }

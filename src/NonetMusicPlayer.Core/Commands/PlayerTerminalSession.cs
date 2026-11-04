@@ -134,7 +134,8 @@ public sealed class PlayerTerminalSession : IDisposable
             OutputPublished?.Invoke(null); Changed?.Invoke(this, EventArgs.Empty); return;
         }
         // 查询载荷不是日志，单独显示；事务摘要由 EntryWritten 在落盘后统一发布。
-        if (result.Operation == "help") Append(result.Message + Environment.NewLine);
+        // 未知命令是用户输入反馈，直接显示一次，不经过异常日志或日志级别过滤。
+        if (result.Operation is "help" or "command.unknown") Append(result.Message + Environment.NewLine);
         else if (result.Data is not null) Append(FormatData(result.Data) + Environment.NewLine);
     }
 

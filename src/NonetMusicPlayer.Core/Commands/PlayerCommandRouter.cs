@@ -11,6 +11,8 @@ public sealed class PlayerCommandRouter(IPlayerCommandBackend backend)
     private readonly object _journalGate = new();
     /// <summary>可选宿主流程闸门，在参数与确认校验之后执行；不能替换或预批准命令。</summary>
     public Func<PlayerCommand, CancellationToken, Task<bool>>? BeforeExecute { get; set; }
+    /// <summary>桌面终端将未知命令直接作为输出；默认保留既有 CLI 的日志与结果行为。</summary>
+    public bool UnknownCommandsAsOutput { get; set; }
     public event EventHandler<CommandResult>? ResultPublished;
     public IReadOnlyList<CommandResult> Journal { get { lock (_journalGate) return _journal.ToArray(); } }
     public static IReadOnlyList<CommandDefinition> Definitions { get; } =
@@ -58,7 +60,7 @@ public sealed class PlayerCommandRouter(IPlayerCommandBackend backend)
         try
         {
             var command = CommandLineParser.Parse(input);
-            var definition = Definitions.FirstOrDefault(d => d.Name == command.Name && (!d.DesktopOnly || backend.HasWindow)) ?? throw new FormatException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.UnknownCommand"));
+            var definition = Definitions.FirstOrDefault(d => d.Name == command.Name && (!d.DesktopOnly || backend.HasWindow)) ?? throw new UnknownCommandException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.UnknownCommand"));
             ValidateArguments(command, definition);
             if (definition.DesktopOnly && !backend.HasWindow) result = new(command.Name, false, NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.WindowRequired"));
             else if (definition.Destructive && !command.Confirmed && (command.Declined || confirm is null || !await confirm(definition))) result = new(command.Name, false, NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get(command.Declined ? "Commands.Cancelled" : "Commands.ConfirmationRequired"), RequiresConfirmation:!command.Declined);
@@ -80,6 +82,7 @@ public sealed class PlayerCommandRouter(IPlayerCommandBackend backend)
             else if (BeforeExecute is not null && !await BeforeExecute(command, cancellationToken)) result = new(command.Name, false, NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.Cancelled"));
             else result = await backend.ExecuteAsync(command with { Confirmed = true }, cancellationToken);
         }
+        catch (UnknownCommandException) when (UnknownCommandsAsOutput) { result = new("command.unknown", false, NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.UnknownCommandOutput")); }
         catch (OperationCanceledException) { result = new("command", false, NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.Cancelled")); }
         catch (Exception error) { AppLog.Warning("Commands", "Player command failed", error); result = new("command", false, AppLog.Redact(error.Message)); }
         finally { _gate.Release(); }
@@ -90,7 +93,7 @@ public sealed class PlayerCommandRouter(IPlayerCommandBackend backend)
     public void Publish(CommandResult result)
     {
         // 事务日志与终端走同一结果流，只记录脱敏后的摘要，不记录配置参数和结构化载荷。
-        if (result.Operation is not ("help" or "clear"))
+        if (result.Operation is not ("help" or "clear") && !(UnknownCommandsAsOutput && result.Operation == "command.unknown"))
         {
             if (result.Success) AppLog.Info("Commands", AppLog.Redact(result.Message));
             else AppLog.Warning("Commands", AppLog.Redact(result.Message));

@@ -31,14 +31,8 @@ internal static class TitleTaskbarChecks
             Require(lights.Children.Select(c => c.Name).SequenceEqual(["CloseWindowButton", "MinimizeWindowButton", "MaximizeWindowButton"]), "Left title controls use macOS action ordering");
             vm.Save(); Require(vm.Storage.Load().Settings.TitleButtonsOnLeft, "Title position persists across restart");
             if (!OperatingSystem.IsWindows()) { Console.WriteLine("PASS TITLE: setting present, both positions/orderings and persistence"); return; }
-            var type = typeof(MainWindow); var edges = ((Grid)window.Content!).Children.OfType<Border>().Where(border => border.Tag is string).ToArray();
-            type.GetField("_awaitingMovePointer", PrivateInstance)!.SetValue(window, true);
-            foreach (var edge in edges) edge.IsHitTestVisible = false;
-            object?[] arguments = [nint.Zero, 0x0020u, nint.Zero, nint.Zero, false];
-            var cursorResult = (nint)type.GetMethod("TitleWindowMessage", PrivateInstance)!.Invoke(window, arguments)!;
-            Require((bool)arguments[4]! && cursorResult == 1 && edges.All(edge => !edge.IsHitTestVisible), "Native stale WM_SETCURSOR is consumed while resize remains suppressed");
-            window.MouseMove(new Point(60, 80)); Pump(window);
-            Require(edges.All(edge => edge.IsHitTestVisible), "Actual interior movement restores all resize hit tests");
+            // 标题鼠标拖动由非客户区接管；不再测试已移除的消息/光标抑制补丁。
+            Require(Win32Properties.GetNonClientHitTestResult(window.FindControl<Border>("TitleBarSurface")!) == Win32Properties.Win32HitTestValue.Caption, "Windows caption uses native title hit testing");
 
             using var taskbar = WindowsTaskbarService.Attach(window, vm) ?? throw new InvalidOperationException("Windows thumbnail service unavailable");
             var getIcon = typeof(WindowsTaskbarService).GetMethod("GetIcon", PrivateInstance)!;
@@ -48,12 +42,12 @@ internal static class TitleTaskbarChecks
             var repeated = (nint)getIcon.Invoke(taskbar, [Enum.GetValues(glyph).GetValue(0)])!;
             Require(repeated == handles[0], "Thumbnail icons reuse cached native handles");
             var before = vm.IsPlaying;
-            arguments = [nint.Zero, 0x0111u, (nint)((0x1800 << 16) | 0x4C02), nint.Zero, false];
+            object?[] arguments = [nint.Zero, 0x0111u, (nint)((0x1800 << 16) | 0x4C02), nint.Zero, false];
             typeof(WindowsTaskbarService).GetMethod("WindowMessage", PrivateInstance)!.Invoke(taskbar, arguments); Pump(window);
             Require((bool)arguments[4]! && vm.IsPlaying != before, "Thumbnail play/pause click invokes the same music command");
             taskbar.Dispose();
             Require(((System.Collections.IDictionary)typeof(WindowsTaskbarService).GetField("_icons", PrivateInstance)!.GetValue(taskbar)!).Count == 0, "Thumbnail icon ownership releases on disposal");
-            Console.WriteLine("PASS TITLE/TASKBAR: platform ordering, native cursor suppression/restoration, HICON create/cache/dispose and thumbnail command routing");
+            Console.WriteLine("PASS TITLE/TASKBAR: platform ordering, native caption, HICON create/cache/dispose and thumbnail command routing");
         }
         finally { vm.Settings.TitleButtonsOnLeft = originalLeft; vm.ApplySettings(); vm.Navigate(originalPage); Pump(window); }
     }

@@ -1,4 +1,9 @@
 {
+  "Commands.UnknownCommandOutput": {
+    "zh-CN": "未知命令",
+    "en-US": "Unknown command",
+    "ja-JP": "不明なコマンド"
+  },
   "Commands.UnknownCommand": {
     "ja-JP": "不明なコマンドです。nonet help を使用してください。",
     "zh-CN": "未知播放器命令，请使用 nonet help。",

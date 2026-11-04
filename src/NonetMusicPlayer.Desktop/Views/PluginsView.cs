@@ -106,18 +106,18 @@ public sealed class PluginsView : UserControl, IDisposable
             Avalonia.Automation.AutomationProperties.SetName(enabled, plugin.Name + " · " + L10n.T("Common.On"));
             ToolTip.SetTip(enabled, L10n.T(plugin.Enabled ? L10n.T("Plugins.DisablePlugin") : L10n.T("Plugins.EnablePlugin")));
             var author = string.IsNullOrWhiteSpace(plugin.Author) ? "Author" : plugin.Author;
-            var title = Ui.RawText(plugin.Name, 17); title.VerticalAlignment = VerticalAlignment.Center; title.MaxLines = 1; title.TextWrapping = Avalonia.Media.TextWrapping.NoWrap;
+            var title = Ui.RawText(plugin.Name, 17); title.VerticalAlignment = VerticalAlignment.Center; title.MaxLines = 2;
             var badge = Ui.AsyncButton("New", async () => { if (owner.PluginUpdate(plugin.Id) is { } info) await owner.ConfirmPluginUpdateAsync(plugin, info); });
             badge.Name = "PluginNewVersion"; badge.FontSize = 10; badge.MinWidth = 38; badge.MinHeight = 22; badge.Padding = new(8, 1);
             badge.Classes.Add("primary"); badge.VerticalAlignment = VerticalAlignment.Center; badge.IsVisible = owner.PluginUpdate(plugin.Id) is not null;
             ToolTip.SetTip(badge, L10n.T("Update.New")); _badges.Add((plugin.Id, badge));
-            var titleRow = new Grid { ColumnDefinitions = new("*,Auto"), ColumnSpacing = 8, HorizontalAlignment = HorizontalAlignment.Left }; titleRow.Children.Add(title); Grid.SetColumn(badge, 1); titleRow.Children.Add(badge);
+            var titleRow = new Grid { ColumnDefinitions = new("*,Auto"), ColumnSpacing = 8 }; titleRow.Children.Add(title); Grid.SetColumn(badge, 1); titleRow.Children.Add(badge);
             var info = Ui.Stack(titleRow, Ui.RawText($"{author} · {plugin.Version} · {TypeName(plugin.Type)}", 12, true));
-            info.Spacing = 5;
+            info.Name = "PluginInfo"; info.Spacing = 5; info.VerticalAlignment = VerticalAlignment.Top;
             if (!string.IsNullOrWhiteSpace(plugin.Description)) info.Children.Add(Ui.RawText(plugin.Description, 12, true));
             if (plugin.Permissions.Count > 0) info.Children.Add(Ui.RawText(L10n.T("Plugins.Permissions") + ": " + string.Join(" / ", plugin.Permissions.Select(PermissionName)), 11, true));
-            info.Margin = new Thickness(0, 0, 16, 0);
-            var actions = new Grid { ColumnDefinitions = new("Auto,Auto,Auto,Auto,Auto,Auto"), ColumnSpacing = 6, VerticalAlignment = VerticalAlignment.Center }; actions.Children.Add(enabled);
+            // 保留原按钮实例与事件，只有容器负责多行排列，避免挤压文字或丢失触摸操作。
+            var actions = new WrapPanel { Name = "PluginActions", Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top }; actions.Children.Add(enabled);
             var configureButton = Ui.AsyncButton("", async () => await owner.OpenPluginConfigurationAsync(plugin)); configureButton.Name = "PluginConfigure";
             configureButton.Content = Icon(IconKind.Settings); ToolTip.SetTip(configureButton, L10n.T("Plugins.PluginConfiguration")); Avalonia.Automation.AutomationProperties.SetName(configureButton, plugin.Name + " · " + L10n.T("Plugins.PluginConfiguration")); Grid.SetColumn(configureButton, 1); configureButton.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(configureButton);
             var update = Ui.AsyncButton("", async () =>
@@ -163,8 +163,9 @@ public sealed class PluginsView : UserControl, IDisposable
             uninstall.Name = "PluginUninstall"; uninstall.Content = Icon(IconKind.Trash);
             ToolTip.SetTip(uninstall, L10n.T("Common.Uninstall")); Avalonia.Automation.AutomationProperties.SetName(uninstall, plugin.Name + " · " + L10n.T("Common.Uninstall"));
             Grid.SetColumn(uninstall, 5); uninstall.VerticalAlignment = VerticalAlignment.Center; actions.Children.Add(uninstall);
-            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") }; grid.Children.Add(info); Grid.SetColumn(actions, 1); grid.Children.Add(actions);
-            panel.Children.Add(new Border { Child = grid, Padding = new Thickness(20), CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(0), Background = Ui.Brush("SurfaceBrush") });
+            foreach (var action in actions.Children) { Grid.SetColumn(action, 0); action.Margin = new(0, 0, 6, 6); }
+            var grid = new ResponsivePluginCard { Name = "PluginCardLayout" }; grid.Children.Add(info); grid.Children.Add(actions);
+            panel.Children.Add(new Border { Name = "PluginCard", Tag = plugin.Id, Child = grid, Padding = new Thickness(20), CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(0), Background = Ui.Brush("SurfaceBrush") });
         }
         Content = Ui.Scroll(panel);
     }

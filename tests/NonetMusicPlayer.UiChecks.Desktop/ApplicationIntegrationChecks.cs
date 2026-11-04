@@ -29,6 +29,7 @@ internal static class ApplicationIntegrationChecks
         var output = Path.GetFullPath(args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal)) ?? "artifacts/ui-checks");
         var data = Path.Combine(output, "test-data-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(output);
+        if (args.Contains("--desktop-ux-only")) { DesktopUxChecks.Run(output, args.FirstOrDefault(a => a.StartsWith("--style="))?[8..]); return; }
         if (args.Contains("--window-size-only")) { WindowSizePreferenceChecks.Run(output, styleFile: args.FirstOrDefault(a => a.StartsWith("--style="))?[8..]); return; }
         if (args.Contains("--layout-validation-only")) { LayoutValidationChecks.Run(output, args.FirstOrDefault(a => a.StartsWith("--style="))?[8..]); return; }
         if (args.Contains("--touch-responsive-only")) { TouchResponsiveChecks.Run(output, args.FirstOrDefault(a => a.StartsWith("--style="))?[8..]); return; }

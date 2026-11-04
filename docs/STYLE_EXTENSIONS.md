@@ -1,5 +1,7 @@
 # 类型级风格与动画扩展
 
+插件中心卡片提供 `PluginCard`、`PluginCardLayout`、`PluginInfo` 和 `PluginActions` 锚点；操作容器使用 WrapPanel，按按钮真实测量宽度均衡换行，小卡片切为上下排列。方案应保留可换行空间，不为操作区指定六列固定网格或压缩说明文字。标题栏 `ApplicationVersionLabel` 保留为隐藏兼容锚点，`ApplicationNameLabel` 后直接显示更新标签。旧插件 Contract、Schema 和业务按钮名称保持兼容。
+
 普通页面过渡可通过可选 `pageTransitions` 定义，能力为 `ui.page-transitions.v1`，支持按路由叠加与有效配置查询。字段、范围和示例见 [页面过渡扩展](PAGE_TRANSITIONS.md)。
 完整布局可在风格文件的可选 `layout` 中定义，使用 SDK 4.15 的 `ui.composition.v1`；旧文件保持有效。控件树、设置接管、条件布局和转场见 [INTERFACE_PRESETS](INTERFACE_PRESETS.md)。
 

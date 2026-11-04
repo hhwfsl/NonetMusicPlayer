@@ -1,7 +1,7 @@
-using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Styling;
 using Avalonia.VisualTree;
 using NonetMusicPlayer.Desktop.Services;
 
@@ -9,34 +9,40 @@ namespace NonetMusicPlayer.Desktop.Views;
 
 public sealed partial class MainWindow
 {
-    private readonly Dictionary<Border, Cursor?> _resizeCursors = [];
-    private readonly Cursor _titleMoveCursor = new(StandardCursorType.Arrow);
-    private Win32Properties.CustomWndProcHookCallback? _titleMessageHook;
-    private bool _movingTitle, _awaitingMovePointer, _nativeTitleMove;
-    private NativePoint? _titleReleasePoint;
+    private readonly List<Border> _resizeBorders = [];
+    private Win32Properties.CustomWindowStylesCallback? _snapWindowStyles;
     private TouchWindowMover? _touchTitleMover;
     private TouchWindowResizer? _touchWindowResizer;
     private void InitializeTitleInteraction()
     {
         _touchTitleMover = new TouchWindowMover(this);
         _touchWindowResizer = new TouchWindowResizer(this);
-        foreach (var border in ((Avalonia.Controls.Grid)Content!).Children.OfType<Border>().Where(b => b.Tag is string)) _resizeCursors[border] = border.Cursor;
-        AddHandler(PointerMovedEvent, (_, e) =>
-        {
-            if (!_awaitingMovePointer || _movingTitle || _nativeTitleMove || e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
-            var p = e.GetPosition(this);
-            // 原生移动结束可能报告旧角落坐标；在真实指针移入非缩放区域前，不恢复缩放命中测试。
-            if (p.X > 12 && p.Y > 12 && p.X < Bounds.Width - 12 && p.Y < Bounds.Height - 12) RestoreResizeHitTesting();
-        }, Avalonia.Interactivity.RoutingStrategies.Tunnel, true);
+        _resizeBorders.AddRange(((Grid)Content!).Children.OfType<Border>().Where(b => b.Tag is string));
         if (OperatingSystem.IsWindows())
         {
-            _titleMessageHook = TitleWindowMessage;
-            Win32Properties.AddWndProcHookCallback(this, _titleMessageHook);
+            // 使用框架的扩展客户区保留系统标题/缩放身份，内容和按钮仍由应用绘制。
+            // 不手动叠加 WS_THICKFRAME，避免原生边框计算令记忆尺寸在每次启动时变大。
+            ExtendClientAreaToDecorationsHint = true;
+            ExtendClientAreaTitleBarHeightHint = 0;
+            WindowDecorations = WindowDecorations.BorderOnly;
+            // 边框模式由框架正确换算客户区；补充系统菜单身份，不引入第二组标题按钮。
+            _snapWindowStyles = (style, extended) => (style | 0x00080000u, extended);
+            Win32Properties.AddWindowStylesCallback(this, _snapWindowStyles);
+            // 标题栏直接报告 HTCAPTION，由 Windows 接管按下、拖动、双击与系统贴靠。
+            // 不再从客户区 PointerPressed 调 BeginMoveDrag，也不补发或拦截鼠标消息。
+            Win32Properties.SetNonClientHitTestResult(TitleBarSurface, Win32Properties.Win32HitTestValue.Caption);
+            // 完整方案可将品牌移到侧栏；角色跟随原控件，不依赖固定的 XAML 父节点。
+            Win32Properties.SetNonClientHitTestResult(TitleBrand, Win32Properties.Win32HitTestValue.Caption);
+            // 窗口级样式也覆盖重挂接及后来插入的 New/插件按钮，内部图标继承 Client。
+            Styles.Add(new Style(selector => selector.Is<Button>())
+            {
+                Setters = { new Setter(Win32Properties.NonClientHitTestResultProperty, Win32Properties.Win32HitTestValue.Client) }
+            });
+            Win32Properties.SetNonClientHitTestResult(MaximizeWindowButton, Win32Properties.Win32HitTestValue.MaxButton);
         }
         Closed += (_, _) =>
         {
-            if (_titleMessageHook is not null) Win32Properties.RemoveWndProcHookCallback(this, _titleMessageHook);
-            _titleMoveCursor.Dispose();
+            if (_snapWindowStyles is not null) Win32Properties.RemoveWindowStylesCallback(this, _snapWindowStyles);
             _touchTitleMover.Dispose();
             _touchWindowResizer.Dispose();
         };
@@ -54,59 +60,21 @@ public sealed partial class MainWindow
             : [MinimizeWindowButton, MaximizeWindowButton, CloseWindowButton];
         TitleButtons.Children.Clear(); foreach (var button in buttons) TitleButtons.Children.Add(button);
     }
-    private void RestoreResizeHitTesting()
-    {
-        _awaitingMovePointer = false; _titleReleasePoint = null; Cursor = null;
-        RefreshResizeBorders();
-    }
-    private void RefreshResizeBorders() { foreach (var pair in _resizeCursors) { pair.Key.Cursor = _awaitingMovePointer ? Cursor : pair.Value; pair.Key.IsHitTestVisible = WindowState == WindowState.Normal && !_awaitingMovePointer; } }
+    // 缩放热区仅随窗口状态切换，不再等待一次后续鼠标移动才能恢复。
+    private void RefreshResizeBorders() { foreach (var border in _resizeBorders) border.IsHitTestVisible = WindowState == WindowState.Normal; }
     private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (Ancestors(e.Source).Any(c => c is Button)) return;
         if (e.Pointer.Type is PointerType.Touch or PointerType.Pen)
         {
             if (e.ClickCount == 2) { ToggleMaximize(); e.Handled = true; return; }
-            RestoreResizeHitTesting(); _touchTitleMover!.TryBegin(e); return;
+            _touchTitleMover!.TryBegin(e); return;
         }
+        // Windows 鼠标拖窗完全走非客户区；触摸/笔和其他平台保留现有兼容入口。
+        if (OperatingSystem.IsWindows()) return;
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
         e.Handled = true;
         if (e.ClickCount == 2) { ToggleMaximize(); return; }
-        _movingTitle = true; _awaitingMovePointer = true; _titleReleasePoint = null; Cursor = _titleMoveCursor;
-        foreach (var pair in _resizeCursors) { pair.Key.Cursor = Cursor; pair.Key.IsHitTestVisible = false; }
-        try { BeginMoveDrag(e); }
-        finally
-        {
-            _movingTitle = false;
-            if (OperatingSystem.IsWindows() && _awaitingMovePointer && GetCursorPos(out var point)) _titleReleasePoint = point;
-        }
+        BeginMoveDrag(e);
     }
-    private nint TitleWindowMessage(nint hwnd, uint message, nint wParam, nint lParam, ref bool handled)
-    {
-        if (!_awaitingMovePointer) return 0;
-        if (message == 0x0231) _nativeTitleMove = true; // WM_ENTERSIZEMOVE
-        if (message == 0x0232) // WM_EXITSIZEMOVE：原生移动循环已释放指针捕获。
-        {
-            _nativeTitleMove = false;
-            if (GetCursorPos(out var release)) _titleReleasePoint = release;
-            SetCursor(LoadCursor(0, 32512));
-        }
-        if (message == 0x0020) // WM_SETCURSOR：也处理释放时过时的命中信息。
-        {
-            SetCursor(LoadCursor(0, 32512)); handled = true; return 1;
-        }
-        if (message is 0x0200 or 0x00A0 && !_nativeTitleMove && !_movingTitle)
-        {
-            if (GetCursorPos(out var current) && _titleReleasePoint is { } previous && (current.X != previous.X || current.Y != previous.Y)) RestoreResizeHitTesting();
-            else
-            {
-                // 仅抑制静止位置的过时原生鼠标消息，避免沿用旧缩放目标的指针，不抑制真实移动。
-                SetCursor(LoadCursor(0, 32512)); handled = true; return 0;
-            }
-        }
-        return 0;
-    }
-    [StructLayout(LayoutKind.Sequential)] private struct NativePoint { public int X, Y; }
-    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetCursorPos(out NativePoint point);
-    [DllImport("user32.dll")] private static extern nint SetCursor(nint cursor);
-    [DllImport("user32.dll", EntryPoint = "LoadCursorW")] private static extern nint LoadCursor(nint instance, nint resource);
 }
