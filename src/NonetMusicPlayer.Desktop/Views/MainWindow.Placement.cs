@@ -19,16 +19,12 @@ public sealed partial class MainWindow
             var size = WindowPlacementService.InitialSize(area); var minimum = WindowPlacementService.MinimumSize(area);
             MinWidth = minimum.Width; MinHeight = minimum.Height; Width = size.Width; Height = size.Height;
         }
+        // 框架在此事件之后才调整原生窗口、计算居中并显示；不要在 Opened 后再次移动。
+        AddHandler(WindowOpenedEvent, (_, _) => PrepareWindowPlacement());
         Opened += (_, _) =>
         {
             // 托盘重新显示沿用运行期间的位置，只有本次进程第一次打开时居中。
             if (_windowSizeReady) return;
-            if (Screens.Primary is { } screen)
-            {
-                var area = screen.WorkingArea.Size.ToSize(screen.Scaling);
-                var desired = double.IsFinite(Width) && double.IsFinite(Height) ? new Size(Width, Height) : WindowPlacementService.InitialSize(area);
-                ApplyWindowPlacement(WindowPlacementService.FitSize(desired, area), screen.WorkingArea, screen.Scaling, center: true);
-            }
             _windowSizeReady = true;
         };
         Resized += (_, e) =>
@@ -43,6 +39,25 @@ public sealed partial class MainWindow
         ScalingChanged += (_, _) => Dispatcher.UIThread.Post(FitWindowToScreen, DispatcherPriority.Loaded);
         Screens.Changed += ScreensChanged;
         Closed += (_, _) => { _placementClosed = true; _windowSizeSaveTimer.Stop(); Screens.Changed -= ScreensChanged; };
+    }
+    private void PrepareWindowPlacement()
+    {
+        if (_windowSizeReady || Screens.Primary is not { } screen) return;
+        var area = screen.WorkingArea.Size.ToSize(screen.Scaling);
+        var desired = double.IsFinite(Width) && double.IsFinite(Height) ? new Size(Width, Height) : WindowPlacementService.InitialSize(area);
+        var size = WindowPlacementService.FitSize(desired, area); var minimum = WindowPlacementService.MinimumSize(area);
+        _applyingWindowPlacement = true;
+        try
+        {
+            MinWidth = minimum.Width; MinHeight = minimum.Height; Width = size.Width; Height = size.Height;
+        }
+        finally { _applyingWindowPlacement = false; }
+    }
+    private void CenterInitialWindowFrame()
+    {
+        // Windows 首帧尚由 DWM 隐藏；使用系统已确认的外框尺寸完成最后的像素取整。
+        if (!_placementClosed && Screens.Primary is { } screen)
+            Position = WindowPlacementService.CenterPosition(screen.WorkingArea, FrameSize ?? ClientSize, DesktopScaling);
     }
     private void RestoreRememberedWindowSize()
     {

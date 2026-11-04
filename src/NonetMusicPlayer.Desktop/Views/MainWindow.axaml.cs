@@ -63,6 +63,7 @@ public sealed partial class MainWindow : Window
         TracksList.SelectionChanged += (_, _) => { UpdateSelectionToolbar(); if (TracksList.BatchMode && !_changingBatchMode) _vm?.CompleteOperation("selection.select"); };
         SetBatchMode(false);
         InitializeTitleInteraction();
+        _startupPresentation = WindowsStartupPresentation.Attach(this, CenterInitialWindowFrame);
         AddHandler(PointerPressedEvent, (_, e) =>
         {
             if (_vm is null) return;
@@ -75,6 +76,7 @@ public sealed partial class MainWindow : Window
         Closing += ConfirmClosing;
         Closed += (_, _) => { _elementExtensionsClosed = true; _dynamicElements.Clear(); _lyricsMotion.Dispose(); _pageMotion.Dispose(); SuspendElementExtensions(); _elementLayouts?.Dispose(); foreach (var bitmap in _pluginNavigationAssets) bitmap.Dispose(); _pluginNavigationAssets.Clear(); foreach (var overlay in _extensionOverlays.Values.ToArray()) overlay.Close(); _extensionOverlays.Clear(); L10n.LanguageChanged -= LanguageChanged; _cachedSettings?.Dispose(); _desktopLyrics?.Dispose(); _taskbar?.Dispose(); _notificationTimer.Stop(); _locateTimer.Stop(); DisposePage(); if (_vm is not null) { DetachPlayerCommands(); _vm.Plugins.LifecycleChanged -= ElementLifecycleChanged; _vm.Plugins.UiPluginUnavailable -= ElementPluginUnavailable; _vm.Plugins.DetachHost(this); _vm.MusicSearchChanged -= MusicSearchStateChanged; _vm.ViewChanged -= ViewChanged; _vm.NavigationRequested -= ResetSongPagePosition; _vm.SettingsChanged -= SettingsChanged; _vm.LocatePlayingTrack -= LocatePlayingTrack; _vm.UserNotification -= UserNotification; _vm.Save(); } };
     }
+    private readonly WindowsStartupPresentation? _startupPresentation;
     private void AttachViewModel()
     {
         DetachElementExtensions();

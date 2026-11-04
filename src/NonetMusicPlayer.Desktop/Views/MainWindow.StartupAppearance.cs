@@ -13,6 +13,7 @@ public sealed partial class MainWindow
     public void PrepareInitialAppearance()
     {
         if (IsVisible || Content is not Control content) return;
+        PrepareWindowPlacement();
         ApplyTemplate();
         var size = new Size(Math.Max(1, ViewportWidth), Math.Max(1, ViewportHeight));
         for (var pass = 0; pass < 2; pass++)

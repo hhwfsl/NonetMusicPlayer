@@ -7,6 +7,12 @@ internal static class Program
     {
         try
         {
+            if (args.Contains("--native-startup-presentation"))
+            {
+                AppBuilder.Configure<NonetMusicPlayer.Desktop.App>().UsePlatformDetect().With(new Win32PlatformOptions { RenderingMode = [Win32RenderingMode.Software] }).WithInterFont().SetupWithoutStarting();
+                var output = Path.GetFullPath(args.FirstOrDefault(a => !a.StartsWith("--")) ?? "artifacts/startup-presentation"); Directory.CreateDirectory(output);
+                StartupPresentationChecks.Run(output, args.FirstOrDefault(a => a.StartsWith("--style="))?[8..]); return 0;
+            }
             if (args.Contains("--native-window-ux"))
             {
                 AppBuilder.Configure<NonetMusicPlayer.Desktop.App>().UsePlatformDetect().With(new Win32PlatformOptions { RenderingMode = [Win32RenderingMode.Software] }).WithInterFont().SetupWithoutStarting();

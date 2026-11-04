@@ -1,6 +1,8 @@
 # Nonet User Manual
 
-Desktop version 0.4.0-beta.45. Chinese, Japanese and English interfaces provide the same features.
+Desktop version 0.4.0-beta.46. Chinese, Japanese and English interfaces provide the same features.
+
+On Windows, the window appears at its final centered position after the first frame is ready, avoiding a white flash and subsequent movement. Tray reopening retains its current position. The minimum size remains 640×480 logical pixels.
 
 The title bar shows the app name followed by New when an update is available; version details remain in About. Plugin actions form balanced rows and move below the text in narrow cards. Unknown terminal commands print “Unknown command” directly. Reordering tracks has no floating hint. Windows handles title-bar mouse dragging, double-clicking and snapping directly, replacing the previous drag-coordinate workaround. The minimum window size is 640×480.
 

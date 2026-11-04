@@ -1,5 +1,7 @@
 # 🎵 Nonet Music Player
 
+桌面 0.4.0-beta.46 修复 Windows 启动时闪白和显示后移动：首帧准备完成后在最终居中位置呈现，保留原有最小尺寸、尺寸记忆和托盘行为。
+
 桌面 0.4.0-beta.45 隐藏标题栏版本、改善插件卡片的多行操作区，并简化未知命令和拖拽排序反馈。Windows 主窗口标题栏直接使用系统非客户区拖动与双击，移除拖窗坐标补偿和鼠标消息拦截；自绘标题栏支持系统贴靠入口，最小窗口为 640×480 DIP。
 
 桌面 0.4.0-beta.44 增加触摸/笔边缘缩放；歌曲工具栏先收缩搜索框、再成组换行，播放栏为完整工具按钮组预留宽度，适配最小窗口和大字号。
@@ -35,7 +37,7 @@
 
 | 产品 | 当前版本 | 发行说明 |
 | --- | --- | --- |
-| 桌面 | [0.4.0-beta.45](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.45) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
+| 桌面 | [0.4.0-beta.46](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.46) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
 | CLI | [0.4.0-beta.32](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.32) | Windows、Linux、macOS x64 |
 | Android | [0.3.0-beta.10](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/android-v0.3.0-beta.10) | API 28+；通用 APK；沿用既有测试签名 |
 
