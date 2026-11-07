@@ -11,8 +11,8 @@ android {
         applicationId = "app.littlemusicplayer.android"
         minSdk = 28
         targetSdk = 36
-        versionCode = 12
-        versionName = "0.3.0-beta.10"
+        versionCode = 13
+        versionName = "0.3.0-beta.11"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }

@@ -27,6 +27,8 @@ data class LibraryState(
 )
 data class PlaybackSnapshot(
     val trackId: String = "", val queueIds: List<String> = emptyList(), val positionMs: Long = 0, val volume: Float = 1f, val source: String = "",
+    // 可选字段兼容旧快照；随机队列与来源顺序分开保存，重启后仍能恢复列表循环。
+    val sourceQueueIds: List<String> = emptyList(),
 )
 data class PlaybackState(
     val track: Track? = null, val positionMs: Long = 0, val durationMs: Long = 0,

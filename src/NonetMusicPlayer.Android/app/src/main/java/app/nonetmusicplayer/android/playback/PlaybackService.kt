@@ -27,6 +27,8 @@ import app.nonetmusicplayer.android.network.PeerMediaDataSource
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import java.io.File
 
 /** 音频解码和媒体会话仅由服务拥有；界面旋转或退出不会创建第二个播放器。 */
@@ -38,8 +40,8 @@ class PlaybackService : MediaSessionService() {
     private val decodeThread = HandlerThread("Nonet-audio", Process.THREAD_PRIORITY_AUDIO)
     private var session: MediaSession?=null
     private var queue=emptyList<String>()
+    private var sourceQueue=emptyList<String>()
     private var origin=""
-    private val shuffle=WeightedShuffle()
     private val failed=mutableSetOf<String>()
     private var counted=false
     private var revision=0
@@ -132,7 +134,7 @@ class PlaybackService : MediaSessionService() {
             override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
                 if(controller.packageName!=packageName && !controller.isTrusted) return MediaSession.ConnectionResult.reject()
                 val commands=MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
-                if(controller.packageName==packageName) commands.add(PLAY_QUEUE).add(NEXT).add(PREVIOUS)
+                if(controller.packageName==packageName) commands.add(PLAY_QUEUE).add(NEXT).add(PREVIOUS).add(MOVE_QUEUE)
                 return MediaSession.ConnectionResult.AcceptedResultBuilder(session).setAvailableSessionCommands(commands.build()).build()
             }
             override fun onCustomCommand(session: MediaSession, controller: MediaSession.ControllerInfo, command: SessionCommand, args: Bundle): ListenableFuture<SessionResult> {
@@ -141,12 +143,24 @@ class PlaybackService : MediaSessionService() {
                     advance(if(command.customAction==NEXT.customAction) 1 else -1,true)
                     return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                 }
+                if(command.customAction==MOVE_QUEUE.customAction) {
+                    val id=args.getString("track").orEmpty()
+                    if(id !in queue) return Futures.immediateFuture(SessionResult(SessionError.ERROR_BAD_VALUE))
+                    queue=PlaybackOrder.move(queue,id,args.getInt("delta"))
+                    if(app.repository.state.value.preferences.mode!="shuffle") sourceQueue=queue
+                    app.playQueue.value=queue;revision++;persist()
+                    return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                }
                 if(command.customAction!=PLAY_QUEUE.customAction) return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
                 val ids=(args.getStringArrayList("ids") ?: app.playQueue.value).take(10000)
                 val selected=args.getString("track").orEmpty()
                 val available=app.repository.state.value.tracks.filter {app.canPlay(it)}.map {it.id}.toSet()
                 if(selected !in ids || selected !in available) return Futures.immediateFuture(SessionResult(SessionError.ERROR_BAD_VALUE))
-                queue=ids.distinct().filter { it in available };app.playQueue.value=queue;origin=args.getString("source").orEmpty();failed.clear();revision++
+                val playable=ids.distinct().filter {it in available}
+                // 队列内重新点歌沿用原始来源，不能将已经洗牌的显示顺序误存为列表顺序。
+                if(!args.getBoolean("keepSourceOrder") || sourceQueue.isEmpty()) sourceQueue=playable
+                queue=PlaybackOrder.create(playable,selected,app.repository.state.value.preferences.mode=="shuffle")
+                app.playQueue.value=queue;origin=args.getString("source").orEmpty();failed.clear();revision++
                 startTrack(selected,0,true)
                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
@@ -163,7 +177,7 @@ class PlaybackService : MediaSessionService() {
                 timerSong=null;collectListening();player.pause()
                 val batch=pendingDuration.toList();pendingDuration.clear()
                 app.repository.recordDurations(batch.filter {it.duration>0}.map {Triple(it.id,it.duration,it.end)})
-                app.repository.savePlayback(PlaybackSnapshot(player.currentMediaItem?.mediaId.orEmpty(),queue,player.currentPosition.coerceAtLeast(0),player.volume,origin))
+                app.repository.savePlayback(PlaybackSnapshot(player.currentMediaItem?.mediaId.orEmpty(),queue,player.currentPosition.coerceAtLeast(0),player.volume,origin,sourceQueue))
                 player.stop();stopSelf()
             })
         audioManager=getSystemService(AudioManager::class.java)
@@ -174,7 +188,19 @@ class PlaybackService : MediaSessionService() {
             val snapshot=app.repository.restorePlayback()
             if(revision==before && snapshot.trackId.isNotBlank()) {
                 queue=snapshot.queueIds;app.playQueue.value=queue;origin=snapshot.source;player.volume=snapshot.volume
+                sourceQueue=snapshot.sourceQueueIds.ifEmpty {PlaybackOrder.restore(queue,sourcePlaylistOrder())}
                 startTrack(snapshot.trackId,snapshot.positionMs,false)
+            }
+        }
+        scope.launch {
+            var previous=app.repository.state.value.preferences.mode
+            app.repository.state.map {it.preferences.mode}.distinctUntilChanged().collect {mode ->
+                if(mode!=previous && queue.isNotEmpty()) {
+                    queue=if(mode=="shuffle") PlaybackOrder.create(queue,player.currentMediaItem?.mediaId,true)
+                        else PlaybackOrder.restore(queue,sourceQueue)
+                    app.playQueue.value=queue;revision++;persist()
+                }
+                previous=mode
             }
         }
         scope.launch {
@@ -195,6 +221,18 @@ class PlaybackService : MediaSessionService() {
                 else if(app.lan.available(track)) networkResume?.takeIf {it.first==track.id && it.third}?.let {startTrack(it.first,it.second,true)}
             }
         }}
+    }
+    /** 旧快照没有原始队列时按已记录的播放来源恢复，绝不借用当前浏览页面。 */
+    private fun sourcePlaylistOrder(): List<String> {
+        val state=app.repository.state.value
+        return when {
+            origin.startsWith("playlist:") ->state.playlists.firstOrNull {it.id==origin.substringAfter(':')}?.trackIds.orEmpty()
+            origin=="recent" ->state.recentIds
+            origin.startsWith("album:") ->state.tracks.filter {it.inLibrary && it.album==origin.substringAfter(':')}.map {it.id}
+            origin.startsWith("artist:") ->state.tracks.filter {it.inLibrary && it.artist==origin.substringAfter(':')}.map {it.id}
+            origin=="browse" ->state.tracks.filter {it.inLibrary}.map {it.id}
+            else ->emptyList()
+        }
     }
     /** 临时停网不视为坏歌，也不跳过整张远端歌单；恢复时继续原进度，用户暂停可取消自动继续。 */
     private fun suspendForNetwork(track: Track) {
@@ -241,16 +279,12 @@ class PlaybackService : MediaSessionService() {
         val candidates=queue.filter { it in allowed && it !in failed }
         if(candidates.isEmpty()) { player.pause();if(failed.isNotEmpty()) app.messages.tryEmit(R.string.no_playable_tracks);return }
         val mode=app.repository.state.value.preferences.mode
-        val next=when {
-            !manual && mode=="repeat-one" && current in candidates -> current
-            direction>0 && mode=="shuffle" -> shuffle.choose(candidates,current)
-            else -> candidates[Math.floorMod(candidates.indexOf(current)+direction,candidates.size)]
-        }
+        val next=PlaybackOrder.next(candidates,current,direction,!manual && mode=="repeat-one")
         next?.let { startTrack(it,0,true) }
     }
     private fun persist() {
         if(!::player.isInitialized) return
-        val snapshot=PlaybackSnapshot(player.currentMediaItem?.mediaId.orEmpty(),queue,player.currentPosition.coerceAtLeast(0),player.volume,origin)
+        val snapshot=PlaybackSnapshot(player.currentMediaItem?.mediaId.orEmpty(),queue,player.currentPosition.coerceAtLeast(0),player.volume,origin,sourceQueue)
         app.scope.launch { app.repository.savePlayback(snapshot) }
     }
     /** 在切歌、暂停及周期保存时结算旧区间，不把旧歌曲时长算到新歌曲上。 */
@@ -277,5 +311,6 @@ class PlaybackService : MediaSessionService() {
         val PLAY_QUEUE=SessionCommand("app.nonetmusicplayer.PLAY_QUEUE",Bundle.EMPTY)
         val NEXT=SessionCommand("app.nonetmusicplayer.NEXT",Bundle.EMPTY)
         val PREVIOUS=SessionCommand("app.nonetmusicplayer.PREVIOUS",Bundle.EMPTY)
+        val MOVE_QUEUE=SessionCommand("app.nonetmusicplayer.MOVE_QUEUE",Bundle.EMPTY)
     }
 }

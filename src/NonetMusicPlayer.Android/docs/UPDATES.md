@@ -3,7 +3,7 @@
 ## 发行命名
 
 - 固定仓库：`https://github.com/hhwfsl/NonetMusicPlayer`，不是可编辑的第三方 APK 地址。
-- 标签：`android-v0.3.0-beta.9`；APK：`Nonet-0.3.0-beta.9.apk`。桌面使用 `v0.4.0-beta.32`，两个产品独立排序。
+- 标签：`android-v0.3.0-beta.11`；APK：`Nonet-0.3.0-beta.11.apk`。桌面使用独立的 `v<版本>` 标签，两个产品独立排序。
 - Release 正文是更新说明；客户端以只读、可选择的纯文本显示，不执行 HTML 或脚本。
 - Release 只附一个完整通用 APK，不制作 ZIP 或拆分安装包。资产必须完整上传并具有 GitHub API 提供的 `sha256:<64 位十六进制>` digest，客户端直接使用该摘要校验。
 - 从最近 100 个公开 Release 中筛选 Android 标签及对应 APK，按数值版本比较，`beta.10` 大于 `beta.9`。忽略草稿、旧版本、缺失或不可验证资产；正式安装版本不自动更新到预发布。

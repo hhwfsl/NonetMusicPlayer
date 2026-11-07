@@ -5,7 +5,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
 /** 使用外键和事务维护歌单次序；删歌单不删除音频本体。 */
-class MusicDatabase(context: Context, name: String = "nonetmusicplayer.db") : SQLiteOpenHelper(context, name, null, 1) {
+class MusicDatabase(context: Context, name: String = "nonetmusicplayer.db") : SQLiteOpenHelper(context, name, null, 3) {
     override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true); db.enableWriteAheadLogging() }
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE tracks(id TEXT PRIMARY KEY,uri TEXT NOT NULL,title TEXT NOT NULL,artist TEXT NOT NULL,album TEXT NOT NULL,duration INTEGER NOT NULL,cover TEXT NOT NULL,lyrics TEXT NOT NULL,provider TEXT NOT NULL,managed INTEGER NOT NULL)")
@@ -15,6 +15,22 @@ class MusicDatabase(context: Context, name: String = "nonetmusicplayer.db") : SQ
         db.execSQL("CREATE TABLE listening(track_id TEXT REFERENCES tracks(id) ON DELETE CASCADE,day TEXT NOT NULL,duration INTEGER NOT NULL,plays INTEGER NOT NULL,PRIMARY KEY(track_id,day))")
         db.execSQL("CREATE TABLE settings(key TEXT PRIMARY KEY,value TEXT NOT NULL)")
         db.execSQL("INSERT INTO playlists VALUES('liked','','',0)")
+        createHourly(db)
     }
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) { error("Unsupported database upgrade: $oldVersion → $newVersion") }
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if(oldVersion<2) createHourly(db)
+        if(oldVersion<3) retireRemovedSource(db)
+    }
+    companion object {
+        /** 仅清理已移除音源的可播放引用；历史统计及其歌曲元数据仍保留在数据库。 */
+        internal fun retireRemovedSource(db: SQLiteDatabase) {
+            db.execSQL("DELETE FROM playlist_tracks WHERE track_id IN (SELECT id FROM tracks WHERE provider='netease')")
+            db.execSQL("DELETE FROM history WHERE track_id IN (SELECT id FROM tracks WHERE provider='netease')")
+            db.execSQL("UPDATE tracks SET managed=0 WHERE provider='netease'")
+        }
+    }
+    private fun createHourly(db: SQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS listening_hours(track_id TEXT NOT NULL,utc_hour INTEGER NOT NULL,duration INTEGER NOT NULL,plays INTEGER NOT NULL,PRIMARY KEY(track_id,utc_hour))")
+        db.execSQL("CREATE INDEX IF NOT EXISTS listening_hours_time ON listening_hours(utc_hour)")
+    }
 }

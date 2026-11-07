@@ -152,4 +152,10 @@
     <string name="sleep_restart">Restart timer</string>
     <string name="sleep_waiting">Closing after this song finishes</string>
     <string name="sleep_remaining">Closes in %1$02d:%2$02d</string>
+    <string name="show_more_playlists">Show more playlists</string>
+    <string name="expand_playlist_section">Expand playlists</string>
+    <string name="collapse_playlist_section">Collapse playlists</string>
+    <string name="show_less">Show less</string>
+    <string name="home_recent_short">Recent</string>
+    <string name="home_statistics_short">Statistics</string>
 </resources>

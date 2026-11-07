@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.QueueMusic
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,51 +24,105 @@ import androidx.compose.ui.unit.dp
 import app.nonetmusicplayer.android.R
 import app.nonetmusicplayer.android.domain.*
 
-@Composable fun MusicHome(state: LibraryState,onNavigate: (String)->Unit,onCreate: ()->Unit,onPlay: (Track,List<Track>)->Unit={_,_->}) {
+@Composable fun MusicHome(state: LibraryState,onNavigate: (String)->Unit,onCreate: ()->Unit) {
     val tracks=remember(state.tracks) {state.tracks.filter {it.inLibrary}}
     val byId=remember(state.tracks) {state.tracks.associateBy {it.id}}
     val today=java.time.LocalDate.now().toString()
-    LazyColumn(Modifier.testTag("music_overview"),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-        item {
-            Surface(shape=RoundedCornerShape(16.dp),color=NonetTheme.colorScheme.surfaceVariant) {
-                Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                    Text(stringResource(R.string.overview),style=NonetTheme.typography.titleMedium)
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-                        listOf(R.string.music to tracks.size,R.string.playlists to state.playlists.size,R.string.today_listening to null).forEach {(label,count) ->Column(Modifier.weight(1f)) {Text(count?.toString() ?: timeLabel(state.statistics.filter {it.day==today}.sumOf {it.durationMs}),style=NonetTheme.typography.headlineSmall,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis);Text(stringResource(label),style=NonetTheme.typography.bodySmall,color=NonetTheme.colorScheme.onSurfaceVariant)}}
+    val fontScale=androidx.compose.ui.platform.LocalDensity.current.fontScale
+    @Composable fun Summary(compact: Boolean=false) {
+        Surface(Modifier.fillMaxWidth().testTag("home_summary"),RoundedCornerShape(14.dp),NonetTheme.colorScheme.surfaceVariant) {
+            if(compact) Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                // 短横屏的概览列较窄，标签和值分列成三行，保证时间数值不会被省略。
+                listOf(R.string.music to tracks.size,R.string.playlists to state.playlists.size,R.string.today_listening to null).forEach {(label,count) ->
+                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        Text(stringResource(label),Modifier.weight(1f),style=NonetTheme.typography.bodySmall,color=NonetTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+                        Text(count?.toString() ?: timeLabel(state.statistics.filter {it.day==today}.sumOf {it.durationMs}),style=NonetTheme.typography.titleSmall,maxLines=1)
+                    }
+                }
+            } else Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.overview),style=NonetTheme.typography.titleSmall,maxLines=1)
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    listOf(R.string.music to tracks.size,R.string.playlists to state.playlists.size,R.string.today_listening to null).forEach {(label,count) ->
+                        Column(Modifier.weight(1f)) {
+                            Text(count?.toString() ?: timeLabel(state.statistics.filter {it.day==today}.sumOf {it.durationMs}),style=NonetTheme.typography.titleLarge,maxLines=1,overflow=TextOverflow.Ellipsis)
+                            Text(stringResource(label),style=NonetTheme.typography.bodySmall,color=NonetTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+                        }
                     }
                 }
             }
         }
-        item { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            QuickCard(stringResource(R.string.recent),Icons.Outlined.History,Modifier.weight(1f)) { onNavigate("recent") }
-            QuickCard(stringResource(R.string.statistics),Icons.Outlined.BarChart,Modifier.weight(1f)) { onNavigate("statistics") }
-        } }
-        if(tracks.isEmpty()) item { EmptyState(stringResource(R.string.empty_music),stringResource(R.string.empty_music_body),stringResource(R.string.create_playlist),onCreate) }
-        item {ListeningChart(stringResource(R.string.chart_hours),ListeningCharts.hours(state.hourlyListening),compact=true)}
-        item {SectionHeading(stringResource(R.string.playlists)) {onNavigate("playlists")}}
-        item {LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            items(state.playlists.take(8),key={it.id}) {p ->
-                Column(Modifier.width(104.dp).clickable {onNavigate("playlist:${p.id}")},verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                    Cover(state.covers["playlist:${p.id}"] ?: byId[p.trackIds.firstOrNull()]?.cover.orEmpty(),Modifier.size(104.dp),p.id=="liked")
-                    Text(if(p.id=="liked") stringResource(R.string.liked) else p.name,maxLines=1,overflow=TextOverflow.Ellipsis,style=NonetTheme.typography.titleSmall)
-                    Text(stringResource(R.string.tracks_count,p.trackIds.size),style=NonetTheme.typography.bodySmall,color=NonetTheme.colorScheme.onSurfaceVariant)
+    }
+    @Composable fun Shortcuts() {
+        Column(Modifier.testTag("home_shortcuts"),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                QuickCard(stringResource(if(tracks.isEmpty()) R.string.create_playlist else R.string.music),Icons.Outlined.MusicNote,Modifier.weight(1f).testTag("home_browse")) {if(tracks.isEmpty()) onCreate() else onNavigate("browse")}
+                QuickCard(stringResource(R.string.playlists),Icons.AutoMirrored.Outlined.QueueMusic,Modifier.weight(1f).testTag("home_playlists")) {onNavigate("playlists")}
+            }
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                QuickCard(stringResource(R.string.home_recent_short),Icons.Outlined.History,Modifier.weight(1f).testTag("home_recent_link")) {onNavigate("recent")}
+                QuickCard(stringResource(R.string.home_statistics_short),Icons.Outlined.BarChart,Modifier.weight(1f).testTag("home_statistics")) {onNavigate("statistics")}
+            }
+        }
+    }
+    @Composable fun PlaylistPreview() {
+        Column(Modifier.testTag("home_playlist_preview")) {
+            SectionHeading(stringResource(R.string.playlists)) {onNavigate("playlists")}
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                state.playlists.take(2).forEach {p ->
+                    Surface(Modifier.weight(1f).testTag("home_playlist_${p.id}"),RoundedCornerShape(10.dp),NonetTheme.colorScheme.surfaceVariant,onClick={onNavigate("playlist:${p.id}")}) {
+                        Row(Modifier.padding(8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            Cover(state.covers["playlist:${p.id}"] ?: byId[p.trackIds.firstOrNull()]?.cover.orEmpty(),Modifier.size(36.dp),p.id=="liked")
+                            Column(Modifier.weight(1f)) {
+                                Text(if(p.id=="liked") stringResource(R.string.liked) else p.name,maxLines=1,overflow=TextOverflow.Ellipsis,style=NonetTheme.typography.titleSmall)
+                                Text(stringResource(R.string.tracks_count,p.trackIds.size),style=NonetTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis,color=NonetTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
                 }
             }
-        }}
-        if(state.recentIds.isNotEmpty()) {
-            item {SectionHeading(stringResource(R.string.recent_music)) {onNavigate("recent")}}
-            items(state.recentIds.take(3),key={"recent-$it"}) {id ->byId[id]?.let {t ->
-                Surface(Modifier.fillMaxWidth(),RoundedCornerShape(12.dp),NonetTheme.colorScheme.surfaceVariant,onClick={onPlay(t,state.recentIds.mapNotNull {byId[it]})}) {
-                    Row(Modifier.padding(10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {Cover(t.cover,Modifier.size(40.dp));Column(Modifier.weight(1f)) {Text(t.title,maxLines=1,overflow=TextOverflow.Ellipsis);Text(t.artist,maxLines=1,overflow=TextOverflow.Ellipsis,style=NonetTheme.typography.bodySmall,color=NonetTheme.colorScheme.onSurfaceVariant)};Icon(Icons.Outlined.PlayArrow,stringResource(R.string.play),tint=NonetTheme.colorScheme.primary)}
-                }
-            }}
         }
-        item {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {QuickCard(stringResource(R.string.albums),Icons.Outlined.Album,Modifier.weight(1f)) {onNavigate("albums")};QuickCard(stringResource(R.string.artists),Icons.Outlined.PersonOutline,Modifier.weight(1f)) {onNavigate("artists")}}}
+    }
+    @Composable fun HourlyChart(modifier: Modifier=Modifier) {
+        BoxWithConstraints(modifier.fillMaxWidth()) {
+            // 默认使用紧凑图表的自然高度，仅在空间不足时缩小，绝不拉伸占满剩余区域。
+            val normalHeight=128.dp+71.dp*fontScale
+            if(maxHeight<normalHeight) ListeningChart(stringResource(R.string.chart_hours),ListeningCharts.hours(state.hourlyListening),Modifier.height(maxHeight),fitHeight=true)
+            else ListeningChart(stringResource(R.string.chart_hours),ListeningCharts.hours(state.hourlyListening),compact=true)
+        }
+    }
+    // 图表始终保留且使用统计页相同的小时数据；小屏优先保留快捷入口和图表，横屏分栏。
+    BoxWithConstraints(Modifier.fillMaxSize().testTag("music_overview").padding(12.dp)) {
+        val height=maxHeight/fontScale
+        if(maxWidth>=400.dp && maxWidth>maxHeight*1.25f) {
+            Row(Modifier.fillMaxSize().testTag("home_content"),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    if(height>=250.dp) Summary(compact=true)
+                    Shortcuts()
+                    if(height>=450.dp) PlaylistPreview()
+                }
+                HourlyChart(Modifier.weight(1f))
+            }
+        } else {
+            Column(Modifier.fillMaxSize().testTag("home_content"),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                if(height>=400.dp) Summary()
+                Shortcuts()
+                HourlyChart()
+                if(height>=650.dp) PlaylistPreview()
+            }
+        }
     }
 }
+
 @Composable private fun QuickCard(label: String,icon: androidx.compose.ui.graphics.vector.ImageVector,modifier: Modifier,onClick: ()->Unit) {
     Surface(onClick=onClick,modifier=modifier,shape=RoundedCornerShape(10.dp),color=NonetTheme.colorScheme.surface,border=BorderStroke(1.dp,NonetTheme.colorScheme.outlineVariant)) {
-        Row(Modifier.padding(14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {Icon(icon,null,tint=NonetTheme.colorScheme.primary,modifier=Modifier.size(20.dp));Text(label,maxLines=1,overflow=TextOverflow.Ellipsis,style=NonetTheme.typography.labelLarge)}
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            // 短横屏的入口列较窄时省略装饰图标，为完整操作文字保留空间。
+            val showIcon=maxWidth>=128.dp*androidx.compose.ui.platform.LocalDensity.current.fontScale
+            Row(Modifier.fillMaxWidth().heightIn(min=48.dp).padding(horizontal=10.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                if(showIcon) Icon(icon,null,tint=NonetTheme.colorScheme.primary,modifier=Modifier.size(20.dp))
+                Text(label,Modifier.weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis,style=NonetTheme.typography.labelLarge)
+            }
+        }
     }
 }
 @Composable private fun GroupStrip(groups: Map<String,List<Track>>,covers: Map<String,String>,prefix: String,onSelect: (String)->Unit) {
@@ -126,7 +181,16 @@ import app.nonetmusicplayer.android.domain.*
     val liked=state.playlists.firstOrNull { it.id=="liked" }?.trackIds.orEmpty()
     val canReorder=!bulk && playlistId!=null && query.isBlank()
     val up=stringResource(R.string.move_up);val down=stringResource(R.string.move_down)
-    SongReorderHost(filtered,canReorder,onMove,draggedContent={track ->TrackRow(track,filtered.indexOf(track),track.id==currentId,track.id in liked,{},{},{})}) {list,draggedId ->
+    val fontScale=androidx.compose.ui.platform.LocalDensity.current.fontScale
+    @Composable fun ToolbarActions() {
+        if(playlistId!=null) {
+            IconAction(Icons.Outlined.Add,stringResource(R.string.add_files),Modifier.testTag("playlist_add_files"),onClick=onAddFiles)
+            IconAction(Icons.Outlined.CreateNewFolder,stringResource(R.string.add_folder),Modifier.testTag("playlist_add_folder"),onClick=onAddFolder)
+        }
+        IconAction(Icons.Outlined.MoreVert,stringResource(R.string.more),Modifier.testTag("playlist_page_more"),onClick=onPageMore)
+        IconAction(if(bulk) Icons.Outlined.Close else Icons.Outlined.Checklist,stringResource(if(bulk) R.string.exit_selection else R.string.batch),Modifier.testTag("playlist_selection")) {bulk=!bulk;selected=emptySet()}
+    }
+    SongReorderHost(filtered,canReorder,onMove,draggedContent={track ->TrackRow(track,filtered.indexOf(track),track.id==currentId,track.id in liked,{},{},{})}) {list,preview,draggedId ->
     // 先实现搜索框所在的惰性列表项，再交给输入框请求焦点；重复点击也能从长列表底部返回。
     LaunchedEffect(requestSearchFocus) {if(requestSearchFocus) list.scrollToItem(1)}
     // 长按拾起后由外层处理拖拽，暂时禁用用户滚动，避免子列表先消费同一条手指移动；程序边缘滚动仍可用。
@@ -139,14 +203,17 @@ import app.nonetmusicplayer.android.domain.*
                 IconAction(Icons.Outlined.PlayArrow,stringResource(R.string.play),enabled=tracks.isNotEmpty()) { tracks.firstOrNull()?.let { onPlay(it,tracks) } }
             }
         } }
-        item { Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-            SearchField(query,{query=it},Modifier.weight(1f),requestFocus=requestSearchFocus,onFocusHandled=onSearchFocusHandled)
-            if(playlistId!=null) {
-                IconAction(Icons.Outlined.Add,stringResource(R.string.add_files),onClick=onAddFiles)
-                IconAction(Icons.Outlined.CreateNewFolder,stringResource(R.string.add_folder),onClick=onAddFolder)
+        item { BoxWithConstraints(Modifier.fillMaxWidth()) {
+            // 小屏或大字时将操作按钮另放一行，搜索框不被四个固定触摸区挤到无法输入。
+            if(maxWidth<180.dp*fontScale+48.dp*(if(playlistId!=null) 4 else 2)) {
+                Column {
+                    SearchField(query,{query=it},Modifier.fillMaxWidth(),requestFocus=requestSearchFocus,onFocusHandled=onSearchFocusHandled)
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End,verticalAlignment=Alignment.CenterVertically) {ToolbarActions()}
+                }
+            } else Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                SearchField(query,{query=it},Modifier.weight(1f),requestFocus=requestSearchFocus,onFocusHandled=onSearchFocusHandled)
+                ToolbarActions()
             }
-            IconAction(Icons.Outlined.MoreVert,stringResource(R.string.more),onClick=onPageMore)
-            IconAction(if(bulk) Icons.Outlined.Close else Icons.Outlined.Checklist,stringResource(if(bulk) R.string.exit_selection else R.string.batch)) {bulk=!bulk;selected=emptySet()}
         } }
         if(bulk) item {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
@@ -159,8 +226,8 @@ import app.nonetmusicplayer.android.domain.*
             }
         }
         if(filtered.isEmpty()) item { EmptyState(stringResource(if(query.isBlank()) R.string.empty_playlist else R.string.no_results)) }
-        itemsIndexed(filtered,key={_,t -> t.id}) { index,track ->
-            Row(Modifier.fillMaxWidth().alpha(if(draggedId==track.id) 0f else 1f).semantics {
+        itemsIndexed(preview,key={_,t -> t.id}) { index,track ->
+            Row(Modifier.animateItem(fadeInSpec=null,fadeOutSpec=null).fillMaxWidth().alpha(if(draggedId==track.id) 0f else 1f).semantics {
                 if(canReorder) customActions=listOf(CustomAccessibilityAction(up) {onMove(track,-1);true},CustomAccessibilityAction(down) {onMove(track,1);true})
             },verticalAlignment=Alignment.CenterVertically) {
                 if(bulk) Checkbox(track.id in selected,{checked ->selected=if(checked) selected+track.id else selected-track.id})

@@ -151,4 +151,10 @@
     <string name="sleep_restart">重新计时</string>
     <string name="sleep_waiting">当前歌曲播放完后关闭</string>
     <string name="sleep_remaining">剩余 %1$02d:%2$02d 后关闭</string>
+    <string name="show_more_playlists">展开更多歌单</string>
+    <string name="expand_playlist_section">展开歌单</string>
+    <string name="collapse_playlist_section">收起歌单</string>
+    <string name="show_less">收起歌单</string>
+    <string name="home_recent_short">最近播放</string>
+    <string name="home_statistics_short">听歌统计</string>
 </resources>

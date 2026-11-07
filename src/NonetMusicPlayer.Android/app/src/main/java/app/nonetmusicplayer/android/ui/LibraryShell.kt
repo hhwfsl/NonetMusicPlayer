@@ -18,6 +18,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -38,8 +42,13 @@ import app.nonetmusicplayer.android.ui.musicString as stringResource
     onNavigate: (String)->Unit,onBack: ()->Unit,onCreate: ()->Unit,onScan: ()->Unit,onOpenPlayer: ()->Unit,onPlay: ()->Unit,onQueue: ()->Unit,
     peers: List<app.nonetmusicplayer.android.network.NearbyDevice> = emptyList(),
     onSearch: ()->Unit={onNavigate("browse")},
+    onMovePlaylist: (String,Int)->Unit={_,_->},
     content: @Composable ()->Unit) {
     var opened by rememberSaveable {mutableStateOf(false)}
+    // 使用新的保存键，避免旧版 Boolean 展开状态被恢复为当前的 Int 可见数量。
+    var visiblePlaylistCount by key("drawer_playlist_visible_count_v2") {rememberSaveable {mutableIntStateOf(5)}}
+    // 整组开合与分页数量分别保存，收起分组不重置已通过“展开更多”显示的歌单数量。
+    var playlistSectionExpanded by key("drawer_playlist_section_expanded_v1") {rememberSaveable {mutableStateOf(true)}}
     val drawerList=rememberLazyListState()
     BackHandler(opened) {opened=false}
     Column(Modifier.fillMaxSize()) {
@@ -72,7 +81,11 @@ import app.nonetmusicplayer.android.ui.musicString as stringResource
             Box(Modifier.fillMaxSize().then(gestures).testTag("library_swipe_area")) {
             Row(Modifier.fillMaxSize()) {
                 Box(Modifier.width(width).fillMaxHeight().clipToBounds()) {
-                    if(width>0.dp) LibraryDrawer(state,route,drawerList,{opened=false;onNavigate(it)},onCreate,{opened=false;onScan()},peers)
+                    // 内容始终按最终侧栏宽度排版，只改变外部裁剪宽度，避免窄帧换行把歌单从下方推上来。
+                    if(width>0.dp) Box(Modifier.fillMaxHeight().wrapContentWidth(Alignment.Start,unbounded=true).width(maximum)) {
+                        LibraryDrawer(state,route,drawerList,{opened=false;onNavigate(it)},onCreate,{opened=false;onScan()},peers,
+                            visiblePlaylistCount,{visiblePlaylistCount=it},playlistSectionExpanded,{playlistSectionExpanded=it},onMovePlaylist)
+                    }
                 }
                 if(wide) {Page(Modifier.weight(1f).fillMaxHeight())}
             }
@@ -86,16 +99,22 @@ import app.nonetmusicplayer.android.ui.musicString as stringResource
     }
 }
 
-@Composable private fun LibraryDrawer(state: LibraryState,route: String,list: LazyListState,onNavigate: (String)->Unit,onCreate: ()->Unit,onScan: ()->Unit,peers: List<app.nonetmusicplayer.android.network.NearbyDevice>) {
+@Composable private fun LibraryDrawer(state: LibraryState,route: String,list: LazyListState,onNavigate: (String)->Unit,onCreate: ()->Unit,onScan: ()->Unit,peers: List<app.nonetmusicplayer.android.network.NearbyDevice>,
+    visibleCount: Int,onVisibleCount: (Int)->Unit,expanded: Boolean,onExpanded: (Boolean)->Unit,onMove: (String,Int)->Unit) {
     val colors=NonetTheme.colorScheme
-    @Composable fun Link(id: String,label: String,icon: ImageVector,action: ()->Unit={onNavigate(id)}) {
-        Row(Modifier.fillMaxWidth().testTag("drawer_$id").clip(RoundedCornerShape(10.dp)).background(if(route==id) colors.primaryContainer else Color.Transparent).clickable(onClick=action).padding(horizontal=14.dp,vertical=13.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+    val visible=if(expanded) state.playlists.take(visibleCount) else emptyList()
+    val up=stringResource(R.string.move_up);val down=stringResource(R.string.move_down)
+    @Composable fun Link(id: String,label: String,icon: ImageVector,action: ()->Unit={onNavigate(id)},modifier: Modifier=Modifier) {
+        Row(modifier.fillMaxWidth().testTag("drawer_$id").clip(RoundedCornerShape(10.dp)).background(if(route==id) colors.primaryContainer else Color.Transparent).clickable(onClick=action).padding(horizontal=14.dp,vertical=13.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
             val tint=when(id) {"music","browse"->Color(0xFF2FBA68);"albums"->Color(0xFFED635C);"artists"->Color(0xFFE5AB3B);"recent","devices"->Color(0xFF408ACC);"statistics"->Color(0xFFE45E64);"settings"->Color(0xFF2EB879);else->colors.primary}
             Icon(icon,null,Modifier.size(21.dp),tint=tint)
             Text(label,maxLines=1,overflow=TextOverflow.Ellipsis,style=NonetTheme.typography.bodyLarge)
         }
     }
-    LazyColumn(Modifier.fillMaxWidth().fillMaxHeight().testTag("drawer_list"),state=list,contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+    @Composable fun PlaylistLink(p: Playlist,modifier: Modifier=Modifier) = Link("playlist:${p.id}",if(p.id=="liked") stringResource(R.string.liked) else p.name,
+        if(p.id=="liked") Icons.Outlined.FavoriteBorder else Icons.AutoMirrored.Outlined.QueueMusic,modifier=modifier)
+    ReorderableListHost(visible,{"drawer_"+it.id},expanded,{p,delta ->onMove(p.id,delta)},list=list,tag="drawer_reorder_host",draggedContent={PlaylistLink(it)}) {_,preview,dragged ->
+    LazyColumn(Modifier.fillMaxWidth().fillMaxHeight().testTag("drawer_list"),state=list,userScrollEnabled=dragged==null,contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(3.dp)) {
         item {Row(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
             Image(painterResource(R.drawable.app_icon),null,Modifier.size(36.dp).testTag("drawer_app_icon"),contentScale=ContentScale.Fit)
             Text("Nonet",style=NonetTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold)
@@ -111,11 +130,25 @@ import app.nonetmusicplayer.android.ui.musicString as stringResource
         item {HorizontalDivider(Modifier.padding(vertical=10.dp),color=colors.outlineVariant)}
         item {Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
             Text(stringResource(R.string.playlists),Modifier.weight(1f).testTag("drawer_playlists").clickable {onNavigate("playlists")}.padding(start=14.dp,top=12.dp,bottom=12.dp),style=NonetTheme.typography.labelLarge,color=colors.onSurfaceVariant)
-            IconAction(Icons.Outlined.Add,stringResource(R.string.create_playlist),onClick=onCreate)
+            IconAction(Icons.Outlined.Add,stringResource(R.string.create_playlist),Modifier.testTag("drawer_add_playlist"),onClick=onCreate)
+            IconAction(if(expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                stringResource(if(expanded) R.string.collapse_playlist_section else R.string.expand_playlist_section),
+                Modifier.testTag("drawer_toggle_playlists")) {onExpanded(!expanded)}
         }}
-        items(state.playlists,key={"drawer_"+it.id}) {p ->Link("playlist:${p.id}",if(p.id=="liked") stringResource(R.string.liked) else p.name,if(p.id=="liked") Icons.Outlined.FavoriteBorder else Icons.AutoMirrored.Outlined.QueueMusic)}
+        items(preview,key={"drawer_"+it.id}) {p ->PlaylistLink(p,(if(dragged!=null) Modifier.animateItem(fadeInSpec=null,fadeOutSpec=null) else Modifier).alpha(if(dragged=="drawer_"+p.id) 0f else 1f).semantics {
+            customActions=listOf(CustomAccessibilityAction(up) {onMove(p.id,-1);true},CustomAccessibilityAction(down) {onMove(p.id,1);true})
+        })}
+        // 每次只追加五个可见歌单；整组收起由标题行控制，分页数量保持不变。
+        if(expanded && visibleCount<state.playlists.size) item(key="drawer_expand_playlists") {
+            Link("expand_playlists",stringResource(R.string.show_more_playlists),Icons.Outlined.ExpandMore,
+                {
+                    // 插入项时保留视口索引，避免列表锚定“展开更多”按钮而把新增歌单推到屏幕上方。
+                    list.requestScrollToItem(list.firstVisibleItemIndex,list.firstVisibleItemScrollOffset)
+                    onVisibleCount((visibleCount+5).coerceAtMost(state.playlists.size))
+                })
+        }
         // 连接歌单只投影到导航，不混入本地歌单，断线后随状态自动消失。
-        peers.forEach {peer ->items(peer.playlists,key={"peer:${peer.id}:${it.id}"}) {p ->
+        if(expanded) peers.forEach {peer ->items(peer.playlists,key={"peer:${peer.id}:${it.id}"}) {p ->
             val id="peer:${peer.id}:${p.id}"
             Row(Modifier.fillMaxWidth().testTag("drawer_$id").clip(RoundedCornerShape(10.dp)).background(if(route==id) colors.primaryContainer else Color.Transparent)
                 .clickable {onNavigate(id)}.padding(horizontal=14.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
@@ -133,5 +166,6 @@ import app.nonetmusicplayer.android.ui.musicString as stringResource
             Link("devices",stringResource(R.string.lan_title),Icons.Outlined.Devices)
             Link("settings",stringResource(R.string.settings),Icons.Outlined.Settings)
         }}}
+    }
     }
 }

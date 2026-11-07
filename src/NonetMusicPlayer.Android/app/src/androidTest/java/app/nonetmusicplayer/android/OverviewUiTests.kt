@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.*
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.lifecycle.ViewModelProvider
 import androidx.media3.common.util.UnstableApi
@@ -36,10 +37,14 @@ class OverviewUiTests {
         var route=""
         compose.activity.setContent {MusicTheme(preferences) {MusicHome(state,{route=it},{})}}
         compose.onNodeWithTag("hourly_chart").assertIsDisplayed()
+        compose.onNodeWithTag("home_recent").assertDoesNotExist()
+        val chart=compose.onNodeWithTag("listening_chart_canvas").fetchSemanticsNode().config[SemanticsProperties.ContentDescription]
         compose.onNodeWithText("Overview").assertExists()
-        compose.onAllNodesWithText("View all").onFirst().performScrollTo().performClick();assertEquals("playlists",route)
+        compose.onNodeWithTag("home_playlists").performClick();assertEquals("playlists",route)
         screenshot("home")
         compose.activity.setContent {MusicTheme(preferences) {StatisticsScreen(state)}}
-        compose.onNodeWithTag("weekly_chart").assertExists();compose.onNodeWithTag("hourly_chart").assertExists();screenshot("statistics")
+        compose.onNodeWithTag("weekly_chart").assertExists();compose.onNodeWithTag("hourly_chart").assertExists()
+        assertEquals(chart,compose.onNode(hasTestTag("listening_chart_canvas") and hasAnyAncestor(hasTestTag("hourly_chart"))).fetchSemanticsNode().config[SemanticsProperties.ContentDescription])
+        screenshot("statistics")
     }
 }

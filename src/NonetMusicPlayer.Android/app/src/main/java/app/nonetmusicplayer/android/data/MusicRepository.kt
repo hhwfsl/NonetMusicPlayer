@@ -33,14 +33,14 @@ class MusicRepository(context: Context, private val scope: CoroutineScope, datab
                 db.rawQuery("SELECT track_id,day,duration,plays FROM listening",null).use { c ->
                     while(c.moveToNext()) stats+=Listening(c.getString(0),c.getString(1),c.getLong(2),c.getInt(3))
                 }
-                _state.value.copy(statistics=stats)
+                _state.value.copy(statistics=stats,hourlyListening=readHours(db))
             } else readState(db)
         }
     }
     private fun readState(db: SQLiteDatabase): LibraryState {
         val kinds=runCatching {JSONObject(readSetting(db,"deviceKinds"))}.getOrDefault(JSONObject())
         val tracks = mutableListOf<Track>()
-        db.rawQuery("SELECT * FROM tracks ORDER BY rowid DESC", null).use { c -> while(c.moveToNext()) {
+        db.rawQuery("SELECT * FROM tracks WHERE provider!='netease' ORDER BY rowid DESC", null).use { c -> while(c.moveToNext()) {
             tracks += Track(c.getString(0), c.getString(1), c.getString(2), c.getString(3), c.getString(4), c.getLong(5), c.getString(6), c.getString(7), c.getString(8), c.getInt(9) == 1, kinds.optString(c.getString(8),"unknown"))
         } }
         val playlists = mutableListOf<Playlist>()
@@ -55,7 +55,12 @@ class MusicRepository(context: Context, private val scope: CoroutineScope, datab
         val stats = mutableListOf<Listening>()
         db.rawQuery("SELECT track_id,day,duration,plays FROM listening", null).use { c -> while(c.moveToNext()) stats += Listening(c.getString(0),c.getString(1),c.getLong(2),c.getInt(3)) }
         val covers=runCatching { JSONObject(readSetting(db,"covers")) }.getOrDefault(JSONObject())
-        return LibraryState(tracks=tracks,playlists=playlists,recentIds=recent,statistics=stats,preferences=preferences(readSetting(db,"preferences")),covers=covers.keys().asSequence().associateWith {covers.getString(it)})
+        return LibraryState(tracks=tracks,playlists=playlists,recentIds=recent,statistics=stats,preferences=preferences(readSetting(db,"preferences")),covers=covers.keys().asSequence().associateWith {covers.getString(it)},hourlyListening=readHours(db))
+    }
+    private fun readHours(db: SQLiteDatabase): List<HourlyListening> = buildList {
+        db.rawQuery("SELECT utc_hour,SUM(duration),SUM(plays) FROM listening_hours WHERE utc_hour>=? GROUP BY utc_hour ORDER BY utc_hour",arrayOf((System.currentTimeMillis()/3_600_000-24).toString())).use {c ->
+            while(c.moveToNext()) add(HourlyListening(c.getLong(0),c.getLong(1),c.getInt(2)))
+        }
     }
     private fun preferences(raw: String): Preferences {
         val j = runCatching { JSONObject(raw) }.getOrDefault(JSONObject())
@@ -67,7 +72,8 @@ class MusicRepository(context: Context, private val scope: CoroutineScope, datab
             mode=j.optString("mode","repeat-all"),historyLimit=j.optInt("historyLimit",1000).coerceIn(1,10000),fontScale=j.optDouble("fontScale",1.0).toFloat().coerceIn(.85f,1.3f),
             background=j.optString("background"),backgroundOpacity=j.optDouble("backgroundOpacity",.5).toFloat().coerceIn(0f,1f),
             scan=ScanOptions(scan.optInt("minimumSeconds",0).coerceIn(0,604800),scan.optString("durationUnit","seconds").takeIf {it in listOf("seconds","minutes")} ?: "seconds",folders("includedFolders"),folders("excludedFolders")),
-            lanApprovalWaitSeconds=j.optInt("lanApprovalWaitSeconds",30).coerceIn(10,120))
+            lanApprovalWaitSeconds=j.optInt("lanApprovalWaitSeconds",30).coerceIn(10,120),
+            sleepMinutes=j.optInt("sleepMinutes",30).coerceIn(1,1440),sleepFinishSong=j.optBoolean("sleepFinishSong",false))
     }
     private fun readSetting(db: SQLiteDatabase, key: String): String = db.rawQuery("SELECT value FROM settings WHERE key=?", arrayOf(key)).use { if(it.moveToFirst()) it.getString(0) else "{}" }
     private fun putSetting(db: SQLiteDatabase, key: String, value: String) { db.execSQL("INSERT OR REPLACE INTO settings VALUES(?,?)", arrayOf(key,value)) }
@@ -132,15 +138,16 @@ class MusicRepository(context: Context, private val scope: CoroutineScope, datab
     }
     suspend fun updatePreferences(p: Preferences) = mutate { db ->
         require(p.lanApprovalWaitSeconds in 10..120)
-        require(p.theme in listOf("system","light","dark") && Regex("#[0-9a-fA-F]{6}").matches(p.accent))
+        require(p.theme in listOf("system","light","dark") && AccentColor.parse(p.accent)!=null)
         require(p.backgroundOpacity in 0f..1f)
         require(p.historyLimit in 1..10000 && p.fontScale in .85f..1.3f && p.mode in listOf("repeat-all","repeat-one","shuffle"))
         require(p.language in listOf("system","zh","en","ja"))
+        require(p.sleepMinutes in 1..1440)
         require(p.scan.minimumSeconds in 0..604800 && p.scan.durationUnit in listOf("seconds","minutes"))
         require((p.scan.includedFolders+p.scan.excludedFolders).let {it.size<=256 && it.all {uri ->uri.startsWith("content://com.android.externalstorage.documents/") && uri.length<=4096}})
         val scan=JSONObject().put("minimumSeconds",p.scan.minimumSeconds).put("durationUnit",p.scan.durationUnit)
             .put("includedFolders",JSONArray(p.scan.includedFolders.distinct())).put("excludedFolders",JSONArray(p.scan.excludedFolders.distinct()))
-        putSetting(db,"preferences",JSONObject().put("theme",p.theme).put("accent",p.accent).put("language",p.language).put("mode",p.mode).put("historyLimit",p.historyLimit).put("fontScale",p.fontScale).put("background",p.background).put("backgroundOpacity",p.backgroundOpacity).put("scan",scan).put("lanApprovalWaitSeconds",p.lanApprovalWaitSeconds).toString())
+        putSetting(db,"preferences",JSONObject().put("theme",p.theme).put("accent",p.accent).put("language",p.language).put("mode",p.mode).put("historyLimit",p.historyLimit).put("fontScale",p.fontScale).put("background",p.background).put("backgroundOpacity",p.backgroundOpacity).put("scan",scan).put("lanApprovalWaitSeconds",p.lanApprovalWaitSeconds).put("sleepMinutes",p.sleepMinutes).put("sleepFinishSong",p.sleepFinishSong).toString())
         db.execSQL("DELETE FROM history WHERE track_id NOT IN (SELECT track_id FROM history ORDER BY played_at DESC LIMIT ?)",arrayOf(p.historyLimit))
     }
     suspend fun recordStarted(trackId: String) = mutate { db ->
@@ -151,21 +158,30 @@ class MusicRepository(context: Context, private val scope: CoroutineScope, datab
             val day=LocalDate.now().toString()
             db.execSQL("INSERT OR IGNORE INTO listening VALUES(?,?,0,0)",arrayOf(trackId,day))
             db.execSQL("UPDATE listening SET plays=plays+1 WHERE track_id=? AND day=?",arrayOf(trackId,day))
+            val hour=System.currentTimeMillis()/3_600_000
+            db.execSQL("INSERT OR IGNORE INTO listening_hours VALUES(?,?,0,0)",arrayOf<Any>(trackId,hour))
+            db.execSQL("UPDATE listening_hours SET plays=plays+1 WHERE track_id=? AND utc_hour=?",arrayOf<Any>(trackId,hour))
         }
     }
-    suspend fun recordDuration(trackId: String, elapsedMs: Long) = mutate(statisticsOnly=true) { db ->
-        if(_state.value.tracks.none { it.id==trackId && it.inLibrary }) return@mutate
-        val day=LocalDate.now().toString()
-        db.execSQL("INSERT OR IGNORE INTO listening VALUES(?,?,0,0)",arrayOf(trackId,day))
-        db.execSQL("UPDATE listening SET duration=duration+? WHERE track_id=? AND day=?",arrayOf<Any>(elapsedMs.coerceIn(0,10000),trackId,day))
+    suspend fun recordDuration(trackId: String, elapsedMs: Long,endMs: Long=System.currentTimeMillis()) = recordDurations(listOf(Triple(trackId,elapsedMs,endMs)))
+    /** 一次检查点只发布一张统计快照，避免每秒片段引发重复数据库查询和界面更新。 */
+    internal suspend fun recordDurations(slices: List<Triple<String,Long,Long>>) = mutate(statisticsOnly=true) {db ->
+        val eligible=_state.value.tracks.filter {it.inLibrary}.map {it.id}.toHashSet()
+        for((trackId,elapsedMs,endMs) in slices) if(trackId in eligible) for((day,hour,ms) in ListeningCharts.split(endMs,elapsedMs)) {
+            db.execSQL("INSERT OR IGNORE INTO listening VALUES(?,?,0,0)",arrayOf(trackId,day))
+            db.execSQL("UPDATE listening SET duration=duration+? WHERE track_id=? AND day=?",arrayOf<Any>(ms,trackId,day))
+            db.execSQL("INSERT OR IGNORE INTO listening_hours VALUES(?,?,0,0)",arrayOf<Any>(trackId,hour))
+            db.execSQL("UPDATE listening_hours SET duration=duration+? WHERE track_id=? AND utc_hour=?",arrayOf<Any>(ms,trackId,hour))
+        }
     }
     suspend fun savePlayback(snapshot: PlaybackSnapshot) = withContext(Dispatchers.IO) { mutex.withLock {
-        putSetting(helper.writableDatabase,"playback",JSONObject().put("trackId",snapshot.trackId).put("queue",JSONArray(snapshot.queueIds)).put("position",snapshot.positionMs).put("volume",snapshot.volume).put("source",snapshot.source).toString())
+        putSetting(helper.writableDatabase,"playback",JSONObject().put("trackId",snapshot.trackId).put("queue",JSONArray(snapshot.queueIds)).put("position",snapshot.positionMs).put("volume",snapshot.volume).put("source",snapshot.source).put("sourceQueue",JSONArray(snapshot.sourceQueueIds)).toString())
     } }
     suspend fun restorePlayback(): PlaybackSnapshot = withContext(Dispatchers.IO) { mutex.withLock {
         val j=runCatching { JSONObject(readSetting(helper.readableDatabase,"playback")) }.getOrDefault(JSONObject())
         val ids=j.optJSONArray("queue") ?: JSONArray()
-        PlaybackSnapshot(j.optString("trackId"),List(ids.length()){ids.getString(it)},j.optLong("position").coerceAtLeast(0),j.optDouble("volume",1.0).toFloat().coerceIn(0f,1f),j.optString("source"))
+        val sourceIds=j.optJSONArray("sourceQueue") ?: JSONArray()
+        PlaybackSnapshot(j.optString("trackId"),List(ids.length()){ids.getString(it)},j.optLong("position").coerceAtLeast(0),j.optDouble("volume",1.0).toFloat().coerceIn(0f,1f),j.optString("source"),List(sourceIds.length()){sourceIds.getString(it)})
     } }
     suspend fun setLyrics(trackId: String, path: String) {
         val previous=_state.value.tracks.firstOrNull {it.id==trackId}?.lyrics.orEmpty()
@@ -219,7 +235,7 @@ class MusicRepository(context: Context, private val scope: CoroutineScope, datab
     suspend fun exportMetadata(): JSONObject = withContext(Dispatchers.IO) {mutex.withLock {
         val result=JSONObject().put("schema",1)
         val tables=JSONObject()
-        listOf("tracks","playlists","playlist_tracks","history","listening","settings").forEach {name ->
+        listOf("tracks","playlists","playlist_tracks","history","listening","settings","listening_hours").forEach {name ->
             val rows=JSONArray()
             helper.readableDatabase.rawQuery("SELECT * FROM $name",null).use {c ->
                 while(c.moveToNext()) {
@@ -234,11 +250,13 @@ class MusicRepository(context: Context, private val scope: CoroutineScope, datab
         require(json.getInt("schema")==1)
         val widths=linkedMapOf("tracks" to 10,"playlists" to 4,"playlist_tracks" to 3,"history" to 2,"listening" to 4,"settings" to 2)
         val tables=json.getJSONObject("tables")
+        if(tables.has("listening_hours")) widths["listening_hours"]=4
         widths.forEach {(name,width) ->
             val rows=tables.getJSONArray(name);require(rows.length()<=100000)
             for(i in 0 until rows.length()) require(rows.getJSONArray(i).length()==width)
         }
         mutate {db ->
+            db.delete("listening_hours",null,null)
             widths.keys.reversed().forEach {db.delete(it,null,null)}
             widths.forEach {(name,width) ->
                 val rows=tables.getJSONArray(name)
@@ -251,6 +269,7 @@ class MusicRepository(context: Context, private val scope: CoroutineScope, datab
                 }
             }
             require(db.rawQuery("SELECT 1 FROM playlists WHERE id='liked'",null).use {it.moveToFirst()})
+            MusicDatabase.retireRemovedSource(db)
             putSetting(db,"playback","{}")
         }
     }

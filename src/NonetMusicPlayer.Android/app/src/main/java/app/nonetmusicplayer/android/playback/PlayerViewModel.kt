@@ -61,7 +61,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         catch(error: Throwable) { report(R.string.operation_failed,error) }
     } }
     private fun report(message: Int, error: Throwable) { app.messages.tryEmit(message);app.log.write("ERROR","User operation failed",error) }
-    fun play(track: Track, queue: List<Track>, source: String="") {
+    fun play(track: Track, queue: List<Track>, source: String="",keepSourceOrder: Boolean=false) {
         if(!app.canPlay(track)) {app.messages.tryEmit(R.string.lan_disconnected);return}
         val c=controller ?: run { app.messages.tryEmit(R.string.player_connecting);return }
         // 队列位于同一应用进程，不把数千个 ID 重复塞进 Binder 消息。
@@ -72,7 +72,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 val missing=queue.filter {it.id !in existing}
                 if(missing.isNotEmpty()) repository.storeTracks(missing)
                 ensureActive();app.playQueue.value=queue.map {it.id}
-                c.sendCustomCommand(PlaybackService.PLAY_QUEUE,Bundle().apply {putString("track",track.id);putString("source",source)})
+                c.sendCustomCommand(PlaybackService.PLAY_QUEUE,Bundle().apply {putString("track",track.id);putString("source",source);putBoolean("keepSourceOrder",keepSourceOrder)})
             } catch(e: CancellationException) {throw e} catch(e: Exception) {report(R.string.playback_failed,e)}
         }
     }
@@ -80,6 +80,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     // 解码器只保留当前项；使用队列命令避免客户端把单项时间轴的切歌当成无操作。
     fun next() { controller?.sendCustomCommand(PlaybackService.NEXT,Bundle.EMPTY) }
     fun previous() { controller?.sendCustomCommand(PlaybackService.PREVIOUS,Bundle.EMPTY) }
+    /** 调整实际服务队列，不重新选歌、不洗牌，也不重建正在解码的音轨。 */
+    fun moveQueueTrack(track: Track,delta: Int) {
+        controller?.sendCustomCommand(PlaybackService.MOVE_QUEUE,Bundle().apply {putString("track",track.id);putInt("delta",delta)})
+    }
     fun seek(position: Long) { controller?.seekTo(position.coerceIn(0,playback.value.durationMs.coerceAtLeast(0))) }
     fun setVolume(volume: Float) { controller?.volume=volume.coerceIn(0f,1f) }
     fun cycleMode() = launchOperation {
@@ -104,7 +108,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         _busy.value=true
         try { persistPermission(uri);val tracks=importer.scanFolder(uri);repository.addTracks(playlistId,tracks);app.messages.tryEmit(if(tracks.isEmpty()) R.string.import_failed else R.string.import_complete) } finally { _busy.value=false }
     }
-    fun createFolderPlaylist(uri: Uri,onCreated: (String)->Unit) = launchOperation {
+    fun createFolderPlaylist(uri: Uri,onCreated: (String)->Unit={}) = launchOperation {
         _busy.value=true
         try {persistPermission(uri);val tracks=importer.scanFolder(uri)
             val name=androidx.documentfile.provider.DocumentFile.fromTreeUri(app,uri)?.name?.take(100).orEmpty().ifBlank {app.getString(R.string.playlists)}

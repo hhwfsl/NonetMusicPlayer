@@ -34,6 +34,14 @@ class RepositoryTests {
             repo.updatePreferences(repo.state.value.preferences.copy(historyLimit=1,theme="dark",language="ja"));assertEquals(1,repo.state.value.recentIds.size)
             repo.savePlayback(PlaybackSnapshot("one",listOf("one","two"),2345,.5f,"playlist:$playlist"));assertEquals(2345L,repo.restorePlayback().positionMs)
             assertEquals("playlist:$playlist",repo.restorePlayback().source)
+            repo.savePlayback(PlaybackSnapshot("one",listOf("two","one"),2345,.5f,"playlist:$playlist",listOf("one","two")))
+            assertEquals(listOf("one","two"),repo.restorePlayback().sourceQueueIds)
+            // 冻结旧版 JSON，确认缺少来源队列字段时仍可读取原播放状态。
+            context.openOrCreateDatabase(database,0,null).use {db ->
+                db.execSQL("UPDATE settings SET value=? WHERE key='playback'",arrayOf("""{"trackId":"one","queue":["two","one"],"position":2345,"volume":0.5,"source":"playlist:$playlist"}"""))
+            }
+            assertEquals(listOf("two","one"),repo.restorePlayback().queueIds)
+            assertTrue(repo.restorePlayback().sourceQueueIds.isEmpty())
             assertThrows(IllegalArgumentException::class.java) {runBlocking {repo.deletePlaylist("liked")}}
             repo.deletePlaylist(playlist);assertTrue(repo.state.value.tracks.any {it.id=="one"})
         } finally {scope.cancel();repo.close();context.deleteDatabase(database)}

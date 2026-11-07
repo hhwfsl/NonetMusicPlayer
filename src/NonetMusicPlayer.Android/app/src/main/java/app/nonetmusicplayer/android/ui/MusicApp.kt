@@ -58,7 +58,7 @@ import kotlinx.coroutines.*
     fun start(track: Track,queue: List<Track>) {activity?.requestNotificationPermission();vm.play(track,queue,route)}
     val files=rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> if(uris.isNotEmpty()) vm.importFiles(importTarget,uris) }
     var folderCreatesPlaylist by remember {mutableStateOf(false)}
-    val folder=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> if(uri!=null) {if(folderCreatesPlaylist) vm.createFolderPlaylist(uri) {navigate("playlist:$it")} else vm.importFolder(importTarget,uri)};folderCreatesPlaylist=false }
+    val folder=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> if(uri!=null) {if(folderCreatesPlaylist) vm.createFolderPlaylist(uri) else vm.importFolder(importTarget,uri)};folderCreatesPlaylist=false }
     var scanConfirmation by remember {mutableStateOf<ScanOptions?>(null)}
     var pendingScan by remember {mutableStateOf<ScanOptions?>(null)}
     val scanPermission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {granted ->val options=pendingScan;pendingScan=null;if(granted && options!=null) vm.scanMusic(options) else if(!granted) vm.app.messages.tryEmit(R.string.scan_permission_denied)}
@@ -96,9 +96,10 @@ import kotlinx.coroutines.*
                     else ->route.substringAfter(':')
                 }
                 LibraryShell(library,playback,route,pageTitle,busy,{focus.clearFocus();navigate(it)},::back,{create=true},{if(!busy) scanConfirmation=library.preferences.scan},{expanded=true},vm::togglePlay,{showQueue=true},nearby.peers,
-                    onSearch={focus.clearFocus();searchRequested=true;navigate("browse")}) {holder.SaveableStateProvider(route) {
+                    onSearch={focus.clearFocus();searchRequested=true;navigate("browse")},
+                    onMovePlaylist={id,delta ->vm.launchOperation {vm.repository.movePlaylist(id,delta)}}) {holder.SaveableStateProvider(route) {
                     when(route) {
-                        "music" -> MusicHome(library,::navigate,{create=true},::start)
+                        "music" -> MusicHome(library,::navigate,{create=true})
                         "browse" -> MusicSearchScreen(vm,::start,{moreTrack=it},searchRequested,{searchRequested=false})
                         "playlists" -> PlaylistGrid(library,{navigate("playlist:$it")},{create=true},{menuPlaylist=it;playlistMore=true},{id,delta ->vm.launchOperation {vm.repository.movePlaylist(id,delta)}})
                         "albums","artists" -> GroupGrid(library,route=="artists") {navigate((if(route=="artists") "artist:" else "album:")+it)}
@@ -133,8 +134,9 @@ import kotlinx.coroutines.*
         if(create || editing!=null) {
             val target=editing;var name by remember(target) {mutableStateOf(target?.name.orEmpty())};var description by remember(target) {mutableStateOf(target?.description.orEmpty())}
             AlertDialog(onDismissRequest={create=false;editing=null},title={Text(stringResource(if(target==null) R.string.create_playlist else R.string.edit))},
-                text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {OutlinedTextField(name,{name=it.take(100)},label={Text(stringResource(R.string.playlist_name))},singleLine=true);if(target!=null) OutlinedTextField(description,{description=it.take(2000)},label={Text(stringResource(R.string.description))}) else OutlinedButton(onClick={create=false;folderCreatesPlaylist=true;folder.launch(null)}) {Icon(Icons.Outlined.CreateNewFolder,null);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.create_from_folder))}}},
-                confirmButton={TextButton(enabled=name.isNotBlank(),onClick={create=false;editing=null;vm.launchOperation {if(target==null) navigate("playlist:"+vm.repository.createPlaylist(name)) else vm.repository.editPlaylist(target.id,name,description)}}){Text(stringResource(R.string.save))}},
+                text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {OutlinedTextField(name,{name=it.take(100)},Modifier.testTag("playlist_name_field"),label={Text(stringResource(R.string.playlist_name))},singleLine=true);if(target!=null) OutlinedTextField(description,{description=it.take(2000)},label={Text(stringResource(R.string.description))}) else OutlinedButton(onClick={create=false;folderCreatesPlaylist=true;folder.launch(null)}) {Icon(Icons.Outlined.CreateNewFolder,null);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.create_from_folder))}}},
+                // 新建或编辑只更新资料库，保持当前路由、侧栏状态和已有滚动位置。
+                confirmButton={TextButton(enabled=name.isNotBlank(),modifier=Modifier.testTag("playlist_save"),onClick={create=false;editing=null;vm.launchOperation {if(target==null) vm.repository.createPlaylist(name) else vm.repository.editPlaylist(target.id,name,description)}}){Text(stringResource(R.string.save))}},
                 dismissButton={TextButton(onClick={create=false;editing=null}){Text(stringResource(R.string.cancel))}})
         }
         val m3uPrefix=stringResource(R.string.playlist_file_prefix);val likedName=stringResource(R.string.liked)
@@ -185,10 +187,8 @@ import kotlinx.coroutines.*
             dismissButton={TextButton(onClick={vm.app.lan.answerConnection(request.requestId,false)},modifier=Modifier.testTag("lan_pair_reject")) {Text(stringResource(R.string.lan_reject))}})}
         if(showQueue) ModalBottomSheet(onDismissRequest={showQueue=false},dragHandle=null) {
             Row(Modifier.fillMaxWidth().padding(start=20.dp,top=8.dp,end=8.dp),verticalAlignment=Alignment.CenterVertically) {Text(stringResource(R.string.queue),Modifier.weight(1f),style=NonetTheme.typography.titleMedium);IconAction(Icons.Outlined.Close,stringResource(R.string.close)) {showQueue=false}}
-            androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxWidth().heightIn(max=480.dp),contentPadding=PaddingValues(8.dp)) {
-                if(queue.isEmpty()) item {EmptyState(stringResource(R.string.queue_empty))}
-                items(queue.size,key={queue[it].id}) {i ->val t=queue[i];TrackRow(t,i,t.id==playback.track?.id,library.playlists.first {it.id=="liked"}.trackIds.contains(t.id),{vm.play(t,queue,playback.source)},{vm.favorite(t)},{showQueue=false;moreTrack=t})}
-            }
+            PlaybackQueueList(queue,playback.track?.id.orEmpty(),library.playlists.first {it.id=="liked"}.trackIds,
+                {vm.play(it,queue,playback.source,keepSourceOrder=true)},vm::favorite,{showQueue=false;moreTrack=it},vm::moveQueueTrack)
         }
         if(batchIds.isNotEmpty()) MusicSheet(onDismissRequest={batchIds=emptySet()}) {
             SheetAction(Icons.Outlined.FavoriteBorder,stringResource(R.string.add_liked)) {val ids=batchIds;batchIds=emptySet();vm.addToPlaylist("liked",library.tracks.filter {it.id in ids})}
