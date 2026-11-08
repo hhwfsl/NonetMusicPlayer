@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using NonetMusicPlayer.Desktop.Controls;
 using NonetMusicPlayer.Desktop.Models;
 using NonetMusicPlayer.Desktop.Services;
 using NonetMusicPlayer.Desktop.ViewModels;
@@ -35,13 +36,15 @@ public sealed partial class MainWindow
         }, RoutingStrategies.Tunnel, true);
         AddHandler(KeyDownEvent, (_, e) =>
         {
+            if (e.Key == Key.Escape && (_queueDragPointer is not null || _queuePendingPointer is not null)) { e.Handled = true; CancelQueueDrag(); return; }
             if (_queueOpen && e.Key == Key.Escape) { e.Handled = true; SetPlaybackQueueOpen(false); PlayerQueue.Focus(); }
-        }, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, true);
+        }, RoutingStrategies.Tunnel, true);
         SizeChanged += (_, _) => { if (_queueSurface?.IsVisible == true) DrawQueue(_queueMotion.Value); };
         PropertyChanged += (_, e) =>
         {
             if (e.Property == IsVisibleProperty && !IsVisible || e.Property == WindowStateProperty && WindowState == WindowState.Minimized) CloseQueueImmediately();
         };
+        Deactivated += (_, _) => CancelQueueDrag();
         Closed += (_, _) => { AttachQueueOwner(null); _queueMotion.Dispose(); };
     }
     private void AttachQueueOwner(MainViewModel? owner)
@@ -69,6 +72,7 @@ public sealed partial class MainWindow
     {
         if (_vm is null || open == _queueOpen) return;
         EnsureQueueSurface(); _queueOpen = open;
+        if (!open) CancelQueueDrag();
         PlayerQueue.Classes.Set("selected", open); PlayerQueue.Classes.Set("popup-open", open);
         if (open) { RefreshQueue(); _queueSurface!.IsVisible = true; DrawQueue(_queueMotion.Value); PlayerQueue.Focus(); }
         _queueSurface!.IsHitTestVisible = open;
@@ -85,6 +89,7 @@ public sealed partial class MainWindow
     }
     private void CloseQueueImmediately()
     {
+        CancelQueueDrag();
         ++_queueRequest; _queueOpen = false; _queueMotion.Cancel();
         _ = _queueMotion.MoveAsync(0, 0);
         PlayerQueue.Classes.Remove("selected"); PlayerQueue.Classes.Remove("popup-open");
@@ -104,7 +109,7 @@ public sealed partial class MainWindow
         var close = Ui.IconButton(Controls.IconKind.Close, "Common.Close", () => SetPlaybackQueueOpen(false));
         Grid.SetColumn(close, 1);
         var header = new Grid { ColumnDefinitions = new("*,Auto"), Margin = new(22, 14, 14, 12), Children = { _queueHeading, close } };
-        _queueList = new ListBox { Name = "PlaybackQueueList", Background = Brushes.Transparent, BorderThickness = new(0), Margin = new(10, 0),
+        _queueList = new ListBox { Name = "PlaybackQueueList", ItemsSource = _queueRows, Background = Brushes.Transparent, BorderThickness = new(0), Margin = new(10, 0, 10, 12),
             ItemTemplate = new FuncDataTemplate<TrackItem>((track, _) =>
             {
                 // 只实现可见行；绑定保留歌曲元数据补全后的即时显示。
@@ -112,25 +117,25 @@ public sealed partial class MainWindow
                 title.Bind(TextBlock.TextProperty, new Binding(nameof(TrackItem.Title)));
                 var artist = new TextBlock { FontSize = 12, Opacity = .65, TextTrimming = TextTrimming.CharacterEllipsis };
                 artist.Bind(TextBlock.TextProperty, new Binding(nameof(TrackItem.Artist)));
-                var duration = new TextBlock { FontSize = 12, Opacity = .6, Margin = new(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-                duration.Bind(TextBlock.TextProperty, new Binding(nameof(TrackItem.DurationText))); Grid.SetColumn(duration, 1);
-                return new Grid { ColumnDefinitions = new("*,Auto"), Margin = new(10, 9), Children = { new StackPanel { Spacing = 5, Children = { title, artist } }, duration } };
+                var cover = new Image { Name = "QueueTrackArtwork", Stretch = Stretch.UniformToFill };
+                cover.Bind(Image.SourceProperty, new Binding(nameof(TrackItem.Artwork)));
+                var artwork = new Border { Width = 44, Height = 44, CornerRadius = new(8), ClipToBounds = true,
+                    Child = new Grid { Children = { new VectorIcon { Kind = IconKind.Music, Width = 24, Height = 24, Brush = Ui.Brush("TextSecondaryBrush") }, cover } } };
+                artwork.Bind(Border.BackgroundProperty, this.GetResourceObservable("SurfaceRaisedBrush"));
+                var text = new StackPanel { Spacing = 4, Margin = new(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Children = { title, artist } }; Grid.SetColumn(text, 1);
+                var duration = new TextBlock { FontSize = 12, Opacity = .6, Margin = new(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+                duration.Bind(TextBlock.TextProperty, new Binding(nameof(TrackItem.DurationText))); Grid.SetColumn(duration, 2);
+                return new Grid { ColumnDefinitions = new("44,*,Auto"), MinHeight = 58, Margin = new(6, 3, 10, 3), Children = { artwork, text, duration } };
             }) };
-        async void PlaySelection(TrackItem? track)
-        {
-            if (_refreshingQueue || track is null || _vm is null) return;
-            try { await _vm.PlayQueueTrackAsync(track); }
-            catch (Exception error) { _vm.ReportError(L10n.T("Playback.UnableToChangePlaybackState"), error); }
-        }
+        InitializeQueueDrag();
         // 点击当前行也表示重新选歌，不能仅依赖 SelectionChanged（选中项可能没有变化）。
-        _queueList.Tapped += (_, e) => PlaySelection(Ancestors(e.Source).OfType<ListBoxItem>().FirstOrDefault()?.DataContext as TrackItem);
-        _queueList.KeyDown += (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; PlaySelection(_queueList.SelectedItem as TrackItem); } };
+        _queueList.Tapped += (_, e) => { if (!_suppressQueueTap) PlayQueueSelection(Ancestors(e.Source).OfType<ListBoxItem>().FirstOrDefault()?.DataContext as TrackItem); };
+        _queueList.KeyDown += (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; PlayQueueSelection(_queueList.SelectedItem as TrackItem); } };
         _queueEmpty = new TextBlock { Text = L10n.T("Playback.QueueEmpty"), Opacity = .65, TextWrapping = TextWrapping.Wrap, Margin = new(24), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         var body = new Grid { Children = { _queueList, _queueEmpty } }; Grid.SetRow(body, 1);
-        var hint = new TextBlock { Text = L10n.T("Playback.QueueHint"), FontSize = 12, Opacity = .65, Margin = new(24, 12, 24, 20), TextWrapping = TextWrapping.Wrap }; Grid.SetRow(hint, 2);
         _queueSurface = new Border { Name = "PlaybackQueuePopover", BorderThickness = new(1), CornerRadius = new(24), ClipToBounds = true,
             HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, ZIndex = 800,
-            BoxShadow = BoxShadows.Parse("0 12 36 0 #48000000"), Child = new Grid { RowDefinitions = new("Auto,*,Auto"), Children = { header, body, hint } } };
+            BoxShadow = BoxShadows.Parse("0 12 36 0 #48000000"), Child = new Grid { RowDefinitions = new("Auto,*"), Children = { header, body } } };
         _queueSurface.Classes.Add("nonet-floating-surface");
         _queueSurface.Bind(Border.BackgroundProperty, this.GetResourceObservable("SurfaceBrush"));
         _queueSurface.Bind(Border.BorderBrushProperty, this.GetResourceObservable("DividerBrush"));
@@ -140,16 +145,23 @@ public sealed partial class MainWindow
     private void RefreshQueue()
     {
         if (_vm is null || _queueList is null) return;
+        CancelQueueDrag();
         var tracks = _vm.PlaybackQueue;
         _refreshingQueue = true;
         try
         {
-            if (_queueList.ItemsSource is not TrackItem[] old || !old.SequenceEqual(tracks)) _queueList.ItemsSource = tracks.ToArray();
+            if (!_queueRows.SequenceEqual(tracks)) { _queueRows.Clear(); foreach (var track in tracks) _queueRows.Add(track); }
             _queueList.SelectedItem = tracks.FirstOrDefault(t => t.Id == _vm.CurrentTrack?.Id);
             _queueHeading!.Text = L10n.Format("Playback.QueueCount", tracks.Count);
             _queueEmpty!.IsVisible = tracks.Count == 0;
         }
         finally { _refreshingQueue = false; }
+    }
+    private async void PlayQueueSelection(TrackItem? track)
+    {
+        if (_refreshingQueue || track is null || _vm is null) return;
+        try { await _vm.PlayQueueTrackAsync(track); }
+        catch (Exception error) { _vm.ReportError(L10n.T("Playback.UnableToChangePlaybackState"), error); }
     }
     private void DrawQueue(double value)
     {

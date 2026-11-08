@@ -134,6 +134,7 @@ public sealed partial class MainWindow
     }
     private bool TryReorderTracks(DragEventArgs e)
     {
+        if (CommitTrackReorderPreview(e)) return true;
         if (_vm?.CurrentPlaylist is not { } playlist || e.DataTransfer.TryGetText() is not { } payload || !payload.StartsWith("nonet-tracks:", StringComparison.Ordinal)) return false;
         var row = Ancestors(e.Source).OfType<ListBoxItem>().FirstOrDefault();
         if (row?.DataContext is not TrackItem target) return false;

@@ -318,7 +318,9 @@ public sealed class LyricsView : UserControl, IDisposable
     private void UpdateWordColor(KaraokeLine text, double time)
     {
         if (text.Tag is not ValueTuple<LyricLine, bool> tag || tag.Item1 is null) return;
-        var active = _activeIndex >= 0 && _activeIndex < _vm.LyricLines.Count && ReferenceEquals(_vm.LyricLines[_activeIndex], tag.Item1);
+        // 相同歌词重载会生成新 record，显示快照按值相等保留旧行控件；高亮必须使用同一相等语义。
+        // 不能只比较对象引用，否则普通 LRC 重载后整页都不再命中当前行，直到重新打开页面。
+        var active = _activeIndex >= 0 && _activeIndex < _vm.LyricLines.Count && _vm.LyricLines[_activeIndex] == tag.Item1;
         text.UpdateTimed(tag.Item2 ? tag.Item1.Translation : tag.Item1.Text, [], time, active, active ? LyricsService.LineCharacterProgress(tag.Item1, time, tag.Item2) : 0);
     }
     /// <summary>使用屏幕渲染节奏，暂停且不滚动时停止请求帧；页面释放后回调不再重排。</summary>

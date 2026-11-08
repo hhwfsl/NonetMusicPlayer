@@ -41,6 +41,7 @@ internal sealed partial class ConsoleTuiView
     {
         "Music" => _view.Music, "Playlists" => _playlist is not null ? _view.PlaylistTracks.GetValueOrDefault(_playlist) ?? [] : _view.Playlists,
         "Recent" => _view.Recent, "Plugins" => _view.Plugins,
+        "Queue" => _view.Queue, "Search" => _view.SearchResults, "Devices" => _view.Devices,
         "Help" => HelpSections.Select(key => new TuiItem(key, T(key), "")).ToArray(),
         "Settings" => _view.Settings.Select(pair => new TuiItem(pair.Key, SettingLabel(pair.Key), pair.Value is JsonValue value && value.TryGetValue<string>(out var text) ? text == "Playback.SystemDefault" ? LocalizationCatalog.Get(text) : text : pair.Value?.ToJsonString() ?? "")).ToArray(), _ => []
     };
@@ -50,7 +51,9 @@ internal sealed partial class ConsoleTuiView
         return name switch
         {
             "playlist-id" => _playlist ?? (Page == "Playlists" ? item?.Id : _view?.Playlists.FirstOrDefault()?.Id) ?? "",
-            "track-id" or "track-id..." => Page is "Music" or "Recent" || _playlist is not null ? item?.Id ?? "" : _view?.CurrentId ?? "",
+            "track-id" or "track-id..." => Page is "Music" or "Recent" or "Queue" or "Search" || _playlist is not null ? item?.Id ?? "" : _view?.CurrentId ?? "",
+            "source-id|local" => _view?.SearchSources.FirstOrDefault()?.Id ?? "local",
+            "peer-id" or "peer-id|all" => _view?.Devices.FirstOrDefault()?.Id ?? "",
             "id" => Page == "Plugins" ? item?.Id ?? "" : _playlist ?? (Page == "Playlists" ? item?.Id : _view?.Playlists.FirstOrDefault()?.Id) ?? "",
             "yyyy-MM-dd" => DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             "day|month|year" => "day", "keep-files|delete-files" => "keep-files", "1-based-position" => "1",
@@ -60,7 +63,9 @@ internal sealed partial class ConsoleTuiView
     private IReadOnlyList<string> Choices(string name) => name switch
     {
         "playlist-id" => _view?.Playlists.Select(p => p.Id).ToArray() ?? [],
-        "track-id" => _view?.Music.Select(p => p.Id).ToArray() ?? [], _ => []
+        "track-id" => _view?.Music.Concat(_view.Queue).Concat(_view.SearchResults).Select(p => p.Id).Distinct().ToArray() ?? [],
+        "source-id|local" => _view?.SearchSources.Select(p => p.Id).ToArray() ?? [],
+        "peer-id" => _view?.Devices.Select(p => p.Id).ToArray() ?? [], _ => []
     };
     private Task? BeginNamedAction(string name, CancellationToken token) => BeginAction(Actions.Single(d => d.Name == name), token);
     private Task? BeginAction(CommandDefinition command, CancellationToken token)

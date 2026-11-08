@@ -17,7 +17,7 @@ nonet settings set terminalScrollbackLines 1000
 
 不带参数启动交互会话。在 `nonet $ ` 提示符后可直接输入 `help`、`player pause` 等命令并回车，也可保留 `nonet` 前缀。危险操作在终端确认，或用 `--yes` / `-y` 确认、`--no` / `-n` 取消。命令分类不加 `--`，旧点号语法不支持。
 
-ANSI 终端默认启动 TUI：Tab / Shift+Tab 切换音乐、歌单、最近、统计、插件、终端、帮助和设置。↑↓ 选择，Enter 浏览或播放，空格暂停/继续；Ctrl+K 打开所有 CLI 操作的键盘菜单，填写参数即可执行，不必输入命令。设置直接选项编辑，破坏性操作用 Y 确认、Enter / N / Esc 取消。
+ANSI 终端默认启动 TUI：Tab / Shift+Tab 切换音乐、歌单、最近、统计、插件、终端、帮助、设置、队列、平台搜索和设备互听。↑↓ 选择，Enter 浏览或播放，空格暂停/继续；队列/歌单 Ctrl+↑↓ 调整顺序，搜索页 S 查询、L 下一页。Ctrl+K 打开全部 CLI 操作的键盘菜单；破坏性操作用 Y 确认，Enter / N / Esc 取消。
 
 只在“终端”栏目输入共享命令；↑↓ 调取命令历史，PgUp/PgDn 回看日志，Ctrl+L 清屏。Ctrl+D 或终端中的 `exit` 退出。没有 F1–F7 快捷分页；窄终端会优先显示当前导航栏目。详细键盘表见 CLI.md。
 
@@ -27,4 +27,6 @@ ANSI 终端默认启动 TUI：Tab / Shift+Tab 切换音乐、歌单、最近、�
 
 持续播放使用 `nonet --stay player play "song.flac"`。脚本使用 `nonet --json playlist list`；输出为 UTF-8 JSON，不混入日志控制码。完整语法、PATH 和纯终端运行说明见发布目录中的 CLI.md、COMMANDS.md。
 
-开发构建：`dotnet build src/NonetMusicPlayerCli -c Release`。发布：`pwsh -File scripts/publish-cli.ps1`。
+本地修订同步固定随机队列与手动排序/重启恢复、v1/v2 平台搜索、歌单/M3U/撤销、歌词管理、24 小时图表和明细、显式批准的双向设备互听。配置由共享核心账户加密保存，托管扩展需明确授权，致命错误可能使宿主退出。图形窗口、主题、原生插件页面由桌面宿主提供；完整范围见 CLI_DESKTOP_PARITY.md。
+
+开发构建：`dotnet build src/NonetMusicPlayerCli -c Release`。发布：`pwsh -File scripts/publish-cli.ps1`，生成三平台目录及 `publish/cli/archives` 纯净 ZIP，保留 Data 和旧目录。

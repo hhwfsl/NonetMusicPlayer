@@ -22,4 +22,7 @@ public static class CoreJson
 [JsonSerializable(typeof(HeadlessPlayerState))]
 [JsonSerializable(typeof(HeadlessPlayerSettings))]
 [JsonSerializable(typeof(CommandResult))]
+[JsonSerializable(typeof(string[]))]
+[JsonSerializable(typeof(List<ExtensionHostRequest>))]
+[JsonSerializable(typeof(NonetMusicPlayer.Core.Network.LanCatalog))]
 internal partial class CoreJsonContext : JsonSerializerContext;

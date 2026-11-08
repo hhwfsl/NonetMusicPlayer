@@ -1,6 +1,12 @@
 # 🎵 Nonet Music Player
 
+桌面 0.4.0-beta.47：队列显示封面并支持拖拽排序；歌曲拖动显示半透明虚影，相邻行连续让位，修复行间切换时闪动。修复逐行歌词重载后主题色消失，以及右上平台搜索改词后残留旧结果的问题；补齐桌面终端命令。CLI 与共享核心同步相关业务代码，独立 CLI 编号仍为 0.4.0-beta.32，功能对照见 [CLI 与桌面功能](docs/CLI_DESKTOP_PARITY.md)。
+
+本地六架构 ZIP 位于 `publish/desktop/archives`，Windows x64/x86/ARM64 installer 位于 `publish/desktop/windows_installer`；对应 SHA-256 清单为 `publish/desktop/SHA256SUMS-0.4.0-beta.47.txt`。运行目录保留原数据，旧包归档。
+
 Android 0.3.0-beta.11 支持队列、歌曲及侧栏歌单拖拽排序和即时让位预览；随机播放生成完整队列，退出随机时恢复来源顺序。侧栏每次展开 5 个歌单，标题行可整组开合并保留数量；新建歌单保持原位置，主页以单屏布局展示正常高度的 24 小时图表。详见 [移动端说明](src/NonetMusicPlayer.Android/README.md)。
+
+逐行歌词重新加载后当前行持续使用主题色，无需关闭再打开歌词页，保留原有页面和虚拟化行缓存。
 
 桌面 0.4.0-beta.46 修复 Windows 启动时闪白和显示后移动：首帧准备完成后在最终居中位置呈现，保留原有最小尺寸、尺寸记忆和托盘行为。
 
@@ -39,7 +45,7 @@ Android 0.3.0-beta.11 支持队列、歌曲及侧栏歌单拖拽排序和即时�
 
 | 产品 | 当前版本 | 发行说明 |
 | --- | --- | --- |
-| 桌面 | [0.4.0-beta.46](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.46) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
+| 桌面 | [0.4.0-beta.47](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.47) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
 | CLI | [0.4.0-beta.32](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.32) | Windows、Linux、macOS x64 |
 | Android | [0.3.0-beta.11](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/android-v0.3.0-beta.11) | API 28+；通用 APK；沿用既有测试签名 |
 

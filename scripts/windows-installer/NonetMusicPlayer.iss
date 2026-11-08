@@ -79,6 +79,9 @@ Source: "{#PackageDirectory}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PackageDirectory}\UserManual.zh-CN.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PackageDirectory}\UserManual.en-US.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PackageDirectory}\UserManual.ja-JP.md"; DestDir: "{app}"; Flags: ignoreversion
+; 离线终端命令与功能对照必须与 ZIP 一致，不能只在便携版提供。
+Source: "{#PackageDirectory}\COMMANDS.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PackageDirectory}\CLI_DESKTOP_PARITY.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [InstallDelete]
 Type: files; Name: "{app}\VideoDecoder\ffmpeg.exe"

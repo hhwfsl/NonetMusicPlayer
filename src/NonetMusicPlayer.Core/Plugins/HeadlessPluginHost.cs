@@ -7,7 +7,7 @@ using NonetMusicPlayer.Core.Streaming;
 namespace NonetMusicPlayer.Core.Plugins;
 
 /// <summary>CLI 的插件生命周期；复用桌面契约与包审查，不创建图形页面或桌宠。</summary>
-public sealed class HeadlessPluginHost : IDisposable
+public sealed partial class HeadlessPluginHost : IDisposable
 {
     private readonly string _root, _index;
     private readonly Dictionary<string, ProviderClient> _clients = [];
@@ -17,7 +17,13 @@ public sealed class HeadlessPluginHost : IDisposable
     {
         _root = Path.GetFullPath(root); PluginPathPolicy.RejectLinkedAncestors(_root); Directory.CreateDirectory(_root); _index = Path.Combine(_root, "installed.json");
         Installed = File.Exists(_index) ? JsonSerializer.Deserialize<List<PluginManifest>>(File.ReadAllText(_index), CoreJson.Options) ?? [] : [];
-        foreach (var plugin in Installed) plugin.Validate();
+        foreach (var plugin in Installed)
+        {
+            plugin.Validate();
+            try { if (ProtectedPluginConfiguration.Read(_root, plugin) is { } configuration) _sessionConfiguration[plugin.Id] = configuration; }
+            catch (Exception error) when (error is IOException or JsonException or System.Security.Cryptography.CryptographicException or InvalidDataException)
+            { plugin.Enabled = false; Diagnostics.AppLog.Warning("Plugin:" + plugin.Id, "CLI 无法读取账户加密配置，已停用该插件", error); }
+        }
     }
     public PluginManifest Find(string id) => Installed.FirstOrDefault(p => p.Id == id) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PluginNotFound"));
     public PluginManifest Install(string package)
@@ -52,11 +58,11 @@ public sealed class HeadlessPluginHost : IDisposable
                 var values = PluginConfigSchema.Resolve(schema, prior.Configuration); PluginConfigSchema.Validate(schema, values);
                 var persisted = JsonNode.Parse(prior.Configuration)!.AsObject(); Scrub(persisted); PluginConfigSchema.RemoveSensitiveFields(schema, persisted); plugin.Configuration = persisted.ToJsonString();
                 plugin.OriginRepository = prior.OriginRepository;
-                plugin.Enabled = oldEnabled && prior.Permissions.ToHashSet(StringComparer.Ordinal).SetEquals(plugin.Permissions);
+                plugin.Enabled = oldEnabled && prior.Permissions.ToHashSet(StringComparer.Ordinal).SetEquals(plugin.Permissions) && (plugin.Runtime != "managed" || plugin.ManagedExecutionConsent);
                 if (previous is not null) SetEnabled(previous, false);
                 PluginPathPolicy.AfterProcessExit(() => Directory.Move(target, rollback)); moved = true;
             }
-            Directory.Move(stage, target); newMoved = true;
+            PluginPathPolicy.AfterProcessExit(() => Directory.Move(stage, target)); newMoved = true;
             if (index < 0) Installed.Add(plugin); else Installed[index] = plugin;
             Save();
             if (moved) { try { DeleteOwnedDirectory(rollback); } catch (IOException error) { Diagnostics.AppLog.Warning("Plugins", "Old package cleanup failed", error); } }
@@ -77,7 +83,9 @@ public sealed class HeadlessPluginHost : IDisposable
     {
         plugin.Validate(); DirectoryFor(plugin);
         if (enabled && plugin.Type is "ui" or "widget" or "theme" or "lyrics" or "agent") throw new PlatformNotSupportedException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PluginUiUnsupported"));
+        if (enabled && plugin.Runtime == "managed" && !plugin.ManagedExecutionConsent) throw new InvalidOperationException(Localization.LocalizationCatalog.Get("Extensions.ManagedWarning"));
         if (!enabled && _clients.Remove(plugin.Id, out var client)) { client.NotifyLifecycle(plugin, "lifecycle.disable"); client.Dispose(); }
+        if (!enabled) StopExtension(plugin.Id);
         var previous = plugin.Enabled; plugin.Enabled = enabled;
         try { Save(); } catch { plugin.Enabled = previous; throw; }
     }
@@ -104,9 +112,15 @@ public sealed class HeadlessPluginHost : IDisposable
         var old = plugin.Configuration; var previousSession = _sessionConfiguration.GetValueOrDefault(plugin.Id);
         var persisted = values.DeepClone().AsObject(); Scrub(persisted); PluginConfigSchema.RemoveSensitiveFields(schema, persisted);
         plugin.Configuration = persisted.ToJsonString(); _sessionConfiguration[plugin.Id] = json;
-        try { Save(); }
-        catch { plugin.Configuration = old; if (previousSession is null) _sessionConfiguration.Remove(plugin.Id); else _sessionConfiguration[plugin.Id] = previousSession; throw; }
+        try { ProtectedPluginConfiguration.Write(_root, plugin, json, plugin.Configuration); Save(); }
+        catch
+        {
+            plugin.Configuration = old; if (previousSession is null) _sessionConfiguration.Remove(plugin.Id); else _sessionConfiguration[plugin.Id] = previousSession;
+            try { ProtectedPluginConfiguration.Write(_root, plugin, previousSession ?? old, old); } catch (Exception error) { Diagnostics.AppLog.Warning("Plugin:" + plugin.Id, "CLI 配置回滚未完全保存", error); }
+            throw;
+        }
         if (_clients.Remove(plugin.Id, out var client)) client.Dispose();
+        StopExtension(plugin.Id);
     }
     private static void Scrub(JsonNode node)
     {
@@ -146,12 +160,32 @@ public sealed class HeadlessPluginHost : IDisposable
     }
     public async Task<IReadOnlyList<ProviderTrack>> CatalogAsync(PluginManifest plugin, CancellationToken cancellationToken)
     {
+        if (plugin.Type == "extension")
+        {
+            var tracks = new List<ProviderTrack>(); var cursors = new HashSet<string>(StringComparer.Ordinal); var cursor = "";
+            do
+            {
+                if (!cursors.Add(cursor)) throw new InvalidDataException("Repeated media cursor.");
+                var page = (await MediaAsync(plugin, "catalog.list", new() { ["cursor"] = cursor }, cancellationToken)).Deserialize(MusicSourceJson.Default.ProviderCatalog) ?? throw new InvalidDataException("Empty media catalog.");
+                if (page.Tracks.Count > 1000 || tracks.Count + page.Tracks.Count > 50000 || page.NextCursor?.Length > 512) throw new InvalidDataException("Invalid media catalog.");
+                foreach (var track in page.Tracks) MusicSearchContract.ValidateTrack(track);
+                tracks.AddRange(page.Tracks); cursor = page.NextCursor ?? "";
+            } while (cursor.Length > 0);
+            return tracks.DistinctBy(t => t.Id).ToArray();
+        }
         var client = await ClientAsync(plugin, cancellationToken);
         try { return await client.ReadCatalogAsync(cancellationToken); }
         catch { _clients.Remove(plugin.Id); client.Dispose(); throw; }
     }
     public async Task<string> ResolveAsync(string pluginId, string trackId, CancellationToken cancellationToken)
     {
+        if (Find(pluginId).Type == "extension")
+        {
+            var reply = await MediaAsync(Find(pluginId), "playback.resolve", new() { ["trackId"] = trackId }, cancellationToken);
+            var playback = reply.Deserialize<PlaybackSource>(CoreJson.Options) ?? throw new InvalidDataException("Missing playback source.");
+            if (playback.Kind != "loopback-http") throw new InvalidDataException("Only loopback audio sources are supported.");
+            LoopbackRangeStream.Validate(new Uri(playback.Url)); return playback.Url;
+        }
         var client = await ClientAsync(Find(pluginId), cancellationToken);
         if (!client.CatalogInitialized) await CatalogAsync(Find(pluginId), cancellationToken);
         var result = await CallProviderAsync(pluginId, client, "playback.resolve", new() { ["trackId"] = trackId }, cancellationToken);
@@ -159,7 +193,7 @@ public sealed class HeadlessPluginHost : IDisposable
         if (source.Kind != "loopback-http") throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.LoopbackOnly"));
         LoopbackRangeStream.Validate(new Uri(source.Url)); return source.Url;
     }
-    public void Dispose() { foreach (var pair in _clients) { if (Installed.FirstOrDefault(p => p.Id == pair.Key) is { } manifest) pair.Value.NotifyLifecycle(manifest, "lifecycle.shutdown"); pair.Value.Dispose(); } _clients.Clear(); }
+    public void Dispose() { foreach (var pair in _clients) { if (Installed.FirstOrDefault(p => p.Id == pair.Key) is { } manifest) pair.Value.NotifyLifecycle(manifest, "lifecycle.shutdown"); pair.Value.Dispose(); } _clients.Clear(); foreach (var id in _extensions.Keys.ToArray()) StopExtension(id); }
 
     /// <summary>失败后丢弃失效进程，下次请求可以重新握手，而非永久复用已释放客户端。</summary>
     private async Task<JsonElement> CallProviderAsync(string id, ProviderClient client, string method, Dictionary<string, string> parameters, CancellationToken token)

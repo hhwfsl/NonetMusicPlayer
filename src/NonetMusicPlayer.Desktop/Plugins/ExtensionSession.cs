@@ -281,7 +281,7 @@ public sealed partial class ExtensionSession : IDisposable
             if (PluginApprovalPolicy.RequiresConfirmation(Manifest.ApprovalMode, operation, PluginCommandPolicy.RequiresConfirmation(operation)) && !await PlayerDialog.Confirm(Owner, L10n.T("Agent.Confirm"), encoded, L10n.T("Common.Confirm")))
                 return new() { ["success"] = false, ["reason"] = "User declined. Do not retry." };
             _lifetime.Token.ThrowIfCancellationRequested();
-            var result = await Owner.Commands.ExecuteAsync(encoded, _ => Task.FromResult(true), _lifetime.Token);
+            var result = await Owner.Commands.ExecuteFromExtensionAsync(encoded, _ => Task.FromResult(true), _lifetime.Token);
             return new() { ["success"] = result.Success, ["data"] = PluginCommandPolicy.Sanitize(result.Data) };
         }
         throw new InvalidDataException("Service is not enabled.");

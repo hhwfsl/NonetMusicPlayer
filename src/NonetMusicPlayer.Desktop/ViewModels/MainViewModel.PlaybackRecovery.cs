@@ -45,7 +45,7 @@ public sealed partial class MainViewModel
             if (_explicitQueueIds is not null) queue = queue.Where(t => _explicitQueueIds.Contains(t.Id)).ToArray();
             _playingList = queue.DistinctBy(t => t.Id).ToList();
             if (_playingList.All(t => t.Id != track.Id)) _playingList.Add(track);
-            if (!preserveQueueScope) _playingList = OrderPlaybackQueue(_playingList, track);
+            if (!preserveQueueScope) { _playingList = OrderPlaybackQueue(_playingList, track); _queueManuallyOrdered = false; }
             NotifyPlaybackQueueChanged();
             _explicitQueueIds?.Add(track.Id);
             PlayingSourcePage = NormalizeSourcePage(sourcePage);

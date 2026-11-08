@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Directory, [Parameter(Mandatory)][ValidateSet('win-x64','win-x86','win-arm64','linux-x64','linux-arm64','osx-x64')][string]$Rid, [switch]$CrashHandlerOnly)
+param([Parameter(Mandatory)][string]$Directory, [Parameter(Mandatory)][ValidateSet('win-x64','win-x86','win-arm64','linux-x64','linux-arm64','osx-x64')][string]$Rid, [switch]$CrashHandlerOnly, [switch]$Cli)
 $ErrorActionPreference = 'Stop'
 $taskDirectory = [IO.Path]::GetFullPath($Directory)
 $taskArchitecture = $Rid.Split('-')[1]
@@ -54,6 +54,7 @@ $taskRequired = if ($Rid.StartsWith('win-')) {
     @('Nonet','NonetCrashHandler','libAvaloniaNative.dylib','libe_sqlite3.dylib','libHarfBuzzSharp.dylib','libSkiaSharp.dylib','libminiaudio.dylib','libsoundflow-ffmpeg.dylib')
 }
 if ($CrashHandlerOnly) { $taskRequired = @(if ($Rid.StartsWith('win-')) { 'NonetCrashHandler.exe' } else { 'NonetCrashHandler' }) }
+if ($Cli) { $taskRequired = if ($Rid.StartsWith('win-')) { @('nonet.exe','miniaudio.dll','soundflow-ffmpeg.dll') } elseif ($Rid.StartsWith('linux-')) { @('nonet','libminiaudio.so','libsoundflow-ffmpeg.so') } else { @('nonet','libminiaudio.dylib','libsoundflow-ffmpeg.dylib') } }
 foreach ($name in $taskRequired) {
     $path = Join-Path $taskDirectory $name
     if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or ((Get-Item -LiteralPath $path).Attributes -band [IO.FileAttributes]::ReparsePoint)) {throw "缺少或链接了必需原生文件：$path"}

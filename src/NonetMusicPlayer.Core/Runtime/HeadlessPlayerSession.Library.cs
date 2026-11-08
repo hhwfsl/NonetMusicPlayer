@@ -3,12 +3,13 @@ using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using NonetMusicPlayer.Core.Library;
 using NonetMusicPlayer.Core.Localization;
+using NonetMusicPlayer.Core.Playback;
 
 namespace NonetMusicPlayer.Core.Runtime;
 
 public sealed partial class HeadlessPlayerSession
 {
-    private StoredMusicTrack FindTrack(string id) => State.Tracks.Concat(State.RecentTemporaryTracks).FirstOrDefault(t => t.Id == id) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.TrackNotFound"));
+    private StoredMusicTrack FindTrack(string id) => State.Tracks.Concat(State.RecentTemporaryTracks).Concat(_musicResults).Concat(_lanTracks.Values).Concat(_queue).FirstOrDefault(t => t.Id == id) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.TrackNotFound"));
     private StoredPlaylist FindPlaylist(string id) => State.Playlists.FirstOrDefault(p => p.Id == id) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PlaylistNotFound"));
     private async Task<IReadOnlyList<StoredMusicTrack>> ReadPathsAsync(IEnumerable<string> inputs, CancellationToken token)
     {
@@ -48,8 +49,14 @@ public sealed partial class HeadlessPlayerSession
     }
     private void RefreshQueue()
     {
-        if (State.LastPlaylistId is { } id && State.Playlists.FirstOrDefault(p => p.Id == id) is { } playlist) _queue = PlaylistTracks(playlist).ToList();
-        _shuffle.Retain(State.Tracks.Concat(State.RecentTemporaryTracks).Select(t => t.Id));
+        if (State.LastPlaylistId is { } id && State.Playlists.FirstOrDefault(p => p.Id == id) is { } playlist)
+        {
+            var source = PlaylistTracks(playlist).ToArray(); State.SourceQueueIds = source.Select(t => t.Id).ToList();
+            var byId = source.ToDictionary(t => t.Id, StringComparer.Ordinal);
+            var queued = _queue.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
+            _queue = State.Settings.PlayMode == PlaybackMode.Shuffle || State.ManualQueueOrder
+                ? _queue.Where(t => byId.ContainsKey(t.Id)).Select(t => byId[t.Id]).Concat(source.Where(t => !queued.Contains(t.Id))).ToList() : source.ToList();
+        }
     }
     private void AddHistory(StoredMusicTrack track)
     {
@@ -68,9 +75,16 @@ public sealed partial class HeadlessPlayerSession
     }
     private void AccountListening()
     {
-        var now = Stopwatch.GetTimestamp(); var elapsed = Math.Clamp(Stopwatch.GetElapsedTime(_listeningAnchor, now).TotalSeconds, 0, 2); _listeningAnchor = now;
-        if (!_loaded || !_audio.IsPlaying || Current is null || !State.Tracks.Any(t => t.Id == Current.Id)) return;
-        var entry = ListeningEntry(); entry.Seconds += elapsed; _sessionSeconds += elapsed;
+        var now = Stopwatch.GetTimestamp(); var elapsed = Stopwatch.GetElapsedTime(_listeningAnchor, now).TotalSeconds; _listeningAnchor = now;
+        var position = _loaded ? _audio.Position.TotalSeconds : State.LastPosition;
+        var advanced = Math.Max(0, position - _listeningPosition); _listeningPosition = position;
+        // 只为实际前进的音频记账；暂停、网络缓冲和跳转不凭墙上时间增加时长。
+        if (!_loaded || !_audio.IsPlaying || Current is null || !double.IsFinite(elapsed) || advanced > elapsed + .75) return;
+        var credit = Math.Min(elapsed, advanced); if (credit <= 0) return;
+        RecordListeningInterval(credit);
+        if (!State.Tracks.Any(t => t.Id == Current.Id)) return;
+        var entry = ListeningEntry(); entry.Seconds += credit; _sessionSeconds += credit;
+        RecordListeningHours(credit);
         if (_sessionSeconds >= 30) CountSession();
     }
     private StoredListeningEntry ListeningEntry()
@@ -101,7 +115,7 @@ public sealed partial class HeadlessPlayerSession
             ["longestArtist"] = artist is null ? null : new JsonObject { ["name"] = artist.Name, ["seconds"] = artist.Seconds } };
     }
     private static string LyricFileId(StoredMusicTrack track) => track.ProviderId is null ? track.Id : MusicFileReader.StableId(track.Id);
-    private string? LyricPath() => Current is null ? null : new[] { ".lrc", ".txt" }.Select(ext => Path.Combine(LyricsDirectory, LyricFileId(Current) + ext)).FirstOrDefault(File.Exists);
+    private string? LyricPath() => Current is null || State.DisabledLyrics.Contains(Current.Id) ? null : new[] { ".lrc", ".txt" }.Select(ext => Path.Combine(LyricsDirectory, LyricFileId(Current) + ext)).FirstOrDefault(File.Exists);
     private string StoreCover(string file)
     {
         if (!File.Exists(file) || new FileInfo(file).Length is <= 0 or > 20 * 1024 * 1024) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.CoverSize"));

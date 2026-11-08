@@ -39,7 +39,7 @@ internal static class Program
             using var cancellation = new CancellationTokenSource();
             Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancellation.Cancel(); };
             await using var session = new HeadlessPlayerSession(directory);
-            var router = new PlayerCommandRouter(session); session.ResultPublished += (_, result) => router.Publish(result);
+            var router = new PlayerCommandRouter(session) { UnknownCommandsAsOutput = true }; session.ResultPublished += (_, result) => router.Publish(result);
             var exitCode = 0;
             var interactive = !json && !noTui && !Console.IsInputRedirected && (forceTui || !Console.IsOutputRedirected && Environment.GetEnvironmentVariable("TERM") != "dumb" && ConsoleCapabilities.EnableAnsi());
             if (interactive && forceTui) ConsoleCapabilities.EnableAnsi();
@@ -52,7 +52,7 @@ internal static class Program
                 void PrintResult(object? sender, CommandResult result)
                 {
                     if (json) Console.WriteLine(JsonSerializer.Serialize(result, CoreJson.Rpc));
-                    else if (result.Operation == "help") Console.WriteLine(result.Message);
+                    else if (result.Operation is "help" or "command.unknown") Console.WriteLine(result.Message);
                     else if (result.Data is not null) Console.WriteLine(result.Data.ToJsonString(CoreJson.Readable));
                 }
                 AppLog.EntryWritten += PrintLog;

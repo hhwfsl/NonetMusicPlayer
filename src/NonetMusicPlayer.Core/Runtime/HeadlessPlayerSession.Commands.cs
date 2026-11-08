@@ -16,9 +16,15 @@ public sealed partial class HeadlessPlayerSession
     public async Task<CommandResult> ExecuteAsync(PlayerCommand command, CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken);
-        try
-        {
+        try { return await ExecuteLockedAsync(command, cancellationToken); }
+        finally { _gate.Release(); }
+    }
+    // 扩展请求在当前已持有的事务中执行，不能再次等待会话自己的锁。
+    private async Task<CommandResult> ExecuteLockedAsync(PlayerCommand command, CancellationToken cancellationToken)
+    {
             ObjectDisposedException.ThrowIf(_disposed, this); AccountListening();
+            if (command.Name is "player.play" or "player.pause" or "player.resume" or "player.stop" or "player.next" or "player.previous" or "player.seek" or "queue.play" or "queue.select" or "network.play") _lanResume = null;
+            var undoSnapshot = Undoable(command.Name) ? JsonSerializer.Serialize(State, CoreJson.Options) : null;
             string Arg(int n) => CommandResults.Required(command, n);
             JsonNode? data = null; var save = true;
             switch (command.Name)
@@ -32,7 +38,9 @@ public sealed partial class HeadlessPlayerSession
                         StoredMusicTrack track;
                         if (File.Exists(Arg(0))) track = new() { Metadata = new MusicFileReader(ArtworkDirectory, LyricsDirectory).Read(Arg(0)) };
                         else track = FindTrack(Arg(0));
-                        State.LastPlaylistId = null; _queue = [track]; _failed.Clear(); await StartAsync(track, 0, cancellationToken);
+                        State.LastPlaylistId = null;
+                        var scope = State.Tracks.Any(t => t.Id == track.Id) ? State.Tracks.Where(Available) : _musicResults.Any(t => t.Id == track.Id) ? _musicResults.Where(Available) : [track];
+                        SelectQueue(scope, track); _failed.Clear(); await StartAsync(track, 0, cancellationToken);
                         if (!_loaded || !_audio.IsPlaying) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PlaybackStartFailed"));
                     }
                     break;
@@ -40,16 +48,16 @@ public sealed partial class HeadlessPlayerSession
                 case "player.resume": await ResumeAsync(cancellationToken); break;
                 case "player.next": await RelativeAsync(1, false, cancellationToken); break;
                 case "player.previous": await RelativeAsync(-1, false, cancellationToken); break;
-                case "player.seek": var duration = _loaded ? _audio.Duration.TotalSeconds : Current?.Metadata.DurationSeconds ?? 0; var seconds = CommandResults.Number(command, 0, 0, duration); if (_loaded) _audio.Position = TimeSpan.FromSeconds(seconds); State.LastPosition = seconds; break;
+                case "player.seek": var duration = _loaded ? _audio.Duration.TotalSeconds : Current?.Metadata.DurationSeconds ?? 0; var seconds = CommandResults.Number(command, 0, 0, duration); if (_loaded) _audio.Position = TimeSpan.FromSeconds(seconds); State.LastPosition = seconds; _listeningPosition = seconds; break;
                 case "player.volume": State.Settings.Volume = CommandResults.Number(command, 0, 0, 100); _audio.Volume = (float)(State.Settings.Volume / 100); break;
                 case "player.mute": State.Settings.Volume = State.Settings.Volume > 0 ? 0 : 80; _audio.Volume = (float)(State.Settings.Volume / 100); break;
-                case "player.mode": State.Settings.PlayMode = Arg(0) switch { "repeat-all" => PlaybackMode.RepeatAll, "repeat-one" => PlaybackMode.RepeatOne, "shuffle" => PlaybackMode.Shuffle, _ => throw new FormatException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.UnknownMode")) }; break;
+                case "player.mode": ChangeMode(Arg(0) switch { "repeat-all" => PlaybackMode.RepeatAll, "repeat-one" => PlaybackMode.RepeatOne, "shuffle" => PlaybackMode.Shuffle, _ => throw new FormatException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.UnknownMode")) }); break;
                 case "player.devices":
                     if (_audio is NativeAudioPlayer nativeAudio) nativeAudio.RefreshDevices();
                     data = Strings(_audio.Devices); save = false; break;
                 case "player.device": if (!_audio.Devices.Contains(Arg(0))) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.OutputNotFound")); _audio.Pause(); _audio.DeviceName = Arg(0); State.Settings.DeviceName = Arg(0); break;
                 case "queue.list": data = TracksJson(_queue); save = false; break;
-                case "queue.play": var playlist = FindPlaylist(Arg(0)); var queue = PlaylistTracks(playlist).ToList(); if (queue.Count == 0) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.EmptyPlaylist")); var selected = command.Arguments.Count > 1 ? queue.FirstOrDefault(t => t.Id == Arg(1)) ?? throw new InvalidDataException(LocalizationCatalog.Get("Commands.NotInPlaylist")) : queue[0]; State.LastPlaylistId = playlist.Id; _queue = queue; _failed.Clear(); await StartAsync(selected, 0, cancellationToken); if (!_loaded || !_audio.IsPlaying) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PlaybackStartFailed")); break;
+                case "queue.play": var playlist = FindPlaylist(Arg(0)); var queue = PlaylistTracks(playlist).ToList(); if (queue.Count == 0) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.EmptyPlaylist")); var selected = command.Arguments.Count > 1 ? queue.FirstOrDefault(t => t.Id == Arg(1)) ?? throw new InvalidDataException(LocalizationCatalog.Get("Commands.NotInPlaylist")) : queue[0]; State.LastPlaylistId = playlist.Id; SelectQueue(queue, selected); _failed.Clear(); await StartAsync(selected, 0, cancellationToken); if (!_loaded || !_audio.IsPlaying) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PlaybackStartFailed")); break;
                 case "music.list": data = TracksJson(State.Tracks.Where(t => command.Arguments.Count == 0 || (t.Metadata.Title + " " + t.Metadata.Artist + " " + t.Metadata.Album).Contains(Arg(0), StringComparison.CurrentCultureIgnoreCase))); save = false; break;
                 case "music.info": data = TrackJson(FindTrack(Arg(0))); save = false; break;
                 case "music.remove":
@@ -63,7 +71,7 @@ public sealed partial class HeadlessPlayerSession
                 case "playlist.delete": var deleted = FindPlaylist(Arg(0)); if (deleted.Id == "liked") throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.LikedDeleteDenied")); State.Playlists.Remove(deleted); if (State.LastPlaylistId == deleted.Id) State.LastPlaylistId = null; break;
                 case "playlist.add":
                     var target = FindPlaylist(Arg(0)); var inputs = command.Arguments.Skip(1).ToArray(); if (inputs.Length == 0) throw new FormatException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.ProvideInputs"));
-                    var found = inputs.Where(id => State.Tracks.Concat(State.RecentTemporaryTracks).Any(t => t.Id == id)).Select(FindTrack).ToArray();
+                    var found = inputs.Where(id => State.Tracks.Concat(State.RecentTemporaryTracks).Concat(_musicResults).Concat(_lanTracks.Values).Concat(_queue).Any(t => t.Id == id)).Select(FindTrack).ToArray();
                     var files = inputs.Where(id => !found.Any(t => t.Id == id)).ToArray();
                     var imported = await ReadPathsAsync(files, cancellationToken); AddToPlaylist(target, found.Concat(imported)); break;
                 case "playlist.remove": var listToChange = FindPlaylist(Arg(0)); var ids = command.Arguments.Skip(1).ToHashSet(StringComparer.Ordinal); if (ids.Count == 0) throw new FormatException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.ProvideIds")); listToChange.TrackIds.RemoveAll(ids.Contains); RefreshQueue(); break;
@@ -85,13 +93,13 @@ public sealed partial class HeadlessPlayerSession
                 case "data.backup": Save(); if (File.Exists(Arg(0))) throw new IOException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.BackupExists")); File.Copy(StatePath, Path.GetFullPath(Arg(0)), false); break;
                 case "data.restore":
                     var restored = ParseState(Arg(0)); Save(); File.Copy(StatePath, StatePath + ".before-restore-" + DateTime.UtcNow.ToString("yyyy-MM-dd-HHmmssfff"), false);
-                    _audio.Stop(); _loaded = false; State = restored; Current = State.Tracks.Concat(State.RecentTemporaryTracks).FirstOrDefault(t => t.Id == State.LastTrackId);
+                    EndListeningRecord("data-restore"); StopNetwork(); _audio.Stop(); _loaded = false; State = restored; Current = State.Tracks.Concat(State.RecentTemporaryTracks).Concat(State.QueueTracks).FirstOrDefault(t => t.Id == State.LastTrackId); _undoLibrary.Clear();
                     // 恢复后的播放队列仍使用来源歌单，不把多首歌的队列退化为单首循环。
                     _queue = State.LastPlaylistId is { } restoredId && State.Playlists.FirstOrDefault(p => p.Id == restoredId) is { } restoredPlaylist ? PlaylistTracks(restoredPlaylist).ToList() : Current is null ? [] : [Current];
-                    ApplySettings(State.Settings); break;
+                    RestoreQueueSnapshot(); ApplySettings(State.Settings); break;
                 case "lyrics.show": var lyric = LyricPath(); data = lyric is null ? JsonValue.Create("") : JsonValue.Create(File.ReadAllText(lyric)); save = false; break;
                 case "lyrics.path": data = JsonValue.Create(LyricPath()); save = false; break;
-                case "lyrics.import": if (Current is null) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.SelectTrack")); var file = Arg(0); if (Path.GetExtension(file).ToLowerInvariant() is not (".lrc" or ".txt") || new FileInfo(file).Length > 4 * 1024 * 1024) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.LyricsSize")); Directory.CreateDirectory(LyricsDirectory); File.Copy(file, Path.Combine(LyricsDirectory, LyricFileId(Current) + Path.GetExtension(file).ToLowerInvariant()), true); break;
+                case "lyrics.import": if (Current is null) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.SelectTrack")); var file = Arg(0); if (Path.GetExtension(file).ToLowerInvariant() is not (".lrc" or ".txt") || new FileInfo(file).Length > 4 * 1024 * 1024) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.LyricsSize")); Directory.CreateDirectory(LyricsDirectory); File.Copy(file, Path.Combine(LyricsDirectory, LyricFileId(Current) + Path.GetExtension(file).ToLowerInvariant()), true); State.DisabledLyrics.Remove(Current.Id); break;
                 case "plugins.list": data = new JsonArray(Plugins.Installed.Select(p => (JsonNode)new JsonObject { ["id"] = p.Id, ["name"] = p.Name, ["type"] = p.Type, ["version"] = p.Version, ["enabled"] = p.Enabled }).ToArray()); save = false; break;
                 case "plugins.install":
                     if (Uri.TryCreate(Arg(0), UriKind.Absolute, out var url) && url.Scheme == "https")
@@ -108,11 +116,11 @@ public sealed partial class HeadlessPlayerSession
                 case "plugins.config": var plugin = Plugins.Find(Arg(0)); if (command.Arguments.Count > 1) Plugins.Configure(plugin, Arg(1)); else { data = JsonNode.Parse(plugin.Configuration); save = false; } break;
                 case "plugins.schema": data = Plugins.Schema(Plugins.Find(Arg(0))); save = false; break;
                 case "plugins.refresh": await RefreshProviderAsync(Arg(0), cancellationToken); break;
-                default: throw new PlatformNotSupportedException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.HostUnsupported"));
+                default: (data, save) = await ExecuteAdvancedAsync(command, cancellationToken); break;
             }
+            if (undoSnapshot is not null) { _undoLibrary.Push(undoSnapshot); if (_undoLibrary.Count > 100) { var keep = _undoLibrary.Take(100).Reverse().ToArray(); _undoLibrary.Clear(); foreach (var item in keep) _undoLibrary.Push(item); } }
+            RecordPlaybackEvent(command.Name);
             if (save) Save(); return CommandResults.Completed(command.Name, data);
-        }
-        finally { _gate.Release(); }
     }
     private async Task ResumeAsync(CancellationToken token)
     {
@@ -125,7 +133,7 @@ public sealed partial class HeadlessPlayerSession
     {
         settings.Validate(); Directory.CreateDirectory(string.IsNullOrWhiteSpace(settings.LyricsFolder) ? Path.Combine(DataDirectory, "Lyrics") : Path.GetFullPath(settings.LyricsFolder));
         if (_audio.DeviceName != settings.DeviceName) { _audio.Pause(); _audio.DeviceName = settings.DeviceName; }
-        _audio.Volume = (float)(settings.Volume / 100); State.Settings = settings; LocalizationCatalog.SetLanguage(settings.Language); TrimHistory();
+        _audio.Volume = (float)(settings.Volume / 100); var mode = settings.PlayMode; settings.PlayMode = State.Settings.PlayMode; State.Settings = settings; ChangeMode(mode); LocalizationCatalog.SetLanguage(settings.Language); TrimHistory();
     }
     private void DisableProvider(string id)
     {
@@ -142,6 +150,8 @@ public sealed partial class HeadlessPlayerSession
             if (track.Lyrics is { Length: <= 100_000 } lyrics) { Directory.CreateDirectory(LyricsDirectory); AtomicFile.Write(Path.Combine(LyricsDirectory, MusicFileReader.StableId(key) + ".lrc"), lyrics); }
             parsed.Add(new() { ProviderId = id, ProviderTrackId = track.Id, Metadata = new MusicMetadata(key, track.Title, track.Artist, track.Album, "", "." + track.Format, 0, track.DurationSeconds, cover) });
         }
-        State.Tracks.RemoveAll(t => t.ProviderId == id); State.Tracks.InsertRange(0, parsed); RefreshQueue();
+        // 云搜索加入歌单的条目未必属于 catalog；刷新来源不能丢弃这些用户引用。
+        var referenced = State.Playlists.SelectMany(p => p.TrackIds).ToHashSet(StringComparer.Ordinal); var returned = parsed.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
+        State.Tracks.RemoveAll(t => t.ProviderId == id && (returned.Contains(t.Id) || !referenced.Contains(t.Id))); State.Tracks.InsertRange(0, parsed); RefreshQueue();
     }
 }

@@ -361,6 +361,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         Settings.PlayMode = mode;
         // 切换随机模式只重排当前播放范围，不受正在浏览的页面影响。
         var queueIds = _playingList.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
+        _queueManuallyOrdered = false;
         _playingList = OrderPlaybackQueue(mode == PlayMode.Shuffle ? _playingList : SourceTracks(PlayingSourcePage).Concat(_playingList).Where(t => queueIds.Contains(t.Id)), CurrentTrack);
         NotifyPlaybackQueueChanged();
         OnPropertyChanged(nameof(ModeText)); OnPropertyChanged(nameof(ModeIcon)); OnPropertyChanged(nameof(ModeDescription));
@@ -511,19 +512,21 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         if (CurrentTrack?.ProviderId == plugin.Id) StopPlayback(); Plugins.SetEnabled(plugin, false);
         _playingList.RemoveAll(t => t.ProviderId == plugin.Id); ApplyFilter(); SettingsChanged?.Invoke(this, EventArgs.Empty); StatusText = L10n.T("Plugins.PluginDisabledAndItsProcessStopped");
     }
-    public async Task ImportM3uAsync(string path)
+    public async Task ImportM3uAsync(string path, Playlist? destination = null)
     {
         var lines = File.ReadAllLines(path).Where(l => !string.IsNullOrWhiteSpace(l) && !l.StartsWith('#')).ToArray();
         if (lines.Length > 50000) throw new InvalidDataException(L10n.T("Playlists.APlaylistImportCannotExceedSongs"));
         var entries = lines.Where(l => !Uri.TryCreate(l, UriKind.Absolute, out var uri) || uri.IsFile).Select(l => Uri.TryCreate(l, UriKind.Absolute, out var uri) && uri.IsFile ? uri.LocalPath : Path.IsPathRooted(l) ? l : Path.Combine(Path.GetDirectoryName(path)!, l)).ToArray();
         var tracks = await ImportAsync(entries); if (tracks.Count == 0) return;
-        var playlist = CreatePlaylist(Path.GetFileNameWithoutExtension(path)); var ids = tracks.ToDictionary(t => t.FilePath, OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        // 终端可指定已有歌单，图形界面省略参数时仍按原流程新建。
+        var playlist = destination ?? CreatePlaylist(Path.GetFileNameWithoutExtension(path)); var ids = tracks.ToDictionary(t => t.FilePath, OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
         foreach (var entry in entries) if (ids.TryGetValue(Path.GetFullPath(entry), out var track)) playlist.TrackIds.Add(track.Id);
         playlist.TrackIds = playlist.TrackIds.Distinct().ToList(); Save(); Navigate("playlist:" + playlist.Id); CompleteOperation("playlist.import");
     }
-    public void ExportM3u(string path)
+    public void ExportM3u(string path, Playlist? source = null)
     {
-        AppStorage.AtomicWrite(path, "#EXTM3U\n" + string.Join('\n', VisibleTracks.Where(t => t.ProviderId is null).Select(t => $"#EXTINF:{(int)t.DurationSeconds},{t.Artist} - {t.Title}\n{t.FilePath}")) + "\n");
+        var tracks = source is null ? (IEnumerable<TrackItem>)VisibleTracks : source.TrackIds.Select(id => State.Tracks.FirstOrDefault(t => t.Id == id)).OfType<TrackItem>();
+        AppStorage.AtomicWrite(path, "#EXTM3U\n" + string.Join('\n', tracks.Where(t => t.ProviderId is null).Select(t => $"#EXTINF:{(int)t.DurationSeconds},{t.Artist} - {t.Title}\n{t.FilePath}")) + "\n");
         CompleteOperation("playlist.export");
     }
     private void PlaybackEnded(object? sender, EventArgs e)

@@ -63,7 +63,7 @@ public sealed partial class MainWindow
         _lastLyricsVisible = visible; _lastLyricsLocked = locked;
     }
 
-    private sealed class DesktopCommandBackend(MainWindow window) : IPlayerCommandBackend
+    private sealed partial class DesktopCommandBackend(MainWindow window) : IPlayerCommandBackend
     {
         public bool HasWindow => true;
         public async Task<CommandResult> ExecuteAsync(PlayerCommand command, CancellationToken cancellationToken)
@@ -145,7 +145,7 @@ public sealed partial class MainWindow
                         if (setting.Equals("startOnLogin", StringComparison.OrdinalIgnoreCase))
                         { if (!vm.SetStartOnLogin(value!.GetValue<bool>())) throw new IOException(L10n.T("Startup.ChangeFailed")); break; }
                         var replacement = updated.Deserialize<AppSettings>(AppStorage.Json) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.InvalidSettings"));
-                        replacement.Validate(); vm.State.Settings = replacement; vm.Volume = replacement.Volume; vm.ApplySettings(); break;
+                        replacement.Validate(); var requestedMode = replacement.PlayMode; replacement.PlayMode = vm.Settings.PlayMode; vm.State.Settings = replacement; vm.SetPlayMode(requestedMode); vm.Volume = replacement.Volume; vm.ApplySettings(); break;
                     case "settings.reset": vm.ResetSettings(); break;
                     case "data.backup": if (File.Exists(Arg(0))) throw new IOException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.BackupExists")); vm.Save(); File.Copy(Path.Combine(vm.Storage.Root, "state.json"), Path.GetFullPath(Arg(0)), false); break;
                     case "data.restore": vm.RestoreLibraryBackup(Arg(0)); break;
@@ -176,8 +176,8 @@ public sealed partial class MainWindow
                     case "undo": vm.UndoCommand.Execute(null); break;
                     case "music.search": vm.Navigate("songs"); vm.SearchText = Arg(0); break;
                     case "import.cancel": vm.CancelImport(); break;
-                    case "playlist.import": await vm.ImportM3uAsync(Arg(0)); break;
-                    case "playlist.export": if (File.Exists(Arg(0))) throw new IOException(L10n.T("Commands.BackupExists")); vm.ExportM3u(Arg(0)); break;
+                    case "playlist.import": await vm.ImportM3uAsync(Arg(0), command.Arguments.Count > 1 ? Playlist(1) : null); break;
+                    case "playlist.export": if (File.Exists(Arg(0))) throw new IOException(L10n.T("Commands.BackupExists")); vm.ExportM3u(Arg(0), command.Arguments.Count > 1 ? Playlist(1) : null); break;
                     case "data.directory": await vm.ConfigureDataDirectoryAsync(Arg(0)); break;
                     case "help.open": window.OpenUserManual(); break;
                     case "selection.begin": window.SetBatchMode(true); break;
@@ -208,7 +208,7 @@ public sealed partial class MainWindow
                     case "network.tracks": data = new JsonArray(vm.LanPeerTracks(Arg(0)).Select(t => (JsonNode)new JsonObject { ["id"] = t.Id, ["title"] = t.Title, ["artist"] = t.Artist, ["source"] = t.SourceDeviceKind }).ToArray()); break;
                     case "app.exit": Dispatcher.UIThread.Post(window.ExitApplication); break;
                     case "terminal.exit": vm.Navigate("library"); break;
-                    default: throw new InvalidOperationException("Command is not implemented by the desktop host.");
+                    default: data = await ExecuteAdvancedAsync(command, cancellationToken); break;
                 }
                 return vm.ErrorRevision == errorsBefore ? CommandResults.Completed(command.Name, data) : CommandResults.Failed(command.Name, vm.StatusText);
             }

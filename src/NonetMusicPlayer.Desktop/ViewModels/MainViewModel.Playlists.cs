@@ -104,8 +104,8 @@ public sealed partial class MainViewModel
         {
             var source = SourceTracks(PlayingSourcePage).Where(t => _explicitQueueIds is null || _explicitQueueIds.Contains(t.Id)).ToDictionary(t => t.Id);
             var queued = _playingList.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
-            // 歌单编辑保留已排好的随机顺序，新增歌曲只加入队尾。
-            _playingList = Settings.PlayMode == PlayMode.Shuffle
+            // 歌单编辑保留随机或手动队列顺序，新增歌曲只加入队尾。
+            _playingList = Settings.PlayMode == PlayMode.Shuffle || _queueManuallyOrdered
                 ? _playingList.Where(t => source.ContainsKey(t.Id)).Select(t => source[t.Id]).Concat(source.Values.Where(t => !queued.Contains(t.Id))).ToList()
                 : source.Values.ToList();
         }

@@ -42,6 +42,9 @@ public sealed partial class MainViewModel
             if (Plugins.HasHook("navigation.before")) await NavigateWithHooksAsync("cloud-search", title, ++_extensionNavigationRequest);
             else Navigate("cloud-search", title);
             if (request != _musicSearchRequest || Page != "cloud-search") { if (request == _musicSearchRequest) { MusicSearchBusy = false; PublishMusicSearchState(); } return; }
+            // 当前已在结果页时 Navigate 有意不重建页面，新的平台/关键词仍必须替换旧显示快照。
+            // 顶部平台搜索与列表内筛选是两个输入；新查询和首次进入时一样重置旧筛选。
+            SearchText = ""; ApplyFilter(); PageTitle = title;
         }
         _musicSearchCursors.Add(cursor); MusicSearchBusy = true; PublishMusicSearchState();
         try

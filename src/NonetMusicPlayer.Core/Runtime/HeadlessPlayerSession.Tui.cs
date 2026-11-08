@@ -8,6 +8,11 @@ public sealed record TuiSnapshot(string Title, string Artist, bool Playing, doub
     public IReadOnlySet<string> Favorites { get; init; } = new HashSet<string>();
     public IReadOnlyDictionary<string, IReadOnlyList<TuiItem>> PlaylistTracks { get; init; } = new Dictionary<string, IReadOnlyList<TuiItem>>();
     public System.Text.Json.Nodes.JsonObject Settings { get; init; } = new();
+    public IReadOnlyList<TuiItem> Queue { get; init; } = [];
+    public IReadOnlyList<TuiItem> SearchResults { get; init; } = [];
+    public IReadOnlyList<TuiItem> SearchSources { get; init; } = [];
+    public IReadOnlyList<TuiItem> Devices { get; init; } = [];
+    public IReadOnlyList<double> HourlySeconds { get; init; } = [];
 }
 
 public sealed partial class HeadlessPlayerSession
@@ -30,7 +35,11 @@ public sealed partial class HeadlessPlayerSession
                 CurrentId = Current?.Id,
                 Favorites = State.Playlists.FirstOrDefault(p => p.Id == "liked")?.TrackIds.ToHashSet(StringComparer.Ordinal) ?? [],
                 PlaylistTracks = State.Playlists.ToDictionary(p => p.Id, p => (IReadOnlyList<TuiItem>)p.TrackIds.Where(index.ContainsKey).Select(id => Item(index[id])).ToArray()),
-                Settings = System.Text.Json.JsonSerializer.SerializeToNode(State.Settings, Persistence.CoreJson.Options)!.AsObject()
+                Settings = System.Text.Json.JsonSerializer.SerializeToNode(State.Settings, Persistence.CoreJson.Options)!.AsObject(),
+                Queue = _queue.Select(Item).ToArray(), SearchResults = _musicResults.Select(Item).ToArray(),
+                SearchSources = new[] { new TuiItem("local", "Local", "") }.Concat(Plugins.MusicSearchSources.Select(p => new TuiItem(p.Id, p.MusicSearch!.Label, ""))).ToArray(),
+                Devices = _lanPeers.Values.Select(p => new TuiItem(p.DeviceId, p.Name, p.Reachable ? "ON" : "OFF")).ToArray(),
+                HourlySeconds = HourlyStatistics(24).Select(h => h!["seconds"]!.GetValue<double>()).ToArray()
             };
         }
         finally { _gate.Release(); }

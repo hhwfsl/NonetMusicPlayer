@@ -37,6 +37,13 @@ public sealed class BaselineExtension : INonetExtension
     {
         if (invocation.Action == "service:media-source")
         {
+            // 通用顶部搜索回归返回与关键词、分页游标相关的身份，不依赖真实音源或网络。
+            if (invocation.Values["method"]?.GetValue<string>() == "music.search" && invocation.Values["query"]?.GetValue<string>() is { } headerQuery && headerQuery.StartsWith("header:", StringComparison.Ordinal))
+            {
+                var cursor = invocation.Values["cursor"]?.GetValue<string>() ?? "";
+                var page = new MusicSearchPage { Tracks = headerQuery == "header:empty" ? [] : [new ProviderTrack { Id = headerQuery + ":" + cursor, Title = headerQuery, Artist = "Header search fixture", DurationSeconds = 180 }], NextCursor = headerQuery == "header:pages" && cursor.Length == 0 ? "more" : null };
+                _frame.State["serviceResult"] = JsonSerializer.SerializeToNode(page, MusicSourceJson.Default.MusicSearchPage); _frame.Revision++; return ValueTask.FromResult(_frame);
+            }
             if (invocation.Values["query"]?.GetValue<string>() == "slow" && string.IsNullOrEmpty(invocation.Values["cursor"]?.GetValue<string>())) return new(DelayedSearchAsync(invocation,cancellationToken));
             var method=invocation.Values["method"]?.GetValue<string>();
             if (method=="music.artwork" || method=="music.search" && invocation.Values["query"]?.GetValue<string>() is "paged" or "slow")

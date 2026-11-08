@@ -20,18 +20,18 @@ public sealed partial class MainWindow
     private void InitializeDropPreview()
     {
         // Drop 实际使用冒泡路由；子控件标记已处理也必须清理，不等待异步导入或播放结束。
-        AddHandler(DragDrop.DropEvent, (_, _) => HideDropPreview(), RoutingStrategies.Bubble, true);
+        AddHandler(DragDrop.DropEvent, (_, _) => { CancelTrackReorderPreview(); HideDropPreview(); }, RoutingStrategies.Bubble, true);
         AddHandler(DragDrop.DragLeaveEvent, (_, _) =>
         {
             // 取消拖动的坐标可能仍在客户区；目标切换紧随的新 DragOver 则使这次清理失效。
             var revision = _dropPreviewRevision;
-            Dispatcher.UIThread.Post(() => { if (revision == _dropPreviewRevision) HideDropPreview(); }, DispatcherPriority.Background);
+            Dispatcher.UIThread.Post(() => { if (revision == _dropPreviewRevision) { _trackReorder?.Restore(); HideDropPreview(); } }, DispatcherPriority.Background);
         }, RoutingStrategies.Bubble, true);
         AddHandler(PointerReleasedEvent, (_, _) => HideDropPreview(), RoutingStrategies.Tunnel, true);
-        AddHandler(KeyDownEvent, (_, e) => { if (e.Key == Key.Escape) HideDropPreview(); }, RoutingStrategies.Tunnel, true);
+        AddHandler(KeyDownEvent, (_, e) => { if (e.Key == Key.Escape) { CancelTrackReorderPreview(); HideDropPreview(); } }, RoutingStrategies.Tunnel, true);
         PropertyChanged += (_, e) => { if (e.Property == IsVisibleProperty && !IsVisible || e.Property == WindowStateProperty && WindowState == WindowState.Minimized) HideDropPreview(); };
-        Deactivated += (_, _) => HideDropPreview();
-        Closed += (_, _) => HideDropPreview();
+        Deactivated += (_, _) => { CancelTrackReorderPreview(); HideDropPreview(); };
+        Closed += (_, _) => { CancelTrackReorderPreview(); HideDropPreview(); };
     }
     /// <summary>提示与实际投放目标使用同一原控件身份，不依赖左右位置或界面方案的容器结构。</summary>
     private void UpdateDropPreview(DragEventArgs e)

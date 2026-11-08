@@ -1,6 +1,6 @@
 # 命令行播放器
 
-NonetMusicPlayerCli 0.4.0-beta.5 是无图形框架依赖的播放器。发布程序名为 `nonet`，使用独立数据目录和音频会话，不连接桌面版实例。
+NonetMusicPlayerCli 0.4.0-beta.32（本地修订）是无图形框架依赖的播放器。发布程序名为 `nonet`，使用独立数据目录和音频会话。新版同步队列、平台搜索、歌词管理、小时统计和显式批准的设备互听，详见 [功能对照](CLI_DESKTOP_PARITY.md)。
 
 ## 启动与 PATH
 
@@ -22,7 +22,7 @@ CMD 在程序目录输入 `nonet`；PowerShell 使用 `.\nonet.exe`。将发布�
 
 ## 交互
 
-默认启动字符 TUI，栏目依次是音乐、歌单、最近、统计、插件、**终端**、帮助、**设置**。Tab / Shift+Tab 切换，不使用 F1–F7。页面不再显示独立底部命令行，命令仅在终端栏目 `nonet $ ` 提示符中输入；↑↓ 直接回顾命令历史，PgUp/PgDn 回看日志，Ctrl+L 清屏。
+默认启动字符 TUI，栏目依次是音乐、歌单、最近、统计、插件、**终端**、帮助、**设置**、播放队列、平台搜索、设备互听。Tab / Shift+Tab 切换，不使用 F1–F7。命令仅在终端栏目 `nonet $ ` 提示符中输入；↑↓ 直接回顾命令历史，PgUp/PgDn 回看日志，Ctrl+L 清屏。
 
 所有 CLI 支持的操作均可用键盘完成：Ctrl+K 打开完整操作菜单，↑↓ 选择操作，Enter 打开参数表单；Tab / ↑↓ 移动字段，←→ 选择已有值，自由输入名称、文件路径、数字等，Enter 下一项或执行，Ctrl+Enter 直接提交，Esc 取消。多值参数可 Ctrl+N 追加。危险操作的确认默认取消，只有按 Y 才执行。
 
@@ -35,6 +35,9 @@ CMD 在程序目录输入 `nonet`；PowerShell 使用 `.\nonet.exe`。将发布�
 | 插件 | Enter 启用/关闭；I 导入；C 开发者配置表单；Delete 卸载并选择保留或删除文件 |
 | 设置 | Enter 编辑；设备/语言/日志/模式可选择；R 默认；B 备份；O 恢复 |
 | 统计 | Enter 选择日期和日/月/年，再查看结果 |
+| 播放队列 | Enter 手动选歌；Ctrl+↑↓ 连续调整实际顺序，不改变当前音轨和进度 |
+| 平台搜索 | S 选择来源和关键词；L 下一页；Enter 播放；A 加入歌单 |
+| 设备互听 | S 开关共享；C 连接邀请；R 当前请求；Enter 查看远端歌单；Delete 断开；Ctrl+K 可批准/拒绝及播放远端歌单 |
 | 终端 | Enter 执行；↑↓ 历史；←→/Home/End/Backspace/Delete 编辑；PgUp/PgDn 日志；Ctrl+L 清屏 |
 | 结果 | ↑↓/PgUp/PgDn 回看；Enter/Esc 返回 |
 
@@ -78,7 +81,13 @@ JSON 模式仅输出命令结果，字段为 `operation`、`success`、`message`
 
 CLI 可用于纯命令行登录、SSH，不依赖 Avalonia、X11、Wayland 或桌面窗口。非播放事务不初始化音频设备。实际发声需要本机音频设备/服务；SSH 不会自动传输声音。Linux 可能需要发行版提供 FFmpeg 原生依赖。Windows 最低 Windows 10 22H2；当前包均为 x64，macOS/Linux 尚需实机验证。
 
-音源插件使用相同 .impp 包验证、配置、进程握手和流媒体 Contract。UI、桌宠和主题插件不能在 CLI 启用。远程仅支持公开 GitHub Release 的 HTTPS .impp 附件。程序不执行系统 Shell，也不会拉取和执行任意仓库源码。
+音源插件使用相同 .impp 包验证、配置、进程握手和流媒体 Contract，支持 v1 音源与 v2 media-source 扩展。`music sources` 列来源，`music query <id> "关键词"` 开始搜索，`music more` 追加下一页；结果使用稳定 ID 加入歌单。插件配置由共享账户加密存储保存，更新不把凭据写入索引。可信托管插件需先阅读“致命错误可能使宿主退出”的提示，再通过 `plugins trust <id>` 和启用确认。UI、桌宠和主题插件不能在 CLI 启用。远程仅支持公开 GitHub Release 的 HTTPS .impp 附件，程序不执行系统 Shell。
+
+随机模式先对整个范围排序再顺序播放，手动选歌重新洗牌；退出随机恢复来源顺序。`queue move <id> <位置>` 只改队列，不改歌单，重启保留实际顺序。统计页显示最近 24 小时播放时长，`statistics history` 查询会话、连续播放区间、事件及小时明细；暂停、拖动进度和解码停滞不凭墙上时间累计。
+
+`network sharing on` 开放本机共享，`network invitation` 返回邀请；对方 `network connect` 后通过 `network requests` 与 `network accept/reject` 明确答复。连接采用现有证书固定协议建立双向会话，只共享歌单引用的本地音频及关联封面/歌词。断开保留已收藏的远端引用；会话凭据不写 CLI 状态文件。退出自动关闭监听和连接。
+
+发布脚本生成 Windows/macOS/Linux x64 运行目录与 `publish/cli/archives` 纯净 ZIP，ZIP 包含版本/RID/逐文件 SHA-256 清单，Unix 程序带执行权限；归档不含 Data。三平台包仍需分别在目标系统验证音频。
 
 ## 插件包与重新接入
 

@@ -1,5 +1,13 @@
 # 通用扩展接口参考（SDK 4.16）
 
+## CLI 数据与音源宿主（本地修订）
+
+CLI 在冻结 Contract v1/v2 上增加数据扩展与 `media-source` 承载，不改变 SDK 程序集身份、已有清单字段和 RPC。v2 初始化只报告实际支持的 state/actions/commands/lyrics/services、可选页面、声明式/受监督运行时、media.search 和 media.artwork-batch 能力，不声明图形 UI、原生页面或桌面钩子。已有音源不必重新打包；需要原生 UI 的服务应提供无窗口配置路径，或继续使用桌面宿主。
+
+`plugins state/invoke/reload` 可直接操作扩展。动作的宿主请求复用已有权限和命令策略，有界处理 `commands`、`catalog`、`lyrics`；未知图形服务明确返回不支持。CLI 不代替用户为危险事务确认，需在终端直接执行并确认对应命令。桌面终端调用动作时，嵌套宿主命令仍经过参数、确认和钩子校验，不重复等待当前路由锁。托管插件必须显式授权共享运行时；普通异常停用归属插件，致命错误仍可能退出宿主。
+
+配置使用共享核心账户加密实现，桌面保留原公开包装 API；扩展状态在 `Plugins/Storage/<id>`，同 ID 更新保留，不放在待替换的包内。CLI 与桌面资料目录独立。详细命令范围和图形功能边界见 [CLI_DESKTOP_PARITY](CLI_DESKTOP_PARITY.md)。
+
 ## 页面过渡（可选 `ui.page-transitions.v1`）
 
 `styles` 服务通过 `StyleSheet.pageTransitions` 提供默认配置与按来源/目标页面匹配的覆盖规则；支持淡入、位移、组合效果、时长、初始透明度和缓动。`catalog` 返回目录，`resolve-page-transition` 查询叠加后的有效配置。参数、优先级、取消恢复及歌词专用转场的关系见 [PAGE_TRANSITIONS](PAGE_TRANSITIONS.md)。

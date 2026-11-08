@@ -22,7 +22,7 @@ internal sealed class TuiForm(string title, IEnumerable<TuiField> fields, Func<I
             var name = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value;
             var options = choices(name);
             if (options.Count == 0 && name.Contains('|') && !name.Contains("file") && !name.Contains("track-id") && !name.Contains("folder")) options = name.Split('|');
-            return new TuiField(name, initial(name), options) { Optional = !m.Groups[1].Success, Repeatable = name.EndsWith("...", StringComparison.Ordinal), Private = command.Name == "plugins.config" && name == "json" };
+            return new TuiField(name, initial(name), options) { Optional = !m.Groups[1].Success, Repeatable = name.EndsWith("...", StringComparison.Ordinal), Private = (command.Name is "plugins.config" or "plugins.invoke") && name == "json" || command.Name == "network.connect" && name == "invitation" };
         });
         return new(command.PublicUsage, fields, values => CommandSyntax.PublicName(command.Name) + " -- " + string.Join(" ", values.Where(f => !f.Optional || f.Value.Length > 0).Select(f => Quote(f.Value))));
     }

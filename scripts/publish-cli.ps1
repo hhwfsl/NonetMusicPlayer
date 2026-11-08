@@ -19,6 +19,7 @@ foreach($taskTarget in @(@{Name='windows';Rid='win-x64'},@{Name='macos';Rid='osx
     if($LASTEXITCODE -ne 0) { throw 'CLI 还原失败，原发布包未修改。' }
     dotnet publish $taskProject -c $Configuration -r $taskTarget.Rid --no-restore --self-contained true -o $taskPackage -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimMode=partial -p:DebugType=None -p:DebugSymbols=false -p:EnableCompressionInSingleFile=true
     if($LASTEXITCODE -ne 0) { throw 'CLI 发布失败，原发布包未修改。' }
+    & (Join-Path $PSScriptRoot 'verify-native-architecture.ps1') -Directory $taskPackage -Rid $taskTarget.Rid -Cli
     # CLI 不引用 Avalonia，不需要图形库、字体、桌面文档或插件示例。
     foreach($taskExtra in Get-ChildItem -LiteralPath $taskPackage -File | Where-Object { $_.Name -match '\.(pdb|xml|deps\.json)$' }) { Remove-Item -LiteralPath $taskExtra.FullName -Force }
     $taskNotices = "NonetMusicPlayerCli $taskVersion`nSoundFlow / FFmpeg: https://github.com/LSXPrime/SoundFlow`nTagLibSharp: https://github.com/mono/taglib-sharp/tree/TaglibSharp-2.3.0.0`nTagLibSharp and FFmpeg remain external and replaceable; no modifications.`n"
@@ -28,9 +29,12 @@ foreach($taskTarget in @(@{Name='windows';Rid='win-x64'},@{Name='macos';Rid='osx
     [IO.File]::WriteAllText((Join-Path $taskPackage 'THIRD_PARTY_NOTICES.txt'),$taskNotices,[Text.UTF8Encoding]::new($false))
     Copy-Item -LiteralPath (Join-Path $taskRoot 'docs/CLI.md') -Destination (Join-Path $taskPackage 'CLI.md')
     Copy-Item -LiteralPath (Join-Path $taskRoot 'docs/COMMANDS.md') -Destination (Join-Path $taskPackage 'COMMANDS.md')
+    Copy-Item -LiteralPath (Join-Path $taskRoot 'docs/CLI_DESKTOP_PARITY.md') -Destination (Join-Path $taskPackage 'CLI_DESKTOP_PARITY.md')
     Copy-Item -LiteralPath (Join-Path $taskRoot 'src/NonetMusicPlayerCli/README.md') -Destination (Join-Path $taskPackage 'README.md')
     Copy-Item -LiteralPath (Join-Path $taskRoot 'src/NonetMusicPlayerCli/CHANGELOG.md') -Destination (Join-Path $taskPackage 'CHANGELOG.md')
     Copy-Item -LiteralPath (Join-Path $taskRoot 'LICENSE') -Destination (Join-Path $taskPackage 'LICENSE')
+    # 先封装纯净暂存目录，再复制用户数据到本地运行目录；ZIP 永远不含 Data。
+    & (Join-Path $PSScriptRoot 'package-desktop-update.ps1') -PackageDirectory $taskPackage -Rid $taskTarget.Rid -Version $taskVersion -Product Cli -OutputDirectory (Join-Path $taskPublishRoot 'archives')
     if ($CleanOnly) {
         Write-Host "Clean CLI $($taskTarget.Name): $taskPackage"
         continue

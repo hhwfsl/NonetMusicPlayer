@@ -4,6 +4,7 @@ namespace NonetMusicPlayer.Desktop.ViewModels;
 
 public sealed partial class MainViewModel
 {
+    private bool _queueManuallyOrdered;
     public event EventHandler? PlaybackQueueChanged;
     private void NotifyPlaybackQueueChanged()
     {
@@ -27,7 +28,19 @@ public sealed partial class MainViewModel
     public async Task PlayQueueTrackAsync(TrackItem track)
     {
         if (RejectLyricsPlaybackChange() || !_playingList.Any(t => t.Id == track.Id)) return;
-        await StartTrackAsync(track, _playingList.ToArray(), PlayingSourcePage, 0);
+        await StartTrackAsync(track, _playingList.ToArray(), PlayingSourcePage, 0, Settings.PlayMode != PlayMode.Shuffle);
         if (IsPlaying) CompleteOperation("queue.play");
+    }
+
+    /// <summary>只提交完整且未被并发更新的队列；不切歌、不改进度，也不改写来源歌单。</summary>
+    public bool ReorderPlaybackQueue(IReadOnlyList<string> expectedOrder, IReadOnlyList<string> orderedIds)
+    {
+        if (RejectLyricsPlaybackChange() || !_playingList.Select(t => t.Id).SequenceEqual(expectedOrder)
+            || orderedIds.Count != _playingList.Count || orderedIds.Distinct(StringComparer.Ordinal).Count() != orderedIds.Count
+            || !orderedIds.ToHashSet(StringComparer.Ordinal).SetEquals(expectedOrder)) return false;
+        if (orderedIds.SequenceEqual(expectedOrder)) return true;
+        var tracks = _playingList.ToDictionary(t => t.Id, StringComparer.Ordinal);
+        _playingList = orderedIds.Select(id => tracks[id]).ToList(); _queueManuallyOrdered = true;
+        NotifyPlaybackQueueChanged(); CompleteOperation("queue.reorder"); return true;
     }
 }

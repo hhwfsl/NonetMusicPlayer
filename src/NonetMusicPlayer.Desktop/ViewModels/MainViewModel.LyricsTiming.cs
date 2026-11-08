@@ -17,7 +17,7 @@ public sealed partial class MainViewModel
         if (_disposed || _loadingAudio || _switchingOutput || _lyricsPlaybackLease is not null)
             throw new InvalidOperationException(L10n.T("LyricsTiming.Busy"));
         var lease = new LyricsPlaybackLease(this, pluginId, track, _playingList.ToArray(), _explicitQueueIds?.ToArray(), Settings.PlayMode, PlayingSourcePage);
-        _lyricsPlaybackLease = lease; _playingList = [track]; _explicitQueueIds = [track.Id]; NotifyPlaybackQueueChanged();
+        _lyricsPlaybackLease = lease; _playingList = [track]; _queueManuallyOrdered = false; _explicitQueueIds = [track.Id]; NotifyPlaybackQueueChanged();
         OnPropertyChanged(nameof(IsLyricsTimingActive)); return lease;
     }
 
@@ -35,12 +35,13 @@ public sealed partial class MainViewModel
         private readonly string[]? _scope;
         private readonly PlayMode _mode;
         private readonly string _source;
+        private readonly bool _manualQueueOrder;
         public TrackItem Track { get; }
         public string PluginId { get; }
         internal bool Starting { get; private set; }
         internal PlayMode SavedMode => _mode;
         internal LyricsPlaybackLease(MainViewModel owner, string pluginId, TrackItem track, TrackItem[] queue, string[]? scope, PlayMode mode, string source)
-        { _owner = owner; PluginId = pluginId; Track = track; _queue = queue; _scope = scope; _mode = mode; _source = source; }
+        { _owner = owner; PluginId = pluginId; Track = track; _queue = queue; _scope = scope; _mode = mode; _source = source; _manualQueueOrder = owner._queueManuallyOrdered; }
 
         public async Task StartAsync()
         {
@@ -72,7 +73,7 @@ public sealed partial class MainViewModel
                 owner.UpdateListeningStatistics();
                 if (!owner._loadingAudio) { try { owner._audio.Pause(); } catch (Exception error) { AppLog.Warning("LyricsTiming", "结束标注时暂停失败", error); } }
                 owner.IsPlaying = false; owner.ResetListeningAnchor();
-                owner._playingList = _queue.ToList(); owner.NotifyPlaybackQueueChanged(); owner._explicitQueueIds = _scope?.ToHashSet(StringComparer.Ordinal);
+                owner._playingList = _queue.ToList(); owner._queueManuallyOrdered = _manualQueueOrder; owner.NotifyPlaybackQueueChanged(); owner._explicitQueueIds = _scope?.ToHashSet(StringComparer.Ordinal);
                 owner.Settings.PlayMode = _mode; owner.PlayingSourcePage = _source;
                 owner.OnPropertyChanged(nameof(IsLyricsTimingActive)); owner.OnPropertyChanged(nameof(ModeText)); owner.OnPropertyChanged(nameof(ModeIcon)); owner.OnPropertyChanged(nameof(ModeDescription));
                 owner.Save();

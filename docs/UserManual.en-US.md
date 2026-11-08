@@ -1,6 +1,8 @@
 # Nonet User Manual
 
-Desktop version 0.4.0-beta.46. Chinese, Japanese and English interfaces provide the same features.
+Desktop version 0.4.0-beta.47. Chinese, Japanese and English interfaces provide the same features.
+
+Local revision: dragging tracks shows a translucent copy that follows the pointer while neighboring rows animate into place. Queue rows no longer have drag dots; touch and pen use a whole-row long press. Changing the upper-right search query or source replaces previous results. New terminal commands cover queue selection/reordering/popovers, source search and pagination, hourly statistics, lyrics and plugin actions. `window default-size` restores and centers the default window size. Run `nonet help` for current commands; see COMMANDS.md for parameters. The standalone CLI now shares the queue, search, playlist, lyrics, statistics, data-plugin and approved LAN workflows; windows and themes remain desktop features.
 
 On Windows, the window appears at its final centered position after the first frame is ready, avoiding a white flash and subsequent movement. Tray reopening retains its current position. The minimum size remains 640×480 logical pixels.
 

@@ -3,6 +3,8 @@ using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -54,8 +56,55 @@ internal static class MusicSearchChecks
         vm.Navigate("library");Pump();using(var bitmap=new RenderTargetBitmap(new PixelSize(1200,800))) { bitmap.Render(window);bitmap.Save(Path.Combine(root,"music-search.png"),PngBitmapEncoderOptions.Default); }
         vm.Navigate("plugins");vm.DisablePlugin(plugin);vm.Navigate("library");Pump();Check(window.GetVisualDescendants().OfType<ComboBox>().Single(c=>c.Name=="MusicSearchSource").Items.Count==1,"Disabled source removed");
         Check(vm.State.Tracks.Count==1&&playlist.TrackIds.Count==1,"Disabling preserves playlist references");
+        RunHeaderQueries(root,fixture,vm,window);
         RunPaged(root,fixture,vm,window);
         window.Close();Pump();Console.WriteLine("PASS generic music search registration/UI, cloud playlist references/SQLite, refresh, catalog, local filter and disable; "+root);
+    }
+    /// <summary>三个通用音源同时启用，经真实右上搜索框提交新词，覆盖结果替换、空结果和迟到响应。</summary>
+    private static void RunHeaderQueries(string root, string fixture, MainViewModel vm, MainWindow window)
+    {
+        vm.Navigate("plugins"); Pump();
+        var sources = Enumerable.Range(1, 3).Select(index =>
+        {
+            var manifest = new PluginManifest { Id="fixture.header-search-"+index,Name="Header source "+index,Version="1.0.0",ContractVersion=2,Type="extension",Runtime="process",PageEntry="page.json",
+                Permissions=["network","process","navigation"],ProvidedServices=["media-source"],MusicSearch=new() {Label="Header source "+index},RequiredCapabilities=["media.search.v1"],EntryPoints=new() {["win-x64"]="bin/NonetMusicPlayer.ExtensionFixture.exe"} };
+            var path = Path.Combine(root,"header-"+index+".impp");
+            using(var zip=ZipFile.Open(path,ZipArchiveMode.Create))
+            {
+                using(var writer=new StreamWriter(zip.CreateEntry("manifest.json").Open())) writer.Write(JsonSerializer.Serialize(manifest,AppStorage.Json));
+                using(var writer=new StreamWriter(zip.CreateEntry("page.json").Open())) writer.Write("""{"schemaVersion":2,"root":{"type":"text","text":"Header fixture"}}""");
+                foreach(var file in Directory.GetFiles(fixture).Where(f=>!f.EndsWith(".pdb"))) zip.CreateEntryFromFile(file,"bin/"+Path.GetFileName(file));
+            }
+            var plugin=vm.Plugins.Install(path); vm.Plugins.SetEnabled(plugin,true); Wait(vm.Plugins.Extension(plugin).StartAsync()); return plugin;
+        }).ToArray();
+        vm.Navigate("library"); Pump();
+        void Submit(PluginManifest source, string query, bool enter)
+        {
+            var selector=window.GetVisualDescendants().OfType<ComboBox>().Single(c=>c.Name=="MusicSearchSource");
+            selector.SelectedIndex=selector.Items.Cast<string>().ToList().IndexOf(source.MusicSearch!.Label);
+            var editor=window.GetVisualDescendants().OfType<TextBox>().Single(c=>c.Name=="HomeMusicSearch"); editor.Text=query;
+            if(enter) {editor.Focus(); window.KeyPress(Key.Enter,RawInputModifiers.None,PhysicalKey.Enter,null);window.KeyRelease(Key.Enter,RawInputModifiers.None,PhysicalKey.Enter,null);}
+            else window.GetVisualDescendants().OfType<Button>().Single(c=>c.Name=="HomeMusicSearchButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            var limit=DateTime.UtcNow.AddSeconds(10);
+            while((vm.MusicSearchBusy||vm.LastMusicSearchQuery!=query||vm.LastMusicSearchSource!=source.Id)&&DateTime.UtcNow<limit) Pump();
+            Check(!vm.MusicSearchBusy&&vm.LastMusicSearchQuery==query&&vm.LastMusicSearchSource==source.Id,$"Header search completed current query and source: expected={source.Id}/{query}; actual={vm.LastMusicSearchSource}/{vm.LastMusicSearchQuery}, page={vm.Page}, busy={vm.MusicSearchBusy}, status={vm.StatusText}, index={selector.SelectedIndex}");
+        }
+        foreach(var source in sources)
+        {
+            Submit(source,"header:first",false); Check(vm.VisibleTracks.Count==1&&vm.VisibleTracks[0].Title=="header:first"&&vm.VisibleTracks[0].ProviderId==source.Id,"Source switch replaces prior provider results");
+            var rows=window.FindControl<ListBox>("TracksList"); vm.SearchText="no matching local filter";
+            Submit(source,"header:second",true);
+            Check(vm.VisibleTracks.Count==1&&vm.VisibleTracks[0].Title=="header:second"&&vm.SearchText.Length==0,"Changed header keyword replaces results and resets old list filter");
+            Check(ReferenceEquals(rows,window.FindControl<ListBox>("TracksList"))&&vm.PageTitle.Contains(source.MusicSearch!.Label),"Result refresh preserves page controls and updates source title");
+            Submit(source,"header:empty",false); Check(vm.VisibleTracks.Count==0&&!vm.HasMoreMusicResults,"Empty new search does not retain previous results");
+        }
+        var slow=vm.SearchMusicAsync(sources[2].Id,"slow"); Check(vm.VisibleTracks.Count==0&&vm.MusicSearchBusy,"Old visible snapshot clears before repeated search finishes");
+        Submit(sources[0],"header:latest",false); Wait(slow);
+        Check(vm.VisibleTracks.Count==1&&vm.VisibleTracks[0].Title=="header:latest"&&vm.LastMusicSearchSource==sources[0].Id,"Late old-provider response cannot replace latest header results");
+        Submit(sources[0],"header:pages",false); var first=vm.VisibleTracks[0]; Wait(vm.LoadMoreMusicResultsAsync());
+        Check(vm.VisibleTracks.Count==2&&ReferenceEquals(first,vm.VisibleTracks[0]),"Pagination continues appending within the current query");
+        foreach(var source in sources) vm.DisablePlugin(source);
+        Console.WriteLine("PASS upper-right search button/Enter, three enabled sources, repeated keyword replacement, filter reset, empty results, latest-response guard and pagination");
     }
     /// <summary>六千条元数据只创建视口附近的控件，滚动追加不重建已显示的数据和页面。</summary>
     private static void RunPaged(string root,string fixture,MainViewModel vm,MainWindow window)

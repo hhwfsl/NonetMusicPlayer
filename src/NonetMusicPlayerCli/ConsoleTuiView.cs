@@ -11,7 +11,7 @@ namespace NonetMusicPlayerCli;
 /// <summary>纯键盘 TUI：页面操作和终端命令共用业务路由，命令编辑仅位于终端栏目。</summary>
 internal sealed partial class ConsoleTuiView(HeadlessPlayerSession session, PlayerCommandRouter router)
 {
-    internal static IReadOnlyList<string> Tabs { get; } = ["Music", "Playlists", "Recent", "Statistics", "Plugins", "Terminal", "Help", "Settings"];
+    internal static IReadOnlyList<string> Tabs { get; } = ["Music", "Playlists", "Recent", "Statistics", "Plugins", "Terminal", "Help", "Settings", "Queue", "Search", "Devices"];
     internal static IReadOnlyList<CommandDefinition> Actions { get; } = PlayerCommandRouter.Definitions.Where(d => !d.DesktopOnly).ToArray();
     private int _page, _selected, _caret, _historyOffset, _resultOffset, _actionIndex;
     private TuiSnapshot? _view;
@@ -96,6 +96,14 @@ internal sealed partial class ConsoleTuiView(HeadlessPlayerSession session, Play
             _exit = true; return null;
         }
         if (Page == "Terminal") return EditTerminal(key, terminal, token);
+        // 队列和歌单的快捷排序复用真实业务命令，保持播放位置不变。
+        if (key.Modifiers.HasFlag(ConsoleModifiers.Control) && (key.Key is ConsoleKey.UpArrow or ConsoleKey.DownArrow) && (Page == "Queue" || Page == "Playlists"))
+        {
+            var moving = Items().ElementAtOrDefault(_selected); var destination = Math.Clamp(_selected + (key.Key == ConsoleKey.UpArrow ? -1 : 1), 0, Math.Max(0, Items().Count - 1));
+            if (moving is null || destination == _selected) return null;
+            _selected = destination;
+            return Execute(Page == "Queue" ? "queue move " + TuiForm.Quote(moving.Id) + " " + (destination + 1) : _playlist is null ? "playlist reorder " + TuiForm.Quote(moving.Id) + " " + (destination + 1) : "playlist move " + TuiForm.Quote(_playlist) + " " + TuiForm.Quote(moving.Id) + " " + (destination + 1), token);
+        }
         if (key.Key is ConsoleKey.UpArrow or ConsoleKey.DownArrow or ConsoleKey.PageUp or ConsoleKey.PageDown)
         {
             _selected = Math.Clamp(_selected + (key.Key is ConsoleKey.UpArrow or ConsoleKey.PageUp ? -1 : 1) * (key.Key is ConsoleKey.PageUp or ConsoleKey.PageDown ? 8 : 1), 0, Math.Max(0, Items().Count - 1)); return null;
@@ -119,13 +127,15 @@ internal sealed partial class ConsoleTuiView(HeadlessPlayerSession session, Play
             if (key.Key == ConsoleKey.Delete && item is not null) return Execute("playlist delete " + TuiForm.Quote(item.Id), token);
             if (key.Key == ConsoleKey.Q && item is not null) return Execute("queue play " + TuiForm.Quote(item.Id), token);
         }
-        else if (Page is "Music" or "Recent" or "Playlists")
+        else if (Page is "Music" or "Recent" or "Playlists" or "Queue" or "Search")
         {
-            if (key.Key == ConsoleKey.Enter && item is not null) return Execute(_playlist is not null ? "queue play " + TuiForm.Quote(_playlist) + " " + TuiForm.Quote(item.Id) : "player play " + TuiForm.Quote(item.Id), token);
+            if (Page == "Search" && key.Key == ConsoleKey.S) return BeginNamedAction("music.query", token);
+            if (Page == "Search" && key.Key == ConsoleKey.L) return Execute("music more", token);
+            if (key.Key == ConsoleKey.Enter && item is not null) return Execute(Page == "Queue" ? "queue select " + TuiForm.Quote(item.Id) : _playlist is not null ? "queue play " + TuiForm.Quote(_playlist) + " " + TuiForm.Quote(item.Id) : "player play " + TuiForm.Quote(item.Id), token);
             if (key.Key == ConsoleKey.F && item is not null) return Execute("favorite " + (_view?.Favorites.Contains(item.Id) == true ? "remove " : "add ") + TuiForm.Quote(item.Id), token);
             if (key.Key == ConsoleKey.I && item is not null) return Execute("music info " + TuiForm.Quote(item.Id), token, true);
             if (key.Key == ConsoleKey.A) return BeginNamedAction("playlist.add", token);
-            if (key.Key == ConsoleKey.Delete && item is not null)
+            if (key.Key == ConsoleKey.Delete && item is not null && Page is not ("Queue" or "Search"))
                 return Execute(Page == "Recent" ? "history remove " + TuiForm.Quote(item.Id) : _playlist is not null ? "playlist remove " + TuiForm.Quote(_playlist) + " " + TuiForm.Quote(item.Id) : "music remove " + TuiForm.Quote(item.Id), token);
             if (key.Key == ConsoleKey.Q && _playlist is not null) return Execute("queue play " + TuiForm.Quote(_playlist), token);
         }
@@ -146,6 +156,14 @@ internal sealed partial class ConsoleTuiView(HeadlessPlayerSession session, Play
             if (key.Key == ConsoleKey.R) return Execute("settings reset", token);
             if (key.Key == ConsoleKey.B) return BeginNamedAction("data.backup", token);
             if (key.Key == ConsoleKey.O) return BeginNamedAction("data.restore", token);
+        }
+        else if (Page == "Devices")
+        {
+            if (key.Key == ConsoleKey.C) return BeginNamedAction("network.connect", token);
+            if (key.Key == ConsoleKey.S) return BeginNamedAction("network.sharing", token);
+            if (key.Key == ConsoleKey.R) return Execute("network requests", token, true);
+            if (key.Key == ConsoleKey.Enter && item is not null) return Execute("network playlists " + TuiForm.Quote(item.Id), token, true);
+            if (key.Key == ConsoleKey.Delete && item is not null) return Execute("network disconnect " + TuiForm.Quote(item.Id), token);
         }
         else if (Page == "Statistics" && key.Key == ConsoleKey.Enter) return BeginNamedAction("statistics", token);
         else if (Page == "Help" && key.Key == ConsoleKey.Enter) { _palette = true; _actionIndex = 0; }

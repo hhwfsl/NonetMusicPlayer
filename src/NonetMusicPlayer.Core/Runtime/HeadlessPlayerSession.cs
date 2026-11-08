@@ -18,12 +18,12 @@ public sealed partial class HeadlessPlayerSession : IPlayerCommandBackend, IAsyn
     private readonly SemaphoreSlim _gate = new(1);
     private readonly FileStream _dataLease;
     private readonly Timer _timer;
-    private readonly WeightedShuffleSelector _shuffle = new();
     private readonly HashSet<string> _failed = new(StringComparer.Ordinal);
     private List<StoredMusicTrack> _queue = [];
     private bool _loaded, _disposed;
     private long _listeningAnchor = Stopwatch.GetTimestamp();
     private double _sessionSeconds;
+    private double _listeningPosition;
     private bool _sessionCounted;
     private DateTimeOffset _lastSaved = DateTimeOffset.UtcNow;
     public bool HasWindow => false;
@@ -49,11 +49,14 @@ public sealed partial class HeadlessPlayerSession : IPlayerCommandBackend, IAsyn
         {
             Directory.CreateDirectory(ArtworkDirectory); Directory.CreateDirectory(Path.Combine(DataDirectory, "Lyrics"));
             State = LoadState(); State.Settings.Validate(); LocalizationCatalog.SetLanguage(State.Settings.Language);
+            foreach (var interrupted in State.ListeningSessions.Where(s => s.EndedAt is null)) { interrupted.EndedAt = interrupted.LastObservedAt; interrupted.EndReason = "process-ended"; }
             AppLog.Initialize(DataDirectory);
             Plugins = new(Path.Combine(DataDirectory, "Plugins"));
             _audio = audio ?? new NativeAudioPlayer(probeWhileIdle: false); _audio.Volume = (float)(State.Settings.Volume / 100); _audio.DeviceName = State.Settings.DeviceName;
-            Current = State.Tracks.Concat(State.RecentTemporaryTracks).FirstOrDefault(t => t.Id == State.LastTrackId);
+            Plugins.HandleRequest = HandleExtensionRequestAsync;
+            Current = State.Tracks.Concat(State.RecentTemporaryTracks).Concat(State.QueueTracks).FirstOrDefault(t => t.Id == State.LastTrackId);
             _queue = State.LastPlaylistId is { } id && State.Playlists.FirstOrDefault(p => p.Id == id) is { } playlist ? PlaylistTracks(playlist).ToList() : Current is null ? [] : [Current];
+            RestoreQueueSnapshot();
             _audio.PlaybackStopped += PlaybackEnded; _audio.PlaybackFailed += PlaybackFailed; _audio.OutputDeviceChanged += OutputChanged;
             _timer = new Timer(_ => _ = TickAsync(), null, 500, 500);
         }
@@ -85,6 +88,14 @@ public sealed partial class HeadlessPlayerSession : IPlayerCommandBackend, IAsyn
         if (state.Tracks.Any(t => t is null || string.IsNullOrWhiteSpace(t.Id)) || state.Playlists.Any(p => p is null || string.IsNullOrWhiteSpace(p.Id) || p.TrackIds is null)) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.InvalidLibrary"));
         if (state.Tracks.Concat(state.RecentTemporaryTracks).Any(t => t.Metadata is null || t.Id.Length > 500 || t.ProviderId is null && !System.Text.RegularExpressions.Regex.IsMatch(t.Id, "^[A-Fa-f0-9]{24}$"))) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.InvalidIdentity"));
         state.Tracks = state.Tracks.DistinctBy(t => t.Id).ToList(); state.Playlists = state.Playlists.DistinctBy(p => p.Id).ToList();
+        // 新字段保持可选，旧备份可直接读取；显式 null 也回落到空快照。
+        state.LastQueueIds ??= []; state.QueueTracks ??= []; state.SourceQueueIds ??= []; state.GroupCovers ??= [];
+        if (state.QueueTracks.Any(t => t is null || t.Metadata is null || string.IsNullOrWhiteSpace(t.Id) || t.Id.Length > 500)) throw new InvalidDataException("Invalid queue snapshot.");
+        state.ListeningHours ??= []; state.ListeningSessions ??= []; state.ListeningIntervals ??= []; state.ListeningEvents ??= []; state.DisabledLyrics ??= [];
+        state.SourceQueueIds = state.SourceQueueIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal).ToList();
+        state.LastQueueIds = state.LastQueueIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal).ToList();
+        if (string.IsNullOrWhiteSpace(state.DeviceId)) state.DeviceId = Guid.NewGuid().ToString("N");
+        if (state.ListeningHours.Any(h => h is null || !double.IsFinite(h.Seconds) || h.Seconds < 0) || state.ListeningSessions.Any(s => s is null || !double.IsFinite(s.Seconds) || s.Seconds < 0)) throw new InvalidDataException("Invalid listening records.");
         if (!state.Playlists.Any(p => p.Id == "liked")) state.Playlists.Insert(0, new() { Id = "liked", Name = "Playlists.LikedSongs" });
         state.LastPosition = double.IsFinite(state.LastPosition) ? Math.Max(0, state.LastPosition) : 0; return state;
     }
@@ -92,6 +103,10 @@ public sealed partial class HeadlessPlayerSession : IPlayerCommandBackend, IAsyn
     {
         if (_loaded) State.LastPosition = Math.Max(0, _audio.Position.TotalSeconds);
         State.LastTrackId = Current?.Id;
+        State.LastQueueIds = _queue.Select(t => t.Id).ToList();
+        // 队列中的云搜索/远端歌曲可能尚未加入资料库，保留元数据才能在重启后恢复完整顺序。
+        State.QueueTracks = _queue.ToList();
+        if (_lanServer is not null) RefreshLanSnapshot();
         AtomicFile.Write(StatePath, JsonSerializer.Serialize(State, CoreJson.Options), true); _lastSaved = DateTimeOffset.UtcNow;
     }
     private IEnumerable<StoredMusicTrack> PlaylistTracks(StoredPlaylist playlist)
@@ -99,7 +114,9 @@ public sealed partial class HeadlessPlayerSession : IPlayerCommandBackend, IAsyn
         var tracks = State.Tracks.ToDictionary(t => t.Id, StringComparer.Ordinal);
         return playlist.TrackIds.Select(id => tracks.GetValueOrDefault(id)).OfType<StoredMusicTrack>().Where(Available);
     }
-    private bool Available(StoredMusicTrack track) => track.ProviderId is null || Plugins.Installed.Any(p => p.Id == track.ProviderId && p.Enabled);
+    private bool Available(StoredMusicTrack track) => track.ProviderId is null || track.ProviderId.StartsWith("lan:", StringComparison.Ordinal)
+        ? track.ProviderId is null || _lanPeers.TryGetValue(track.ProviderId[4..], out var peer) && peer.Connected
+        : Plugins.Installed.Any(p => p.Id == track.ProviderId && p.Enabled);
     private async Task StartAsync(StoredMusicTrack? track, double position, CancellationToken token, bool newSession = true)
     {
         if (track is null) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.NoTrack"));
@@ -110,11 +127,13 @@ public sealed partial class HeadlessPlayerSession : IPlayerCommandBackend, IAsyn
         {
             try
             {
-                var source = track.ProviderId is null ? track.Metadata.FilePath : await Plugins.ResolveAsync(track.ProviderId, track.ProviderTrackId!, token);
+                await PrepareTrackResourcesAsync(track, token);
+                var source = track.ProviderId is null || track.ProviderId.StartsWith("lan:", StringComparison.Ordinal) ? track.Metadata.FilePath : await Plugins.ResolveAsync(track.ProviderId, track.ProviderTrackId!, token);
                 await _audio.LoadAsync(source, token); _audio.Position = TimeSpan.FromSeconds(Math.Clamp(position, 0, Math.Max(0, _audio.Duration.TotalSeconds)));
                 _audio.Play(); _loaded = true; Current = track; State.LastPosition = _audio.Position.TotalSeconds;
+                if (newSession || _listeningSession is null) StartListeningRecord();
                 if (newSession) { _sessionSeconds = 0; _sessionCounted = false; AddHistory(track); }
-                _listeningAnchor = Stopwatch.GetTimestamp(); Save(); return;
+                _listeningAnchor = Stopwatch.GetTimestamp(); _listeningPosition = _audio.Position.TotalSeconds; Save(); return;
             }
             catch (AudioOutputUnavailableException error)
             {
@@ -125,9 +144,7 @@ public sealed partial class HeadlessPlayerSession : IPlayerCommandBackend, IAsyn
                 _failed.Add(track.Id); AppLog.Warning("Audio", "CLI audio failed", error);
                 Publish(CommandResults.Failed("player.play", LocalizationCatalog.Format("Commands.AudioFailed", track.Metadata.Title)));
                 var usable = candidates.Where(t => !_failed.Contains(t.Id)).ToArray();
-                track = State.Settings.PlayMode == PlaybackMode.Shuffle
-                    ? PickShuffled(usable, track.Id)
-                    : Following(candidates, track.Id, 1, usable.Select(t => t.Id).ToHashSet(StringComparer.Ordinal));
+                track = Following(candidates, track.Id, 1, usable.Select(t => t.Id).ToHashSet(StringComparer.Ordinal));
                 position = 0;
             }
         }
@@ -138,7 +155,7 @@ public sealed partial class HeadlessPlayerSession : IPlayerCommandBackend, IAsyn
         var index = queue.ToList().FindIndex(t => t.Id == current);
         for (var offset = 1; offset <= queue.Count; offset++)
         {
-            var target = queue[(index + direction * offset % queue.Count + queue.Count) % queue.Count];
+            var target = queue[((index + direction * offset) % queue.Count + queue.Count) % queue.Count];
             if (usable is null || usable.Contains(target.Id)) return target;
         }
         return null;
@@ -149,14 +166,8 @@ public sealed partial class HeadlessPlayerSession : IPlayerCommandBackend, IAsyn
         if (queue.Length == 0) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.EmptyQueue"));
         _failed.Clear();
         var next = automatic && State.Settings.PlayMode == PlaybackMode.RepeatOne ? Current
-            : State.Settings.PlayMode == PlaybackMode.Shuffle ? PickShuffled(queue, Current?.Id)
             : Following(queue, Current?.Id, direction);
         if (next is not null) await StartAsync(next, 0, token);
-    }
-    private StoredMusicTrack? PickShuffled(IReadOnlyList<StoredMusicTrack> tracks, string? current)
-    {
-        var id = _shuffle.Choose(tracks.Select(t => t.Id), current);
-        return tracks.FirstOrDefault(t => t.Id == id);
     }
     private async Task TickAsync()
     {
@@ -209,7 +220,7 @@ public sealed partial class HeadlessPlayerSession : IPlayerCommandBackend, IAsyn
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return; _disposed = true; await _timer.DisposeAsync(); await _gate.WaitAsync();
-        try { AccountListening(); Save(); _audio.PlaybackStopped -= PlaybackEnded; _audio.PlaybackFailed -= PlaybackFailed; _audio.OutputDeviceChanged -= OutputChanged; _audio.Dispose(); Plugins.Dispose(); }
+        try { AccountListening(); EndListeningRecord("application-exit"); StopNetwork(); Save(); _audio.PlaybackStopped -= PlaybackEnded; _audio.PlaybackFailed -= PlaybackFailed; _audio.OutputDeviceChanged -= OutputChanged; _audio.Dispose(); Plugins.Dispose(); }
         finally { _dataLease.Dispose(); _gate.Release(); }
     }
 }

@@ -17,7 +17,35 @@ public sealed class HeadlessPlayerState
     public string? LastTrackId { get; set; }
     public string? LastPlaylistId { get; set; }
     public double LastPosition { get; set; }
+    /// <summary>可选队列快照兼容旧 CLI 数据；实际顺序与来源顺序分开保存。</summary>
+    public List<string> LastQueueIds { get; set; } = [];
+    public List<StoredMusicTrack> QueueTracks { get; set; } = [];
+    public List<string> SourceQueueIds { get; set; } = [];
+    public bool ManualQueueOrder { get; set; }
+    public Dictionary<string, string> GroupCovers { get; set; } = [];
+    public List<StoredListeningHour> ListeningHours { get; set; } = [];
+    public List<HeadlessListeningSession> ListeningSessions { get; set; } = [];
+    public List<HeadlessListeningInterval> ListeningIntervals { get; set; } = [];
+    public List<HeadlessListeningEvent> ListeningEvents { get; set; } = [];
+    public HashSet<string> DisabledLyrics { get; set; } = [];
+    public string DeviceId { get; set; } = Guid.NewGuid().ToString("N");
 }
+public sealed record StoredListeningHour(long UtcHour, string TrackId, double Seconds);
+public sealed class HeadlessListeningSession
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string TrackId { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Artist { get; set; } = "";
+    public string Source { get; set; } = "";
+    public DateTimeOffset StartedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset LastObservedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? EndedAt { get; set; }
+    public double Seconds { get; set; }
+    public string EndReason { get; set; } = "";
+}
+public sealed record HeadlessListeningInterval(string SessionId, string TrackId, DateTimeOffset StartedAt, DateTimeOffset EndedAt, double Seconds, double From, double To);
+public sealed record HeadlessListeningEvent(string SessionId, DateTimeOffset At, string Operation, double Position, double Volume, string Mode);
 public sealed class StoredMusicTrack
 {
     public MusicMetadata Metadata { get; set; } = new("", "", "", "", "", "", 0, 0, null);
@@ -53,12 +81,14 @@ public sealed class HeadlessPlayerSettings
     public string TerminalMinimumLogLevel { get; set; } = "INFO";
     public string LyricsFolder { get; set; } = "";
     public string BackupFolder { get; set; } = "";
+    public int LanApprovalWaitSeconds { get; set; } = 30;
     public void Validate()
     {
         if (!double.IsFinite(Volume) || Volume is < 0 or > 100) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.VolumeRange"));
         if (HistoryLimit is < 0 or > 100000) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.HistoryRange"));
         Commands.SettingsContract.Validate("terminalScrollbackLines", System.Text.Json.Nodes.JsonValue.Create(TerminalScrollbackLines));
         Commands.SettingsContract.Validate("terminalMinimumLogLevel", System.Text.Json.Nodes.JsonValue.Create(TerminalMinimumLogLevel));
+        Commands.SettingsContract.Validate("lanApprovalWaitSeconds", System.Text.Json.Nodes.JsonValue.Create(LanApprovalWaitSeconds));
         if (Language is not ("zh-CN" or "en-US" or "ja-JP")) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.UnsupportedLanguage"));
         if (!Enum.IsDefined(PlayMode)) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.UnsupportedMode"));
         if (string.IsNullOrWhiteSpace(DeviceName)) DeviceName = "Playback.SystemDefault";

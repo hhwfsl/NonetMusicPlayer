@@ -1,6 +1,6 @@
 # 播放器命令参考
 
-桌面终端输入未知命令时仅显示本地化“未知命令”，不写入异常日志，也不受最低显示日志等级过滤。无效参数、未闭合引号及实际执行故障仍按正常错误处理。共享路由器的 `UnknownCommandsAsOutput` 是宿主可选行为，默认为关闭，CLI 的已有日志与结果策略不变；命令确认与插件闸门不受影响。
+桌面终端与 CLI 输入未知命令时仅显示本地化“未知命令”，不写入异常日志，也不受最低显示日志等级过滤。无效参数、未闭合引号及实际执行故障仍按正常错误处理。两种宿主启用共享路由器的 `UnknownCommandsAsOutput`；命令确认与插件闸门不受影响。
 
 桌面终端和独立 CLI 使用同一套公开语法：
 
@@ -17,9 +17,9 @@ nonet playlist delete <id> -y
 
 ## 共享命令
 
-### 桌面设备互听
+### 设备互听
 
-仅桌面宿主提供下列命令，CLI 帮助不列出。界面按钮和命令使用同一会话与结果流。
+桌面和 CLI 都提供以下命令，使用各自独立的资料目录和共享会话。启动时不自动开放共享；`sharing on` 或主动连接时才监听。
 
 ```text
 network status
@@ -32,13 +32,14 @@ network reject <request-id>
 network peers
 network playlists <peer-id>
 network tracks <peer-id>
+network play <peer-id> [playlist-id] [track-id]
 network disconnect <peer-id|all>
 network sharing off
 network renew
 settings set lanApprovalWaitSeconds 30
 ```
 
-`invitation` 将本机邀请复制到系统剪贴板，不将密钥打印或保存到终端历史；`connect` 的邀请参数也不回显或保存。邀请应只交给同一可信局域网中的自己的设备。`accept/reject` 只处理当前未过期请求，不能重复使用。连接会主动开启本机共享以建立双向会话。通过 `network playlists` 返回的 page 使用 `navigation open <page>` 进入歌单；播放、收藏与添加到本地歌单沿用既有歌曲 ID 命令。`renew` 轮换尚未使用的邀请，不解除已建立的连接。
+桌面的 `invitation` 复制本机邀请到剪贴板；CLI 返回本次邀请供用户复制，不写入磁盘日志。`connect` 的邀请参数不回显或保存到输入历史。邀请仅交给可信局域网中的自己的设备。`accept/reject` 只处理当前未过期请求，不能重复使用。连接主动开启本机共享以建立双向会话。`network play` 可直接播放整台设备或指定远端歌单；收藏与加入本地歌单使用查询返回的歌曲 ID。`renew` 轮换尚未使用的邀请，不解除已有连接。
 
 下表每项都以 `nonet` 开头：
 
@@ -48,17 +49,20 @@ settings set lanApprovalWaitSeconds 30
 | --- | --- |
 | 无 | `help [category] [command]`、`clear`、`exit` |
 | `app` | `exit` |
-| `player` | `status`、`play [track-id或file]`、`pause`、`resume`、`next`、`previous`、`seek <seconds>`、`volume <0-100>`、`mute`、`mode <repeat-all或repeat-one或shuffle>`、`devices`、`device <name>` |
-| `queue` | `list`、`play <playlist-id> [track-id]` |
-| `music` | `list [query]`、`info <track-id>`、`remove <track-id...>` |
+| `player` | `status`、`play [track-id或file]`、`pause`、`resume`、`stop`、`next`、`previous`、`seek <seconds>`、`volume <0-100>`、`mute`、`mode <repeat-all或repeat-one或shuffle>`、`devices`、`device <name>` |
+| `queue` | `list`、`play <playlist-id> [track-id]`、`select <track-id>`、`move <track-id> <1-based-position>` |
+| `music` | `list [query]`、`info <track-id>`、`remove <track-id...>`、`search <query>`、`sources`、`query <source-id或local> <query>`、`results`、`more`、`undo` |
 | `playlist` | `list`、`create <name>`、`rename <id> <name>`、`describe <id> <description>`、`delete <id>`、`add <id> <file或folder或track-id...>`、`remove <id> <track-id...>`、`move <id> <track-id> <position>`、`reorder <id> <position>`、`cover <id> <file或default>` |
 | `favorite` | `add <track-id>`、`remove <track-id>` |
 | `history` | `list`、`remove <track-id...>`、`clear` |
-| `statistics` | `show [yyyy-MM-dd] [day或month或year]` |
+| `statistics` | `show [yyyy-MM-dd] [day或month或year]`、`hours [1-72]`、`history [session或interval或event或hour] [limit] [offset] [session-id]` |
 | `settings` | `list`、`get <name>`、`set <name> <json-value>`、`reset` |
 | `data` | `backup <file>`、`restore <file>` |
-| `lyrics` | `show`、`import <file>`、`path` |
+| `lyrics` | `show`、`import <file>`、`path`、`reload`、`export <file>`、`clear` |
 | `plugins` | `list`、`install <impp-file或github-release-url>`、`enable <id>`、`disable <id>`、`uninstall <id> [keep-files或delete-files]`、`config <id> [json]`、`schema <id>`、`refresh <id>` |
+| `plugins` 新增 | `info <id>`、`reload <id>`、`state <id>`、`invoke <id> <action> [json]`、`trust <id>` |
+| `playlist` 新增 | `tracks <id>`、`from-folders <folder...>`、`import <m3u-file> [playlist-id]`、`export <m3u-file> [playlist-id]` |
+| `album` / `artist` | `list`、`tracks <name>`、`cover <name> <file或auto或default>` |
 
 无分类的命令操作终端本身。`nonet clear` 只清空显示和结果历史，保留磁盘日志、业务数据及方向键命令历史。`nonet exit` 在桌面版返回音乐主页，在 CLI 结束会话。`nonet app exit` 真正退出宿主进程。
 
@@ -70,17 +74,15 @@ settings set lanApprovalWaitSeconds 30
 
 | 分类 | 命令与参数 |
 | --- | --- |
-| `window` | `show`、`hide`、`minimize`、`maximize`、`restore`、`close` |
+| `window` | `show`、`hide`、`minimize`、`maximize`、`restore`、`close`、`default-size` |
 | `navigation` | `open <page>` |
 | `documentation` | `open` |
-| `music` | `search <query>`、`undo` |
-| `layout` | `reset` |
+| `player` / `queue` | `player locate`、`queue show`、`queue hide`、`queue toggle` |
+| `layout` | `reset`、`edit <true或false>`、`export <json-file>`、`apply <json-file>` |
+| `updates` | `check`、`install`（下载校验后重启，需确认） |
 | `desktop-lyrics` | `toggle`、`lock <true或false>` |
-| `album` / `artist` | `cover <name> <file或auto或default>` |
 | `import` | `cancel` |
-| `playlist` | `import <m3u-file>`、`export <m3u-file>` |
 | `data` | `directory <folder>` |
-| `statistics` | `history [session或interval或event或hour] [limit] [offset] [session-id]` |
 | `selection` | `begin`、`end`、`all`、`clear`、`select <track-id...>`、`list` |
 
 页面 ID：`library`（音乐主页）、`songs`、`playlists`、`albums`、`artists`、`history`、`statistics`、`network`（设备互听）、`plugins`、`terminal`、`settings`、`lyrics`。歌单使用 `playlist:<id>`，分类使用 `album:<name>` 和 `artist:<name>`。

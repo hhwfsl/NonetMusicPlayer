@@ -104,6 +104,7 @@ foreach ($target in $targets) {
     foreach ($language in @("zh-CN", "en-US", "ja-JP")) {
         Copy-Item -LiteralPath (Join-Path $repositoryRoot "docs/UserManual.$language.md") -Destination $manualDestination
     }
+    foreach ($document in @('COMMANDS.md','CLI_DESKTOP_PARITY.md')) { Copy-Item -LiteralPath (Join-Path $repositoryRoot ('docs/' + $document)) -Destination $manualDestination }
     Copy-Item -LiteralPath (Join-Path $repositoryRoot 'LICENSE') -Destination (Join-Path $manualDestination 'LICENSE')
     # 在复制用户数据之前构建 Release 更新资产；绝不将便携数据或引导配置打进更新包。
     if ($CleanOnly) {

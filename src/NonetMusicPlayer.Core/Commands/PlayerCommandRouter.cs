@@ -7,6 +7,8 @@ namespace NonetMusicPlayer.Core.Commands;
 public sealed class PlayerCommandRouter(IPlayerCommandBackend backend)
 {
     private readonly SemaphoreSlim _gate = new(1);
+    private readonly AsyncLocal<CommandScope?> _scope = new();
+    private sealed class CommandScope { public bool Active = true; public int Depth; }
     private readonly Queue<CommandResult> _journal = new();
     private readonly object _journalGate = new();
     /// <summary>可选宿主流程闸门，在参数与确认校验之后执行；不能替换或预批准命令。</summary>
@@ -21,13 +23,21 @@ public sealed class PlayerCommandRouter(IPlayerCommandBackend backend)
         new("player.play", "player.play [track-id|file]"), new("player.pause", "player.pause"), new("player.resume", "player.resume"), new("player.next", "player.next"), new("player.previous", "player.previous"),
         new("player.seek", "player.seek <seconds>"), new("player.volume", "player.volume <0-100>"), new("player.mute", "player.mute"), new("player.mode", "player.mode <repeat-all|repeat-one|shuffle>"),
         new("player.devices", "player.devices"), new("player.device", "player.device <name>"), new("queue.list", "queue.list"), new("queue.play", "queue.play <playlist-id> [track-id]"),
+        new("player.stop", "player.stop"), new("queue.select", "queue.select <track-id>"), new("queue.move", "queue.move <track-id> <1-based-position>"),
+        new("playlist.tracks", "playlist.tracks <playlist-id>"), new("playlist.from-folders", "playlist.from-folders <folder...>"),
+        new("music.sources", "music.sources"), new("music.query", "music.query <source-id|local> <query>"), new("music.results", "music.results"), new("music.more", "music.more"),
+        new("album.list", "album.list"), new("album.tracks", "album.tracks <name>"), new("artist.list", "artist.list"), new("artist.tracks", "artist.tracks <name>"),
+        new("lyrics.reload", "lyrics.reload"), new("lyrics.clear", "lyrics.clear", true), new("lyrics.export", "lyrics.export <file>"),
+        new("statistics.hours", "statistics.hours [hours]"),
+        new("plugins.info", "plugins.info <id>"), new("plugins.reload", "plugins.reload <id>"), new("plugins.state", "plugins.state <id>"), new("plugins.invoke", "plugins.invoke <id> <action> [json]", true),
+        new("plugins.trust", "plugins.trust <id>", true),
         new("music.list", "music.list [query]"), new("music.info", "music.info <track-id>"), new("music.remove", "music.remove <track-id...>", true),
         new("playlist.list", "playlist.list"), new("playlist.create", "playlist.create <name>"), new("playlist.rename", "playlist.rename <id> <name>"), new("playlist.describe", "playlist.describe <id> <description>"),
         new("playlist.delete", "playlist.delete <id>", true), new("playlist.add", "playlist.add <id> <file|folder|track-id...>"), new("playlist.remove", "playlist.remove <id> <track-id...>", true),
         new("playlist.move", "playlist.move <id> <track-id> <1-based-position>"), new("playlist.reorder", "playlist.reorder <id> <1-based-position>"), new("playlist.cover", "playlist.cover <id> <file|default>"),
         new("favorite.add", "favorite.add <track-id>"), new("favorite.remove", "favorite.remove <track-id>"),
         new("history.list", "history.list"), new("history.remove", "history.remove <track-id...>"), new("history.clear", "history.clear", true), new("statistics", "statistics [yyyy-MM-dd] [day|month|year]"),
-        new("statistics.history", "statistics.history [session|interval|event|hour] [limit] [offset] [session-id]", DesktopOnly: true),
+        new("statistics.history", "statistics.history [session|interval|event|hour] [limit] [offset] [session-id]"),
         new("settings.list", "settings.list"), new("settings.get", "settings.get <name>"), new("settings.set", "settings.set <name> <json-value>"), new("settings.reset", "settings.reset", true),
         new("data.backup", "data.backup <file>"), new("data.restore", "data.restore <file>", true),
         new("lyrics.show", "lyrics.show"), new("lyrics.import", "lyrics.import <file>"), new("lyrics.path", "lyrics.path"),
@@ -37,25 +47,44 @@ public sealed class PlayerCommandRouter(IPlayerCommandBackend backend)
         new("layout.reset", "layout.reset", true, true),
         new("window.show", "window.show", DesktopOnly:true), new("window.hide", "window.hide", DesktopOnly:true), new("window.minimize", "window.minimize", DesktopOnly:true), new("window.maximize", "window.maximize", DesktopOnly:true), new("window.restore", "window.restore", DesktopOnly:true), new("window.close", "window.close", DesktopOnly:true),
         new("desktop-lyrics.toggle", "desktop-lyrics.toggle", DesktopOnly:true), new("desktop-lyrics.lock", "desktop-lyrics.lock <true|false>", DesktopOnly:true),
-        new("album.cover", "album.cover <name> <file|auto|default>", DesktopOnly:true), new("artist.cover", "artist.cover <name> <file|auto|default>", DesktopOnly:true),
-        new("navigate", "navigate <page>", DesktopOnly:true), new("undo", "undo", DesktopOnly:true),
-        new("music.search", "music.search <query>", DesktopOnly:true), new("import.cancel", "import.cancel", DesktopOnly:true),
-        new("playlist.import", "playlist.import <m3u-file>", DesktopOnly:true), new("playlist.export", "playlist.export <m3u-file>", DesktopOnly:true),
+        new("album.cover", "album.cover <name> <file|auto|default>"), new("artist.cover", "artist.cover <name> <file|auto|default>"),
+        new("navigate", "navigate <page>", DesktopOnly:true), new("undo", "undo"),
+        new("music.search", "music.search <query>"), new("import.cancel", "import.cancel", DesktopOnly:true),
+        new("playlist.import", "playlist.import <m3u-file> [playlist-id]"), new("playlist.export", "playlist.export <m3u-file> [playlist-id]"),
+        new("queue.show", "queue.show", DesktopOnly:true), new("queue.hide", "queue.hide", DesktopOnly:true), new("queue.toggle", "queue.toggle", DesktopOnly:true),
+        new("player.locate", "player.locate", DesktopOnly:true), new("window.default-size", "window.default-size", DesktopOnly:true), new("layout.edit", "layout.edit <true|false>", DesktopOnly:true),
+        new("layout.export", "layout.export <json-file>", DesktopOnly:true), new("layout.apply", "layout.apply <json-file>", true, true),
+        new("updates.check", "updates.check", DesktopOnly:true), new("updates.install", "updates.install", true, true),
         new("data.directory", "data.directory <folder>", true, true), new("help.open", "help.open", DesktopOnly:true),
         new("selection.begin", "selection.begin", DesktopOnly:true), new("selection.end", "selection.end", DesktopOnly:true),
         new("selection.all", "selection.all", DesktopOnly:true), new("selection.clear", "selection.clear", DesktopOnly:true),
         new("selection.select", "selection.select <track-id...>", DesktopOnly:true), new("selection.list", "selection.list", DesktopOnly:true),
-        new("network.status", "network.status", DesktopOnly:true), new("network.sharing", "network.sharing <on|off>", DesktopOnly:true),
-        new("network.connect", "network.connect <invitation>", DesktopOnly:true), new("network.peers", "network.peers", DesktopOnly:true),
-        new("network.requests", "network.requests", DesktopOnly:true), new("network.accept", "network.accept <request-id>", DesktopOnly:true),
-        new("network.reject", "network.reject <request-id>", DesktopOnly:true), new("network.disconnect", "network.disconnect <peer-id|all>", DesktopOnly:true),
-        new("network.renew", "network.renew", DesktopOnly:true), new("network.invitation", "network.invitation", DesktopOnly:true),
-        new("network.playlists", "network.playlists <peer-id>", DesktopOnly:true), new("network.tracks", "network.tracks <peer-id>", DesktopOnly:true)
+        new("network.status", "network.status"), new("network.sharing", "network.sharing <on|off>"),
+        new("network.connect", "network.connect <invitation>"), new("network.peers", "network.peers"),
+        new("network.requests", "network.requests"), new("network.accept", "network.accept <request-id>"),
+        new("network.reject", "network.reject <request-id>"), new("network.disconnect", "network.disconnect <peer-id|all>"),
+        new("network.renew", "network.renew"), new("network.invitation", "network.invitation"),
+        new("network.playlists", "network.playlists <peer-id>"), new("network.tracks", "network.tracks <peer-id>"), new("network.play", "network.play <peer-id> [playlist-id] [track-id]")
     ];
 
     public async Task<CommandResult> ExecuteAsync(string input, Func<CommandDefinition, Task<bool>>? confirm = null, CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken);
+        var previous = _scope.Value; var scope = new CommandScope(); _scope.Value = scope;
+        try { return await ExecuteCoreAsync(input, confirm, cancellationToken); }
+        finally { scope.Active = false; _scope.Value = previous; _gate.Release(); }
+    }
+    /// <summary>仅供宿主处理已校验的扩展请求；复用确认/参数/钩子检查，避免动作回调等待自己的路由锁。</summary>
+    public async Task<CommandResult> ExecuteFromExtensionAsync(string input, Func<CommandDefinition, Task<bool>>? confirm = null, CancellationToken cancellationToken = default)
+    {
+        if (_scope.Value is not { Active: true } scope) return await ExecuteAsync(input, confirm, cancellationToken);
+        if (scope.Depth >= 8) return CommandResults.Failed("plugins.invoke", "Extension command nesting limit reached.");
+        scope.Depth++;
+        try { return await ExecuteCoreAsync(input, confirm, cancellationToken); }
+        finally { scope.Depth--; }
+    }
+    private async Task<CommandResult> ExecuteCoreAsync(string input, Func<CommandDefinition, Task<bool>>? confirm, CancellationToken cancellationToken)
+    {
         CommandResult result;
         try
         {
@@ -85,7 +114,6 @@ public sealed class PlayerCommandRouter(IPlayerCommandBackend backend)
         catch (UnknownCommandException) when (UnknownCommandsAsOutput) { result = new("command.unknown", false, NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.UnknownCommandOutput")); }
         catch (OperationCanceledException) { result = new("command", false, NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.Cancelled")); }
         catch (Exception error) { AppLog.Warning("Commands", "Player command failed", error); result = new("command", false, AppLog.Redact(error.Message)); }
-        finally { _gate.Release(); }
         Publish(result); return result;
     }
 

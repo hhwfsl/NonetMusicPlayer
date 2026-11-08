@@ -3,5 +3,6 @@
   <ItemGroup>
     <ProjectReference Include="../../src/NonetMusicPlayer.Core/NonetMusicPlayer.Core.csproj" />
     <ProjectReference Include="../../src/NonetMusicPlayerCli/NonetMusicPlayerCli.csproj" />
+    <ProjectReference Include="../NonetMusicPlayer.ExtensionFixture/NonetMusicPlayer.ExtensionFixture.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>

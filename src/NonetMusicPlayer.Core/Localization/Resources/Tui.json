@@ -41,5 +41,13 @@
   "Tui.SettingTerminalScrollbackLines":{"zh-CN":"终端历史行数（1–10000）","en-US":"Terminal scrollback (1–10000)","ja-JP":"ターミナル履歴行数（1–10000）"},
   "Tui.SettingTerminalMinimumLogLevel":{"zh-CN":"终端日志最低等级","en-US":"Minimum terminal log level","ja-JP":"ターミナルの最低ログレベル"},
   "Tui.SettingLyricsFolder":{"zh-CN":"歌词目录","en-US":"Lyrics directory","ja-JP":"歌詞の保存先"},
-  "Tui.SettingBackupFolder":{"zh-CN":"备份目录","en-US":"Backup directory","ja-JP":"バックアップ先"}
+  "Tui.SettingBackupFolder":{"zh-CN":"备份目录","en-US":"Backup directory","ja-JP":"バックアップ先"},
+  "Tui.SettingLanApprovalWaitSeconds":{"zh-CN":"设备连接确认等待秒数","en-US":"Pairing approval timeout","ja-JP":"接続確認の待機秒数"},
+  "Tui.Queue":{"zh-CN":"播放队列","en-US":"Queue","ja-JP":"再生キュー"},
+  "Tui.Search":{"zh-CN":"平台搜索","en-US":"Search","ja-JP":"音源検索"},
+  "Tui.Devices":{"zh-CN":"设备互听","en-US":"Devices","ja-JP":"デバイス共有"},
+  "Tui.Last24Hours":{"zh-CN":"最近24小时播放时长","en-US":"Listening in the last 24 hours","ja-JP":"過去24時間の再生時間"},
+  "Tui.QueueKeys":{"zh-CN":"Enter 选歌 · Ctrl+↑↓ 调整顺序 · M 播放模式 · Ctrl+K 操作","en-US":"Enter select · Ctrl+Arrows reorder · M mode · Ctrl+K actions","ja-JP":"Enter 選曲 · Ctrl+↑↓ 並替 · M モード · Ctrl+K 操作"},
+  "Tui.SearchKeys":{"zh-CN":"S 选择来源并搜索 · L 下一页 · Enter 播放 · A 加入歌单","en-US":"S search a source · L next page · Enter play · A add to playlist","ja-JP":"S 音源検索 · L 次頁 · Enter 再生 · A リスト追加"},
+  "Tui.DeviceKeys":{"zh-CN":"S 开关共享 · C 连接 · R 待确认请求 · Enter 歌单 · Del 断开","en-US":"S sharing · C connect · R requests · Enter playlists · Del disconnect","ja-JP":"S 共有 · C 接続 · R 確認要求 · Enter リスト · Del 切断"}
 }

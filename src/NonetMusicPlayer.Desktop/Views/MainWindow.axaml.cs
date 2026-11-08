@@ -45,6 +45,8 @@ public sealed partial class MainWindow : Window
         SizeChanged += (_, _) => Responsive();
         PropertyChanged += (_, e) => { if (e.Property == WindowStateProperty) { if (WindowState == WindowState.Minimized) { _pageMotion.Cancel(); _lyricsMotion.Cancel(); } RefreshWindowFrame(); RefreshResizeBorders(); } };
         DragDrop.SetAllowDrop(this, true);
+        // 歌曲让位会切换系统拖放命中行；进入新行也要接续预览，避免旧行 Leave 的延迟清理将其撤销。
+        AddHandler(DragDrop.DragEnterEvent, DragOver);
         AddHandler(DragDrop.DragOverEvent, DragOver);
         InitializeDropPreview();
         AddHandler(DragDrop.DropEvent, Library_Drop);
@@ -424,10 +426,11 @@ public sealed partial class MainWindow : Window
         if (_dragTrack is not null && (!TracksList.BatchMode || !selectedIds.Contains(_dragTrack.Id))) { selectedIds.Clear(); selectedIds.Add(_dragTrack.Id); }
         var ids = _vm!.VisibleTracks.Where(t => selectedIds.Contains(t.Id)).Select(t => t.Id).ToArray(); if (ids.Length == 0) return;
         _dragging = true; var press = _dragPress; _dragPress = null;
+        BeginTrackReorderPreview(ids);
         try { var transfer = new DataTransfer(); transfer.Add(DataTransferItem.CreateText("nonet-tracks:" + string.Join('\n', ids))); await DragDrop.DoDragDropAsync(press, transfer, DragDropEffects.Copy | DragDropEffects.Move); }
-        finally { _dragging = false; HideDropPreview(); }
+        finally { _dragging = false; CancelTrackReorderPreview(); _trackReorderActive = false; HideDropPreview(); }
     }
-    private void DragOver(object? sender, DragEventArgs e) { var text = e.DataTransfer.TryGetText(); e.DragEffects = text?.StartsWith("nonet-playlist:") == true ? DragDropEffects.Move : e.DataTransfer.Contains(DataFormat.File) || text?.StartsWith("nonet-tracks:") == true ? DragDropEffects.Copy : DragDropEffects.None; UpdateDropPreview(e); e.Handled = true; }
+    private void DragOver(object? sender, DragEventArgs e) { UpdateTrackReorderPreview(e); var text = e.DataTransfer.TryGetText(); e.DragEffects = text?.StartsWith("nonet-playlist:") == true ? DragDropEffects.Move : e.DataTransfer.Contains(DataFormat.File) || text?.StartsWith("nonet-tracks:") == true ? DragDropEffects.Copy : DragDropEffects.None; UpdateDropPreview(e); e.Handled = true; }
     private async void Library_Drop(object? sender, DragEventArgs e) { if (e.Handled) return; e.Handled = true; if (TryReorderTracks(e)) return; await DropAsync(e, _vm?.CurrentPlaylist?.IsSystem == true, _vm?.CurrentPlaylist); }
     private async void Favorite_Drop(object? sender, DragEventArgs e) { e.Handled = true; await DropAsync(e, true, null); }
     private async void Player_Drop(object? sender, DragEventArgs e)

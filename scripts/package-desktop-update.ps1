@@ -1,13 +1,14 @@
-param([Parameter(Mandatory)][string]$PackageDirectory, [Parameter(Mandatory)][string]$Rid, [Parameter(Mandatory)][string]$Version, [string]$OutputDirectory)
+param([Parameter(Mandatory)][string]$PackageDirectory, [Parameter(Mandatory)][string]$Rid, [Parameter(Mandatory)][string]$Version, [string]$OutputDirectory, [ValidateSet('Desktop','Cli')][string]$Product = 'Desktop')
 $ErrorActionPreference = 'Stop'
 $taskRepository = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $taskPackage = [IO.Path]::GetFullPath($PackageDirectory)
 $taskAllowedRoot = [IO.Path]::GetFullPath((Join-Path $taskRepository 'artifacts')).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
 if (-not $taskPackage.StartsWith($taskAllowedRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Only clean staging packages under artifacts may be packaged.' }
-$taskSource = if ($Rid.StartsWith('osx-')) { Join-Path $taskPackage 'Nonet.app' } else { $taskPackage }
+$taskSource = if ($Product -eq 'Desktop' -and $Rid.StartsWith('osx-')) { Join-Path $taskPackage 'Nonet.app' } else { $taskPackage }
 $taskOutput = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $taskRepository "artifacts/releases/update-packages/$Version" }
 [IO.Directory]::CreateDirectory($taskOutput) | Out-Null
-$taskZip = Join-Path $taskOutput "NonetMusicPlayer.Desktop-$Version-$Rid.zip"
+$taskArchivePrefix = if ($Product -eq 'Desktop') { 'NonetMusicPlayer.Desktop' } else { 'NonetMusicPlayerCli' }
+$taskZip = Join-Path $taskOutput "$taskArchivePrefix-$Version-$Rid.zip"
 $taskTemporary = $taskZip + '.' + [guid]::NewGuid().ToString('N') + '.tmp'
 $taskFiles = [ordered]@{}
 $taskBlocked = @('Data', 'Plugins', 'Artwork', 'Lyrics', 'Fonts', 'Backups', 'Logs', 'Backgrounds', 'Updates', 'Nonet.bootstrap.json')
@@ -23,13 +24,13 @@ try {
             try { $taskFiles[$taskRelative] = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($taskInput)).ToLowerInvariant(); $taskInput.Position = 0
                 $taskEntry = $taskArchive.CreateEntry($taskRelative, [IO.Compression.CompressionLevel]::Fastest)
                 # POSIX 模式用于跨平台恢复可执行权限；普通文档和依赖采用 0644。
-                $taskMode = if ($taskFile.Name -in @('Nonet','NonetCrashHandler')) { 0x81ED } else { 0x81A4 }
+                $taskMode = if ($taskFile.Name -cin @('Nonet','NonetCrashHandler','nonet')) { 0x81ED } else { 0x81A4 }
                 $taskEntry.ExternalAttributes = [int]($taskMode -shl 16)
                 $taskWriter = $taskEntry.Open(); try { $taskInput.CopyTo($taskWriter) } finally { $taskWriter.Dispose() }
             } finally { $taskInput.Dispose() }
         }
         $taskManifest = @{ schema = 1; version = $Version; rid = $Rid; files = $taskFiles } | ConvertTo-Json -Depth 5
-        $taskManifestEntry = $taskArchive.CreateEntry('NonetMusicPlayer.update.json')
+        $taskManifestEntry = $taskArchive.CreateEntry($(if ($Product -eq 'Desktop') { 'NonetMusicPlayer.update.json' } else { 'NonetMusicPlayer.Cli.package.json' }))
         $taskWriter = [IO.StreamWriter]::new($taskManifestEntry.Open(), [Text.UTF8Encoding]::new($false))
         try { $taskWriter.Write($taskManifest) } finally { $taskWriter.Dispose() }
     } finally { $taskArchive.Dispose(); $taskStream.Dispose() }

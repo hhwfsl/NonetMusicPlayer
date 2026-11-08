@@ -82,6 +82,12 @@ internal sealed partial class ConsoleTuiView
         else if (Page == "Statistics")
         {
             Line(T("Listening") + ": " + Time(_view?.ListeningSeconds ?? 0)); Line(T("StatisticsKeys"));
+            if (_view?.HourlySeconds is { Count: > 0 } hours)
+            {
+                Line(T("Last24Hours")); var maximum = Math.Max(1, hours.Max()); const string bars = "▁▂▃▄▅▆▇█";
+                Line(string.Concat(hours.Select(seconds => bars[(int)Math.Clamp(Math.Ceiling(seconds / maximum * 7), 0, 7)])));
+                Line(Time(hours.Sum()));
+            }
         }
         else
         {
@@ -94,7 +100,7 @@ internal sealed partial class ConsoleTuiView
         while (lines.Count < height - 3) Line();
         if (_notice is not null && _form is null && _palette == false && _confirmation is null && _result is null && Page != "Terminal") Line("│ " + _notice);
         else Line("├" + new string('─', width - 1));
-        Line("╰─ " + (_confirmation is not null ? T("ConfirmKeys") : _result is not null ? T("ResultKeys") : _form is not null ? T("FormKeys") : _palette ? T("ActionKeys") : Page switch { "Terminal" => T("TerminalKeys"), "Settings" => T("SettingsKeys"), "Plugins" => T("PluginKeys"), "Playlists" => T("PlaylistKeys"), "Statistics" => T("StatisticsKeys"), _ => T("MusicKeys") }));
+        Line("╰─ " + (_confirmation is not null ? T("ConfirmKeys") : _result is not null ? T("ResultKeys") : _form is not null ? T("FormKeys") : _palette ? T("ActionKeys") : Page switch { "Terminal" => T("TerminalKeys"), "Settings" => T("SettingsKeys"), "Plugins" => T("PluginKeys"), "Playlists" => T("PlaylistKeys"), "Statistics" => T("StatisticsKeys"), "Queue" => T("QueueKeys"), "Search" => T("SearchKeys"), "Devices" => T("DeviceKeys"), _ => T("MusicKeys") }));
         var frame = "\u001b[?25l\u001b[H" + string.Join("\r\n", lines.Take(height - 1)) + "\u001b[J";
         return cursorVisible ? frame + $"\u001b[{cursorRow};{cursorColumn + 1}H\u001b[?25h" : frame;
 
@@ -112,7 +118,7 @@ internal sealed partial class ConsoleTuiView
             Line(visiblePrefix + value[start..]);
         }
     }
-    private string ChoiceLabel(string value) => _view?.Playlists.Concat(_view.Music).FirstOrDefault(item => item.Id == value)?.Title ?? value;
+    private string ChoiceLabel(string value) => _view?.Playlists.Concat(_view.Music).Concat(_view.SearchSources).Concat(_view.Devices).FirstOrDefault(item => item.Id == value)?.Title ?? value;
     private static string Time(double seconds)
     {
         var whole = (long)Math.Clamp(double.IsFinite(seconds) ? seconds : 0, 0, TimeSpan.MaxValue.TotalSeconds);
