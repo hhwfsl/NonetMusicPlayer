@@ -11,16 +11,23 @@ namespace NonetMusicPlayer.Desktop.Views;
 public sealed partial class MainWindow
 {
     private int _playlistHeaderProfile = -1;
-    private Border PlaylistArtwork(Playlist playlist, double size, bool original = false)
+    private Border PlaylistArtwork(Playlist playlist, double size, bool original = false, bool deferred = false)
     {
         var artwork = new Grid();
         artwork.Children.Add(new VectorIcon { Kind = playlist.IsSystem ? IconKind.Heart : IconKind.Playlist, Filled = playlist.IsSystem, Width = size * .55, Height = size * .55, Brush = playlist.IsSystem ? new SolidColorBrush(Color.Parse("#F0526C")) : Ui.Brush("TextSecondaryBrush") });
-        var image = _vm?.GetPlaylistArtwork(playlist) ?? playlist.Artwork;
+        var image = deferred ? null : _vm?.GetPlaylistArtwork(playlist) ?? playlist.Artwork;
         var path = _vm?.GetPlaylistArtworkPath(playlist) ?? playlist.CoverPath;
-        artwork.Children.Add(original ? new OriginalArtworkImage(path, image) { Name = "PlaylistOriginalCover" }
+        if (deferred)
+        {
+            var thumbnail = new ThumbnailImage(); thumbnail.SetPaths([path]); artwork.Children.Add(thumbnail);
+        }
+        else artwork.Children.Add(original ? new OriginalArtworkImage(path, image) { Name = "PlaylistOriginalCover" }
             : new Image { Source = image, Stretch = Stretch.UniformToFill, IsVisible = image is not null });
         var result = new Border { Width = size, Height = size, CornerRadius = new CornerRadius(Math.Min(12, size / 5)), ClipToBounds = true, Background = Ui.Brush("SurfaceRaisedBrush"), Child = artwork };
-        result.Classes.Add("playlist-artwork"); result.Classes.Set("placeholder", image is null); return result;
+        result.Classes.Add("playlist-artwork"); result.Classes.Set("placeholder", image is null);
+        if (deferred && artwork.Children.LastOrDefault() is ThumbnailImage loading)
+            loading.PropertyChanged += (_, e) => { if (e.Property == Image.SourceProperty) result.Classes.Set("placeholder", loading.Source is null); };
+        return result;
     }
     private void BuildPlaylistHeader()
     {

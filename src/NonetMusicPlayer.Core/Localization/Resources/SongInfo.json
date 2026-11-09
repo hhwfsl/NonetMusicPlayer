@@ -1,0 +1,19 @@
+{
+  "SongInfo.MusicSection": {"zh-CN":"歌曲标签","en-US":"Song tags","ja-JP":"曲のタグ"},
+  "SongInfo.AudioSection": {"zh-CN":"音频信息","en-US":"Audio","ja-JP":"音声情報"},
+  "SongInfo.FileSection": {"zh-CN":"文件与来源","en-US":"File and source","ja-JP":"ファイルと取得元"},
+  "SongInfo.AlbumArtist": {"zh-CN":"专辑艺术家","en-US":"Album artist","ja-JP":"アルバムアーティスト"},
+  "SongInfo.Release": {"zh-CN":"年份 / 流派","en-US":"Year / genre","ja-JP":"年 / ジャンル"},
+  "SongInfo.Numbering": {"zh-CN":"曲目 / 碟号","en-US":"Track / disc","ja-JP":"トラック / ディスク"},
+  "SongInfo.TrackNumber": {"zh-CN":"曲目 {0}","en-US":"Track {0}","ja-JP":"トラック {0}"},
+  "SongInfo.DiscNumber": {"zh-CN":"碟片 {0}","en-US":"Disc {0}","ja-JP":"ディスク {0}"},
+  "SongInfo.Composer": {"zh-CN":"作曲者","en-US":"Composer","ja-JP":"作曲者"},
+  "SongInfo.AudioSpecs": {"zh-CN":"音频规格","en-US":"Audio specs","ja-JP":"音声仕様"},
+  "SongInfo.Bitrate": {"zh-CN":"码率","en-US":"Bitrate","ja-JP":"ビットレート"},
+  "SongInfo.Mono": {"zh-CN":"单声道","en-US":"Mono","ja-JP":"モノラル"},
+  "SongInfo.Stereo": {"zh-CN":"立体声","en-US":"Stereo","ja-JP":"ステレオ"},
+  "SongInfo.ChannelCount": {"zh-CN":"{0} 声道","en-US":"{0} channels","ja-JP":"{0} チャンネル"},
+  "SongInfo.Modified": {"zh-CN":"修改时间","en-US":"Modified","ja-JP":"更新日時"},
+  "SongInfo.FileUnavailable": {"zh-CN":"文件已移动或不可访问，当前显示已保存的信息。","en-US":"The file has moved or is unavailable. Showing saved information.","ja-JP":"ファイルが移動されたか利用できません。保存済みの情報を表示しています。"},
+  "SongInfo.MetadataUnavailable": {"zh-CN":"部分音频标签暂时无法读取，已保留可用信息。","en-US":"Some audio tags could not be read. Available information is still shown.","ja-JP":"一部の音声タグを読み取れません。取得できた情報を表示しています。"}
+}

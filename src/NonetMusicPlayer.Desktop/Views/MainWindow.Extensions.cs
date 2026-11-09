@@ -51,7 +51,12 @@ public sealed partial class MainWindow
         try { return plugin.Type == "extension" ? plugin.NativePage ? new NativeExtensionView(_vm!.Plugins, plugin, "plugin.page") : new ExtensionPageView(_vm!.Plugins, plugin) : new PluginPageView(_vm!.Plugins, plugin, includeTitle: false); }
         catch (Exception e) { _vm!.ReportError(L10n.T("Plugins.UnableToOpenPluginPage"), e); return Ui.Card(L10n.T("Common.PageFailedToLoad"), Ui.Text(L10n.T("Plugins.DataIsUnchangedCheckThePluginSPageConfiguration"), 13, true)); }
     }
-    private sealed record MusicGroup(string Name, TrackItem[] Tracks) { public int Count => Tracks.Length; }
+    private sealed record MusicGroup(string Name, TrackItem[] Tracks)
+    {
+        public int Count => Tracks.Length;
+        // 同一页面中的封面规则不变，回滚到已访问分类时复用路径快照。
+        public string[]? CoverPaths { get; set; }
+    }
     private VirtualizedCardGrid? _groupList;
     private MusicGroup[] _groups = [];
     private bool _groupsArtists;
@@ -80,21 +85,41 @@ public sealed partial class MainWindow
         }
         var type = artists ? "artist" : "album";
         _groups = groups; _groupsArtists = artists;
-        // 分类卡片按可见行虚拟化，不一次性解码全部封面。
+        void Bind(Control control, int index)
+        {
+            var card = (MusicGroupCardView)control; var group = groups[index];
+            card.Group = group; card.Title.Text = group.Name;
+            card.Note.Text = L10n.Format("Common.Tracks", group.Count);
+            card.Artwork.SetPaths(group.CoverPaths ??= _vm.GroupCoverPaths(type, group.Name, group.Tracks));
+        }
+        // 按可见行复用卡片，点击和菜单读取当前绑定，封面由控件在后台加载。
         _groupList = new VirtualizedCardGrid(groups.Length, index =>
             {
-                var group = groups[index];
+                var card = new MusicGroupCardView();
                 var cover = new Border { Height = 150, CornerRadius = new(12), Background = Ui.Brush("SurfaceRaisedBrush"), ClipToBounds = true,
-                    Child = new Grid { Children = { new VectorIcon { Kind = artists ? IconKind.Artist : IconKind.Album, Width = 30, Height = 30 }, new Image { Name = "MusicGroupCover", Source = _vm.ResolveGroupCover(type, group.Name, group.Tracks), Stretch = Stretch.UniformToFill } } } };
-                var title = Ui.RawText(group.Name, 15); title.TextWrapping = TextWrapping.NoWrap; title.TextTrimming = TextTrimming.CharacterEllipsis;
-                var open = Ui.Button("", () => _vm.Navigate(type + ":" + group.Name, group.Name)); open.Classes.Add("quiet"); open.HorizontalContentAlignment = HorizontalAlignment.Stretch;
-                var details = Ui.Stack(cover, title, Ui.Text(L10n.Format("Common.Tracks", group.Count), 12, true)); details.Spacing = 8; open.Content = details;
+                    Child = new Grid { Children = { new VectorIcon { Kind = artists ? IconKind.Artist : IconKind.Album, Width = 30, Height = 30 }, card.Artwork } } };
+                var open = Ui.Button("", () => { if (card.Group is { } group) _vm.Navigate(type + ":" + group.Name, group.Name); }); open.Classes.Add("quiet"); open.HorizontalContentAlignment = HorizontalAlignment.Stretch;
+                var details = Ui.Stack(cover, card.Title, card.Note); details.Spacing = 8; open.Content = details;
                 open.Name = "OpenMusicGroup";
-                var card = new Grid { Name = "MusicGroupCard", Margin = new(0, 0, 12, 0) }; card.Children.Add(open);
-                card.PointerPressed += (_, e) => { if (!e.GetCurrentPoint(card).Properties.IsRightButtonPressed) return; OpenGroupMenu(card, type, group.Name); e.Handled = true; };
-                return card;
-            });
+                card.Children.Add(open);
+                card.PointerPressed += (_, e) => { if (!e.GetCurrentPoint(card).Properties.IsRightButtonPressed || card.Group is not { } group) return; OpenGroupMenu(card, type, group.Name); e.Handled = true; };
+                Bind(card, index); return card;
+            }, Bind);
         UpdateGroupColumns(Math.Max(360, Bounds.Width - 210)); Grid.SetRow(_groupList, 1); page.Children.Add(_groupList); return page;
+    }
+    private sealed class MusicGroupCardView : Grid
+    {
+        // 保留旧方案的 Grid 样式键与命名锚点，换绑不触发整棵视觉树重建。
+        protected override Type StyleKeyOverride => typeof(Grid);
+        public MusicGroup? Group { get; set; }
+        public ThumbnailImage Artwork { get; } = new() { Name = "MusicGroupCover" };
+        public TextBlock Title { get; } = Ui.RawText("", 15);
+        public TextBlock Note { get; } = Ui.RawText("", 12, true);
+        public MusicGroupCardView()
+        {
+            Name = "MusicGroupCard"; Margin = new(0, 0, 12, 0);
+            Title.TextWrapping = TextWrapping.NoWrap; Title.TextTrimming = TextTrimming.CharacterEllipsis;
+        }
     }
     private void OpenGroupMenu(Control anchor, string type, string name)
     {

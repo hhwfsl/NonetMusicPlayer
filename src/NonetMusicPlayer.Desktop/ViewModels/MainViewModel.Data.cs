@@ -143,6 +143,13 @@ public sealed partial class MainViewModel
         Save(); ViewChanged?.Invoke(this, EventArgs.Empty); StatusText = stored is null ? L10n.T("Common.DefaultCoverRestored") : L10n.T("Storage.CustomCoverSavedToTheDataFolder"); CompleteOperation(groupType.StartsWith("artist") ? "artist.cover" : "album.cover");
     }
     public bool UsesSoftwareDefaultGroupCover(string groupType, string name) => State.SoftwareDefaultGroupCovers.Contains(GroupCoverKey(groupType, GroupDisplayName(groupType, name)));
+    /// <summary>只提取路径快照；卡片滚动不在界面线程检查文件或解码，也不在后台读取可变资料库。</summary>
+    public string[] GroupCoverPaths(string groupType, string name, IEnumerable<TrackItem> tracks)
+    {
+        if (UsesSoftwareDefaultGroupCover(groupType, name)) return [];
+        State.GroupCovers.TryGetValue(GroupCoverKey(groupType, GroupDisplayName(groupType, name)), out var custom);
+        return new[] { custom }.Concat(tracks.Select(t => t.CoverPath)).Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => p!).Distinct(StringComparer.Ordinal).ToArray();
+    }
     public IImage? ResolveGroupCover(string groupType, string name) => ResolveGroupCover(groupType, name, SourceTracks(GroupCoverKey(groupType, GroupDisplayName(groupType, name))));
     public IImage? ResolveGroupCover(string groupType, string name, IEnumerable<TrackItem> tracks)
     {

@@ -50,24 +50,9 @@ public sealed class ArtworkCache
         Bitmap? bitmap = null;
         try
         {
-            // 分配像素前拒绝过大编码数据及解压炸弹。
-            if (file.Length <= 0 || file.Length > 20 * 1024 * 1024) return null;
-            int width, height;
-            using (var probe = File.OpenRead(path))
-            using (var codec = SKCodec.Create(probe))
-            {
-                if (codec is null) return null;
-                width = codec.Info.Width; height = codec.Info.Height;
-            }
-            if (width <= 0 || height <= 0 || (long)width * height > 64 * 1024 * 1024) return null;
-            var scaledWidth = Math.Min(MaxDimension, width);
-            var scaledHeight = Math.Min(MaxDimension, height);
-            var expectedBytes = 4L * (width >= height ? scaledWidth * Math.Max(1, (int)((long)height * scaledWidth / width)) : scaledHeight * Math.Max(1, (int)((long)width * scaledHeight / height)));
-            Trim(expectedBytes);
-            using var input = File.OpenRead(path);
-            bitmap = width >= height ? Bitmap.DecodeToWidth(input, scaledWidth, BitmapInterpolationMode.HighQuality) : Bitmap.DecodeToHeight(input, scaledHeight, BitmapInterpolationMode.HighQuality);
+            bitmap = DecodeThumbnail(path);
+            if (bitmap is null) return null;
             var bytes = 4L * bitmap.PixelSize.Width * bitmap.PixelSize.Height;
-            if (bitmap.PixelSize.Width > MaxDimension || bitmap.PixelSize.Height > MaxDimension || bytes > MaxBytes) { bitmap.Dispose(); return null; }
             Trim(bytes);
             var node = _lru.AddFirst(path);
             var entry = new Entry(bitmap, new CachedImage(this, path, bitmap.Size), node, bytes, file.Length, file.LastWriteTimeUtc);
@@ -77,6 +62,26 @@ public sealed class ArtworkCache
         {
             bitmap?.Dispose(); return null;
         }
+    }
+    /// <summary>共享缩略图尺寸与输入限制；异步卡片直接拥有可见像素，不在绘制时进入同步 LRU。</summary>
+    internal static Bitmap? DecodeThumbnail(string path)
+    {
+        var file = new FileInfo(path);
+        // 分配像素前拒绝过大编码数据及解压炸弹，两个方向都限制在 320px 内。
+        if (!file.Exists || file.Length <= 0 || file.Length > 20 * 1024 * 1024) return null;
+        int width, height;
+        using (var probe = File.OpenRead(path))
+        using (var codec = SKCodec.Create(probe))
+        {
+            if (codec is null) return null;
+            width = codec.Info.Width; height = codec.Info.Height;
+        }
+        if (width <= 0 || height <= 0 || (long)width * height > 64 * 1024 * 1024) return null;
+        using var input = File.OpenRead(path);
+        var bitmap = width >= height ? Bitmap.DecodeToWidth(input, Math.Min(MaxDimension, width), BitmapInterpolationMode.HighQuality)
+            : Bitmap.DecodeToHeight(input, Math.Min(MaxDimension, height), BitmapInterpolationMode.HighQuality);
+        if (bitmap.PixelSize.Width <= MaxDimension && bitmap.PixelSize.Height <= MaxDimension) return bitmap;
+        bitmap.Dispose(); return null;
     }
     private void Trim(long incoming)
     {

@@ -13,8 +13,8 @@ public sealed partial class MainWindow
     private Control BuildPlaylistCard(Playlist playlist)
     {
         // 只替换内容，原按钮继续保留导航、右键菜单与拖动排序处理。
-        var button = BuildPlaylistNavigationButton(playlist);
-        var cover = PlaylistArtwork(playlist, 150); cover.Width = double.NaN;
+        var button = BuildPlaylistNavigationButton(playlist, false);
+        var cover = PlaylistArtwork(playlist, 150, deferred: true); cover.Width = double.NaN;
         return PlaylistCard(button, cover, PlaylistName(playlist), L10n.Format("Common.Tracks", playlist.TrackIds.Count));
     }
     private Control BuildRemotePlaylistCard((string Page, string Name, string Source) remote)

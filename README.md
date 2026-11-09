@@ -1,8 +1,12 @@
 # 🎵 Nonet Music Player
 
+桌面 0.4.0-beta.48：专辑、艺术家卡片按绘制帧合并滚动刷新并复用可见控件，封面在后台限并发解码，过期请求取消；歌单卡片同样异步加载封面。拖动滚动条时优先呈现当前视口，离页或持续最小化后释放卡片像素。
+
+查看歌曲信息增加年份/流派、曲目/碟号、专辑艺术家、作曲者及音频规格、码率和修改时间，有数据的附加标签才显示。信息按组展示且可复制，关闭按钮固定在底部。
+
 桌面 0.4.0-beta.47：队列显示封面并支持拖拽排序；歌曲拖动显示半透明虚影，相邻行连续让位，修复行间切换时闪动。修复逐行歌词重载后主题色消失，以及右上平台搜索改词后残留旧结果的问题；补齐桌面终端命令。CLI 与共享核心同步相关业务代码，独立 CLI 编号仍为 0.4.0-beta.32，功能对照见 [CLI 与桌面功能](docs/CLI_DESKTOP_PARITY.md)。
 
-本地六架构 ZIP 位于 `publish/desktop/archives`，Windows x64/x86/ARM64 installer 位于 `publish/desktop/windows_installer`；对应 SHA-256 清单为 `publish/desktop/SHA256SUMS-0.4.0-beta.47.txt`。运行目录保留原数据，旧包归档。
+本地六架构 ZIP 位于 `publish/desktop/archives`，Windows x64/x86/ARM64 installer 位于 `publish/desktop/windows_installer`；对应 SHA-256 清单为 `publish/desktop/SHA256SUMS-0.4.0-beta.48.txt`。运行目录保留原数据，旧包归档。
 
 Android 0.3.0-beta.11 支持队列、歌曲及侧栏歌单拖拽排序和即时让位预览；随机播放生成完整队列，退出随机时恢复来源顺序。侧栏每次展开 5 个歌单，标题行可整组开合并保留数量；新建歌单保持原位置，主页以单屏布局展示正常高度的 24 小时图表。详见 [移动端说明](src/NonetMusicPlayer.Android/README.md)。
 
@@ -45,7 +49,7 @@ Android 0.3.0-beta.11 支持队列、歌曲及侧栏歌单拖拽排序和即时�
 
 | 产品 | 当前版本 | 发行说明 |
 | --- | --- | --- |
-| 桌面 | [0.4.0-beta.47](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.47) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
+| 桌面 | [0.4.0-beta.48](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.48) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
 | CLI | [0.4.0-beta.32](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.32) | Windows、Linux、macOS x64 |
 | Android | [0.3.0-beta.11](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/android-v0.3.0-beta.11) | API 28+；通用 APK；沿用既有测试签名 |
 

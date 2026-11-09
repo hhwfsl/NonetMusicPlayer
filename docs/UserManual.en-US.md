@@ -1,6 +1,8 @@
 # Nonet User Manual
 
-Desktop version 0.4.0-beta.47. Chinese, Japanese and English interfaces provide the same features.
+Desktop version 0.4.0-beta.48. Chinese, Japanese and English interfaces provide the same features.
+
+Album and artist cards reuse visible controls and load bounded thumbnails in the background. Rapid scrollbar changes render the latest viewport and cancel outdated artwork requests; playlist cards also load artwork asynchronously. Leaving a page or sustained minimization releases card pixels, and restoring the window reloads them without moving the viewport. Song information now groups available tags, audio specifications and local file details; optional missing tags stay hidden and the Close button remains accessible in small windows.
 
 Local revision: dragging tracks shows a translucent copy that follows the pointer while neighboring rows animate into place. Queue rows no longer have drag dots; touch and pen use a whole-row long press. Changing the upper-right search query or source replaces previous results. New terminal commands cover queue selection/reordering/popovers, source search and pagination, hourly statistics, lyrics and plugin actions. `window default-size` restores and centers the default window size. Run `nonet help` for current commands; see COMMANDS.md for parameters. The standalone CLI now shares the queue, search, playlist, lyrics, statistics, data-plugin and approved LAN workflows; windows and themes remain desktop features.
 

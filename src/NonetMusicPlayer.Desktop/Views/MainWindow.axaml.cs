@@ -315,10 +315,12 @@ public sealed partial class MainWindow : Window
     }
     private void Navigate_Click(object? sender, RoutedEventArgs e) { if (sender is Button { Tag: string page }) _vm?.Navigate(page); }
     /// <summary>界面方案复用同一歌单入口行为；右键、拖动和封面保持原功能。</summary>
-    private Button BuildPlaylistNavigationButton(Playlist playlist)
+    private Button BuildPlaylistNavigationButton(Playlist playlist) => BuildPlaylistNavigationButton(playlist, true);
+    private Button BuildPlaylistNavigationButton(Playlist playlist, bool buildArtwork)
     {
         var label = new TextBlock { Text = PlaylistName(playlist), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
-        var content = new Grid { ColumnDefinitions = new("34,*") }; content.Children.Add(PlaylistArtwork(playlist, 28)); Grid.SetColumn(label, 1); content.Children.Add(label);
+        // 卡片稍后会替换内容，不为即将丢弃的侧栏封面同步读盘。
+        var content = new Grid { ColumnDefinitions = new("34,*") }; if (buildArtwork) content.Children.Add(PlaylistArtwork(playlist, 28)); Grid.SetColumn(label, 1); content.Children.Add(label);
         var button = new Button { Content = content, Tag = "playlist:" + playlist.Id, Padding = new(10, 0), MinHeight = 46, HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Stretch };
         button.Classes.Add("nav"); ToolTip.SetTip(button, PlaylistName(playlist)); button.Click += (_, _) => _vm?.Navigate("playlist:" + playlist.Id, PlaylistName(playlist));
         AttachPlaylistDrag(button, playlist); button.PointerPressed += (_, e) => { if (e.GetCurrentPoint(button).Properties.IsRightButtonPressed) { OpenPlaylistMenu(button, playlist); e.Handled = true; } }; return button;

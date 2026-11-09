@@ -79,6 +79,7 @@ public sealed partial class MainWindow
             if (!_memorySuspended || _vm?.Settings.OptimizeMemoryWhenMinimized != true || IsVisible && WindowState != WindowState.Minimized) return;
             _pageMotion.Cancel(); _lyricsMotion.Cancel();
             foreach (var image in this.GetVisualDescendants().OfType<OriginalArtworkImage>()) image.SuspendDecodedPixels();
+            foreach (var image in this.GetVisualDescendants().OfType<ThumbnailImage>()) image.SuspendDecodedPixels();
             AppBackgroundService.TrimMemory(); ArtworkCache.Shared.Clear();
             _memoryCachesReleased = true;
             await Task.Run(() => HiddenWindowMemory.Collect(token), token);
@@ -103,6 +104,7 @@ public sealed partial class MainWindow
             AppBackgroundService.GetImage(InterfaceSettings.BackgroundImagePath);
             this.FindControl<Image>("AppBackgroundImage")?.InvalidateVisual();
             foreach (var image in this.GetVisualDescendants().OfType<OriginalArtworkImage>()) image.ResumeDecodedPixels();
+            foreach (var image in this.GetVisualDescendants().OfType<ThumbnailImage>()) image.ResumeDecodedPixels();
         }
         _vm.RefreshPlaybackState();
     }
