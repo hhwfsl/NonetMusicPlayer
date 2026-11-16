@@ -5,6 +5,8 @@ namespace NonetMusicPlayer.Core.Runtime;
 
 public sealed partial class HeadlessPlayerSession
 {
+    // 接收设备的远端歌词缓存独立于用户导入目录，不继承旧版的本机覆盖或禁用状态。
+    private string RemoteLyricPath(StoredMusicTrack track) => Path.Combine(DataDirectory, "LanCache", "Lyrics", LyricFileId(track) + ".lrc");
     /// <summary>播放时按稳定身份补封面和歌词；可选元数据失败不能阻止旧音源继续播放。</summary>
     private async Task PrepareTrackResourcesAsync(StoredMusicTrack track, CancellationToken token)
     {
@@ -12,8 +14,9 @@ public sealed partial class HeadlessPlayerSession
         {
             if (track.ProviderId?.StartsWith("lan:", StringComparison.Ordinal) == true && _lanPeers.TryGetValue(track.ProviderId[4..], out var peer))
             {
-                var metadata = peer.Catalog.Tracks.FirstOrDefault(t => t.Id == track.ProviderTrackId); var lyric = Path.Combine(LyricsDirectory, LyricFileId(track) + ".lrc");
-                if (metadata?.Lyrics == true && !State.DisabledLyrics.Contains(track.Id) && !File.Exists(lyric)) { Directory.CreateDirectory(LyricsDirectory); await File.WriteAllTextAsync(lyric, Encoding.UTF8.GetString(await peer.ReadAssetAsync("lyrics", track.ProviderTrackId!, token)), token); }
+                var metadata = peer.Catalog.Tracks.FirstOrDefault(t => t.Id == track.ProviderTrackId); var lyric = RemoteLyricPath(track);
+                if (metadata?.Lyrics == true) { Directory.CreateDirectory(Path.GetDirectoryName(lyric)!); Persistence.AtomicFile.Write(lyric, Encoding.UTF8.GetString(await peer.ReadAssetAsync("lyrics", track.ProviderTrackId!, token))); }
+                else if (File.Exists(lyric)) File.Delete(lyric);
                 if (metadata?.Artwork == true && !File.Exists(track.Metadata.CoverPath))
                 {
                     var cover = Path.Combine(ArtworkDirectory, LyricFileId(track) + ".image"); await File.WriteAllBytesAsync(cover, await peer.ReadAssetAsync("artwork", track.ProviderTrackId!, token), token); track.Metadata = track.Metadata with { CoverPath = cover };

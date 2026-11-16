@@ -84,7 +84,8 @@ class PeerServer(private val id: String,private val name: String,ssl: SSLContext
     private val catalog: ()->JSONObject,private val open: suspend (String,String)->PeerPayload?,private val onError: (Exception)->Unit={},
     private val approve: suspend (IncomingConnection)->Boolean = {false},
     private val waitSeconds: ()->Int = {30},private val reverse: (suspend (ReverseAccess)->Boolean)? = null,
-    private val disconnected: (String)->Unit = {},private val activity: (String)->Unit = {}): Closeable {
+    private val disconnected: (String)->Unit = {},private val activity: (String)->Unit = {},
+    private val sessionsChanged: (Int)->Unit = {}): Closeable {
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.IO)
     private val socket=ssl.serverSocketFactory.createServerSocket(0,12,InetAddress.getByName("0.0.0.0")) as SSLServerSocket
     private val slots=Semaphore(12);private val clients=ConcurrentHashMap.newKeySet<SSLSocket>()
@@ -100,11 +101,13 @@ class PeerServer(private val id: String,private val name: String,ssl: SSLContext
     }} catch(_: IOException) {}}}
     fun renew() {key=PeerSecurity.randomKey();expires=System.currentTimeMillis()+300000}
     fun invitation(host: String)="nonet://connect?host=$host&port=$port&cert=$fingerprint&key=$key"
+    // 多个请求可并发结束；串行读取最新数量，避免迟到的计数让已断开的服务重新持锁。
+    @Synchronized private fun publishSessions() {sessionsChanged(identities.size)}
     fun grantAccess(device: String,name: String): String {
         require(device.matches(Regex("[a-fA-F0-9]{32}")) && device!=id && scope.isActive && sessions.size<16)
-        return PeerSecurity.randomKey().also {sessions[it]=System.currentTimeMillis();identities[it]=Session(device,name,"",false)}
+        return PeerSecurity.randomKey().also {sessions[it]=System.currentTimeMillis();identities[it]=Session(device,name,"",false);publishSessions()}
     }
-    fun revoke(device: String) {identities.entries.filter {it.value.id==device}.forEach {identities.remove(it.key);sessions.remove(it.key)}}
+    fun revoke(device: String) {identities.entries.filter {it.value.id==device}.forEach {identities.remove(it.key);sessions.remove(it.key)};publishSessions()}
     private suspend fun serve(client: SSLSocket) {
         client.soTimeout=12000;client.startHandshake();val input=client.inputStream.buffered();val output=client.outputStream.buffered()
         val raw=ByteArrayOutputStream();var tail=""
@@ -130,6 +133,8 @@ class PeerServer(private val id: String,private val name: String,ssl: SSLContext
             // 接受之前不创建会话；超时、停止共享、邀请轮换或界面关闭均不授予访问。
             if(!accepted || !scope.isActive || !MessageDigest.isEqual(request.optString("key").toByteArray(),key.toByteArray())) {respond(403);return}
             val token=PeerSecurity.randomKey();sessions[token]=System.currentTimeMillis();identities[token]=Session(remoteId,remoteName,remote,duplex)
+            // 已批准的只读会话也在后台提供音频，不能等待双向目录建立后才取得服务租约。
+            publishSessions()
             respond(200,JSONObject().put("deviceId",id).put("name",name).put("token",token).put("protocol",1).put("duplex",duplex).toString().toByteArray());return
         }
         val token=headers["authorization"].orEmpty().removePrefix("Bearer ");val seen=sessions[token]
@@ -158,7 +163,7 @@ class PeerServer(private val id: String,private val name: String,ssl: SSLContext
             c.put("tracks",org.json.JSONArray().apply {for(i in offset until minOf(offset+200,tracks.length())) put(tracks.getJSONObject(i))});if(offset>0) c.put("playlists",org.json.JSONArray());respond(200,c.toString().toByteArray());return
         }
         val p=path.split('/').filter {it.isNotEmpty()}
-        if(p.size!=3 || p[0]!="v1" || p[1] !in setOf("audio","artwork","lyrics")) {respond(404);return}
+        if(p.size!=3 || p[0]!="v1" || p[1] !in setOf("audio","artwork","lyrics","playlist-artwork")) {respond(404);return}
         val track=java.net.URLDecoder.decode(p[2],"UTF-8");if(track.length !in 1..256 || '/' in track || '\\' in track) {respond(400);return}
         val payload=open(p[1],track) ?: run {respond(404);return}
         payload.use {file ->
@@ -172,5 +177,5 @@ class PeerServer(private val id: String,private val name: String,ssl: SSLContext
         }
     }
     private fun header(out: OutputStream,status: Int,length: Long,type: String,extra: String="") {out.write("HTTP/1.1 $status Response\r\nContent-Length: $length\r\nContent-Type: $type\r\nCache-Control: no-store\r\nConnection: close\r\nX-Content-Type-Options: nosniff\r\n$extra\r\n".toByteArray(Charsets.US_ASCII))}
-    override fun close() {scope.cancel();socket.close();clients.forEach {runCatching {it.close()}};clients.clear();sessions.clear();identities.clear()}
+    override fun close() {scope.cancel();socket.close();clients.forEach {runCatching {it.close()}};clients.clear();sessions.clear();identities.clear();publishSessions()}
 }

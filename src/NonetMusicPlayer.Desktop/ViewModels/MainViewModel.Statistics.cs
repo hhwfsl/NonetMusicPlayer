@@ -51,7 +51,9 @@ public sealed partial class MainViewModel
             var seconds = Math.Min(elapsed, advance);
             if (seconds <= 0 || !double.IsFinite(seconds)) return;
             var track = CurrentTrack!;
-            var counted = TrackIndex().ContainsKey(track.Id) && (PlayingSourcePage != "temporary" || _countedTemporaryIds.Contains(track.Id));
+            // 互听引用即使未收藏也计入接收端统计；提供端的纯音频转发不会经过此播放时钟。
+            var counted = track.ProviderId?.StartsWith("lan:", StringComparison.Ordinal) == true
+                || TrackIndex().ContainsKey(track.Id) && (PlayingSourcePage != "temporary" || _countedTemporaryIds.Contains(track.Id));
             var start = utcNow.AddSeconds(-seconds);
             _listeningJournal.Credit(start, utcNow, (int)_listeningClock.GetLocalNow().Offset.TotalMinutes, from, position, seconds, counted);
             _statisticsErrorReported = false;

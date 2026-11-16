@@ -1,6 +1,8 @@
 # 通用扩展层 v2 / SDK 4.14
 
-当前 SDK 参考为 4.16。桌面 beta.47 / CLI beta.32 源码补充 CLI v2 数据/音源承载与共享加密配置，继续支持冻结 v1/v2，不提升 SDK 版本或清单 Contract。CLI 的能力协商、托管信任和图形边界见 [通用参考](UNIVERSAL_EXTENSIONS.md#cli-数据与音源宿主本地修订)；全部功能对照见宿主 `docs/CLI_DESKTOP_PARITY.md`。下文各 SDK 段落描述能力首次加入时的版本。
+桌面 beta.49 与 CLI beta.33 宿主可在已配对设备请求音频时调用已启用音源的既有 `playback.resolve`，复用带令牌的 loopback HTTP/Range 流并在提供端中转；手机不获取插件地址或账户配置。已有 Contract v1/v2 音源无需新增 RPC、修改 id 或重新打包；网络歌单资产字段属于互听协议可选扩展，SDK 保持 4.16。接收端完整封面/描述与只读功能请使用 Android beta.12 或相应新桌面/CLI，见宿主 `docs/LAN_LIBRARY.md`。
+
+当前 SDK 参考为 4.16。CLI beta.33 提供 v2 数据/音源承载、共享加密配置和互听音频转发，继续支持冻结 v1/v2，不提升 SDK 版本或清单 Contract。CLI 的能力协商、托管信任和图形边界见 [通用参考](UNIVERSAL_EXTENSIONS.md#cli-数据与音源宿主本地修订)；全部功能对照见宿主 `docs/CLI_DESKTOP_PARITY.md`。下文各 SDK 段落描述能力首次加入时的版本。
 
 SDK 4.14 新增可选 `ui.styles.v1`、`runtime.startup.v1` 和原生主页声明。插件可按控件类型、状态和模板部件叠加样式与动画，详见 [风格开发协议](STYLE_EXTENSIONS.md)。类型级样式与具体控件布局接口独立，停用后恢复原始值，不改变既有 Contract 或程序集身份。
 

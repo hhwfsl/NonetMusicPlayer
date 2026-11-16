@@ -6,8 +6,16 @@ using System.Text.Json.Serialization;
 namespace NonetMusicPlayer.Core.Network;
 
 /// <summary>局域网只传音乐元数据，不包含本地路径、设置、历史或播放控制。</summary>
-public sealed record LanSong(string Id, string Title, string Artist, string Album, long DurationMs, bool Artwork, bool Lyrics);
-public sealed record LanPlaylist(string Id, string Name, string Description, string[] TrackIds);
+public sealed record LanSong(string Id, string Title, string Artist, string Album, long DurationMs, bool Artwork, bool Lyrics)
+{
+    // 可选资产修订号供接收方刷新缓存，旧设备忽略；不包含原始文件路径或插件地址。
+    public string ArtworkRevision { get; init; } = "";
+}
+public sealed record LanPlaylist(string Id, string Name, string Description, string[] TrackIds)
+{
+    public bool Artwork { get; init; }
+    public string ArtworkRevision { get; init; } = "";
+}
 [method: JsonConstructor]
 public sealed record LanCatalog(string DeviceId, string Name, string Revision, LanSong[] Tracks, LanPlaylist[] Playlists, int Total, string DeviceKind = "unknown")
 {

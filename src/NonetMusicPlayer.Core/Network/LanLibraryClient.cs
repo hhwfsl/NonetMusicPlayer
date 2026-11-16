@@ -146,6 +146,13 @@ public sealed class LanLibraryClient : IDisposable
         using var response = await _http.GetAsync($"v1/{kind}/{Uri.EscapeDataString(id)}", HttpCompletionOption.ResponseHeadersRead, token); response.EnsureSuccessStatusCode();
         return await ReadLimited(response, kind == "lyrics" ? 2 * 1024 * 1024 : 5 * 1024 * 1024, token);
     }
+    /// <summary>歌单封面独立于歌曲 ID；只允许已同步歌单声明的资产。</summary>
+    public async Task<byte[]> ReadPlaylistArtworkAsync(string id, CancellationToken token = default)
+    {
+        if (!Catalog.Playlists.Any(p => p.Id == id && p.Artwork)) throw new InvalidDataException();
+        using var response = await _http.GetAsync($"v1/playlist-artwork/{Uri.EscapeDataString(id)}", HttpCompletionOption.ResponseHeadersRead, token);
+        response.EnsureSuccessStatusCode(); return await ReadLimited(response, 5 * 1024 * 1024, token);
+    }
     private static async Task<byte[]> ReadLimited(HttpResponseMessage response, int limit, CancellationToken token)
     {
         if (response.Content.Headers.ContentLength > limit) throw new InvalidDataException();

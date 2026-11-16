@@ -62,7 +62,7 @@ internal sealed partial class ConsoleTuiView
     }
     private IReadOnlyList<string> Choices(string name) => name switch
     {
-        "playlist-id" => _view?.Playlists.Select(p => p.Id).ToArray() ?? [],
+        "playlist-id" => _view?.Playlists.Where(p => !p.Id.StartsWith("peer:", StringComparison.Ordinal)).Select(p => p.Id).ToArray() ?? [],
         "track-id" => _view?.Music.Concat(_view.Queue).Concat(_view.SearchResults).Select(p => p.Id).Distinct().ToArray() ?? [],
         "source-id|local" => _view?.SearchSources.Select(p => p.Id).ToArray() ?? [],
         "peer-id" => _view?.Devices.Select(p => p.Id).ToArray() ?? [], _ => []

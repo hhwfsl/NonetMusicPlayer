@@ -37,6 +37,15 @@ public sealed class BaselineExtension : INonetExtension
     {
         if (invocation.Action == "service:media-source")
         {
+            if (invocation.Values["method"]?.GetValue<string>() == "playback.resolve")
+            {
+                // 互听回归由测试提供受控本机 Range 服务，验证真实插件 RPC 而非绕过解析的假地址。
+                var countPath = Path.Combine(_storage, "lan-resolve-count.txt");
+                var count = File.Exists(countPath) ? int.Parse(File.ReadAllText(countPath)) : 0;
+                File.WriteAllText(countPath, (count + 1).ToString());
+                _frame.State["serviceResult"] = new JsonObject { ["kind"] = "loopback-http", ["url"] = File.ReadAllText(Path.Combine(_storage, "lan-playback-source.txt")) };
+                _frame.Revision++; return ValueTask.FromResult(_frame);
+            }
             // 通用顶部搜索回归返回与关键词、分页游标相关的身份，不依赖真实音源或网络。
             if (invocation.Values["method"]?.GetValue<string>() == "music.search" && invocation.Values["query"]?.GetValue<string>() is { } headerQuery && headerQuery.StartsWith("header:", StringComparison.Ordinal))
             {

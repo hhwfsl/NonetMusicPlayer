@@ -101,6 +101,8 @@ internal sealed partial class ConsoleTuiView(HeadlessPlayerSession session, Play
         {
             var moving = Items().ElementAtOrDefault(_selected); var destination = Math.Clamp(_selected + (key.Key == ConsoleKey.UpArrow ? -1 : 1), 0, Math.Max(0, Items().Count - 1));
             if (moving is null || destination == _selected) return null;
+            // 远端歌单顺序由来源设备管理；播放队列本身属于当前会话，仍可重排。
+            if (Page == "Playlists" && (_playlist ?? moving.Id).StartsWith("peer:", StringComparison.Ordinal)) return null;
             _selected = destination;
             return Execute(Page == "Queue" ? "queue move " + TuiForm.Quote(moving.Id) + " " + (destination + 1) : _playlist is null ? "playlist reorder " + TuiForm.Quote(moving.Id) + " " + (destination + 1) : "playlist move " + TuiForm.Quote(_playlist) + " " + TuiForm.Quote(moving.Id) + " " + (destination + 1), token);
         }
@@ -121,10 +123,10 @@ internal sealed partial class ConsoleTuiView(HeadlessPlayerSession session, Play
         var item = Items().ElementAtOrDefault(_selected);
         if (Page == "Playlists" && _playlist is null)
         {
-            if (key.Key == ConsoleKey.Enter && item is not null) { _playlist = item.Id; _selected = 0; return null; }
+            if (key.Key == ConsoleKey.Enter && item is not null) { _playlist = item.Id; _selected = 0; return Execute("playlist tracks " + TuiForm.Quote(item.Id), token); }
             if (key.Key == ConsoleKey.C) return BeginNamedAction("playlist.create", token);
-            if (key.Key == ConsoleKey.R && item is not null) return BeginNamedAction("playlist.rename", token);
-            if (key.Key == ConsoleKey.Delete && item is not null) return Execute("playlist delete " + TuiForm.Quote(item.Id), token);
+            if (key.Key == ConsoleKey.R && item is not null && !item.Id.StartsWith("peer:", StringComparison.Ordinal)) return BeginNamedAction("playlist.rename", token);
+            if (key.Key == ConsoleKey.Delete && item is not null && !item.Id.StartsWith("peer:", StringComparison.Ordinal)) return Execute("playlist delete " + TuiForm.Quote(item.Id), token);
             if (key.Key == ConsoleKey.Q && item is not null) return Execute("queue play " + TuiForm.Quote(item.Id), token);
         }
         else if (Page is "Music" or "Recent" or "Playlists" or "Queue" or "Search")
@@ -136,7 +138,10 @@ internal sealed partial class ConsoleTuiView(HeadlessPlayerSession session, Play
             if (key.Key == ConsoleKey.I && item is not null) return Execute("music info " + TuiForm.Quote(item.Id), token, true);
             if (key.Key == ConsoleKey.A) return BeginNamedAction("playlist.add", token);
             if (key.Key == ConsoleKey.Delete && item is not null && Page is not ("Queue" or "Search"))
+            {
+                if (_playlist?.StartsWith("peer:", StringComparison.Ordinal) == true || Page != "Recent" && _playlist is null && item.Id.StartsWith("lan:", StringComparison.Ordinal)) return null;
                 return Execute(Page == "Recent" ? "history remove " + TuiForm.Quote(item.Id) : _playlist is not null ? "playlist remove " + TuiForm.Quote(_playlist) + " " + TuiForm.Quote(item.Id) : "music remove " + TuiForm.Quote(item.Id), token);
+            }
             if (key.Key == ConsoleKey.Q && _playlist is not null) return Execute("queue play " + TuiForm.Quote(_playlist), token);
         }
         else if (Page == "Plugins")

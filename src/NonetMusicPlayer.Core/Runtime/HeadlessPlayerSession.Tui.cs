@@ -23,20 +23,20 @@ public sealed partial class HeadlessPlayerSession
         await _gate.WaitAsync(token);
         try
         {
-            var references = State.Playlists.SelectMany(p => p.TrackIds).ToHashSet(StringComparer.Ordinal);
             TuiItem Item(StoredMusicTrack t) => new(t.Id, t.Metadata.Title, t.Metadata.Artist + " · " + t.Metadata.Album);
             var index = State.Tracks.Concat(State.RecentTemporaryTracks).DistinctBy(t => t.Id).ToDictionary(t => t.Id);
             return new(Current?.Metadata.Title ?? "—", Current?.Metadata.Artist ?? "", _loaded && _audio.IsPlaying, _loaded ? _audio.Position.TotalSeconds : State.LastPosition,
-                Current?.Metadata.DurationSeconds ?? 0, State.Settings.Volume, State.Settings.PlayMode.ToString(), State.Tracks.Where(t => references.Contains(t.Id)).Select(Item).ToArray(),
-                State.Playlists.Select(p => new TuiItem(p.Id, Localization.LocalizationCatalog.Get(p.Name), p.TrackIds.Count.ToString())).ToArray(),
+                Current?.Metadata.DurationSeconds ?? 0, State.Settings.Volume, State.Settings.PlayMode.ToString(), VisibleLibraryTracks().Select(Item).ToArray(),
+                State.Playlists.Select(p => new TuiItem(p.Id, Localization.LocalizationCatalog.Get(p.Name), p.TrackIds.Count.ToString())).Concat(_lanPeers.Values.SelectMany(peer => peer.Catalog.Playlists.Select(p => new TuiItem(RemotePlaylistId(peer, p), p.Name, peer.Name + " · " + p.TrackIds.Length)))).ToArray(),
                 State.History.Where(index.ContainsKey).Select(id => Item(index[id])).ToArray(),
                 Plugins.Installed.Select(p => new TuiItem(p.Id, p.Name, p.Version + " · " + (p.Enabled ? "ON" : "OFF"))).ToArray(), State.ListeningEntries.Sum(e => e.Seconds))
             {
                 CurrentId = Current?.Id,
                 Favorites = State.Playlists.FirstOrDefault(p => p.Id == "liked")?.TrackIds.ToHashSet(StringComparer.Ordinal) ?? [],
-                PlaylistTracks = State.Playlists.ToDictionary(p => p.Id, p => (IReadOnlyList<TuiItem>)p.TrackIds.Where(index.ContainsKey).Select(id => Item(index[id])).ToArray()),
+                PlaylistTracks = State.Playlists.ToDictionary(p => p.Id, p => (IReadOnlyList<TuiItem>)p.TrackIds.Where(index.ContainsKey).Select(id => Item(index[id])).ToArray())
+                    .Concat(_lanPeers.Values.SelectMany(peer => peer.Catalog.Playlists.Select(p => new KeyValuePair<string, IReadOnlyList<TuiItem>>(RemotePlaylistId(peer, p), p.TrackIds.Select(id => _lanTracks.GetValueOrDefault("lan:" + peer.DeviceId + ":" + id)).OfType<StoredMusicTrack>().Select(Item).ToArray())))).ToDictionary(p => p.Key, p => p.Value),
                 Settings = System.Text.Json.JsonSerializer.SerializeToNode(State.Settings, Persistence.CoreJson.Options)!.AsObject(),
-                Queue = _queue.Select(Item).ToArray(), SearchResults = _musicResults.Select(Item).ToArray(),
+                Queue = _queue.Select(Item).ToArray(), SearchResults = _musicResults.Where(t => !IsLanTrack(t) || _lanTracks.ContainsKey(t.Id)).Select(Item).ToArray(),
                 SearchSources = new[] { new TuiItem("local", "Local", "") }.Concat(Plugins.MusicSearchSources.Select(p => new TuiItem(p.Id, p.MusicSearch!.Label, ""))).ToArray(),
                 Devices = _lanPeers.Values.Select(p => new TuiItem(p.DeviceId, p.Name, p.Reachable ? "ON" : "OFF")).ToArray(),
                 HourlySeconds = HourlyStatistics(24).Select(h => h!["seconds"]!.GetValue<double>()).ToArray()

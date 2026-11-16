@@ -15,6 +15,7 @@ internal class PeerConnectionLease(context: Context): Closeable {
     private var network: ConnectivityManager.NetworkCallback?=null
 
     @Suppress("DEPRECATION")
+    @Synchronized
     fun renew() {
         // 有界租期由服务续租；即使协程意外退出，也不会留下永久 CPU 锁。
         wake.acquire(120_000)
@@ -26,6 +27,7 @@ internal class PeerConnectionLease(context: Context): Closeable {
             network=callback
         }
     }
+    @Synchronized
     override fun close() {
         network?.let {runCatching {connectivity.unregisterNetworkCallback(it)}};network=null
         if(wake.isHeld) wake.release()

@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using NonetMusicPlayer.Core.Commands;
 using NonetMusicPlayer.Core.Library;
 using NonetMusicPlayer.Core.Network;
+using NonetMusicPlayer.Core.Streaming;
 
 namespace NonetMusicPlayer.Core.Runtime;
 
@@ -20,6 +21,8 @@ public sealed partial class HeadlessPlayerSession
     private readonly ConcurrentDictionary<string, (LanConnectionRequest Request, TaskCompletionSource<bool> Answer, DateTimeOffset Expires)> _lanApprovals = [];
     private LanCatalog _lanCatalog = new("", "", "", [], [], 0, "desktop");
     private IReadOnlyDictionary<string, string> _lanFiles = new Dictionary<string, string>();
+    private IReadOnlyDictionary<string, StoredMusicTrack> _lanLocal = new Dictionary<string, StoredMusicTrack>();
+    private readonly Dictionary<string, (string Url, long Until)> _lanPlaybackSources = [];
     private string LanName => Environment.MachineName + " CLI";
     private (string Id, double Position)? _lanResume;
 
@@ -51,7 +54,7 @@ public sealed partial class HeadlessPlayerSession
                 return (new JsonObject { ["id"] = connected.DeviceId, ["name"] = connected.Name }, false);
             case "network.peers": return (new JsonArray(_lanPeers.Values.Select(p => (JsonNode)new JsonObject { ["id"] = p.DeviceId, ["name"] = p.Name, ["deviceKind"] = p.Catalog.DeviceKind, ["reachable"] = p.Reachable, ["connectionState"] = p.Reachable ? "available" : "reconnecting", ["tracks"] = p.Catalog.Total }).ToArray()), false);
             case "network.tracks": return (TracksJson(_lanTracks.Values.Where(t => t.ProviderId == "lan:" + Peer().DeviceId)), false);
-            case "network.playlists": return (new JsonArray(Peer().Catalog.Playlists.Select(p => (JsonNode)new JsonObject { ["id"] = p.Id, ["name"] = p.Name, ["count"] = p.TrackIds.Length }).ToArray()), false);
+            case "network.playlists": var listed = Peer(); return (new JsonArray(listed.Catalog.Playlists.Select(p => (JsonNode)RemotePlaylistJson(listed, p, false)).ToArray()), false);
             case "network.play":
                 var remote = Peer(); var ids = command.Arguments.Count > 1 ? remote.Catalog.Playlists.FirstOrDefault(p => p.Id == Arg(1))?.TrackIds ?? throw new InvalidDataException("Unknown remote playlist.") : remote.Catalog.Tracks.Select(t => t.Id).ToArray();
                 var tracks = ids.Select(id => _lanTracks.GetValueOrDefault("lan:" + remote.DeviceId + ":" + id)).OfType<StoredMusicTrack>().ToArray();
@@ -69,13 +72,7 @@ public sealed partial class HeadlessPlayerSession
     {
         if (_lanServer is not null) return;
         RefreshLanSnapshot(); _lanCertificate = LanLibraryServer.Certificate(Path.Combine(DataDirectory, "lan-identity.pfx"));
-        var server = new LanLibraryServer(_lanCertificate, State.DeviceId, LanName, () => Volatile.Read(ref _lanCatalog), (kind, id) =>
-        {
-            var files = Volatile.Read(ref _lanFiles);
-            if (!files.TryGetValue(kind + ":" + id, out var path) || !File.Exists(path)) return Task.FromResult<LanFile?>(null);
-            var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            return Task.FromResult<LanFile?>(new(stream, stream.Length, "application/octet-stream"));
-        }, async (request, token) =>
+        var server = new LanLibraryServer(_lanCertificate, State.DeviceId, LanName, () => Volatile.Read(ref _lanCatalog), (kind, id) => OpenSharedFileAsync(kind, id, CancellationToken.None), async (request, token) =>
         {
             var id = Guid.NewGuid().ToString("N"); var answer = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             _lanApprovals[id] = (request, answer, DateTimeOffset.UtcNow.AddSeconds(State.Settings.LanApprovalWaitSeconds));
@@ -84,6 +81,7 @@ public sealed partial class HeadlessPlayerSession
             catch (Exception error) when (error is OperationCanceledException or TimeoutException) { return false; }
             finally { _lanApprovals.TryRemove(id, out _); }
         });
+        server.OpenFileAsync = OpenSharedFileAsync;
         server.ApprovalWaitSeconds = () => State.Settings.LanApprovalWaitSeconds;
         server.AcceptReverse = async (access, token) => { if (_disposed) return false; AddPeer(await LanLibraryClient.FromApprovedAccessAsync(access, token)); return true; };
         server.PeerDisconnected += id => { if (_lanPeers.TryGetValue(id, out var peer)) RemovePeer(peer); };
@@ -92,20 +90,83 @@ public sealed partial class HeadlessPlayerSession
     private void RefreshLanSnapshot()
     {
         var referenced = State.Playlists.SelectMany(p => p.TrackIds).ToHashSet(StringComparer.Ordinal);
-        var tracks = State.Tracks.Where(t => t.ProviderId is null && referenced.Contains(t.Id) && File.Exists(t.Metadata.FilePath)).Take(20000).ToArray();
+        // 插件歌曲由本机原音源解析；不把其他设备歌曲递归转发。
+        var tracks = State.Tracks.Where(t => referenced.Contains(t.Id) && !IsLanTrack(t) && (t.ProviderId is not null || File.Exists(t.Metadata.FilePath))).Take(20000).ToArray();
         var files = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var track in tracks)
         {
-            files["audio:" + track.Id] = track.Metadata.FilePath;
+            if (track.ProviderId is null) files["audio:" + track.Id] = track.Metadata.FilePath;
             if (track.Metadata.CoverPath is { } cover && File.Exists(cover)) files["artwork:" + track.Id] = cover;
             if (!State.DisabledLyrics.Contains(track.Id)) foreach (var extension in new[] { ".lrc", ".txt" }) { var path = Path.Combine(LyricsDirectory, LyricFileId(track) + extension); if (File.Exists(path)) { files["lyrics:" + track.Id] = path; break; } }
         }
         var included = tracks.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
-        var catalog = new LanCatalog(State.DeviceId, LanName, Guid.NewGuid().ToString("N"), tracks.Select(t => new LanSong(t.Id, t.Metadata.Title, t.Metadata.Artist, t.Metadata.Album, (long)(t.Metadata.DurationSeconds * 1000), files.ContainsKey("artwork:" + t.Id), files.ContainsKey("lyrics:" + t.Id))).ToArray(),
-            State.Playlists.Select(p => new LanPlaylist(p.Id, p.Name, p.Description, p.TrackIds.Where(included.Contains).ToArray())).ToArray(), tracks.Length, "desktop");
+        var local = tracks.ToDictionary(t => t.Id, StringComparer.Ordinal);
+        var lists = State.Playlists.Take(2000).Select(p => {
+            var path = p.CoverPath ?? (p.Id == "liked" ? null : p.TrackIds.Select(id => local.GetValueOrDefault(id)?.Metadata.CoverPath).FirstOrDefault(File.Exists));
+            var revision = SharedAssetRevision(path); if (revision.Length > 0) files["playlist-artwork:" + p.Id] = path!;
+            return new LanPlaylist(p.Id, p.Id == "liked" ? Localization.LocalizationCatalog.Get(p.Name) : p.Name, p.Description, p.TrackIds.Where(included.Contains).ToArray()) { Artwork = revision.Length > 0, ArtworkRevision = revision };
+        }).ToArray();
+        var catalog = new LanCatalog(State.DeviceId, LanName, "", tracks.Select(t => new LanSong(t.Id, t.Metadata.Title, t.Metadata.Artist, t.Metadata.Album, (long)(t.Metadata.DurationSeconds * 1000), files.ContainsKey("artwork:" + t.Id) || t.ProviderId is not null, files.ContainsKey("lyrics:" + t.Id) || t.ProviderId is not null && !State.DisabledLyrics.Contains(t.Id)) { ArtworkRevision = SharedAssetRevision(t.Metadata.CoverPath) }).ToArray(), lists, tracks.Length, "desktop");
         // 播放状态落盘不应刷新目录修订号，避免远端分页在切歌时不断失效。
         catalog = catalog with { Revision = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(catalog with { Revision = "" }, Persistence.CoreJson.Options))) };
-        Volatile.Write(ref _lanFiles, files); Volatile.Write(ref _lanCatalog, catalog);
+        Volatile.Write(ref _lanLocal, local); Volatile.Write(ref _lanFiles, files); Volatile.Write(ref _lanCatalog, catalog);
+    }
+    private static string SharedAssetRevision(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return "";
+        try { var file = new FileInfo(path); return file.Exists && file.Length is > 0 and <= 5_000_000 ? Convert.ToHexStringLower(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(path + ":" + file.Length + ":" + file.LastWriteTimeUtc.Ticks))) : ""; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { return ""; }
+    }
+    private static LanFile? OpenSharedAsset(string? path, bool audio)
+    {
+        if (!File.Exists(path)) return null;
+        var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        if (!audio && stream.Length > 5_000_000) { stream.Dispose(); return null; }
+        return new(stream, stream.Length, audio ? "application/octet-stream" : Path.GetExtension(path) == ".png" ? "image/png" : Path.GetExtension(path) is ".lrc" or ".txt" ? "text/plain; charset=utf-8" : "image/jpeg");
+    }
+    private async Task<LanFile?> OpenSharedFileAsync(string kind, string id, CancellationToken token)
+    {
+        if (_disposed || _lanServer is null) return null;
+        if (kind == "playlist-artwork") return OpenSharedAsset(Volatile.Read(ref _lanFiles).GetValueOrDefault(kind + ":" + id), false);
+        if (!Volatile.Read(ref _lanLocal).TryGetValue(id, out var track)) return null;
+        if (track.ProviderId is null) return OpenSharedAsset(Volatile.Read(ref _lanFiles).GetValueOrDefault(kind + ":" + id), kind == "audio");
+        string? source = null;
+        // 插件宿主的字典和生命周期在会话事务内解析；实际网络复制不占用业务锁。
+        await _gate.WaitAsync(token);
+        try {
+            if (_disposed || _lanServer is null || !Volatile.Read(ref _lanLocal).ContainsKey(id) || !Plugins.Installed.Any(p => p.Id == track.ProviderId && p.Enabled)) return null;
+            if (kind != "audio") {
+                await PrepareTrackResourcesAsync(track, token);
+                return OpenSharedAsset(kind == "artwork" ? track.Metadata.CoverPath : State.DisabledLyrics.Contains(id) ? null : new[] { ".lrc", ".txt" }.Select(ext => Path.Combine(LyricsDirectory, LyricFileId(track) + ext)).FirstOrDefault(File.Exists), false);
+            }
+            if (_lanPlaybackSources.TryGetValue(id, out var cached) && cached.Until > Environment.TickCount64) source = cached.Url;
+            else {
+                source = await Plugins.ResolveAsync(track.ProviderId, track.ProviderTrackId!, token); token.ThrowIfCancellationRequested();
+                if (_lanPlaybackSources.Count >= 64) _lanPlaybackSources.Clear();
+                _lanPlaybackSources[id] = (source, Environment.TickCount64 + 30_000);
+            }
+        } finally { _gate.Release(); }
+        return await Task.Run<LanFile?>(() => { var stream = new LoopbackRangeStream(new Uri(source), token); return new(stream, stream.Length, "application/octet-stream"); }, token);
+    }
+    private static string RemotePlaylistId(LanLibraryClient peer, LanPlaylist list) => "peer:" + peer.DeviceId + ":" + list.Id;
+    private string RemotePlaylistCover(LanLibraryClient peer, LanPlaylist list) => Path.Combine(ArtworkDirectory, MusicFileReader.StableId(RemotePlaylistId(peer, list) + ":" + list.ArtworkRevision) + ".image");
+    private JsonObject RemotePlaylistJson(LanLibraryClient peer, LanPlaylist list, bool compositeId) => new() {
+        ["id"] = compositeId ? RemotePlaylistId(peer, list) : list.Id, ["name"] = list.Name, ["description"] = list.Description, ["count"] = list.TrackIds.Length,
+        ["readOnly"] = true, ["deviceId"] = peer.DeviceId, ["deviceName"] = peer.Name, ["sourcePlaylistId"] = list.Id,
+        ["artwork"] = list.Artwork, ["artworkRevision"] = list.ArtworkRevision, ["coverPath"] = list.Artwork && File.Exists(RemotePlaylistCover(peer, list)) ? RemotePlaylistCover(peer, list) : null
+    };
+    private JsonArray PlaylistListings() => new(State.Playlists.Select(p => (JsonNode)new JsonObject {
+        ["id"] = p.Id, ["name"] = p.Id == "liked" ? Localization.LocalizationCatalog.Get("Playlists.LikedSongs") : p.Name, ["description"] = p.Description, ["count"] = p.TrackIds.Count, ["coverPath"] = p.CoverPath, ["readOnly"] = false
+    }).Concat(_lanPeers.Values.SelectMany(peer => peer.Catalog.Playlists.Select(p => (JsonNode)RemotePlaylistJson(peer, p, true)))).ToArray());
+    private async Task<IReadOnlyList<StoredMusicTrack>> ReadPlaylistTracksAsync(string id, CancellationToken token)
+    {
+        if (!id.StartsWith("peer:", StringComparison.Ordinal)) return PlaylistTracks(FindPlaylist(id)).ToArray();
+        foreach (var peer in _lanPeers.Values) if (peer.Catalog.Playlists.FirstOrDefault(p => RemotePlaylistId(peer, p) == id) is { } list) {
+            if (list.Artwork && !File.Exists(RemotePlaylistCover(peer, list))) try { await File.WriteAllBytesAsync(RemotePlaylistCover(peer, list), await peer.ReadPlaylistArtworkAsync(list.Id, token), token); }
+                catch (Exception e) when (e is not OperationCanceledException) { Diagnostics.AppLog.Warning("LAN", "CLI 远端歌单可选封面暂不可用"); }
+            return list.TrackIds.Select(track => _lanTracks.GetValueOrDefault("lan:" + peer.DeviceId + ":" + track)).OfType<StoredMusicTrack>().ToArray();
+        }
+        throw new InvalidDataException(Localization.LocalizationCatalog.Get("Commands.PlaylistNotFound"));
     }
     private void AddPeer(LanLibraryClient peer)
     {
@@ -153,5 +214,6 @@ public sealed partial class HeadlessPlayerSession
         foreach (var request in _lanApprovals.Values) request.Answer.TrySetResult(false); _lanApprovals.Clear();
         foreach (var peer in _lanPeers.Values) RemovePeer(peer);
         _lanServer?.Dispose(); _lanServer = null; _lanCertificate?.Dispose(); _lanCertificate = null;
+        _lanPlaybackSources.Clear(); Volatile.Write(ref _lanLocal, new Dictionary<string, StoredMusicTrack>()); Volatile.Write(ref _lanFiles, new Dictionary<string, string>());
     }
 }

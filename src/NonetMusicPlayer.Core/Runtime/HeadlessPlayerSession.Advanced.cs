@@ -6,6 +6,7 @@ using NonetMusicPlayer.Core.Commands;
 using NonetMusicPlayer.Core.Library;
 using NonetMusicPlayer.Core.Persistence;
 using NonetMusicPlayer.Core.Plugins;
+using NonetMusicPlayer.Core.Localization;
 
 namespace NonetMusicPlayer.Core.Runtime;
 
@@ -32,7 +33,7 @@ public sealed partial class HeadlessPlayerSession
                 var moving = _queue.FirstOrDefault(t => t.Id == Arg(0)) ?? throw new InvalidDataException("Track is not in the queue.");
                 var at = CommandResults.Integer(command, 1, 1, _queue.Count) - 1; _queue.Remove(moving); _queue.Insert(at, moving); State.ManualQueueOrder = true;
                 return (TracksJson(_queue), true);
-            case "playlist.tracks": return (TracksJson(PlaylistTracks(FindPlaylist(Arg(0)))), false);
+            case "playlist.tracks": return (TracksJson(await ReadPlaylistTracksAsync(Arg(0), token)), false);
             case "playlist.from-folders":
                 var created = new JsonArray();
                 var prepared = new List<(StoredPlaylist Playlist, IReadOnlyList<StoredMusicTrack> Tracks)>();
@@ -48,14 +49,15 @@ public sealed partial class HeadlessPlayerSession
             case "music.query": await QueryMusicAsync(Arg(0), Arg(1), false, token); return (MusicResultsJson(), false);
             case "music.more": if (_searchCursor.Length > 0) await QueryMusicAsync(_searchSource, _searchQuery, true, token); return (MusicResultsJson(), false);
             case "music.results": return (MusicResultsJson(), false);
-            case "music.search": return (TracksJson(State.Tracks.Where(t => (t.Metadata.Title + " " + t.Metadata.Artist + " " + t.Metadata.Album).Contains(Arg(0), StringComparison.CurrentCultureIgnoreCase))), false);
+            case "music.search": return (TracksJson(VisibleLibraryTracks().Where(t => (t.Metadata.Title + " " + t.Metadata.Artist + " " + t.Metadata.Album).Contains(Arg(0), StringComparison.CurrentCultureIgnoreCase))), false);
             case "album.list": case "artist.list":
                 var kind = command.Name.Split('.')[0];
-                return (new JsonArray(State.Tracks.GroupBy(t => kind == "album" ? t.Metadata.Album : t.Metadata.Artist).OrderBy(g => g.Key).Select(g => (JsonNode)new JsonObject
+                return (new JsonArray(VisibleLibraryTracks().GroupBy(t => kind == "album" ? t.Metadata.Album : t.Metadata.Artist).OrderBy(g => g.Key).Select(g => (JsonNode)new JsonObject
                     { ["name"] = g.Key, ["count"] = g.Count(), ["coverPath"] = State.GroupCovers.TryGetValue(kind + ":" + g.Key, out var custom) ? custom : g.Select(t => t.Metadata.CoverPath).FirstOrDefault(p => p is not null) }).ToArray()), false);
-            case "album.tracks": case "artist.tracks": return (TracksJson(State.Tracks.Where(t => (command.Name.StartsWith("album.") ? t.Metadata.Album : t.Metadata.Artist) == Arg(0))), false);
+            case "album.tracks": case "artist.tracks": return (TracksJson(VisibleLibraryTracks().Where(t => (command.Name.StartsWith("album.") ? t.Metadata.Album : t.Metadata.Artist) == Arg(0))), false);
             case "album.cover": case "artist.cover":
                 var key = command.Name.Split('.')[0] + ":" + Arg(0);
+                if (!State.Tracks.Any(t => !IsLanTrack(t) && (command.Name.StartsWith("album.") ? t.Metadata.Album : t.Metadata.Artist) == Arg(0))) throw new InvalidOperationException(LocalizationCatalog.Get("Lan.ReadOnly"));
                 if (Arg(1) == "auto") State.GroupCovers.Remove(key); else State.GroupCovers[key] = Arg(1) == "default" ? "" : StoreCover(Arg(1)); return (null, true);
             case "playlist.import":
                 var file = Path.GetFullPath(Arg(0)); if (new FileInfo(file).Length > 4 * 1024 * 1024) throw new InvalidDataException("M3U is too large.");
@@ -74,6 +76,7 @@ public sealed partial class HeadlessPlayerSession
             case "lyrics.reload": return (JsonValue.Create(LyricPath() is { } path ? File.ReadAllText(path) : ""), false);
             case "lyrics.clear":
                 if (Current is null) throw new InvalidOperationException("Select a track first.");
+                RequireEditableSource(Current);
                 // 取消软件内关联，保留原歌词和音频文件，重新导入即可恢复。
                 State.DisabledLyrics.Add(Current.Id);
                 return (null, true);
@@ -93,7 +96,7 @@ public sealed partial class HeadlessPlayerSession
     {
         query = query.Trim(); if (query.Length is 0 or > 300) throw new InvalidDataException("Search query must contain 1–300 characters.");
         if (!more) { _musicResults.Clear(); _searchCursors.Clear(); _searchCursor = ""; _searchSource = source; _searchQuery = query; }
-        if (source is "" or "local") { _musicResults.AddRange(State.Tracks.Where(t => (t.Metadata.Title + " " + t.Metadata.Artist + " " + t.Metadata.Album).Contains(query, StringComparison.CurrentCultureIgnoreCase))); return; }
+        if (source is "" or "local") { _musicResults.AddRange(VisibleLibraryTracks().Where(t => (t.Metadata.Title + " " + t.Metadata.Artist + " " + t.Metadata.Album).Contains(query, StringComparison.CurrentCultureIgnoreCase))); return; }
         var page = await Plugins.SearchMusicAsync(source, query, _searchCursor, token); _searchCursors.Add(_searchCursor);
         var known = _musicResults.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
         foreach (var track in page.Tracks)
@@ -103,7 +106,7 @@ public sealed partial class HeadlessPlayerSession
         }
         var next = page.NextCursor ?? ""; _searchCursor = page.Tracks.Count == 0 || _searchCursors.Contains(next) ? "" : next;
     }
-    private JsonObject MusicResultsJson() => new() { ["source"] = _searchSource, ["query"] = _searchQuery, ["hasMore"] = _searchCursor.Length > 0, ["items"] = TracksJson(_musicResults) };
+    private JsonObject MusicResultsJson() => new() { ["source"] = _searchSource, ["query"] = _searchQuery, ["hasMore"] = _searchCursor.Length > 0, ["items"] = TracksJson(_musicResults.Where(t => !IsLanTrack(t) || _lanTracks.ContainsKey(t.Id))) };
     /// <summary>搜索和目录采用同一身份与资源命名，加入歌单不会丢失封面或歌词。</summary>
     private StoredMusicTrack StoreSourceTrack(string provider, ProviderTrack track)
     {

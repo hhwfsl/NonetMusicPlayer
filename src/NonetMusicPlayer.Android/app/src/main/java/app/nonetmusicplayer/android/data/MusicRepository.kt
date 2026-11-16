@@ -85,7 +85,8 @@ class MusicRepository(context: Context, private val scope: CoroutineScope, datab
         db.rawQuery("SELECT managed,lyrics,cover FROM tracks WHERE id=?",arrayOf(t.id)).use { existing ->
             if(existing.moveToFirst()) {
                 managed=managed || existing.getInt(0)==1
-                if(lyrics.isBlank()) lyrics=existing.getString(1)
+                // 远端歌词以提供设备为准，目录刷新不能继续继承旧版留下的本机歌词覆盖。
+                if(lyrics.isBlank() && !t.isRemoteContent) lyrics=existing.getString(1)
                 if(t.providerId.startsWith("lan:") && java.io.File(existing.getString(2)).isFile) cover=existing.getString(2)
             }
         }
@@ -154,7 +155,8 @@ class MusicRepository(context: Context, private val scope: CoroutineScope, datab
         val track=_state.value.tracks.firstOrNull { it.id==trackId } ?: return@mutate
         db.execSQL("INSERT OR REPLACE INTO history VALUES(?,?)",arrayOf<Any>(trackId,System.currentTimeMillis()))
         db.execSQL("DELETE FROM history WHERE track_id NOT IN (SELECT track_id FROM history ORDER BY played_at DESC LIMIT ?)",arrayOf(_state.value.preferences.historyLimit))
-        if(track.inLibrary) {
+        // 互听歌曲由本机实际播放时计数，不要求先加入收藏；普通临时本地文件仍沿用原规则。
+        if(track.inLibrary || track.providerId.startsWith("lan:")) {
             val day=LocalDate.now().toString()
             db.execSQL("INSERT OR IGNORE INTO listening VALUES(?,?,0,0)",arrayOf(trackId,day))
             db.execSQL("UPDATE listening SET plays=plays+1 WHERE track_id=? AND day=?",arrayOf(trackId,day))
@@ -166,7 +168,7 @@ class MusicRepository(context: Context, private val scope: CoroutineScope, datab
     suspend fun recordDuration(trackId: String, elapsedMs: Long,endMs: Long=System.currentTimeMillis()) = recordDurations(listOf(Triple(trackId,elapsedMs,endMs)))
     /** 一次检查点只发布一张统计快照，避免每秒片段引发重复数据库查询和界面更新。 */
     internal suspend fun recordDurations(slices: List<Triple<String,Long,Long>>) = mutate(statisticsOnly=true) {db ->
-        val eligible=_state.value.tracks.filter {it.inLibrary}.map {it.id}.toHashSet()
+        val eligible=_state.value.tracks.filter {it.inLibrary || it.providerId.startsWith("lan:")}.map {it.id}.toHashSet()
         for((trackId,elapsedMs,endMs) in slices) if(trackId in eligible) for((day,hour,ms) in ListeningCharts.split(endMs,elapsedMs)) {
             db.execSQL("INSERT OR IGNORE INTO listening VALUES(?,?,0,0)",arrayOf(trackId,day))
             db.execSQL("UPDATE listening SET duration=duration+? WHERE track_id=? AND day=?",arrayOf<Any>(ms,trackId,day))
@@ -185,7 +187,11 @@ class MusicRepository(context: Context, private val scope: CoroutineScope, datab
     } }
     suspend fun setLyrics(trackId: String, path: String) {
         val previous=_state.value.tracks.firstOrNull {it.id==trackId}?.lyrics.orEmpty()
-        mutate {db ->db.execSQL("UPDATE tracks SET lyrics=? WHERE id=?",arrayOf(path,trackId))}
+        mutate {db ->
+            val remote=db.rawQuery("SELECT provider FROM tracks WHERE id=?",arrayOf(trackId)).use {it.moveToFirst() && it.getString(0).startsWith("lan:")}
+            require(!remote) {"Remote source content is read-only"}
+            db.execSQL("UPDATE tracks SET lyrics=? WHERE id=?",arrayOf(path,trackId))
+        }
         // 每次导入生成新路径来失效歌词缓存；只清理本应用 Lyrics 内的旧副本。
         withContext(Dispatchers.IO) {
             if(previous!=path && previous.isNotBlank()) {
@@ -198,10 +204,11 @@ class MusicRepository(context: Context, private val scope: CoroutineScope, datab
     suspend fun removeRecent(ids: Set<String>) = mutate { db ->
         ids.forEach {db.delete("history","track_id=?",arrayOf(it))}
     }
-    /** 断线清除临时设备曲库；本机歌单与收藏引用保持不变。 */
+    /** 断线清除未听的临时曲库；已听歌曲仅保留统计所需资料，不自动加入本机歌单或收藏。 */
     suspend fun removePeerEphemeral(peer: String?=null) = mutate {db ->
-        if(peer==null) db.execSQL("DELETE FROM tracks WHERE provider LIKE 'lan:%' AND id NOT IN (SELECT track_id FROM playlist_tracks)")
-        else db.execSQL("DELETE FROM tracks WHERE provider=? AND id NOT IN (SELECT track_id FROM playlist_tracks)",arrayOf("lan:$peer"))
+        val unused="id NOT IN (SELECT track_id FROM playlist_tracks) AND id NOT IN (SELECT track_id FROM history) AND id NOT IN (SELECT track_id FROM listening) AND id NOT IN (SELECT track_id FROM listening_hours)"
+        if(peer==null) db.execSQL("DELETE FROM tracks WHERE provider LIKE 'lan:%' AND $unused")
+        else db.execSQL("DELETE FROM tracks WHERE provider=? AND $unused",arrayOf("lan:$peer"))
     }
     /** 设备类型随引用保存，断线后仍能正确区分桌面歌曲和移动歌曲，不改变旧表宽度。 */
     suspend fun setPeerKind(id: String,kind: String) = mutate {db ->
@@ -209,6 +216,7 @@ class MusicRepository(context: Context, private val scope: CoroutineScope, datab
         kinds.put("lan:$id",kind.takeIf {it in listOf("desktop","mobile")} ?: "unknown");putSetting(db,"deviceKinds",kinds.toString())
     }
     suspend fun setCover(key: String, path: String) = mutate { db ->
+        require(_state.value.canEditCover(key)) {"This artwork belongs to a read-only or unavailable collection"}
         val covers=runCatching {JSONObject(readSetting(db,"covers"))}.getOrDefault(JSONObject())
         if(path.isBlank()) covers.remove(key) else covers.put(key,path)
         putSetting(db,"covers",covers.toString())
@@ -225,6 +233,7 @@ class MusicRepository(context: Context, private val scope: CoroutineScope, datab
     }
     /** 移除软件引用，不触碰 content URI 所指向的用户音频或源歌词。 */
     suspend fun removeEverywhere(ids: Set<String>) = mutate { db ->
+        require(_state.value.tracks.none {it.id in ids && it.isRemoteContent}) {"Remote source content is read-only"}
         ids.forEach {db.delete("playlist_tracks","track_id=?",arrayOf(it))}
         markUnreferenced(db)
     }

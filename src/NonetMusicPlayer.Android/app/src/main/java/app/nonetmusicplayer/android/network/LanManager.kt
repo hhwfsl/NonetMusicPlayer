@@ -21,9 +21,9 @@ import java.net.NetworkInterface
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
-data class NearbyPlaylist(val id: String,val name: String,val description: String,val trackIds: List<String>)
+data class NearbyPlaylist(val id: String,val name: String,val description: String,val trackIds: List<String>,val cover: String = "")
 data class NearbyDevice(val id: String,val name: String,val playlists: List<NearbyPlaylist>,val trackIds: List<String>,val deviceKind: String = "unknown",val reachable: Boolean=true)
-data class NearbyState(val sharing: Boolean=false,val invitations: List<String> = emptyList(),val peers: List<NearbyDevice> = emptyList(),val connecting: Boolean=false,val incoming: IncomingConnection? = null)
+data class NearbyState(val sharing: Boolean=false,val invitations: List<String> = emptyList(),val peers: List<NearbyDevice> = emptyList(),val connecting: Boolean=false,val incoming: IncomingConnection? = null,val servingConnections: Int=0)
 private class PeerConnection(val id: String,val name: String,val invitation: PeerInvitation,val http: OkHttpClient,val token: String) {
     @Volatile var revision="";@Volatile var alive=true;val health=PeerHeartbeatPolicy();val retry=Channel<Unit>(Channel.CONFLATED)
     // 媒体请求由自己的 Call 直接持有认证及固定证书，取消不再被内层同步 execute 吞掉。
@@ -43,7 +43,7 @@ class LanManager(private val app: MusicApplication) {
     private var approval: Pair<String,CompletableDeferred<Boolean>>?=null
     private var approvalDeadline=0L
     private val _notices=MutableSharedFlow<String>(extraBufferCapacity=16);val notices=_notices.asSharedFlow()
-    private var sourceTracks: List<Track>?=null;private var sourceLists: List<Playlist>?=null;private var cached: JSONObject?=null
+    private var sourceTracks: List<Track>?=null;private var sourceLists: List<Playlist>?=null;private var sourceCovers: Map<String,String>?=null;private var cached: JSONObject?=null
     private val plain=OkHttpClient.Builder().followRedirects(false).followSslRedirects(false).build()
     /** 每个请求只向同源已配对设备发送令牌，封面和 Media3 共用此路由。 */
     val http: OkHttpClient=plain.newBuilder().addInterceptor {chain ->
@@ -71,7 +71,8 @@ class LanManager(private val app: MusicApplication) {
         // 在主线程交接所有权；服务已取消时不会把后台生成的监听器重新挂回应用。
         withContext(Dispatchers.Main.immediate) {if(server==null) {server=PeerServer(deviceId,deviceName,ssl,pin,::catalog,::openLocal,{app.log.write("WARN","LAN request failed",it)},::confirmConnection,
             {app.repository.state.value.preferences.lanApprovalWaitSeconds},::acceptReverse,{id ->connections[id]?.let {p ->app.scope.launch {disconnect(p,"remote")}}},
-            {id ->connections[id]?.let {it.health.contact(android.os.SystemClock.elapsedRealtime());publishHealth(it)}});publishSharing()}}
+            {id ->connections[id]?.let {it.health.contact(android.os.SystemClock.elapsedRealtime());publishHealth(it)}},
+            {count ->_state.update {it.copy(servingConnections=count)}});publishSharing()}}
     }
     @androidx.annotation.OptIn(markerClass=[androidx.media3.common.util.UnstableApi::class])
     private suspend fun confirmConnection(request: IncomingConnection): Boolean = withContext(Dispatchers.Main.immediate) {
@@ -102,15 +103,28 @@ class LanManager(private val app: MusicApplication) {
         val s=server;val addresses=runCatching {NetworkInterface.getNetworkInterfaces().toList().filter {it.isUp && !it.isLoopback}.flatMap {it.inetAddresses.toList()}.mapNotNull {it.hostAddress}.filter {PeerSecurity.privateAddress(it) && !it.startsWith("127.")}}.getOrDefault(emptyList())
         _state.update {it.copy(sharing=s!=null,invitations=if(s==null) emptyList() else addresses.distinct().map(s::invitation))}
     }
+    private fun playlistCover(id: String): String {
+        val state=app.repository.state.value;val playlist=state.playlists.firstOrNull {it.id==id} ?: return ""
+        return state.covers["playlist:$id"].orEmpty().ifBlank {if(id=="liked") "" else playlist.trackIds.firstOrNull()?.let {trackId ->state.tracks.firstOrNull {it.id==trackId && it.providerId.isBlank()}?.cover}.orEmpty()}
+    }
     @Synchronized private fun catalog(): JSONObject {
-        val state=app.repository.state.value;if(sourceTracks===state.tracks && sourceLists===state.playlists) cached?.let {return it}
+        val state=app.repository.state.value;if(sourceTracks===state.tracks && sourceLists===state.playlists && sourceCovers===state.covers) cached?.let {return it}
         val ids=state.playlists.flatMap {it.trackIds}.toSet();val tracks=state.tracks.filter {it.inLibrary && it.providerId.isBlank() && it.id in ids}.take(20000);val localIds=tracks.map {it.id}.toSet()
         val songs=JSONArray().apply {tracks.forEach {put(JSONObject().put("id",it.id).put("title",it.title).put("artist",it.artist).put("album",it.album).put("durationMs",it.durationMs).put("artwork",it.cover.isNotBlank()).put("lyrics",it.lyrics.isNotBlank() && it.lyrics!="none:"))}}
-        val lists=JSONArray().apply {state.playlists.take(2000).forEach {p ->put(JSONObject().put("id",p.id).put("name",if(p.id=="liked") app.getString(R.string.liked) else p.name).put("description",p.description).put("trackIds",JSONArray(p.trackIds.filter {it in localIds})))}}
+        val lists=JSONArray().apply {state.playlists.take(2000).forEach {p ->
+            val cover=playlistCover(p.id);val file=File(cover);val artwork=file.isFile && file.length() in 1..5_000_000
+            put(JSONObject().put("id",p.id).put("name",if(p.id=="liked") app.getString(R.string.liked) else p.name).put("description",p.description).put("trackIds",JSONArray(p.trackIds.filter {it in localIds}))
+                .put("artwork",artwork).put("artworkRevision",if(artwork) hash(cover+":"+file.length()+":"+file.lastModified()) else ""))
+        }}
         val c=JSONObject().put("deviceId",deviceId).put("name",deviceName).put("deviceKind","mobile").put("tracks",songs).put("playlists",lists).put("total",tracks.size);c.put("revision",hash(c.toString()))
-        sourceTracks=state.tracks;sourceLists=state.playlists;cached=c;return c
+        sourceTracks=state.tracks;sourceLists=state.playlists;sourceCovers=state.covers;cached=c;return c
     }
     private suspend fun openLocal(kind: String,id: String): PeerPayload?=withContext(Dispatchers.IO) {
+        // 歌单资产与歌曲分别授权，不把请求中的 ID 当作任意本机路径。
+        if(kind=="playlist-artwork") {
+            if(app.repository.state.value.playlists.none {it.id==id}) return@withContext null
+            return@withContext File(playlistCover(id)).takeIf {it.isFile && it.length() in 1..5_000_000}?.let {PeerPayload(it.inputStream(),it.length(),if(it.extension=="png") "image/png" else "image/jpeg")}
+        }
         val s=app.repository.state.value;val t=s.tracks.firstOrNull {it.id==id && it.providerId.isBlank() && it.inLibrary && s.playlists.any {p ->id in p.trackIds}} ?: return@withContext null
         when(kind) {
             "lyrics" -> {val text=when {t.lyrics=="none:" ->"";t.lyrics.startsWith("embedded:") ->t.lyrics.removePrefix("embedded:");File(t.lyrics).isFile && File(t.lyrics).length()<=2_000_000 ->File(t.lyrics).readText();else ->""};val bytes=text.toByteArray();if(bytes.isEmpty() || bytes.size>2_000_000) null else PeerPayload(ByteArrayInputStream(bytes),bytes.size.toLong(),"text/plain; charset=utf-8")}
@@ -160,12 +174,18 @@ class LanManager(private val app: MusicApplication) {
             require(page.getString("deviceId")==peer.id && page.getString("revision")==first!!.getString("revision"));total=page.getInt("total");require(total in 0..20000)
             val rows=page.getJSONArray("tracks");require(rows.length()<=200 && (rows.length()>0 || songs.size>=total))
             for(i in 0 until rows.length()) {val r=rows.getJSONObject(i);val remote=r.getString("id");require(remote.length in 1..256 && '/' !in remote && '\\' !in remote)
-                val cover=if(r.optBoolean("artwork")) peer.invitation.origin.newBuilder().addPathSegments("v1/artwork").addPathSegment(remote).build().toString() else ""
+                val cover=if(r.optBoolean("artwork")) peer.invitation.origin.newBuilder().addPathSegments("v1/artwork").addPathSegment(remote).addQueryParameter("v",r.optString("artworkRevision").take(128)).build().toString() else ""
                 songs+=Track("lan_"+hash(peer.id+":"+remote),"nonet-lan://${peer.id}/"+Uri.encode(remote),r.getString("title").take(2000),r.optString("artist").take(2000),r.optString("album").take(2000),r.optLong("durationMs").coerceAtLeast(0),cover,providerId="lan:${peer.id}",inLibrary=false,sourceDeviceKind=page.optString("deviceKind","unknown"))
             }
         } while(songs.size<total)
         require(songs.distinctBy {it.id}.size==songs.size);val lists=first!!.getJSONArray("playlists");require(lists.length()<=2000);val byId=songs.associateBy {Uri.parse(it.uri).lastPathSegment}
-        val playlists=List(lists.length()) {i ->val p=lists.getJSONObject(i);val ids=p.getJSONArray("trackIds");require(ids.length()<=20000);NearbyPlaylist(p.getString("id"),p.getString("name").take(100),p.optString("description").take(2000),List(ids.length()) {ids.getString(it)}.mapNotNull {byId[it]?.id})}
+        val playlists=List(lists.length()) {i ->
+            val p=lists.getJSONObject(i);val ids=p.getJSONArray("trackIds");val playlistId=p.getString("id")
+            require(ids.length()<=20000 && playlistId.length in 1..256 && '/' !in playlistId && '\\' !in playlistId)
+            // 新字段可选，旧桌面仍显示原来的占位；版本参数让封面更换后更新图片缓存。
+            val cover=if(p.optBoolean("artwork")) peer.invitation.origin.newBuilder().addPathSegments("v1/playlist-artwork").addPathSegment(playlistId).addQueryParameter("v",p.optString("artworkRevision").take(128)).build().toString() else ""
+            NearbyPlaylist(playlistId,p.getString("name").take(100),p.optString("description").take(2000),List(ids.length()) {ids.getString(it)}.mapNotNull {byId[it]?.id},cover)
+        }
         if(!peer.alive || connections[peer.id]!==peer) return@withContext
         app.repository.setPeerKind(peer.id,first!!.optString("deviceKind","unknown"));app.repository.storeTracks(songs);peer.revision=first!!.getString("revision")
         _state.update {it.copy(peers=it.peers.filterNot {p ->p.id==peer.id}+NearbyDevice(peer.id,peer.name,playlists,songs.map {t ->t.id},first!!.optString("deviceKind","unknown")))}

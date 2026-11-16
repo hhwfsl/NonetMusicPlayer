@@ -56,6 +56,12 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     {
         _listeningClock = timeProvider ?? TimeProvider.System;
         _scanner = scanner; _audio = audioPlayer; State = Storage.Load(); Plugins = new(Storage);
+        // 插件重载、关闭或更新后不复用旧进程的本机流地址。
+        Plugins.LifecycleChanged += (_, _) =>
+        {
+            if (Dispatcher.UIThread.CheckAccess()) _lanPlaybackSources.Clear();
+            else Dispatcher.UIThread.Post(() => _lanPlaybackSources.Clear());
+        };
         _listeningJournal = new(Storage.ListeningJournal);
         // 重启时连接均未建立，清除未收藏的远端临时引用，保留正常歌单中的移动歌曲。
         var retainedLan = State.Playlists.SelectMany(p => p.TrackIds).ToHashSet(StringComparer.Ordinal);

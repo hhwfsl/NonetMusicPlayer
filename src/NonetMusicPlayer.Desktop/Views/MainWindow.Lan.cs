@@ -2,12 +2,15 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using NonetMusicPlayer.Core.Network;
 using NonetMusicPlayer.Desktop.Services;
+using NonetMusicPlayer.Desktop.Controls;
+using Avalonia.VisualTree;
 
 namespace NonetMusicPlayer.Desktop.Views;
 
 public sealed partial class MainWindow
 {
     private IDisposable? _lanDisconnectNotification;
+    private string _lanVisibleCatalogKey = "";
     private void LanDisconnectedNotification(string message)
     {
         if (IsActive && IsVisible && WindowState != WindowState.Minimized) return;
@@ -15,7 +18,21 @@ public sealed partial class MainWindow
         var notice = SystemConnectionNotification.Show(this, L10n.T("Lan.Title"), message, 10, RestoreFromTray);
         _lanDisconnectNotification = notice; DispatcherTimer.RunOnce(notice.Dispose, TimeSpan.FromSeconds(10));
     }
-    private void LanNavigationChanged(object? sender, EventArgs e) => BuildPlaylists();
+    private void LanNavigationChanged(object? sender, EventArgs e)
+    {
+        BuildPlaylists();
+        var catalogKey=string.Join("|",(_vm?.LanPeers.Select(p => p.DeviceId+":"+p.Catalog.Revision) ?? Enumerable.Empty<string>()).OrderBy(p => p));
+        if(catalogKey!=_lanVisibleCatalogKey)
+        {
+            _lanVisibleCatalogKey=catalogKey;
+            // 分类使用卡片快照，连接变更时只替换结果视口，保留搜索输入与当前页面。
+            if(_vm?.Page is "albums" or "artists") ApplyCatalogQuery();
+            else if(_vm?.Page=="library") ShowPage();
+        }
+        if (_vm?.Page.StartsWith("lan:", StringComparison.Ordinal) == true) BuildPlaylistHeader();
+        foreach (var image in this.GetVisualDescendants().OfType<ThumbnailImage>().Where(i => i.Name == "LanPlaylistCover"))
+            if (image.Tag is string page) image.SetPaths([_vm?.LanPlaylistCoverPath(page)]);
+    }
     /// <summary>配对由真实用户确认；关闭、超时、隐藏界面均不能隐式授权。</summary>
     private async Task<bool> ConfirmLanConnectionAsync(LanConnectionRequest request, CancellationToken token)
     {

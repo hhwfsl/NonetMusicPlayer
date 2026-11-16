@@ -11,15 +11,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import app.nonetmusicplayer.android.R
 import app.nonetmusicplayer.android.domain.Track
+import app.nonetmusicplayer.android.domain.visibleInLibrary
 import app.nonetmusicplayer.android.playback.PlayerViewModel
 import app.nonetmusicplayer.android.ui.musicString as stringResource
 
 /** 只搜索已经导入的曲目；保留键盘自动聚焦和按视口组合的虚拟列表。 */
 @UnstableApi
-@Composable internal fun MusicSearchScreen(vm: PlayerViewModel,onPlay: (Track,List<Track>)->Unit,onMore: (Track)->Unit,requestFocus: Boolean,onFocusHandled: ()->Unit) {
+@Composable internal fun MusicSearchScreen(vm: PlayerViewModel,onPlay: (Track,List<Track>)->Unit,onMore: (Track)->Unit,requestFocus: Boolean,onFocusHandled: ()->Unit,activeRemoteIds: Set<String> = emptySet()) {
     val library by vm.library.collectAsStateWithLifecycle()
     var query by rememberSaveable {mutableStateOf("")}
-    val tracks=remember(library.tracks,query) {library.tracks.filter {it.inLibrary && (query.isBlank() || listOf(it.title,it.artist,it.album).any {v ->v.contains(query,true)})}}
+    val tracks=remember(library.tracks,query,activeRemoteIds) {library.tracks.filter {it.visibleInLibrary(activeRemoteIds) && (query.isBlank() || listOf(it.title,it.artist,it.album).any {v ->v.contains(query,true)})}}
     val liked=library.playlists.firstOrNull {it.id=="liked"}?.trackIds.orEmpty()
     val list=rememberLazyListState()
     LaunchedEffect(query) {list.scrollToItem(0)}

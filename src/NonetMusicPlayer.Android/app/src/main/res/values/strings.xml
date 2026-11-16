@@ -30,7 +30,10 @@
     <string name="lan_available">Device available</string>
     <string name="lan_reconnecting">Temporarily unavailable; retrying automatically. Pairing and playlists are retained.</string>
     <string name="lan_background_settings">Background activity settings</string>
-    <string name="lan_background_hint">Android power saving may suspend background networking. You can exclude Nonet from battery optimization in system settings; this may increase battery use. Temporary loss retains pairing; reconnect if the system terminates the process.</string>
+    <string name="lan_background_hint">Allow background activity to keep sharing audio when the phone is idle. The system asks for confirmation; this may increase battery use. Some devices also require unrestricted background activity in app settings. Temporary network loss retains pairing; reconnect if the system terminates the process.</string>
+    <string name="lan_background_allowed">Battery optimization exemption allowed</string>
+    <string name="lan_background_limited">Battery optimization may interrupt audio sharing</string>
+    <string name="lan_background_allow">Allow uninterrupted sharing</string>
     <string name="app_name" translatable="false">Nonet</string>
     <string name="music">Music</string><string name="playlists">Playlists</string><string name="sources">Sources</string><string name="settings">Settings</string>
     <string name="overview">Overview</string><string name="tracks_count">Tracks · %1$d</string><string name="playlists_count">Playlists · %1$d</string>
@@ -65,7 +68,7 @@
     <string name="invalid_lyrics">Lyrics could not be imported. Select a non-empty LRC or TXT file (up to 2 MB).</string>
     <string name="player_connecting">Connecting to the player. Try again shortly.</string>
     <string name="crop_image">Crop image</string>
-    <string name="crop_hint">Drag to position; pinch or use the slider to zoom.</string>
+    <string name="crop_hint">Only the framed area is kept. Drag inside the frame; pinch or use the slider to zoom. The image always fills the frame.</string>
     <string name="invalid_image">Image unavailable. Choose an image up to 20 MB and 100 megapixels.</string>
     <string name="change_cover">Change cover</string>
     <string name="restore_cover">Restore default cover</string>

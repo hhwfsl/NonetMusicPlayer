@@ -47,7 +47,10 @@ public sealed partial class MainViewModel
         else
         {
             var referenced = State.Playlists.SelectMany(p => p.TrackIds).ToHashSet(StringComparer.Ordinal);
-            result = State.Tracks.Where(t => Available(t) && referenced.Contains(t.Id));
+            // 全库分类合并当前连接的设备投影，去重后再分类/搜索；已断开的收藏引用只保留在原歌单中。
+            var remote = _lanTracks.Where(p => _lanPeers.TryGetValue(p.Key, out var peer) && peer.Connected).SelectMany(p => p.Value);
+            result = State.Tracks.Where(t => Available(t) && referenced.Contains(t.Id) && t.ProviderId?.StartsWith("lan:", StringComparison.Ordinal) != true)
+                .Concat(remote).DistinctBy(t => t.Id);
             if (page.StartsWith("album:", StringComparison.Ordinal)) { var album = page[6..]; result = result.Where(t => GroupDisplayName("album", t.Album) == album); }
             else if (page.StartsWith("artist:", StringComparison.Ordinal)) { var artist = page[7..]; result = result.Where(t => GroupDisplayName("artist", t.Artist) == artist); }
         }

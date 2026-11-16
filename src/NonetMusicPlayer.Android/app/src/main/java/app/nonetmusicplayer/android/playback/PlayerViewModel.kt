@@ -148,6 +148,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
     fun importLyrics(track: Track, uri: Uri) = launchOperation {
         try {
+            require(!track.isRemoteContent) {"Remote source content is read-only"}
             val path=importer.importLyrics(track.id,uri)
             repository.setLyrics(track.id,path);updatePlayback();app.messages.tryEmit(R.string.lyrics_imported)
         } catch(cancel: CancellationException) {throw cancel}
@@ -155,8 +156,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
     suspend fun lyricsFor(track: Track): List<LyricLine> = try {LrcParser.parse(lyricText(track))} catch(e: CancellationException) {throw e} catch(e: Exception) {app.log.write("WARN","Lyrics could not be loaded");emptyList()}
     suspend fun lyricText(track: Track): String = withContext(Dispatchers.IO) {
+        // 旧版可能保存过本机覆盖；互听内容只读取提供端歌词，不应用导入/禁用标记。
+        if(track.isRemoteContent) return@withContext app.lan.lyrics(track)
         if(track.lyrics=="none:") return@withContext ""
-        if(track.providerId.startsWith("lan:") && track.lyrics.isBlank()) return@withContext app.lan.lyrics(track)
         // 为旧导入记录补读源文件，不要求重新导入，不生成 LRC；手动取消关联仍优先返回。
         if(track.lyrics.isBlank() && track.providerId.isBlank()) return@withContext embeddedLock.withLock {
             embeddedCache[track.uri] ?: EmbeddedLyrics.read(app,Uri.parse(track.uri)).also {text ->

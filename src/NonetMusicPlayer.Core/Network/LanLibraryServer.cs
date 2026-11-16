@@ -26,6 +26,8 @@ public sealed class LanLibraryServer : IDisposable
     private readonly ConcurrentDictionary<string, Session> _sessions = new();
     public Func<LanReverseAccess, CancellationToken, Task<bool>>? AcceptReverse { get; set; }
     public Func<int>? ApprovalWaitSeconds { get; set; }
+    /// <summary>可取消的媒体打开入口；保留旧构造签名，插件解析与共享退出使用同一请求期限。</summary>
+    public Func<string, string, CancellationToken, Task<LanFile?>>? OpenFileAsync { get; set; }
     public event Action<string>? PeerDisconnected;
     /// <summary>仅在用户发起双向连接且对端接受后授权反向读取。</summary>
     public string GrantAccess(string deviceId, string name)
@@ -139,9 +141,12 @@ public sealed class LanLibraryServer : IDisposable
                     await Respond(tls, 200, JsonSerializer.SerializeToUtf8Bytes(c with { Tracks = c.Tracks.Skip(offset).Take(200).ToArray(), Playlists = offset == 0 ? c.Playlists : [] }, LanJson.Default.LanCatalog), "application/json", head, deadline.Token); return;
                 }
                 var parts = route.Split('/', StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length != 3 || parts[0] != "v1" || parts[1] is not ("audio" or "artwork" or "lyrics")) { await Respond(tls, 404, [], "text/plain", head, deadline.Token); return; }
+                if (parts.Length != 3 || parts[0] != "v1" || parts[1] is not ("audio" or "artwork" or "lyrics" or "playlist-artwork")) { await Respond(tls, 404, [], "text/plain", head, deadline.Token); return; }
                 var id = Uri.UnescapeDataString(parts[2]); if (id.Length > 256 || id.Contains('/') || id.Contains('\\')) { await Respond(tls, 400, [], "text/plain", head, deadline.Token); return; }
-                using var file = await _open(parts[1], id); if (file is null) { await Respond(tls, 404, [], "text/plain", head, deadline.Token); return; }
+                // 插件可能需要解析云端播放源，认证之后才调用，不向接收方转交插件 URL 或凭据。
+                deadline.CancelAfter(TimeSpan.FromSeconds(60));
+                using var file = OpenFileAsync is { } open ? await open(parts[1], id, deadline.Token) : await _open(parts[1], id);
+                if (file is null) { await Respond(tls, 404, [], "text/plain", head, deadline.Token); return; }
                 long start = 0, end = file.Length - 1; var partial = fields.TryGetValue("Range", out var range);
                 if (partial && !TryRange(range!, file.Length, out start, out end)) { await WriteHeader(tls, 416, 0, "text/plain", $"Content-Range: bytes */{file.Length}\r\n", deadline.Token); return; }
                 await WriteHeader(tls, partial ? 206 : 200, file.Length == 0 ? 0 : end - start + 1, file.ContentType, "Accept-Ranges: bytes\r\n" + (partial ? $"Content-Range: bytes {start}-{end}/{file.Length}\r\n" : ""), deadline.Token);

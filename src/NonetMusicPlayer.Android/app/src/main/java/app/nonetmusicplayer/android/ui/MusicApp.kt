@@ -40,6 +40,7 @@ import kotlinx.coroutines.*
 @Composable fun MusicApp(vm: PlayerViewModel) {
     val library by vm.library.collectAsStateWithLifecycle();val playback by vm.playback.collectAsStateWithLifecycle();val busy by vm.busy.collectAsStateWithLifecycle()
     val nearby by vm.app.lan.state.collectAsStateWithLifecycle()
+    val activeRemoteIds=remember(nearby.peers) {nearby.peers.flatMap {it.trackIds}.toHashSet()}
     val queue by vm.queue.collectAsStateWithLifecycle()
     var showQueue by remember {mutableStateOf(false)}
     var route by rememberSaveable { mutableStateOf("music") };var expanded by rememberSaveable { mutableStateOf(false) }
@@ -99,32 +100,33 @@ import kotlinx.coroutines.*
                     onSearch={focus.clearFocus();searchRequested=true;navigate("browse")},
                     onMovePlaylist={id,delta ->vm.launchOperation {vm.repository.movePlaylist(id,delta)}}) {holder.SaveableStateProvider(route) {
                     when(route) {
-                        "music" -> MusicHome(library,::navigate,{create=true})
-                        "browse" -> MusicSearchScreen(vm,::start,{moreTrack=it},searchRequested,{searchRequested=false})
-                        "playlists" -> PlaylistGrid(library,{navigate("playlist:$it")},{create=true},{menuPlaylist=it;playlistMore=true},{id,delta ->vm.launchOperation {vm.repository.movePlaylist(id,delta)}})
-                        "albums","artists" -> GroupGrid(library,route=="artists") {navigate((if(route=="artists") "artist:" else "album:")+it)}
+                        "music" -> MusicHome(library,::navigate,{create=true},activeRemoteIds)
+                        "browse" -> MusicSearchScreen(vm,::start,{moreTrack=it},searchRequested,{searchRequested=false},activeRemoteIds)
+                        "playlists" -> PlaylistGrid(library,{navigate("playlist:$it")},{create=true},{menuPlaylist=it;playlistMore=true},{id,delta ->vm.launchOperation {vm.repository.movePlaylist(id,delta)}},nearby.peers,::navigate)
+                        "albums","artists" -> GroupGrid(library,route=="artists",activeRemoteIds) {navigate((if(route=="artists") "artist:" else "album:")+it)}
                         "settings" -> SettingsScreen(library.preferences,{vm.launchOperation {vm.repository.updatePreferences(it)}},{vm.app.messages.tryEmit(R.string.invalid_settings)},{vm.launchOperation {vm.repository.updatePreferences(Preferences())}},{imageKey="background";imagePicker.launch("image/*")},vm)
                         "devices","sources" ->NearbyScreen(vm)
                         "statistics" -> StatisticsScreen(library)
                         else -> {
                             val playlist=library.playlists.firstOrNull {route=="playlist:${it.id}"}
+                            val remotePlaylist=if(route.startsWith("peer:")) nearby.peers.firstOrNull {it.id==route.split(':').getOrNull(1)}?.playlists?.firstOrNull {it.id==route.split(':').getOrNull(2)} else null
                             val tracks=remember(library.tracks,library.recentIds,playlist,route,nearby.peers) {
                                 val byId=library.tracks.associateBy {it.id}
                                 when {
                                     playlist!=null -> playlist.trackIds.mapNotNull {byId[it]}
                                     route.startsWith("peer:") ->nearby.peers.firstOrNull {it.id==route.split(':').getOrNull(1)}?.playlists?.firstOrNull {it.id==route.split(':').getOrNull(2)}?.trackIds.orEmpty().mapNotNull {byId[it]}
                                     route=="recent" -> library.recentIds.mapNotNull {byId[it]}
-                                    route.startsWith("album:") -> library.tracks.filter {it.inLibrary && it.album==route.substringAfter(':')}
-                                    route.startsWith("artist:") -> library.tracks.filter {it.inLibrary && it.artist==route.substringAfter(':')}
-                                    route=="browse" -> library.tracks.filter {it.inLibrary}
+                                    route.startsWith("album:") -> library.tracks.filter {it.visibleInLibrary(activeRemoteIds) && it.album==route.substringAfter(':')}
+                                    route.startsWith("artist:") -> library.tracks.filter {it.visibleInLibrary(activeRemoteIds) && it.artist==route.substringAfter(':')}
+                                    route=="browse" -> library.tracks.filter {it.visibleInLibrary(activeRemoteIds)}
                                     else -> emptyList()
                                 }
                             }
                             val title=pageTitle
-                            TrackListPage(title,playlist?.description.orEmpty(),tracks,library,if(playback.source==route) playback.track?.id.orEmpty() else "",playlist?.id,::start,vm::favorite,{moreTrack=it},
+                            TrackListPage(title,playlist?.description ?: remotePlaylist?.description.orEmpty(),tracks,library,if(playback.source==route) playback.track?.id.orEmpty() else "",playlist?.id,::start,vm::favorite,{moreTrack=it},
                                 {if(playlist!=null){importTarget=playlist.id;files.launch(arrayOf("audio/*"))}},
-                                {if(playlist!=null){importTarget=playlist.id;folder.launch(null)}},{menuPlaylist=playlist;playlistMore=true},library.covers[route].orEmpty(),{batchIds=it},{track,delta ->if(playlist!=null) vm.launchOperation {vm.repository.moveTrack(playlist.id,track.id,delta)}},
-                                requestSearchFocus=route=="browse" && searchRequested,onSearchFocusHandled={searchRequested=false})
+                                {if(playlist!=null){importTarget=playlist.id;folder.launch(null)}},{menuPlaylist=playlist;playlistMore=true},remotePlaylist?.cover ?: library.covers[route].orEmpty(),{batchIds=it},{track,delta ->if(playlist!=null) vm.launchOperation {vm.repository.moveTrack(playlist.id,track.id,delta)}},
+                                requestSearchFocus=route=="browse" && searchRequested,onSearchFocusHandled={searchRequested=false},showPageMore=library.canEditCover(playlist?.let {"playlist:${it.id}"} ?: route))
                         }
                     }
                 }}
@@ -140,7 +142,8 @@ import kotlinx.coroutines.*
                 dismissButton={TextButton(onClick={create=false;editing=null}){Text(stringResource(R.string.cancel))}})
         }
         val m3uPrefix=stringResource(R.string.playlist_file_prefix);val likedName=stringResource(R.string.liked)
-        if(playlistMore) MusicSheet(onDismissRequest={playlistMore=false}) {
+        val artworkKey=menuPlaylist?.let {"playlist:${it.id}"} ?: route
+        if(playlistMore && library.canEditCover(artworkKey)) MusicSheet(onDismissRequest={playlistMore=false}) {
             val target=menuPlaylist ?: library.playlists.firstOrNull {route=="playlist:${it.id}"}
             SheetAction(Icons.Outlined.Image,stringResource(R.string.change_cover)) {playlistMore=false;imageKey=target?.let {"playlist:${it.id}"} ?: route;imagePicker.launch("image/*")}
             SheetAction(Icons.Outlined.Restore,stringResource(R.string.restore_cover)) {playlistMore=false;vm.launchOperation {vm.repository.setCover(target?.let {"playlist:${it.id}"} ?: route,"")}}
@@ -164,12 +167,14 @@ import kotlinx.coroutines.*
             SheetAction(Icons.Outlined.Info,stringResource(R.string.track_info)) {moreTrack=null;infoTrack=track}
             if(expanded) {
                 SheetAction(Icons.AutoMirrored.Outlined.QueueMusic,stringResource(R.string.queue)) {moreTrack=null;showQueue=true}
-                SheetAction(Icons.Outlined.Subtitles,stringResource(R.string.import_lyrics)) {moreTrack=null;lyricTarget=track;lyricsFile.launch(arrayOf("*/*"))}
-                SheetAction(Icons.Outlined.LinkOff,stringResource(R.string.unlink_lyrics)) {moreTrack=null;vm.launchOperation {vm.repository.setLyrics(track.id,"none:")}}
+                if(!track.isRemoteContent) {
+                    SheetAction(Icons.Outlined.Subtitles,stringResource(R.string.import_lyrics)) {moreTrack=null;lyricTarget=track;lyricsFile.launch(arrayOf("*/*"))}
+                    SheetAction(Icons.Outlined.LinkOff,stringResource(R.string.unlink_lyrics)) {moreTrack=null;vm.launchOperation {vm.repository.setLyrics(track.id,"none:")}}
+                }
                 if(track.lyrics!="none:" && (track.lyrics.isNotBlank() || track.providerId.startsWith("lan:") || (track.id==playback.track?.id && lines.isNotEmpty()))) SheetAction(Icons.Outlined.FileUpload,stringResource(R.string.export_lyrics)) {moreTrack=null;lyricTarget=track;exportLrc.launch(track.title.replace(Regex("[\\\\/:*?\"<>|]"),"_")+".lrc")}
             } else if(route=="recent") {
                 SheetAction(Icons.Outlined.RemoveCircleOutline,stringResource(R.string.remove_recent)) {moreTrack=null;vm.launchOperation {vm.repository.removeRecent(setOf(track.id))}}
-            } else if(route=="browse") {
+            } else if(route=="browse" && !track.isRemoteContent) {
                 SheetAction(Icons.Outlined.DeleteOutline,stringResource(R.string.remove_everywhere)) {moreTrack=null;removeIds=setOf(track.id)}
             } else if(route.startsWith("playlist:")) {
                 val id=route.substringAfter(':')
@@ -194,7 +199,7 @@ import kotlinx.coroutines.*
             SheetAction(Icons.Outlined.FavoriteBorder,stringResource(R.string.add_liked)) {val ids=batchIds;batchIds=emptySet();vm.addToPlaylist("liked",library.tracks.filter {it.id in ids})}
             if(route.startsWith("playlist:")) SheetAction(Icons.Outlined.RemoveCircleOutline,stringResource(R.string.remove)) {val ids=batchIds;batchIds=emptySet();vm.launchOperation {vm.repository.removeTracks(route.substringAfter(':'),ids)}}
             if(route=="recent") SheetAction(Icons.Outlined.RemoveCircleOutline,stringResource(R.string.remove_recent)) {val ids=batchIds;batchIds=emptySet();vm.launchOperation {vm.repository.removeRecent(ids)}}
-            if(route=="browse") SheetAction(Icons.Outlined.DeleteOutline,stringResource(R.string.remove_everywhere)) {removeIds=batchIds;batchIds=emptySet()}
+            if(route=="browse" && library.tracks.none {it.id in batchIds && it.isRemoteContent}) SheetAction(Icons.Outlined.DeleteOutline,stringResource(R.string.remove_everywhere)) {removeIds=batchIds;batchIds=emptySet()}
             Spacer(Modifier.height(24.dp))
         }
         if(removeIds.isNotEmpty()) AlertDialog(onDismissRequest={removeIds=emptySet()},title={Text(stringResource(R.string.remove_everywhere))},

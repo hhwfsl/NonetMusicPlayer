@@ -33,7 +33,7 @@ public sealed partial class MainWindow
     {
         PlaylistHeader.Content = null; PlaylistHeader.IsVisible = _vm?.CurrentPlaylist is not null;
         PageHeadingLabel.IsVisible = _vm?.CurrentPlaylist is null;
-        if (_vm?.CurrentPlaylist is not { } playlist) { BuildClassificationHeader(); return; }
+        if (_vm?.CurrentPlaylist is not { } playlist) { if (_vm?.Page.StartsWith("lan:", StringComparison.Ordinal) == true) BuildLanPlaylistHeader(); else BuildClassificationHeader(); return; }
         _playlistHeaderProfile = Bounds.Height < 620 ? 0 : Bounds.Width < 1000 || Bounds.Height < 650 ? 1 : 2;
         var small = Bounds.Width < 1000 || Bounds.Height < 650; var coverSize = small ? 112 : 180;
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions((coverSize + 24) + ",*"), Margin = new(0, 0, 0, 6) };
@@ -51,6 +51,21 @@ public sealed partial class MainWindow
         PlaylistHeader.Margin = new(0, Bounds.Height < 620 ? 8 : 18, 0, 0);
         PlaylistHeader.Content = _playlistHeaderProfile == 0 ? new Expander { Header = Ui.RawText(PlaylistName(playlist), 18), Content = grid, IsExpanded = false, HorizontalAlignment = HorizontalAlignment.Stretch } : grid;
         grid.PointerPressed += (_, e) => { if (e.GetCurrentPoint(grid).Properties.IsRightButtonPressed) { OpenPlaylistMenu(grid, playlist); e.Handled = true; } };
+    }
+    private void BuildLanPlaylistHeader()
+    {
+        if (_vm?.LanPlaylistInfo(_vm.Page) is not { } list) return;
+        var image = new ThumbnailImage { Name = "LanPlaylistCover", Tag = _vm.Page };
+        image.SetPaths([_vm.LanPlaylistCoverPath(_vm.Page)]);
+        var cover = new Border { Width = 112, Height = 112, CornerRadius = new(12), ClipToBounds = true, Background = Ui.Brush("SurfaceRaisedBrush"),
+            Child = new Grid { Children = { new VectorIcon { Kind = IconKind.Playlist, Width = 48, Height = 48 }, image } } };
+        var title = Ui.RawText(list.Name, 25); title.MaxLines = 1; title.TextTrimming = TextTrimming.CharacterEllipsis;
+        var description = Ui.RawText(list.Description, 13, true); description.MaxLines = 2; description.TextTrimming = TextTrimming.CharacterEllipsis;
+        description.Name = "LanPlaylistDescription"; description.IsVisible = !string.IsNullOrWhiteSpace(list.Description);
+        ToolTip.SetTip(description, list.Description);
+        var text = Ui.Stack(title, description, Ui.Text(L10n.Format("Common.Tracks", list.TrackIds.Length), 12, true)); text.VerticalAlignment = VerticalAlignment.Center;
+        var grid = new Grid { ColumnDefinitions = new("136,*") }; grid.Children.Add(cover); Grid.SetColumn(text, 1); grid.Children.Add(text);
+        PlaylistHeader.Content = grid; PlaylistHeader.IsVisible = true; PageHeadingLabel.IsVisible = false;
     }
     private void BuildClassificationHeader()
     {

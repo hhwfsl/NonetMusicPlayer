@@ -23,6 +23,8 @@ public sealed partial class HeadlessPlayerSession
     private async Task<CommandResult> ExecuteLockedAsync(PlayerCommand command, CancellationToken cancellationToken)
     {
             ObjectDisposedException.ThrowIf(_disposed, this); AccountListening();
+            // 插件重启或配置变化后旧 loopback 地址可能已失效，不能沿用互听的短期解析缓存。
+            if (command.Name is "plugins.enable" or "plugins.disable" or "plugins.uninstall" or "plugins.reload" or "plugins.refresh" || command.Name == "plugins.config" && command.Arguments.Count > 1) _lanPlaybackSources.Clear();
             if (command.Name is "player.play" or "player.pause" or "player.resume" or "player.stop" or "player.next" or "player.previous" or "player.seek" or "queue.play" or "queue.select" or "network.play") _lanResume = null;
             var undoSnapshot = Undoable(command.Name) ? JsonSerializer.Serialize(State, CoreJson.Options) : null;
             string Arg(int n) => CommandResults.Required(command, n);
@@ -39,7 +41,7 @@ public sealed partial class HeadlessPlayerSession
                         if (File.Exists(Arg(0))) track = new() { Metadata = new MusicFileReader(ArtworkDirectory, LyricsDirectory).Read(Arg(0)) };
                         else track = FindTrack(Arg(0));
                         State.LastPlaylistId = null;
-                        var scope = State.Tracks.Any(t => t.Id == track.Id) ? State.Tracks.Where(Available) : _musicResults.Any(t => t.Id == track.Id) ? _musicResults.Where(Available) : [track];
+                        var scope = VisibleLibraryTracks().Any(t => t.Id == track.Id) ? VisibleLibraryTracks().Where(Available) : _musicResults.Any(t => t.Id == track.Id) ? _musicResults.Where(Available) : [track];
                         SelectQueue(scope, track); _failed.Clear(); await StartAsync(track, 0, cancellationToken);
                         if (!_loaded || !_audio.IsPlaying) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PlaybackStartFailed"));
                     }
@@ -57,14 +59,14 @@ public sealed partial class HeadlessPlayerSession
                     data = Strings(_audio.Devices); save = false; break;
                 case "player.device": if (!_audio.Devices.Contains(Arg(0))) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.OutputNotFound")); _audio.Pause(); _audio.DeviceName = Arg(0); State.Settings.DeviceName = Arg(0); break;
                 case "queue.list": data = TracksJson(_queue); save = false; break;
-                case "queue.play": var playlist = FindPlaylist(Arg(0)); var queue = PlaylistTracks(playlist).ToList(); if (queue.Count == 0) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.EmptyPlaylist")); var selected = command.Arguments.Count > 1 ? queue.FirstOrDefault(t => t.Id == Arg(1)) ?? throw new InvalidDataException(LocalizationCatalog.Get("Commands.NotInPlaylist")) : queue[0]; State.LastPlaylistId = playlist.Id; SelectQueue(queue, selected); _failed.Clear(); await StartAsync(selected, 0, cancellationToken); if (!_loaded || !_audio.IsPlaying) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PlaybackStartFailed")); break;
-                case "music.list": data = TracksJson(State.Tracks.Where(t => command.Arguments.Count == 0 || (t.Metadata.Title + " " + t.Metadata.Artist + " " + t.Metadata.Album).Contains(Arg(0), StringComparison.CurrentCultureIgnoreCase))); save = false; break;
-                case "music.info": data = TrackJson(FindTrack(Arg(0))); save = false; break;
+                case "queue.play": var queue = (await ReadPlaylistTracksAsync(Arg(0), cancellationToken)).ToList(); if (queue.Count == 0) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.EmptyPlaylist")); var selected = command.Arguments.Count > 1 ? queue.FirstOrDefault(t => t.Id == Arg(1)) ?? throw new InvalidDataException(LocalizationCatalog.Get("Commands.NotInPlaylist")) : queue[0]; State.LastPlaylistId = Arg(0).StartsWith("peer:", StringComparison.Ordinal) ? null : Arg(0); SelectQueue(queue, selected); _failed.Clear(); await StartAsync(selected, 0, cancellationToken); if (!_loaded || !_audio.IsPlaying) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PlaybackStartFailed")); break;
+                case "music.list": data = TracksJson(VisibleLibraryTracks().Where(t => command.Arguments.Count == 0 || (t.Metadata.Title + " " + t.Metadata.Artist + " " + t.Metadata.Album).Contains(Arg(0), StringComparison.CurrentCultureIgnoreCase))); save = false; break;
+                case "music.info": data = await ReadTrackInfoAsync(FindTrack(Arg(0)), cancellationToken); save = false; break;
                 case "music.remove":
-                    var removing = command.Arguments.ToHashSet(StringComparer.Ordinal); if (removing.Count == 0) throw new FormatException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.ProvideIds")); foreach (var id in removing) FindTrack(id);
+                    var removing = command.Arguments.ToHashSet(StringComparer.Ordinal); if (removing.Count == 0) throw new FormatException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.ProvideIds")); foreach (var id in removing) RequireEditableSource(FindTrack(id));
                     State.Tracks.RemoveAll(t => removing.Contains(t.Id)); foreach (var list in State.Playlists) list.TrackIds.RemoveAll(removing.Contains);
                     _queue.RemoveAll(t => removing.Contains(t.Id)); if (Current is not null && removing.Contains(Current.Id)) { _audio.Stop(); _loaded = false; Current = null; State.LastPosition = 0; } break;
-                case "playlist.list": data = new JsonArray(State.Playlists.Select(p => (JsonNode)new JsonObject { ["id"] = p.Id, ["name"] = p.Id == "liked" ? LocalizationCatalog.Get("Playlists.LikedSongs") : p.Name, ["description"] = p.Description, ["count"] = p.TrackIds.Count, ["coverPath"] = p.CoverPath }).ToArray()); save = false; break;
+                case "playlist.list": data = PlaylistListings(); save = false; break;
                 case "playlist.create": var created = new StoredPlaylist { Name = ValidName(Arg(0)) }; State.Playlists.Add(created); data = new JsonObject { ["id"] = created.Id }; break;
                 case "playlist.rename": var renamed = FindPlaylist(Arg(0)); if (renamed.Id == "liked") throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.LikedRenameDenied")); renamed.Name = ValidName(Arg(1)); break;
                 case "playlist.describe": var description = Arg(1).Trim(); if (description.Length > 500) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.DescriptionTooLong")); FindPlaylist(Arg(0)).Description = description; break;
@@ -99,7 +101,7 @@ public sealed partial class HeadlessPlayerSession
                     RestoreQueueSnapshot(); ApplySettings(State.Settings); break;
                 case "lyrics.show": var lyric = LyricPath(); data = lyric is null ? JsonValue.Create("") : JsonValue.Create(File.ReadAllText(lyric)); save = false; break;
                 case "lyrics.path": data = JsonValue.Create(LyricPath()); save = false; break;
-                case "lyrics.import": if (Current is null) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.SelectTrack")); var file = Arg(0); if (Path.GetExtension(file).ToLowerInvariant() is not (".lrc" or ".txt") || new FileInfo(file).Length > 4 * 1024 * 1024) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.LyricsSize")); Directory.CreateDirectory(LyricsDirectory); File.Copy(file, Path.Combine(LyricsDirectory, LyricFileId(Current) + Path.GetExtension(file).ToLowerInvariant()), true); State.DisabledLyrics.Remove(Current.Id); break;
+                case "lyrics.import": if (Current is null) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.SelectTrack")); RequireEditableSource(Current); var file = Arg(0); if (Path.GetExtension(file).ToLowerInvariant() is not (".lrc" or ".txt") || new FileInfo(file).Length > 4 * 1024 * 1024) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.LyricsSize")); Directory.CreateDirectory(LyricsDirectory); File.Copy(file, Path.Combine(LyricsDirectory, LyricFileId(Current) + Path.GetExtension(file).ToLowerInvariant()), true); State.DisabledLyrics.Remove(Current.Id); break;
                 case "plugins.list": data = new JsonArray(Plugins.Installed.Select(p => (JsonNode)new JsonObject { ["id"] = p.Id, ["name"] = p.Name, ["type"] = p.Type, ["version"] = p.Version, ["enabled"] = p.Enabled }).ToArray()); save = false; break;
                 case "plugins.install":
                     if (Uri.TryCreate(Arg(0), UriKind.Absolute, out var url) && url.Scheme == "https")

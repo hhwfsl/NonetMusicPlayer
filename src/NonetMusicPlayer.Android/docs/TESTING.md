@@ -1,5 +1,21 @@
 # Android 测试
 
+## 0.3.0-beta.12 发布验证 — 2026-11-16
+
+- Debug、androidTest 与 R8 Release 构建通过；纯 JVM **37/37**、Android 15 仪器回归 **14/14** 通过。覆盖固定裁剪框、远端歌单/曲库投影、未收藏统计、菜单只读、弹层逐帧亮度、130 秒后台 Doze HTTPS/Range 读取及结束后释放保护。
+- lint 为 **0 errors、74 warnings**；新增两条为持续局域网音频使用系统电池优化豁免的通用策略提示，产品始终交由系统确认，不自行修改名单。模拟器授权与电源状态在测试结束恢复；仍需各品牌手机实机验证。
+- 实际 APK 为 `app.littlemusicplayer.android`、beta.12/versionCode 14，旧 beta.11 为 13；签名证书保持 `e1108f9d1624dc72d8060ecdd4712c7aadc52b1f560d90c834e48ea0165d3eed`。APK SHA-256 为 `34515525482dfcc12af8f70c1aa27eded65200c22853fdbac3f1dce849dd6aaf`，随 Release 提供 `SHA256SUMS.txt`。旧本地包先备份后替换；本轮日志位于忽略目录 `artifacts/releases/all-platforms-20261116-172514`。
+
+## 2026-11-16 本地回归：远端只读、底部弹层与后台供流
+
+- `ReadOnlyAndSheetTests` 在真实 HTTPS 配对后检查远端歌单详情与播放页菜单，确认没有封面/歌词编辑、源内容删除入口；数据库层拒绝远端修改，但自己的收藏歌单封面仍可更新。
+- 原版遮罩按下时，原生截图中的背景像素由 RGB 74 降到 RGB 51，复现整屏闪动；修复版验证按下亮度不变、关闭逐帧不再变暗、原生窗口没有重复 dim/动画，连续请求只回调一次。
+- 原版已批准的单向只读会话在审批结束后释放 CPU 保护，基线测试失败；修复版在界面后台、屏幕关闭和强制 Doze 下持续 130 秒，每 5 秒校验 HTTPS Range 返回的真实音频字节，跨过原 120 秒租期仍可读取。显式断开后释放唤醒保护，共享监听仍存在。测试中只在隔离模拟器临时模拟用户授予电池优化豁免，结束后恢复名单和电源状态；产品代码必须通过系统确认。
+- 同轮运行 `RepositoryTests`、`MobileCropAndLanTests`、`PairingAndLyricsTests` 与上述新测试，仪器回归 **14/14** 通过；编辑策略、裁剪几何与可见性 JVM 回归 **7/7** 通过。测试环境为 Android 15 隔离模拟器，未操作用户手机；不能替代各品牌实体手机的 Wi-Fi 和后台限制验证。
+- Debug、androidTest 与 R8 Release 构建成功，最终清单的定向系统设置请求额外回归 **1/1** 通过。lint 为 **0 errors、74 warnings**，未屏蔽错误；相较原有 72 条，新增两条为清单与调用处直接申请电池豁免的通用策略提示。该请求用于无法由云推送替代的持续局域网音频核心功能，且必须经系统用户确认。
+- 日志位于忽略目录 `artifacts/remote-readonly-20261116-163224`。本地 APK 保持 beta.11/versionCode 13 和原签名；本次不创建 GitHub Release，不递增桌面、CLI 或 SDK 版本。
+- 最终 R8 APK 覆盖安装、冷启动通过，崩溃缓冲为空；证书 SHA-256 为 `e1108f9d1624dc72d8060ecdd4712c7aadc52b1f560d90c834e48ea0165d3eed`，APK SHA-256 为 `66adedb01b94f54f271163edfe52fe37158296cbf7c803554fd4efcc0fcd0f7e`。旧本地 APK 归档到 `artifacts/android-release-backups/20261116-171037-904`；更新包与校验清单位于 `publish/android`。
+
 ## 0.3.0-beta.11 发布验证 — 2026-11-07
 
 - Android 独立提升为 `0.3.0-beta.11` / versionCode 13；实际 APK 包名仍为 `app.littlemusicplayer.android`，minSdk 28、targetSdk 36，桌面、CLI 和 SDK 未递增。

@@ -9,8 +9,13 @@ namespace NonetMusicPlayer.Core.Runtime;
 
 public sealed partial class HeadlessPlayerSession
 {
+    // 远端历史引用持久化，但分类浏览只投影当前连接目录，不能把已断线设备重新列为在线曲库。
+    private static bool IsLanTrack(StoredMusicTrack track) => track.ProviderId?.StartsWith("lan:", StringComparison.Ordinal) == true;
+    private IEnumerable<StoredMusicTrack> VisibleLibraryTracks() => State.Tracks.Where(t => !IsLanTrack(t)).Concat(_lanTracks.Values).DistinctBy(t => t.Id);
+    private static void RequireEditableSource(StoredMusicTrack track)
+    { if (IsLanTrack(track)) throw new InvalidOperationException(LocalizationCatalog.Get("Lan.ReadOnly")); }
     private StoredMusicTrack FindTrack(string id) => State.Tracks.Concat(State.RecentTemporaryTracks).Concat(_musicResults).Concat(_lanTracks.Values).Concat(_queue).FirstOrDefault(t => t.Id == id) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.TrackNotFound"));
-    private StoredPlaylist FindPlaylist(string id) => State.Playlists.FirstOrDefault(p => p.Id == id) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PlaylistNotFound"));
+    private StoredPlaylist FindPlaylist(string id) => id.StartsWith("peer:", StringComparison.Ordinal) ? throw new InvalidOperationException(LocalizationCatalog.Get("Lan.ReadOnly")) : State.Playlists.FirstOrDefault(p => p.Id == id) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PlaylistNotFound"));
     private async Task<IReadOnlyList<StoredMusicTrack>> ReadPathsAsync(IEnumerable<string> inputs, CancellationToken token)
     {
         var files = new HashSet<string>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
@@ -82,7 +87,7 @@ public sealed partial class HeadlessPlayerSession
         if (!_loaded || !_audio.IsPlaying || Current is null || !double.IsFinite(elapsed) || advanced > elapsed + .75) return;
         var credit = Math.Min(elapsed, advanced); if (credit <= 0) return;
         RecordListeningInterval(credit);
-        if (!State.Tracks.Any(t => t.Id == Current.Id)) return;
+        if (!IsLanTrack(Current) && !State.Tracks.Any(t => t.Id == Current.Id)) return;
         var entry = ListeningEntry(); entry.Seconds += credit; _sessionSeconds += credit;
         RecordListeningHours(credit);
         if (_sessionSeconds >= 30) CountSession();
@@ -96,7 +101,7 @@ public sealed partial class HeadlessPlayerSession
     }
     private void CountSession()
     {
-        if (_sessionCounted || _sessionSeconds <= 0 || Current is null || !State.Tracks.Any(t => t.Id == Current.Id)) return;
+        if (_sessionCounted || _sessionSeconds <= 0 || Current is null || !IsLanTrack(Current) && !State.Tracks.Any(t => t.Id == Current.Id)) return;
         ListeningEntry().PlayCount++; _sessionCounted = true;
     }
     private JsonObject Statistics(DateOnly? selected, string period)
@@ -115,7 +120,7 @@ public sealed partial class HeadlessPlayerSession
             ["longestArtist"] = artist is null ? null : new JsonObject { ["name"] = artist.Name, ["seconds"] = artist.Seconds } };
     }
     private static string LyricFileId(StoredMusicTrack track) => track.ProviderId is null ? track.Id : MusicFileReader.StableId(track.Id);
-    private string? LyricPath() => Current is null || State.DisabledLyrics.Contains(Current.Id) ? null : new[] { ".lrc", ".txt" }.Select(ext => Path.Combine(LyricsDirectory, LyricFileId(Current) + ext)).FirstOrDefault(File.Exists);
+    private string? LyricPath() => Current is null ? null : IsLanTrack(Current) ? (File.Exists(RemoteLyricPath(Current)) ? RemoteLyricPath(Current) : null) : State.DisabledLyrics.Contains(Current.Id) ? null : new[] { ".lrc", ".txt" }.Select(ext => Path.Combine(LyricsDirectory, LyricFileId(Current) + ext)).FirstOrDefault(File.Exists);
     private string StoreCover(string file)
     {
         if (!File.Exists(file) || new FileInfo(file).Length is <= 0 or > 20 * 1024 * 1024) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.CoverSize"));

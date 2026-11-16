@@ -30,7 +30,10 @@
     <string name="lan_available">接続先は利用可能です</string>
     <string name="lan_reconnecting">一時的にアクセスできません。ペアリングとプレイリストを保持して自動復旧します。</string>
     <string name="lan_background_settings">バックグラウンド動作設定</string>
-    <string name="lan_background_hint">Android の省電力機能はバックグラウンド通信を停止する場合があります。システム設定で Nonet を電池最適化の対象外にできますが、電池消費が増える場合があります。一時的な通信停止ではペアリングを保持します。プロセスが強制終了された場合は再接続してください。</string>
+    <string name="lan_background_hint">端末のスリープ中も音声を共有するには、システム画面でバックグラウンド動作を許可してください。電池消費が増える場合があります。端末によってはアプリ設定でのバックグラウンド制限解除も必要です。一時的な通信停止ではペアリングを保持します。強制終了後は再接続してください。</string>
+    <string name="lan_background_allowed">電池最適化の対象外に設定済み</string>
+    <string name="lan_background_limited">電池最適化がバックグラウンド共有を中断する可能性があります</string>
+    <string name="lan_background_allow">継続的なバックグラウンド共有を許可</string>
     <string name="music">音楽</string><string name="playlists">プレイリスト</string><string name="sources">音源</string><string name="settings">設定</string>
     <string name="overview">概要</string><string name="tracks_count">%1$d 曲</string><string name="playlists_count">%1$d プレイリスト</string>
     <string name="albums">アルバム</string><string name="artists">アーティスト</string><string name="view_all">すべて表示</string><string name="recent">最近の再生</string>
@@ -64,7 +67,7 @@
     <string name="invalid_lyrics">歌詞を読み込めません。空でない LRC または TXT ファイル（最大 2 MB）を選択してください。</string>
     <string name="player_connecting">プレーヤーに接続中です。しばらくしてから再試行してください。</string>
     <string name="crop_image">画像を切り抜く</string>
-    <string name="crop_hint">ドラッグで移動、ピンチまたはスライダーで拡大。</string>
+    <string name="crop_hint">枠内の部分だけを保存します。枠内でドラッグし、ピンチまたはスライダーで拡大します。画像は常に枠全体を覆います。</string>
     <string name="invalid_image">20 MB、1 億画素以下の画像を選択してください。</string>
     <string name="change_cover">カバーを変更</string>
     <string name="restore_cover">既定のカバーに戻す</string>

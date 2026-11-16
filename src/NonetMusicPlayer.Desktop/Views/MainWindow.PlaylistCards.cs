@@ -20,8 +20,10 @@ public sealed partial class MainWindow
     private Control BuildRemotePlaylistCard((string Page, string Name, string Source) remote)
     {
         var button = BuildRemotePlaylistNavigationButton(remote);
+        var image = new ThumbnailImage { Name = "LanPlaylistCover", Tag = remote.Page };
+        image.SetPaths([_vm?.LanPlaylistCoverPath(remote.Page)]);
         var cover = new Border { Height = 150, CornerRadius = new(12), Background = Brushes.Transparent,
-            Child = new VectorIcon { Kind = IconKind.Playlist, Width = 58, Height = 58, Brush = Ui.Brush("TextSecondaryBrush") } };
+            ClipToBounds = true, Child = new Grid { Children = { new VectorIcon { Kind = IconKind.Playlist, Width = 58, Height = 58, Brush = Ui.Brush("TextSecondaryBrush") }, image } } };
         return PlaylistCard(button, cover, remote.Name, remote.Source);
     }
     private static Button PlaylistCard(Button button, Control cover, string title, string note)

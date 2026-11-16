@@ -225,12 +225,13 @@ class PlaybackService : MediaSessionService() {
     /** 旧快照没有原始队列时按已记录的播放来源恢复，绝不借用当前浏览页面。 */
     private fun sourcePlaylistOrder(): List<String> {
         val state=app.repository.state.value
+        val activeRemoteIds=app.lan.state.value.peers.flatMap {it.trackIds}.toHashSet()
         return when {
             origin.startsWith("playlist:") ->state.playlists.firstOrNull {it.id==origin.substringAfter(':')}?.trackIds.orEmpty()
             origin=="recent" ->state.recentIds
-            origin.startsWith("album:") ->state.tracks.filter {it.inLibrary && it.album==origin.substringAfter(':')}.map {it.id}
-            origin.startsWith("artist:") ->state.tracks.filter {it.inLibrary && it.artist==origin.substringAfter(':')}.map {it.id}
-            origin=="browse" ->state.tracks.filter {it.inLibrary}.map {it.id}
+            origin.startsWith("album:") ->state.tracks.filter {it.visibleInLibrary(activeRemoteIds) && it.album==origin.substringAfter(':')}.map {it.id}
+            origin.startsWith("artist:") ->state.tracks.filter {it.visibleInLibrary(activeRemoteIds) && it.artist==origin.substringAfter(':')}.map {it.id}
+            origin=="browse" ->state.tracks.filter {it.visibleInLibrary(activeRemoteIds)}.map {it.id}
             else ->emptyList()
         }
     }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.triStateToggleable
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.shape.*
 import androidx.compose.foundation.text.*
 import androidx.compose.runtime.*
@@ -20,6 +21,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.*
@@ -29,6 +33,7 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -150,10 +155,31 @@ internal val LocalContentColor=staticCompositionLocalOf {Color(0xFF202329)}
     }
 }
 @Composable fun ModalBottomSheet(onDismissRequest: ()->Unit,dragHandle: (@Composable ()->Unit)?=null,content: @Composable ColumnScope.()->Unit) {
-    Dialog(onDismissRequest,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
-        Box(Modifier.fillMaxSize()) {
-            Box(Modifier.matchParentSize().background(Color.Black.copy(alpha=.28f)).clickable(onClick=onDismissRequest))
-            Surface(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().widthIn(max=720.dp).fillMaxWidth().heightIn(max=LocalConfiguration.current.screenHeightDp.dp*.86f),RoundedCornerShape(topStart=20.dp,topEnd=20.dp)) {
+    val motion=remember {Animatable(0f)}
+    val scope=rememberCoroutineScope();val dismiss by rememberUpdatedState(onDismissRequest)
+    var closing by remember {mutableStateOf(false)}
+    LaunchedEffect(Unit) {motion.animateTo(1f,tween(220,easing=FastOutSlowInEasing))}
+    val requestDismiss: ()->Unit = {
+        if(!closing) {
+            closing=true
+            scope.launch {motion.animateTo(0f,tween(170,easing=FastOutSlowInEasing));dismiss()}
+        }
+    }
+    Dialog(requestDismiss,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
+        val window=(LocalView.current.parent as? DialogWindowProvider)?.window
+        DisposableEffect(window) {
+            // 此窗口只由本弹层拥有；遮罩与开合均由 Compose 绘制，避免系统变暗/退场再叠加一轮。
+            window?.apply {clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);setDimAmount(0f);setWindowAnimations(0)}
+            onDispose { }
+        }
+        Box(Modifier.fillMaxSize().testTag("bottom_sheet")) {
+            // 遮罩没有按压指示；默认指示会把整屏再次涂黑，形成点击外部时的一闪。
+            Box(Modifier.matchParentSize().testTag("bottom_sheet_scrim").graphicsLayer {alpha=.28f*motion.value}.background(Color.Black)
+                .clickable(interactionSource=remember {MutableInteractionSource()},indication=null,onClick=requestDismiss))
+            Surface(Modifier.align(Alignment.BottomCenter).testTag("bottom_sheet_panel").widthIn(max=720.dp).fillMaxWidth()
+                .heightIn(max=LocalConfiguration.current.screenHeightDp.dp*.86f)
+                .graphicsLayer {translationY=(1f-motion.value)*size.height;alpha=motion.value}
+                .navigationBarsPadding().pointerInput(Unit) {detectTapGestures { }},RoundedCornerShape(topStart=20.dp,topEnd=20.dp)) {
                 Column {Box(Modifier.fillMaxWidth().height(20.dp),contentAlignment=Alignment.Center) {Box(Modifier.size(28.dp,3.dp).background(NonetTheme.colorScheme.outlineVariant,CircleShape))};content()}
             }
         }

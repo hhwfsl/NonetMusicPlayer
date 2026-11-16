@@ -6,6 +6,7 @@ internal static class Program
         try
         {
             var output = args.FirstOrDefault() ?? "artifacts/plugin-ui-checks";
+            if (args.Contains("--lan-cloud")) { LanCloudSharingChecks.Run(output); return 0; }
             if (args.Contains("--song-info")) { SongInformationChecks.Run(output); return 0; }
             if (args.Contains("--catalog-scroll")) { CatalogScrollChecks.Run(output, Array.IndexOf(args, "--style-file") is var scrollStyle && scrollStyle >= 0 ? args[scrollStyle + 1] : null); return 0; }
             if (args.Length == 4 && args[0] == "--crash-observer-child") return CrashHandlerChecks.Child(args[1], args[2], args[3]);

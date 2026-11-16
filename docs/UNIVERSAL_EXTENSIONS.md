@@ -1,5 +1,7 @@
 # 通用扩展接口参考（SDK 4.16）
 
+桌面 beta.49 与 CLI beta.33 的互听扩展不改变插件清单或 RPC：接收到已批准设备的音频请求时，通过原音源 `playback.resolve` 获取本机流，再通过配对 HTTPS 转发。`network.library.v1` 仍不交付配对令牌或播放 URL；CLI 只协商下文实际支持的无窗口能力，不宣称桌面 UI/服务能力。音源不必重新打包；歌单封面可选字段和端点详见宿主 `docs/LAN_LIBRARY.md`。
+
 ## CLI 数据与音源宿主（本地修订）
 
 CLI 在冻结 Contract v1/v2 上增加数据扩展与 `media-source` 承载，不改变 SDK 程序集身份、已有清单字段和 RPC。v2 初始化只报告实际支持的 state/actions/commands/lyrics/services、可选页面、声明式/受监督运行时、media.search 和 media.artwork-batch 能力，不声明图形 UI、原生页面或桌面钩子。已有音源不必重新打包；需要原生 UI 的服务应提供无窗口配置路径，或继续使用桌面宿主。

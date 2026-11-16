@@ -152,7 +152,7 @@ import app.nonetmusicplayer.android.ui.musicString as stringResource
             val id="peer:${peer.id}:${p.id}"
             Row(Modifier.fillMaxWidth().testTag("drawer_$id").clip(RoundedCornerShape(10.dp)).background(if(route==id) colors.primaryContainer else Color.Transparent)
                 .clickable {onNavigate(id)}.padding(horizontal=14.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-                Icon(Icons.Outlined.Devices,null,Modifier.size(21.dp),tint=colors.primary)
+                if(p.cover.isNotBlank()) Cover(p.cover,Modifier.size(32.dp)) else Icon(Icons.Outlined.Devices,null,Modifier.size(21.dp),tint=colors.primary)
                 Column(Modifier.weight(1f)) {
                     Text(p.name,maxLines=1,overflow=TextOverflow.Ellipsis)
                     val kind=stringResource(when(peer.deviceKind) {"desktop"->R.string.lan_source_desktop;"mobile"->R.string.lan_source_mobile;else->R.string.lan_source_unknown})

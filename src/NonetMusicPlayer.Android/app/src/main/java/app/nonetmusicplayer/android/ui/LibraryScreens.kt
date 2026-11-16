@@ -23,9 +23,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.nonetmusicplayer.android.R
 import app.nonetmusicplayer.android.domain.*
+import app.nonetmusicplayer.android.network.NearbyDevice
 
-@Composable fun MusicHome(state: LibraryState,onNavigate: (String)->Unit,onCreate: ()->Unit) {
-    val tracks=remember(state.tracks) {state.tracks.filter {it.inLibrary}}
+@Composable fun MusicHome(state: LibraryState,onNavigate: (String)->Unit,onCreate: ()->Unit,activeRemoteIds: Set<String> = emptySet()) {
+    val tracks=remember(state.tracks,activeRemoteIds) {state.tracks.filter {it.visibleInLibrary(activeRemoteIds)}}
     val byId=remember(state.tracks) {state.tracks.associateBy {it.id}}
     val today=java.time.LocalDate.now().toString()
     val fontScale=androidx.compose.ui.platform.LocalDensity.current.fontScale
@@ -136,9 +137,9 @@ import app.nonetmusicplayer.android.domain.*
         }
     }
 }
-@Composable fun GroupGrid(state: LibraryState,artist: Boolean,onSelect: (String)->Unit) {
-    val groups=remember(state.tracks,artist) {
-        state.tracks.filter {it.inLibrary}.groupBy {if(artist) it.artist else it.album}.filterKeys {it.isNotBlank()}
+@Composable fun GroupGrid(state: LibraryState,artist: Boolean,activeRemoteIds: Set<String> = emptySet(),onSelect: (String)->Unit) {
+    val groups=remember(state.tracks,artist,activeRemoteIds) {
+        state.tracks.filter {it.visibleInLibrary(activeRemoteIds)}.groupBy {if(artist) it.artist else it.album}.filterKeys {it.isNotBlank()}
     }
     LazyVerticalGrid(columns=GridCells.Adaptive(128.dp),contentPadding=PaddingValues(20.dp),horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
         items(groups.entries.toList(),key={it.key}) { (name,tracks) ->
@@ -150,10 +151,11 @@ import app.nonetmusicplayer.android.domain.*
         }
     }
 }
-@Composable fun PlaylistGrid(state: LibraryState,onSelect: (String)->Unit,onCreate: ()->Unit,onMore: (Playlist)->Unit,onMove: (String,Int)->Unit) {
+@Composable fun PlaylistGrid(state: LibraryState,onSelect: (String)->Unit,onCreate: ()->Unit,onMore: (Playlist)->Unit,onMove: (String,Int)->Unit,
+    peers: List<NearbyDevice> = emptyList(),onRemoteSelect: (String)->Unit = {}) {
     LazyVerticalGrid(columns=GridCells.Adaptive(128.dp),modifier=Modifier.testTag("playlist_grid"),contentPadding=PaddingValues(20.dp),horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
         item(span={GridItemSpan(maxLineSpan)}) { Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-            Text(stringResource(R.string.playlists_count,state.playlists.size),Modifier.weight(1f),color=NonetTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.playlists_count,state.playlists.size+peers.sumOf {it.playlists.size}),Modifier.weight(1f),color=NonetTheme.colorScheme.onSurfaceVariant)
             FilledTonalIconButton(onClick=onCreate) { Icon(Icons.Outlined.Add,stringResource(R.string.create_playlist)) }
         } }
         items(state.playlists,key={it.id}) { playlist ->
@@ -169,11 +171,29 @@ import app.nonetmusicplayer.android.domain.*
                 }
             }
         }
+        // 与侧栏使用同一份连接投影，断开即移除；远端歌单只读，不展示本地排序或编辑按钮。
+        peers.forEach {peer ->
+            item(key="peer-header:${peer.id}",span={GridItemSpan(maxLineSpan)}) {
+                val kind=stringResource(when(peer.deviceKind) {"desktop"->R.string.lan_source_desktop;"mobile"->R.string.lan_source_mobile;else->R.string.lan_source_unknown})
+                Text(stringResource(R.string.lan_playlist_source,kind,peer.name),style=NonetTheme.typography.titleSmall,color=NonetTheme.colorScheme.onSurfaceVariant)
+            }
+            items(peer.playlists,key={"peer:${peer.id}:${it.id}"}) {playlist ->
+                val page="peer:${peer.id}:${playlist.id}"
+                val cover=playlist.cover.ifBlank {state.tracks.firstOrNull {it.id==playlist.trackIds.firstOrNull()}?.cover.orEmpty()}
+                Column(Modifier.testTag("playlist_card_$page").clickable {onRemoteSelect(page)},verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Cover(cover,Modifier.fillMaxWidth().aspectRatio(1f))
+                    Text(playlist.name,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.Medium)
+                    if(playlist.description.isNotBlank()) Text(playlist.description,maxLines=2,overflow=TextOverflow.Ellipsis,style=NonetTheme.typography.bodySmall,color=NonetTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.tracks_count,playlist.trackIds.size),style=NonetTheme.typography.bodySmall,color=NonetTheme.colorScheme.onSurfaceVariant)
+                    if(!peer.reachable) Text(stringResource(R.string.lan_reconnecting),style=NonetTheme.typography.bodySmall,color=NonetTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
     }
 }
 @Composable fun TrackListPage(title: String,description: String,tracks: List<Track>,state: LibraryState,currentId: String,
     playlistId: String?,onPlay: (Track,List<Track>)->Unit,onLike: (Track)->Unit,onMore: (Track)->Unit,onAddFiles: ()->Unit,onAddFolder: ()->Unit,onPageMore: ()->Unit,cover: String="",onBatch: (Set<String>)->Unit={},onMove: (Track,Int)->Unit={_,_->},
-    requestSearchFocus: Boolean=false,onSearchFocusHandled: ()->Unit={}) {
+    requestSearchFocus: Boolean=false,onSearchFocusHandled: ()->Unit={},showPageMore: Boolean=true) {
     var bulk by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var selected by remember { mutableStateOf(emptySet<String>()) }
     var query by remember(title) { mutableStateOf("") }
@@ -187,7 +207,7 @@ import app.nonetmusicplayer.android.domain.*
             IconAction(Icons.Outlined.Add,stringResource(R.string.add_files),Modifier.testTag("playlist_add_files"),onClick=onAddFiles)
             IconAction(Icons.Outlined.CreateNewFolder,stringResource(R.string.add_folder),Modifier.testTag("playlist_add_folder"),onClick=onAddFolder)
         }
-        IconAction(Icons.Outlined.MoreVert,stringResource(R.string.more),Modifier.testTag("playlist_page_more"),onClick=onPageMore)
+        if(showPageMore) IconAction(Icons.Outlined.MoreVert,stringResource(R.string.more),Modifier.testTag("playlist_page_more"),onClick=onPageMore)
         IconAction(if(bulk) Icons.Outlined.Close else Icons.Outlined.Checklist,stringResource(if(bulk) R.string.exit_selection else R.string.batch),Modifier.testTag("playlist_selection")) {bulk=!bulk;selected=emptySet()}
     }
     SongReorderHost(filtered,canReorder,onMove,draggedContent={track ->TrackRow(track,filtered.indexOf(track),track.id==currentId,track.id in liked,{},{},{})}) {list,preview,draggedId ->
@@ -205,7 +225,8 @@ import app.nonetmusicplayer.android.domain.*
         } }
         item { BoxWithConstraints(Modifier.fillMaxWidth()) {
             // 小屏或大字时将操作按钮另放一行，搜索框不被四个固定触摸区挤到无法输入。
-            if(maxWidth<180.dp*fontScale+48.dp*(if(playlistId!=null) 4 else 2)) {
+            val actionCount=(if(playlistId!=null) 2 else 0)+(if(showPageMore) 1 else 0)+1
+            if(maxWidth<180.dp*fontScale+48.dp*actionCount) {
                 Column {
                     SearchField(query,{query=it},Modifier.fillMaxWidth(),requestFocus=requestSearchFocus,onFocusHandled=onSearchFocusHandled)
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End,verticalAlignment=Alignment.CenterVertically) {ToolbarActions()}

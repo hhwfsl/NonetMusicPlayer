@@ -41,8 +41,9 @@ class PeerSharingService: Service() {
         getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(networkChanged)
         val wakeFilter=IntentFilter(Intent.ACTION_SCREEN_ON).apply {addAction(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)}
         if(Build.VERSION.SDK_INT>=33) registerReceiver(wakeChanged,wakeFilter,RECEIVER_NOT_EXPORTED) else registerReceiver(wakeChanged,wakeFilter)
-        scope.launch {
-            (application as MusicApplication).lan.state.map {it.sharing && (it.connecting || it.incoming!=null || it.peers.isNotEmpty())}.distinctUntilChanged().collectLatest {connected ->
+        // 在服务的工作调度器续租，页面停绘或主线程忙碌不影响源设备继续供流。
+        scope.launch(Dispatchers.IO) {
+            (application as MusicApplication).lan.state.map {it.sharing && (it.connecting || it.incoming!=null || it.peers.isNotEmpty() || it.servingConnections>0)}.distinctUntilChanged().collectLatest {connected ->
                 try {
                     if(connected) while(isActive) {
                         try {connectionLease.renew()} catch(error: Exception) {(application as MusicApplication).log.write("WARN","LAN background protection unavailable",error)}

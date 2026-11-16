@@ -43,13 +43,14 @@ public sealed partial class HeadlessPlayerSession
         if (request.Service == "lyrics")
         {
             var track = FindTrack(args["trackId"]!.GetValue<string>()); var operation = args["operation"]?.GetValue<string>() ?? "read";
-            var path = Path.Combine(LyricsDirectory, LyricFileId(track) + ".lrc");
+            var path = IsLanTrack(track) ? RemoteLyricPath(track) : Path.Combine(LyricsDirectory, LyricFileId(track) + ".lrc");
             if (operation == "read")
             {
                 if (!plugin.Permissions.Contains("music-read")) throw new InvalidDataException("Music read permission required.");
-                return new() { ["success"] = true, ["text"] = State.DisabledLyrics.Contains(track.Id) || !File.Exists(path) ? "" : await File.ReadAllTextAsync(path, token), ["disabled"] = State.DisabledLyrics.Contains(track.Id) };
+                return new() { ["success"] = true, ["text"] = !IsLanTrack(track) && State.DisabledLyrics.Contains(track.Id) || !File.Exists(path) ? "" : await File.ReadAllTextAsync(path, token), ["disabled"] = !IsLanTrack(track) && State.DisabledLyrics.Contains(track.Id) };
             }
             if (!plugin.Permissions.Contains("lyrics-write")) throw new InvalidDataException("Lyrics write permission required.");
+            RequireEditableSource(track);
             if (operation == "unlink") State.DisabledLyrics.Add(track.Id);
             else if (operation == "associate")
             {
