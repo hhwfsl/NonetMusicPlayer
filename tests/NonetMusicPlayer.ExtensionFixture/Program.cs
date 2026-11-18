@@ -37,6 +37,13 @@ public sealed class BaselineExtension : INonetExtension
     {
         if (invocation.Action == "service:media-source")
         {
+            if (invocation.Values["method"]?.GetValue<string>() == "music.share-link")
+            {
+                var id = invocation.Values["trackId"]!.GetValue<string>();
+                _frame.State["serviceResult"] = new JsonObject { ["url"] = id == "bad-link" ? "http://127.0.0.1/private" : "https://music.example.com/song/" + id };
+                _frame.Revision++;
+                return ValueTask.FromResult(_frame);
+            }
             if (invocation.Values["method"]?.GetValue<string>() == "playback.resolve")
             {
                 // 互听回归由测试提供受控本机 Range 服务，验证真实插件 RPC 而非绕过解析的假地址。

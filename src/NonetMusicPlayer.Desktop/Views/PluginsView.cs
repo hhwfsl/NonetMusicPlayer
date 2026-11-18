@@ -104,7 +104,6 @@ public sealed class PluginsView : UserControl, IDisposable
             enabled.Name = "PluginEnabled"; enabled.VerticalAlignment = VerticalAlignment.Center; enabled.VerticalContentAlignment = VerticalAlignment.Center; enabled.Margin = new(0); enabled.Padding = new(0);
             enabled.Classes.Add("plugin-enabled");
             Avalonia.Automation.AutomationProperties.SetName(enabled, plugin.Name + " · " + L10n.T("Common.On"));
-            ToolTip.SetTip(enabled, L10n.T(plugin.Enabled ? L10n.T("Plugins.DisablePlugin") : L10n.T("Plugins.EnablePlugin")));
             var author = string.IsNullOrWhiteSpace(plugin.Author) ? "Author" : plugin.Author;
             var title = Ui.RawText(plugin.Name, 17); title.VerticalAlignment = VerticalAlignment.Center; title.MaxLines = 2;
             var badge = Ui.AsyncButton("New", async () => { if (owner.PluginUpdate(plugin.Id) is { } info) await owner.ConfirmPluginUpdateAsync(plugin, info); });
@@ -136,7 +135,6 @@ public sealed class PluginsView : UserControl, IDisposable
             {
                 enabled.IsChecked = plugin.Enabled;
                 openPage.IsEnabled = plugin.Enabled && plugin.HasPage && plugin.Type is "extension" or "agent" or "ui" or "lyrics";
-                ToolTip.SetTip(enabled, L10n.T(plugin.Enabled ? "Plugins.DisablePlugin" : "Plugins.EnablePlugin"));
             });
             ToolTip.SetTip(openPage, L10n.T("Plugins.OpenPage")); Avalonia.Automation.AutomationProperties.SetName(openPage, L10n.T("Plugins.OpenPage"));
             Grid.SetColumn(openPage, 3); actions.Children.Add(openPage);

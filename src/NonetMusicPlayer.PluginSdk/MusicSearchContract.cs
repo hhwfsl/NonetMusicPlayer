@@ -9,6 +9,8 @@ public sealed class MusicSearchSource
     public int PageSize { get; set; } = 30;
     /// <summary>可选的按可见行批量获取封面；旧音源默认仍在搜索结果内返回图片。</summary>
     public bool DeferredArtwork { get; set; }
+    /// <summary>可选的公开歌曲链接。旧音源默认不显示分享入口。</summary>
+    public bool SupportsShareLink { get; set; }
 }
 
 public sealed class MusicSearchPage
@@ -23,6 +25,18 @@ public sealed class MusicSearchPage
 /// <summary>客户端、打包器与插件共用边界校验，不以特定平台或供应商为前提。</summary>
 public static class MusicSearchContract
 {
+    public const string ShareLinkCapability = "media.share-link.v1";
+
+    /// <summary>链接只供复制，不应返回播放代理、含身份信息的 URL 或本机路径。</summary>
+    public static Uri ValidateShareLink(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url) || url.Length > 2048 || url.Any(char.IsWhiteSpace)
+            || !Uri.TryCreate(url, UriKind.Absolute, out var link) || link.Scheme != Uri.UriSchemeHttps
+            || !link.IsDefaultPort || link.UserInfo.Length != 0 || link.HostNameType != UriHostNameType.Dns
+            || link.IsLoopback || !link.Host.Contains('.'))
+            throw new InvalidDataException("Invalid public song link.");
+        return link;
+    }
     public static void ValidateTrack(ProviderTrack track)
     {
         if (string.IsNullOrWhiteSpace(track.Id) || track.Id.Length > 300 || track.Id.Any(char.IsControl)

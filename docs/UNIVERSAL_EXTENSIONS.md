@@ -75,6 +75,7 @@ CLI 在冻结 Contract v1/v2 上增加数据扩展与 `media-source` 承载，�
 搜索音源声明 `"musicSearch":{"label":"音源名","pageSize":30,"deferredArtwork":true}`，并在 `requiredCapabilities` 声明 `media.artwork-batch.v1`。没有新字段时仍使用内联 `CoverBase64`，不请求新方法；旧包和程序集不需要重编译。
 
 - `music.search` 新增字符串参数 `includeArtwork`。启用延迟封面时为 `"false"`，否则为 `"true"`；旧音源可以忽略此参数。先返回元数据，避免等待整页图片。
+- `media.share-link.v1` 为桌面宿主可选能力。音源在 `musicSearch` 中声明 `supportsShareLink: true`，并在 `media-source` 服务处理 `music.share-link`，仅接收所属音源的 `trackId`，返回 `{ "url": "https://…" }`。链接指向公开的歌曲页面，不携带账号、签名地址或临时播放令牌。旧客户端会忽略此字段，清单不需要把此能力列入 `requiredCapabilities`。宿主只在用户点击歌曲或播放器“更多”中的分享项后复制，并在成功时提示。
 - `music.artwork` 接收字符串参数 `trackIds`，其值为 JSON 字符串数组，如 `"[\"123\",\"456\"]"`。单次 1–30 个稳定歌曲 ID，只能查询发起音源自己的歌曲，不接受任意网址或本机路径。
 - 返回 `MusicSearchPage`，每项包含该歌曲的正常 `ProviderTrack` 元数据与可选 `CoverBase64`。可以省略无封面的歌曲；不得返回请求外的 ID，不能返回重复 ID 或超过请求数量。封面保持原编码大小及像素限制。
 - 宿主仅按虚拟化视口请求封面，显示及磁盘缓存有界；缓存淘汰后允许重新查询。音源也应限制缩略图和元数据缓存。

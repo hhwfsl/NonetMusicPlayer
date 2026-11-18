@@ -20,7 +20,10 @@ public sealed class ColorPickerDialog : Window
         var red = Channel(initial.R); var green = Channel(initial.G); var blue = Channel(initial.B);
         red.Name = "ColorRed"; green.Name = "ColorGreen"; blue.Name = "ColorBlue";
         foreach (var (control, label) in new (Control, string)[] { (red, L10n.T("Common.RedRTo")), (green, L10n.T("Common.GreenGTo")), (blue, L10n.T("Common.BlueBTo")), (hex, L10n.T("Common.HexColorRRGGBB")), (brightness, L10n.T("Common.BrightnessTo")), (wheel, L10n.T("Settings.ColorWheelDragToSelectHueAndSaturation")) })
-        { Avalonia.Automation.AutomationProperties.SetName(control, L10n.T(label)); ToolTip.SetTip(control, L10n.T(label)); }
+        {
+            Avalonia.Automation.AutomationProperties.SetName(control, label);
+            if (control is not (TextBox or NumericUpDown)) ToolTip.SetTip(control, label);
+        }
         var error = Ui.Text("", 12, true); bool updating = false;
         void Update(Color color, bool updateWheel)
         {

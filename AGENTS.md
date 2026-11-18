@@ -4,6 +4,7 @@
 
 - 每次更新 Windows 发布版时同步构建 installer，不得用 -SkipInstaller 省略；仅纯 ZIP 专项构建可显式跳过。publish/desktop/windows_installer 每个架构只保留最新成功构建的安装器，旧安装器移至 artifacts/releases/installers 归档；不得删掉其他架构的最新安装器。纯净 Release 默认也构建安装器，安装器必须与当前程序版本一致。
 - 桌面发行 RID 为 win-x64、win-x86、win-arm64、linux-x64、linux-arm64、osx-x64。Windows 各架构同时提供 ZIP 和 installer；构建后必须运行 scripts/verify-native-architecture.ps1，不能将其他架构依赖混入包内。交叉构建与目标系统实机验证分开记录。CLI 与 Android 版本独立，不因桌面打包变更无故递增。
+- 本地 `publish/desktop/archives` 只保留最新版的各平台 ZIP。完整桌面构建通过校验后清理该目录的旧 ZIP。仅构建部分平台时，保留其他架构最近一次成功的包。
 
 - 使用单一 `NonetMusicPlayer` 工程目录开发、构建和发布；本地测试版本放在 `publish/desktop` 与 `publish/cli`。不再维护两个主工程目录。
 - GitHub 提交桌面、CLI、共享核心、Android、主项目 SDK/打包器与必要测试；Android 作为普通源码目录，不能是嵌套 Git 链接或子模块。iOS 暂不公开。插件模板仅在用户明确要求时单独公开；具体私人插件不上传。禁止上传使用数据、凭据、签名私钥、缓存、旧开发历史和本地归档。
@@ -11,6 +12,7 @@
 - 正式发布前检查暂存区文件范围并扫描敏感内容；纯净 ZIP 从全新暂存构建，作为 Release 资产上传，不提交进源码 Git。更新测试版时保留数据及旧包备份。
 - 保留用户已有修改，尤其是未提交的 XAML 布局；新增或改写的代码使用中文说明性注释。
 - 插件模板单独保存在 `../NonetMusicPlayerPlugin`；开发插件通过 ProjectReference 依赖主项目的 `src/NonetMusicPlayer.PluginSdk`，打包使用主项目 `tools/NonetMusicPlayer.PluginPackager`，调试运行真实宿主。不在模板复制 SDK 或另一套打包代码。用户指定插件仅放在 `../MyNonetMusicPlayerPlugin`，一个文件夹一个插件；发行包单独放在各插件的 dist，不生成源码 ZIP，不放入主项目 samples。
+- 每个插件的 `dist` 只保留最新版的各平台 `.impp`，等新版包全部验证通过后清理该插件的旧版包。
 - `samples/` 不进入 Git 跟踪、GitHub 源码导出或提交。主工程与默认测试必须不依赖私有插件目录；通用 Contract 测试使用独立生成的最小夹具，实际插件集成测试归入对应插件项目。
 - 若旧的本地未发布提交包含 samples，不直接推送这些提交；使用已检查的纯净源码快照提交，保留旧本地提交作为开发记录，不擅自改写已发布的 Git 历史。
 - 仅开发插件时不额外发布配套客户端；插件所需的宿主版本及兼容限制必须在插件文档中明确说明。

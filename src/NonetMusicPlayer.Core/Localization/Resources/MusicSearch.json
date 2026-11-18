@@ -1,4 +1,7 @@
 {
+  "MusicSearch.SharePlatformLink": { "zh-CN": "分享{0}链接", "en-US": "Share {0} link", "ja-JP": "{0}のリンクを共有" },
+  "MusicSearch.ShareLinkCopied": { "zh-CN": "已将{0}链接复制到剪贴板。", "en-US": "Copied the {0} link to the clipboard.", "ja-JP": "{0}のリンクをクリップボードにコピーしました。" },
+  "MusicSearch.ShareUnavailable": { "zh-CN": "暂时无法复制此歌曲的分享链接。", "en-US": "Could not copy a share link for this track.", "ja-JP": "この曲の共有リンクをコピーできませんでした。" },
   "MusicSearch.ImportFailed": { "zh-CN": "云端歌单导入失败，已导入的引用会保留。", "en-US": "Cloud playlist import failed. Imported references have been kept.", "ja-JP": "クラウドプレイリストの取り込みに失敗しました。取り込み済みの参照は保持されます。" },
   "MusicSearch.MetadataPartial": { "zh-CN": "部分歌曲信息暂时无法获取（{0} 首），已导入的歌曲仍可使用。", "en-US": "Metadata is temporarily unavailable for {0} tracks. Imported tracks are still available.", "ja-JP": "{0} 曲の情報を一時的に取得できません。取り込み済みの曲は引き続き使用できます。" },
   "MusicSearch.Source": { "zh-CN": "搜索来源", "en-US": "Search source", "ja-JP": "検索元" },

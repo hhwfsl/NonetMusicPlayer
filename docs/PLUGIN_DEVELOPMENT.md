@@ -515,7 +515,7 @@ Contract v2 扩展可声明 `"hasPage": false`、`"pageEntry": ""`，并将 `ui.
 
 ## 选择器交互（SDK 4.16）
 
-声明 `ui.select-options.v1` 后，`select` 节点可使用 `popupPlacement`（`auto`、`top`、`bottom`）和 `suppressTooltips`。前者控制弹出方向，后者同时关闭触发控件和所有选项的提示。缺省为自动方向、保留现有提示行为；旧页面无需改动。
+声明 `ui.select-options.v1` 后，`select` 节点可使用 `popupPlacement`（缺省 `auto`，也可选 `top` 或 `bottom`）和 `suppressTooltips`。桌面端统一关闭下拉触发控件和选项的悬停提示。旧页面的 `suppressTooltips` 字段继续受支持。
 
 ```json
 {"type":"select","bind":"choices","selectedBind":"choice","input":"choice","action":"choose","popupPlacement":"top","suppressTooltips":true}

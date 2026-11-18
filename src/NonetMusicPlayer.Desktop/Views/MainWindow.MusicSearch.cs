@@ -70,7 +70,7 @@ public sealed partial class MainWindow
         var sources = new[] { (Id: "", Label: L10n.T("Common.Local")) }.Concat(_vm.Plugins.MusicSearchSources.Select(p => (p.Id, p.MusicSearch!.Label))).ToArray();
         if (sources.All(s => s.Id != _selectedMusicSource)) _selectedMusicSource = "";
         var select = new ComboBox { Name = "MusicSearchSource", ItemsSource = sources.Select(s => s.Label).ToArray(), SelectedIndex = Array.FindIndex(sources, s => s.Id == _selectedMusicSource), Width = 112, VerticalAlignment = VerticalAlignment.Center };
-        ToolTip.SetTip(select, L10n.T("MusicSearch.Source"));
+        Avalonia.Automation.AutomationProperties.SetName(select, L10n.T("MusicSearch.Source"));
         var editor = new TextBox { Name = "HomeMusicSearch", Text = _homeMusicQuery, PlaceholderText = L10n.T("MusicSearch.Placeholder"), MaxLength = 300, MinHeight = 40, Padding = new(34, 0, 32, 0) };
         editor.Classes.Add("web-search");
         var field = new Grid { Name = "HomeMusicSearchField", Width = Math.Clamp(ViewportWidth * .22, 140, 280), Height = 40, ClipToBounds = true }; field.Children.Add(editor);

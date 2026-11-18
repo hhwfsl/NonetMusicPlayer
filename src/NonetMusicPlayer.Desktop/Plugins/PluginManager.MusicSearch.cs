@@ -8,6 +8,21 @@ namespace NonetMusicPlayer.Desktop.Plugins;
 public sealed partial class PluginManager
 {
     public IReadOnlyList<PluginManifest> MusicSearchSources => Installed.Where(p => p.Enabled && p.MusicSearch is not null && HasMediaSource(p)).ToArray();
+
+    public PluginManifest? ShareLinkSource(TrackItem track) => string.IsNullOrWhiteSpace(track.ProviderTrackId) ? null
+        : MusicSearchSources.FirstOrDefault(plugin => plugin.Id == track.ProviderId && plugin.MusicSearch!.SupportsShareLink);
+
+    public async Task<string> ReadShareLinkAsync(TrackItem track, CancellationToken token)
+    {
+        // 只将所属音源的稳定 ID 交给插件，不查询播放地址或向网络打开返回的链接。
+        var plugin = ShareLinkSource(track) ?? throw new InvalidOperationException(L10n.T("MusicSearch.ShareUnavailable"));
+        var answer = await CallMediaAsync(plugin, "music.share-link", new() { ["trackId"] = track.ProviderTrackId! }, token);
+        token.ThrowIfCancellationRequested();
+        if (ShareLinkSource(track) != plugin || answer.ValueKind != JsonValueKind.Object
+            || !answer.TryGetProperty("url", out var url) || url.ValueKind != JsonValueKind.String)
+            throw new InvalidDataException(L10n.T("MusicSearch.ShareUnavailable"));
+        return MusicSearchContract.ValidateShareLink(url.GetString()).AbsoluteUri;
+    }
     private async Task<JsonElement> CallMediaAsync(PluginManifest plugin, string method, Dictionary<string, string> args, CancellationToken token)
     {
         RequireInstalled(plugin);

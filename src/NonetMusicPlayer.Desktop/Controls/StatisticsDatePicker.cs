@@ -95,7 +95,7 @@ public sealed class StatisticsDatePicker : UserControl
         }
         // 年份列表不可编辑且虚拟化，打开时将已选年份带入视口。
         var year = new ComboBox { Name = "StatisticsYear", ItemsSource = Enumerable.Range(MinimumYear, MaximumYear - MinimumYear + 1).ToArray(), SelectedIndex = _displayMonth.Year - MinimumYear, Width = 108, MaxDropDownHeight = 280, HorizontalContentAlignment = HorizontalAlignment.Center };
-        ToolTip.SetTip(year, L10n.T("Common.SelectYear"));
+        Avalonia.Automation.AutomationProperties.SetName(year, L10n.T("Common.SelectYear"));
         Avalonia.Automation.AutomationProperties.SetName(year, L10n.T("Common.Year"));
         year.SelectionChanged += (_, _) => { if (year.SelectedItem is not int value) return; _displayMonth = new DateTime(value, _displayMonth.Month, 1); RenderMonth(); };
         var months = Enumerable.Range(1, 12).Select(number => new ComboBoxItem { Content = L10n.Culture.DateTimeFormat.GetAbbreviatedMonthName(number) }).ToArray();

@@ -38,9 +38,14 @@
         <CornerRadius x:Key="ControlCornerRadius">9</CornerRadius>
     </Application.Resources>
     <Application.Styles>
-        <Style Selector=":is(Button), MenuItem, ComboBox, ComboBoxItem, ToggleSwitch, TextBlock, TextBox, NumericUpDown, Slider">
+        <Style Selector=":is(Button), MenuItem, TextBlock, Slider">
             <Setter Property="icons:FullTextToolTips.Enabled" Value="True" />
             <Setter Property="ToolTip.ShowOnDisabled" Value="True" />
+        </Style>
+        <!-- 输入、下拉列表和切换控件统一关闭悬停提示。下拉项在弹出层中也单独应用此规则。 -->
+        <Style Selector=":is(TextBox), :is(NumericUpDown), :is(ComboBox), :is(ComboBoxItem), :is(DropDownButton), :is(SplitButton), :is(ToggleButton)">
+            <Setter Property="icons:FullTextToolTips.Enabled" Value="False" />
+            <Setter Property="ToolTip.ServiceEnabled" Value="False" />
         </Style>
         <Style Selector=":is(TextBlock)">
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
@@ -336,6 +341,10 @@
             <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <!-- 悬停与聚焦沿用输入框本身的背景，保留透明和自定义背景。 -->
+        <Style Selector=":is(TextBox):pointerover:not(:disabled) /template/ Border#PART_BorderElement, :is(TextBox):focus:not(:disabled) /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="{ReflectionBinding Background, RelativeSource={RelativeSource TemplatedParent}}" />
         </Style>
         <!-- 数字编辑器是复合控件；内部文本框不能继承独立输入框的圆角和不透明背景。 -->
         <Style Selector="NumericUpDown /template/ TextBox#PART_TextBox">

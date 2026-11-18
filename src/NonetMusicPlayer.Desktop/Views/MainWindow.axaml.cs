@@ -388,6 +388,7 @@ public sealed partial class MainWindow : Window
         })); menu.Items.Add(playlists);
         var info = Menu(L10n.T("Common.TrackInformation"), async () => { if (track is not null) await SongInfoDialog.Show(this, track); }, IconKind.Info);
         info.IsEnabled = track is not null; menu.Items.Add(info);
+        AppendTrackShareLink(menu, track);
         menu.Items.Add(new Separator());
         AppendLyricsMenu(menu);
         OpenMenu(control, menu);

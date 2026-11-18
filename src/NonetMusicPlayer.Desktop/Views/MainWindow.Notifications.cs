@@ -14,11 +14,13 @@ public sealed partial class MainWindow
     private readonly Queue<UserNotificationEventArgs> _notifications = new();
     private readonly DispatcherTimer _notificationTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private int _notificationSeconds;
+    private bool _pauseNotificationOnHover;
     private void InitializeNotifications()
     {
         _notificationTimer.Tick += (_, _) =>
         {
-            if (NotificationBar.IsPointerOver) return;
+            // 警告和操作成功提示即使被鼠标覆盖也继续计时，关闭按钮依然可用。
+            if (_pauseNotificationOnHover && NotificationBar.IsPointerOver) return;
             if (--_notificationSeconds <= 0) NextNotification();
         };
     }
@@ -38,9 +40,10 @@ public sealed partial class MainWindow
         NotificationTitle.Text = L10n.T(next.Title);
         NotificationMessage.Text = L10n.T(next.Message);
         NotificationIcon.Kind = IconKind.Info;
-        var brush = new SolidColorBrush(Color.Parse(next.IsWarning ? "#DCA647" : "#F0526C"));
+        var brush = new SolidColorBrush(Color.Parse(next.IsSuccess ? "#65BD8B" : next.IsWarning ? "#DCA647" : "#F0526C"));
         NotificationIcon.Brush = brush; NotificationBar.BorderBrush = brush;
-        _notificationSeconds = next.IsWarning ? 12 : 20;
+        _pauseNotificationOnHover = !next.IsWarning && !next.IsSuccess;
+        _notificationSeconds = next.IsSuccess ? 4 : next.IsWarning ? 6 : 20;
         NotificationBar.IsVisible = true; _notificationTimer.Start();
         Avalonia.Automation.AutomationProperties.SetName(NotificationBar, next.Title + "。" + next.Message);
     }

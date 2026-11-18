@@ -22,6 +22,7 @@ internal static class DesktopInteractionChecks
     public static void Run(string output, string? preset)
     {
         AppBuilder.Configure<NonetMusicPlayer.Desktop.App>().UseSkia().WithInterFont().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false }).SetupWithoutStarting();
+        CheckInputAppearance();
         var root = Path.Combine(Path.GetFullPath(output), Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
         var storage = new AppStorage(root); storage.Save(new AppState { LastSourcePage = "cloud-search" });
         using var vm = new MainViewModel(new MusicLibraryScanner(storage), new FakeAudio());
@@ -47,7 +48,7 @@ internal static class DesktopInteractionChecks
         CheckLegacyPage();
         CheckDropHints();
         window.Close(); Pump();
-        Console.WriteLine("PASS startup home, bounded dashboard, terminal hover, live process/managed reconfiguration, fault/re-enable actions, legacy page hit testing and stable player geometry.");
+        Console.WriteLine("PASS input background and tooltip policy, startup home, bounded dashboard, terminal hover, live process/managed reconfiguration, legacy page hit testing and stable player geometry.");
 
         void CaptureHome(string name)
         {
@@ -102,7 +103,7 @@ internal static class DesktopInteractionChecks
             Until(() => !plugin.Enabled); vm.Navigate("plugins"); Pump();
             var center = window.GetVisualDescendants().OfType<PluginsView>().Single();
             var toggle = center.GetVisualDescendants().OfType<ToggleSwitch>().Single(c => c.Name == "PluginEnabled" && c.GetVisualAncestors().OfType<Border>().FirstOrDefault(b => b.Parent is StackPanel)?.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == plugin.Name) == true);
-            var actions = (Grid)toggle.Parent!; var open = actions.Children.OfType<Button>().Single(b => b.Name == "PluginOpenPage");
+            var actions = (Panel)toggle.Parent!; var open = actions.Children.OfType<Button>().Single(b => b.Name == "PluginOpenPage");
             Check(!open.IsEnabled, "Fault disables the page action."); toggle.IsChecked = true; Pump(); Check(open.IsEnabled, "Re-enable immediately restores the page action.");
             open.RaiseEvent(new(Button.ClickEvent)); Pump(); Check(vm.Page == "plugin:" + plugin.Id, "Re-enabled page opens without re-entering the manager."); vm.Plugins.SetEnabled(plugin, false);
         }
@@ -166,6 +167,67 @@ internal static class DesktopInteractionChecks
         }
         void Click(Control control) { var point = control.TranslatePoint(new(Math.Min(control.Bounds.Width / 2, 40), Math.Min(control.Bounds.Height / 2, 16)), window)!.Value; window.MouseMove(point); window.MouseDown(point, MouseButton.Left); window.MouseUp(point, MouseButton.Left); Pump(); }
     }
+    private static void CheckInputAppearance()
+    {
+        var text = new TextBox { PlaceholderText = "搜索歌曲" };
+        var transparent = new TextBox { Background = Brushes.Transparent, IsReadOnly = true, Text = "只读内容" };
+        var number = new NumericUpDown { Value = 2 };
+        var button = new Button { Content = "确认" };
+        ToolTip.SetTip(text, "插件自定义提示");
+        var panel = new StackPanel { Children = { text, transparent, number, button } };
+        var window = new Window { Content = panel, Width = 420, Height = 240 };
+        window.Show();
+        Pump();
+        var numericInput = number.GetVisualDescendants().OfType<TextBox>().Single();
+        Check(!ToolTip.GetServiceEnabled(number) && ToolTip.GetServiceEnabled(button), "Input tooltip policy must leave other controls working.");
+        foreach (var input in new[] { text, transparent, numericInput })
+        {
+            button.Focus();
+            window.MouseMove(new(10, 220));
+            Pump();
+            var border = input.GetVisualDescendants().OfType<Border>().Single(candidate => candidate.Name == "PART_BorderElement");
+            var initial = (border.Background as ISolidColorBrush)?.Color;
+            Check(initial is not null && !ToolTip.GetServiceEnabled(input) && !FullTextToolTips.GetEnabled(input), "Input must have a normal background and suppress tooltips.");
+            window.MouseMove(input.TranslatePoint(new Point(12, 12), window)!.Value);
+            Pump();
+            Check(input.IsPointerOver && (border.Background as ISolidColorBrush)?.Color == initial, "Hover must preserve the input background.");
+            Check(input.Focus(NavigationMethod.Tab), "Keyboard focus must reach the input.");
+            window.MouseMove(new(10, 220));
+            Pump();
+            Check(input.IsFocused && (border.Background as ISolidColorBrush)?.Color == initial, "Keyboard focus must preserve the input background.");
+        }
+        window.Close();
+        CheckSelectionToolTips();
+    }
+
+    private static void CheckSelectionToolTips()
+    {
+        var first = new ComboBoxItem { Content = "第一个选项" };
+        var second = new ComboBoxItem { Content = "第二个选项" };
+        var combo = new ComboBox { ItemsSource = new[] { first, second }, SelectedIndex = 0 };
+        var toggle = new Avalonia.Controls.Primitives.ToggleButton { Content = "切换" };
+        var toggleSwitch = new ToggleSwitch { Content = "开关" };
+        var dropdown = new DropDownButton { Content = "菜单" };
+        var controls = new Control[] { combo, toggle, toggleSwitch, dropdown, first, second };
+        foreach (var control in controls) ToolTip.SetTip(control, "自定义提示");
+        var window = new Window { Content = new StackPanel { Children = { combo, toggle, toggleSwitch, dropdown } }, Width = 420, Height = 320 };
+        window.Show();
+        Pump();
+        combo.IsDropDownOpen = true;
+        Pump();
+        Check(combo.IsDropDownOpen && second.IsAttachedToVisualTree(), "Options must be visible while checking their tooltip style.");
+        Check(controls.All(control => !ToolTip.GetServiceEnabled(control) && !FullTextToolTips.GetEnabled(control)), "Dropdowns, their popup options and toggle controls must suppress automatic and explicit tooltips.");
+        combo.SelectedIndex = 1;
+        combo.IsDropDownOpen = false;
+        Pump();
+        var point = toggle.TranslatePoint(new Point(12, 12), window)!.Value;
+        window.MouseDown(point, MouseButton.Left);
+        window.MouseUp(point, MouseButton.Left);
+        Pump();
+        Check(combo.SelectedItem == second && toggle.IsChecked == true, "Dropdown selection and pointer toggling must keep working.");
+        window.Close();
+    }
+
     private static void Write(ZipArchive zip, string name, string text) { using var writer = new StreamWriter(zip.CreateEntry(name).Open()); writer.Write(text); }
     private static void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
     private static void Wait(Task task) { Until(() => task.IsCompleted); task.GetAwaiter().GetResult(); }

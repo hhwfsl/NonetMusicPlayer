@@ -133,6 +133,7 @@ public sealed partial class MainWindow
         if (tracks.Length == 1)
         {
             menu.Items.Add(Menu(L10n.T("Common.TrackInformation"), () => SongInfoDialog.Show(this, tracks[0]), IconKind.Info));
+            AppendTrackShareLink(menu, tracks[0]);
             if (_vm.CurrentPlaylist is not null)
             {
                 menu.Items.Add(Menu(L10n.T("Playlists.MoveUpInPlaylist"), () => { _vm.MoveInPlaylist(tracks[0], -1); return Task.CompletedTask; }, IconKind.MoveUp));

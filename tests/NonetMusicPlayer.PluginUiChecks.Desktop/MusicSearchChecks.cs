@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -23,7 +24,7 @@ internal static class MusicSearchChecks
         if(Application.Current is null)AppBuilder.Configure<NonetMusicPlayer.Desktop.App>().UseSkia().WithInterFont().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing=false }).SetupWithoutStarting();
         var repo=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../.."));
         var fixture=Path.Combine(repo,"tests/NonetMusicPlayer.ExtensionFixture/bin/Release/net10.0");
-        var manifest=new PluginManifest { Id="fixture.music-search",Name="Source fixture",Version="1.0.0",ContractVersion=2,Type="extension",Runtime="process",PageEntry="page.json",Permissions=["network","process","navigation","library-write"],ProvidedServices=["media-source"],MusicSearch=new() { Label="Cloud fixture" },RequiredCapabilities=["media.search.v1"],EntryPoints=new() { ["win-x64"]="bin/NonetMusicPlayer.ExtensionFixture.exe" } };
+        var manifest=new PluginManifest { Id="fixture.music-search",Name="Source fixture",Version="1.0.0",ContractVersion=2,Type="extension",Runtime="process",PageEntry="page.json",Permissions=["network","process","navigation","library-write"],ProvidedServices=["media-source"],MusicSearch=new() { Label="Cloud fixture", SupportsShareLink=true },RequiredCapabilities=["media.search.v1"],EntryPoints=new() { ["win-x64"]="bin/NonetMusicPlayer.ExtensionFixture.exe" } };
         var package=Path.Combine(root,"fixture.impp");using(var zip=ZipFile.Open(package,ZipArchiveMode.Create))
         {
             using(var writer=new StreamWriter(zip.CreateEntry("manifest.json").Open()))writer.Write(JsonSerializer.Serialize(manifest,AppStorage.Json));
@@ -47,6 +48,7 @@ internal static class MusicSearchChecks
         var selector=window.GetVisualDescendants().OfType<ComboBox>().Single(c=>c.Name=="MusicSearchSource");Check(selector.SelectedIndex==0&&selector.Items.Count==2,$"Local default and optional source: selected={selector.SelectedIndex}, items={selector.Items.Count}, enabled={plugin.Enabled}, sources={vm.Plugins.MusicSearchSources.Count}");
         Wait(vm.SearchMusicAsync(plugin.Id,"fixture"));Check(vm.Page=="cloud-search"&&vm.VisibleTracks.Count==1&&vm.State.Tracks.Count==0,"Search without automatic import");
         var cloud=vm.VisibleTracks.Single();Check(cloud.HasArtwork&&cloud.HasSearchCover&&File.Exists(cloud.CoverPath),"Search preview has a cover before playback");
+        CheckShareLink(window, vm, cloud);
         var playlist=vm.CreatePlaylist("Mixed source");vm.AddToPlaylist(playlist,[cloud]);Check(vm.State.Tracks.Single().ProviderTrackId=="remote-1"&&cloud.IsCloud,"Cloud ID persisted");
         Check(!cloud.HasSearchCover&&DataDirectoryService.Contains(storage.ArtworkFolder,cloud.CoverPath!)&&cloud.HasArtwork,"Added cover promoted out of temporary cache");
         Wait(vm.RefreshProviderAsync(plugin));Check(vm.State.Tracks.Count==1&&playlist.TrackIds.Contains(cloud.Id),"Refresh cannot erase searched/cloud references");
@@ -59,6 +61,46 @@ internal static class MusicSearchChecks
         RunHeaderQueries(root,fixture,vm,window);
         RunPaged(root,fixture,vm,window);
         window.Close();Pump();Console.WriteLine("PASS generic music search registration/UI, cloud playlist references/SQLite, refresh, catalog, local filter and disable; "+root);
+    }
+    private static void CheckShareLink(MainWindow window, MainViewModel vm, TrackItem track)
+    {
+        // 调用与歌曲、播放器菜单相同的入口，通过实际菜单点击和剪贴板验证 RPC 往返。
+        var append = typeof(MainWindow).GetMethod("AppendTrackShareLink", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        var menu = new ContextMenu();
+        append.Invoke(window, [menu, null]);
+        append.Invoke(window, [menu, new TrackItem("local", "Local", "", "", "", ".wav", 0)]);
+        Check(menu.Items.Count == 0, "No share action for missing or local track");
+        append.Invoke(window, [menu, track]);
+        var item = (MenuItem)menu.Items.Single()!;
+        Check(item.Header?.ToString()?.Contains("Source fixture") == true, "Share menu uses provider name");
+        var notice = new TaskCompletionSource<UserNotificationEventArgs>();
+        void Capture(object? sender, UserNotificationEventArgs e) { if (e.IsSuccess) notice.TrySetResult(e); }
+        vm.UserNotification += Capture;
+        try
+        {
+            item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            Wait(notice.Task);
+            Check(Wait(window.Clipboard!.TryGetTextAsync()) == "https://music.example.com/song/remote-1", "Public song URL copied before success notice");
+        }
+        finally { vm.UserNotification -= Capture; }
+        var bad = new TrackItem("bad", "Bad", "", "", "", ".audio", 0) { ProviderId = track.ProviderId, ProviderTrackId = "bad-link" };
+        try { Wait(vm.Plugins.ReadShareLinkAsync(bad, default)); throw new InvalidOperationException("Loopback share link accepted"); }
+        catch (InvalidDataException) { }
+        var bar = window.FindControl<Border>("NotificationBar")!;
+        var dismiss = bar.GetVisualDescendants().OfType<Button>().Single();
+        dismiss.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+        vm.ReportWarning("Warning timeout fixture"); Pump(); window.UpdateLayout();
+        var point = bar.TranslatePoint(bar.Bounds.Center - bar.Bounds.Position, window)!.Value;
+        window.MouseMove(point); Pump();
+        Check(bar.IsVisible && bar.IsPointerOver, "Warning starts visible under pointer");
+        var end = DateTime.UtcNow.AddSeconds(8);
+        while (bar.IsVisible && DateTime.UtcNow < end) Pump();
+        Check(!bar.IsVisible, "Warning auto-closes despite hovering");
+        vm.ReportWarning("Warning manual fixture"); Pump();
+        Check(bar.IsVisible, "Second warning starts visible");
+        dismiss.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+        Check(!bar.IsVisible, "Warnings can still be closed manually");
+        Console.WriteLine("PASS share action, public-link validation, clipboard success and warning hover/manual dismissal");
     }
     /// <summary>三个通用音源同时启用，经真实右上搜索框提交新词，覆盖结果替换、空结果和迟到响应。</summary>
     private static void RunHeaderQueries(string root, string fixture, MainViewModel vm, MainWindow window)

@@ -5,4 +5,5 @@ public sealed class UserNotificationEventArgs(string title, string message, bool
     public string Title { get; } = title;
     public string Message { get; } = message;
     public bool IsWarning { get; } = isWarning;
+    public bool IsSuccess { get; init; }
 }

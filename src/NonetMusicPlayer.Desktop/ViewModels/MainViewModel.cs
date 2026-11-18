@@ -603,16 +603,18 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     {
         StatusText = AppLog.Redact(L10n.T(message)); AppLog.Warning("Client", message); NotifyUser(L10n.T("Common.Notice"), StatusText, true);
     }
-    private void NotifyUser(string title, string message, bool warning)
+    public void ReportSuccess(string message) => NotifyUser(L10n.T("Common.Notice"), message, false, success: true);
+
+    private void NotifyUser(string title, string message, bool warning, bool success = false)
     {
         if (UserNotification is null)
         {
             if (_startupNotifications.Count < 16 && !_startupNotifications.Any(item => item.Message == message)) _startupNotifications.Add(new(title, message, warning));
             return;
         }
-        if (_lastNotification == message && DateTimeOffset.UtcNow - _lastNotificationTime < TimeSpan.FromSeconds(30)) return;
+        if (!success && _lastNotification == message && DateTimeOffset.UtcNow - _lastNotificationTime < TimeSpan.FromSeconds(30)) return;
         _lastNotification = message; _lastNotificationTime = DateTimeOffset.UtcNow;
-        try { UserNotification?.Invoke(this, new(title, message, warning)); }
+        try { UserNotification?.Invoke(this, new(title, message, warning) { IsSuccess = success }); }
         catch (Exception error) { AppLog.Error("UI", "显示错误提示失败", error); }
     }
     public void PublishStartupNotifications()

@@ -43,10 +43,10 @@ public sealed class LyricsTimingControl : UserControl, IPluginKeyboardScope, IDi
         _songSelector.ItemTemplate = new FuncDataTemplate<TrackItem>((track, _) =>
         {
             var label = track is null ? "" : track.Title + " — " + track.Artist;
-            var text = Ui.RawText(label, 14); text.TextTrimming = TextTrimming.CharacterEllipsis; ToolTip.SetTip(text, label); return text;
+            var text = Ui.RawText(label, 14); text.TextTrimming = TextTrimming.CharacterEllipsis; return text;
         });
         TextSearch.SetTextBinding(_songSelector, new Avalonia.Data.Binding(nameof(TrackItem.Title)));
-        ToolTip.SetTip(_songSelector, L10n.T("LyricsTiming.ChooseSong"));
+        Avalonia.Automation.AutomationProperties.SetName(_songSelector, L10n.T("LyricsTiming.ChooseSong"));
         _songSelector.SelectionChanged += (_, _) => { if (!_updatingSongs && !IsActive && _songSelector.SelectedItem is TrackItem track) { _track = track; Refresh(); } };
         _songSelector.DropDownOpened += (_, _) => UpdateSongs();
         _choose = Button("LyricsTiming.ChooseFile", ChooseAsync, "TimingChoose");

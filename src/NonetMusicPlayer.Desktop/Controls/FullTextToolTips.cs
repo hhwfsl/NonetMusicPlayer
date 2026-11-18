@@ -62,7 +62,7 @@ public sealed class FullTextToolTips : AvaloniaObject
             _control.SetCurrentValue(ToolTip.TipProperty, _description);
         }
     }
-    private static bool IsInteractive(Control control) => control is Button or MenuItem or ComboBox or ComboBoxItem or ToggleSwitch or TextBox or NumericUpDown or Slider;
+    private static bool IsInteractive(Control control) => control is Button or MenuItem or ComboBox or ComboBoxItem or SplitButton or TextBox or NumericUpDown or Slider;
     private static string? Combine(string? name, string? detail)
     {
         name = name?.Trim(); detail = detail?.Trim();
@@ -79,34 +79,17 @@ public sealed class FullTextToolTips : AvaloniaObject
             return text.TextTrimming != Avalonia.Media.TextTrimming.None && text.Bounds.Width > 0 && text.TextLayout.TextLines.Any(l => l.HasCollapsed) ? text.Text : null;
         }
         var name = AutomationProperties.GetName(control);
-        if (control is TextBox input)
-        {
-            // 不把输入中的密码、令牌或搜索文本复制到提示中。
-            var value = input.IsReadOnly && input.PasswordChar == '\0' ? input.Text : input.PlaceholderText;
-            return Combine(name, value);
-        }
         object? content = control switch
         {
             MenuItem item => item.Header,
-            ComboBox choice => choice.SelectedItem,
-            ToggleSwitch toggle => toggle.IsChecked == true ? toggle.OnContent : toggle.OffContent,
             ContentControl container => container.Content,
             _ => null
         };
         var label = content is VectorIcon && !string.IsNullOrWhiteSpace(name) ? null : ContentText(content, allowIconFallback);
-        if (control is ComboBox or ComboBoxItem)
-        {
-            // 模板可能将存储值转换为文案；提示使用实际显示文本，不直接显示原始配置键或改写用户元数据。
-            var displayed = control.GetVisualDescendants().OfType<TextBlock>()
-                .Where(t => t.IsVisible && !string.IsNullOrWhiteSpace(t.Text) && (control is ComboBoxItem || !t.GetVisualAncestors().OfType<ComboBoxItem>().Any()))
-                .Select(t => t.Text!).Distinct().ToArray();
-            if (displayed.Length > 0) label = string.Join("\n", displayed);
-        }
         if (control is Button && string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(label))
             name = control.Name switch { "PART_IncreaseButton" => L10n.T("Common.Increase"), "PART_DecreaseButton" => L10n.T("Common.Decrease"), _ => name };
-        if (control is NumericUpDown number) label = number.Value?.ToString(L10n.Culture);
         if (control is Slider slider) label = slider.Value.ToString("0.##", L10n.Culture);
-        if (control is NumericUpDown or Slider && string.IsNullOrWhiteSpace(name))
+        if (control is Slider && string.IsNullOrWhiteSpace(name))
             name = control.GetVisualAncestors().OfType<Control>().TakeWhile(c => c is not TopLevel).Select(AutomationProperties.GetName).FirstOrDefault(s => !string.IsNullOrWhiteSpace(s));
         return Combine(name, label);
     }

@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Media;
 using NonetMusicPlayer.Desktop.Controls;
@@ -65,7 +66,11 @@ internal static class Ui
     {
         var grid = new ResponsiveSettingsRow { WideColumns = wideColumns, ColumnDefinitions = new ColumnDefinitions(wideColumns), Margin = new Thickness(0, 6), Tag = label + " " + description };
         var labels = string.IsNullOrWhiteSpace(description) ? Stack(Text(label)) : Stack(Text(label), Text(description, 12, true)); labels.Spacing = 5; labels.Margin = new Thickness(0, 0, 25, 0); grid.Children.Add(labels);
-        editor.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center; Avalonia.Automation.AutomationProperties.SetName(editor, L10n.T(label)); ToolTip.SetTip(editor, L10n.T(description)); Grid.SetColumn(editor, 1); grid.Children.Add(editor); return grid;
+        editor.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center;
+        Avalonia.Automation.AutomationProperties.SetName(editor, L10n.T(label));
+        if (editor is not (TextBox or NumericUpDown or ComboBox or DropDownButton or SplitButton or ToggleButton))
+            ToolTip.SetTip(editor, L10n.T(description));
+        Grid.SetColumn(editor, 1); grid.Children.Add(editor); return grid;
     }
     public static ComboBox Choice(IEnumerable<string> values, string selected, Action<string> changed)
     {
@@ -75,12 +80,11 @@ internal static class Ui
     public static ToggleSwitch Toggle(bool value, Action<bool> changed)
     {
         var toggle = new ToggleSwitch { IsChecked = value, OnContent = "", OffContent = "", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right };
-        ToolTip.SetTip(toggle, L10n.T(value ? L10n.T("Common.Enabled") : L10n.T("Common.Disabled")));
         var applied = value; var reverting = false;
         toggle.IsCheckedChanged += (_, _) =>
         {
             if (reverting) return;
-            try { changed(toggle.IsChecked == true); applied = toggle.IsChecked == true; ToolTip.SetTip(toggle, L10n.T(applied ? L10n.T("Common.Enabled") : L10n.T("Common.Disabled"))); }
+            try { changed(toggle.IsChecked == true); applied = toggle.IsChecked == true; }
             catch (Exception error)
             {
                 reverting = true;
