@@ -39,11 +39,13 @@ public sealed partial class MainWindow
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions((coverSize + 24) + ",*"), Margin = new(0, 0, 0, 6) };
         grid.Children.Add(PlaylistArtwork(playlist, coverSize, original: true));
         var title = Ui.RawText(PlaylistName(playlist), small ? 25 : 30); title.FontWeight = FontWeight.SemiBold; title.MaxLines = 1; title.TextTrimming = TextTrimming.CharacterEllipsis;
-        var description = string.IsNullOrWhiteSpace(playlist.Description) ? Ui.Text(L10n.T("Playlists.AddPlaylistDescription"), 13, true) : Ui.RawText(playlist.Description, 13, true);
+        var description = playlist.IsSourceLinked ? Ui.Text("MusicSearch.CatalogReadOnly", 13, true)
+            : string.IsNullOrWhiteSpace(playlist.Description) ? Ui.Text(L10n.T("Playlists.AddPlaylistDescription"), 13, true) : Ui.RawText(playlist.Description, 13, true);
         description.MaxLines = 2; description.TextTrimming = TextTrimming.CharacterEllipsis;
         var note = Ui.Text(L10n.Format("Common.Tracks", playlist.TrackIds.Count), 12, true);
-        var edit = Ui.AsyncButton(L10n.T("Playlists.EditPlaylist"), () => EditPlaylistAsync(playlist));
-        edit.Content = Ui.Actions(new VectorIcon { Kind = IconKind.Edit, Width = 18, Height = 18 }, Ui.Text(L10n.T("Playlists.EditPlaylist")));
+        var actionLabel = playlist.IsSourceLinked ? "MusicSearch.CatalogSyncNow" : "Playlists.EditPlaylist";
+        var edit = Ui.AsyncButton(L10n.T(actionLabel), () => playlist.IsSourceLinked ? _vm.Plugins.RefreshFollowedPlaylistAsync(playlist) : EditPlaylistAsync(playlist));
+        edit.Content = Ui.Actions(new VectorIcon { Kind = playlist.IsSourceLinked ? IconKind.Refresh : IconKind.Edit, Width = 18, Height = 18 }, Ui.Text(actionLabel));
         var play = Ui.Button(L10n.T("Playback.Play"), () => { if (_vm is not null) _ = _vm.PlayTrackAsync(_vm.VisibleTracks.FirstOrDefault(), _vm.VisibleTracks.ToArray()); });
         play.Content = Ui.Actions(new VectorIcon { Kind = IconKind.Play }, Ui.Text(L10n.T("Playback.Play")));
         var details = Ui.Stack(title, description, note, Ui.Actions(play, edit)); details.Spacing = small ? 5 : 10; details.VerticalAlignment = VerticalAlignment.Center;
@@ -83,8 +85,18 @@ public sealed partial class MainWindow
     }
     private async Task EditPlaylistAsync(Playlist playlist)
     {
-        if (_vm is null) return;
+        if (_vm is null || playlist.IsSourceLinked) return;
         var result = await PlaylistEditDialog.Show(this, playlist);
         if (result is not null) _vm.UpdatePlaylistDetails(playlist, result.Name, result.Description, result.CoverPath);
+    }
+    private void AddFollowedPlaylistActions(ContextMenu menu, Playlist playlist)
+    {
+        if (_vm is not { } vm) return;
+        menu.Items.Add(Menu("MusicSearch.CatalogSyncNow", () => vm.Plugins.RefreshFollowedPlaylistAsync(playlist), IconKind.Refresh));
+        menu.Items.Add(Menu("MusicSearch.CatalogUnfollow", async () =>
+        {
+            if (await PlayerDialog.Confirm(this, L10n.T("MusicSearch.CatalogUnfollow"), L10n.T("MusicSearch.CatalogUnfollowConfirm"), L10n.T("MusicSearch.CatalogUnfollow")))
+                vm.UnfollowCatalog(playlist);
+        }, IconKind.Trash));
     }
 }

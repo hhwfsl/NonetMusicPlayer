@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
 
-namespace NonetMusicPlayer.Desktop.Services;
+namespace NonetMusicPlayer.Core.Updates;
 
 /// <summary>由旧版自身的独立副本执行更新；等待退出、逐文件替换、失败回滚，用户数据不参与更新。</summary>
 public static class UpdateInstaller
@@ -12,8 +12,13 @@ public static class UpdateInstaller
     {
         var executable = Environment.ProcessPath ?? throw new IOException("Application path unavailable");
         var runtime = Path.GetDirectoryName(executable)!;
-        if (Path.GetFileNameWithoutExtension(executable) != "Nonet") throw new InvalidOperationException("Updates require a published desktop executable");
-        var installation = OperatingSystem.IsMacOS() && Path.GetFileName(runtime) == "MacOS" ? Path.GetFullPath(Path.Combine(runtime, "../..")) : runtime;
+        var expected = ReleaseUpdateService.ExecutableFor(update.Product, ReleaseUpdateService.PlatformRid);
+        if (!string.Equals(update.Executable, expected, StringComparison.Ordinal)
+            || !string.Equals(Path.GetFileName(executable), Path.GetFileName(expected), StringComparison.Ordinal))
+            throw new InvalidOperationException("Updates require the published executable for this edition");
+        var installation = update.Product == ReleaseProduct.Desktop && OperatingSystem.IsMacOS() && Path.GetFileName(runtime) == "MacOS"
+            ? Path.GetFullPath(Path.Combine(runtime, "../..")) : runtime;
+        UpdatePaths.RejectLinks(installation);
         var probe = Path.Combine(installation, ".nonet-update-write-" + Guid.NewGuid().ToString("N"));
         using (File.Create(probe)) { } File.Delete(probe);
         var helperFolder = Path.Combine(update.StageRoot, "helper"); Directory.CreateDirectory(helperFolder);
@@ -22,11 +27,11 @@ public static class UpdateInstaller
             var name = Path.GetFileName(path);
             // 只复制程序和运行时依赖，不复制引导配置、数据库或用户资源。
             if (path != executable && !(name.EndsWith(".dll") || name.EndsWith(".dylib") || name.Contains(".so") || name.EndsWith(".deps.json") || name.EndsWith(".runtimeconfig.json"))) continue;
-            DataDirectoryService.RejectLinkedAncestors(path); File.Copy(path, Path.Combine(helperFolder, name), false);
+            UpdatePaths.RejectLinks(path); File.Copy(path, Path.Combine(helperFolder, name), false);
             if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(Path.Combine(helperFolder, name), File.GetUnixFileMode(path));
         }
         using var current = Process.GetCurrentProcess();
-        var plan = new UpdateApplyPlan { Installation = installation, Payload = update.Payload, Executable = update.Executable, ParentId = Environment.ProcessId, ParentStartedUtc = current.StartTime.ToUniversalTime(), DataRoot = Path.GetFullPath(dataRoot), BackupRoot = Path.GetFullPath(backupRoot), Manifest = update.Manifest };
+        var plan = new UpdateApplyPlan { Installation = installation, Payload = update.Payload, Executable = update.Executable, ParentId = Environment.ProcessId, ParentStartedUtc = current.StartTime.ToUniversalTime(), DataRoot = Path.GetFullPath(dataRoot), BackupRoot = Path.GetFullPath(backupRoot), Manifest = update.Manifest, Product = update.Product };
         var planPath = Path.Combine(update.StageRoot, "apply-plan.json");
         File.WriteAllText(planPath, JsonSerializer.Serialize(plan, UpdateJsonContext.Default.UpdateApplyPlan));
         var start = new ProcessStartInfo(Path.Combine(helperFolder, Path.GetFileName(executable))) { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = helperFolder };
@@ -34,18 +39,31 @@ public static class UpdateInstaller
         return Process.Start(start) ?? throw new IOException("Unable to start update helper");
     }
     /// <summary>执行经过路径约束的更新计划，完成后重新启动已安装的程序。</summary>
-    public static int RunHelper(string planPath)
+    public static int RunHelper(string planPath, ReleaseProduct product = ReleaseProduct.Desktop)
     {
         UpdateApplyPlan? plan = null;
+        var canRestart = false;
+        string? resultPath = null;
         try
         {
-            planPath = Path.GetFullPath(planPath); DataDirectoryService.RejectLinkedAncestors(planPath);
+            planPath = Path.GetFullPath(planPath); UpdatePaths.RejectLinks(planPath);
             var stage = Path.GetDirectoryName(planPath)!;
-            using var running = new FileStream(Path.Combine(stage, "helper.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            var helper = Path.GetDirectoryName(Environment.ProcessPath)!;
+            if (!UpdatePaths.Same(helper, Path.Combine(stage, "helper")) || Path.GetFileName(planPath) != "apply-plan.json")
+                throw new InvalidDataException("Update helper must use its own stage");
+            var lockPath = Path.Combine(stage, "helper.lock");
+            UpdatePaths.RejectLinks(lockPath);
+            using var running = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             if (new FileInfo(planPath).Length > 512 * 1024) throw new InvalidDataException("Update plan too large");
             plan = JsonSerializer.Deserialize(File.ReadAllText(planPath), UpdateJsonContext.Default.UpdateApplyPlan) ?? throw new InvalidDataException("Invalid update plan");
-            var helper = Path.GetDirectoryName(Environment.ProcessPath)!;
-            if (!SamePath(helper, Path.Combine(stage, "helper")) || !SamePath(plan.Payload, Path.Combine(stage, "payload"))) throw new InvalidDataException("Update helper and payload must share their own stage");
+            if (plan.Product != product || !UpdatePaths.Same(plan.Payload, Path.Combine(stage, "payload"))
+                || !Guid.TryParseExact(Path.GetFileName(stage), "N", out _) || !UpdatePaths.Same(Path.GetDirectoryName(stage)!, Path.Combine(plan.DataRoot, "Updates"))
+                || plan.Executable != ReleaseUpdateService.ExecutableFor(product, ReleaseUpdateService.PlatformRid))
+                throw new InvalidDataException("Update helper and payload must share their own stage");
+            var result = Path.Combine(stage, "result.txt");
+            UpdatePaths.RejectLinks(result);
+            resultPath = result;
+            canRestart = product == ReleaseProduct.Desktop;
             using (var parent = TryGetParent(plan))
             {
                 if (parent is not null && !parent.WaitForExit(60_000)) throw new IOException("Application did not exit before update");
@@ -54,14 +72,18 @@ public static class UpdateInstaller
             Apply(plan, Path.Combine(stage, "rollback"));
             // 失败还原仅保护本次替换事务，成功后的下载、助手和旧副本由新进程统一回收。
             var downloaded = Path.Combine(stage, "download.zip");
-            DataDirectoryService.RejectLinkedAncestors(downloaded);
+            UpdatePaths.RejectLinks(downloaded);
             if (File.Exists(downloaded)) File.Delete(downloaded);
-            File.WriteAllText(Path.Combine(stage, "result.txt"), "success"); StartApplication(plan); return 0;
+            File.WriteAllText(resultPath, "success");
+            // CLI 子命令完成后交回当前终端，下一次运行时进入新版本。
+            if (canRestart) StartApplication(plan);
+            return 0;
         }
         catch (Exception error)
         {
-            try { File.WriteAllText(Path.Combine(Path.GetDirectoryName(planPath)!, "result.txt"), error.ToString()); } catch (IOException) { }
-            if (plan is not null) { try { StartApplication(plan); } catch (Exception) { } }
+            if (resultPath is not null)
+                try { File.WriteAllText(resultPath, error.ToString()); } catch (IOException) { }
+            if (canRestart && plan is not null) { try { StartApplication(plan); } catch (Exception) { } }
             return 1;
         }
     }
@@ -79,18 +101,19 @@ public static class UpdateInstaller
     public static void Apply(UpdateApplyPlan plan, string rollbackRoot)
     {
         var root = Path.GetFullPath(plan.Installation); var payload = Path.GetFullPath(plan.Payload); rollbackRoot = Path.GetFullPath(rollbackRoot);
-        if (DataDirectoryService.Contains(plan.DataRoot, root) || SamePath(root, plan.DataRoot)) throw new InvalidDataException("Installation cannot be the data directory");
-        DataDirectoryService.RejectLinkedAncestors(root); DataDirectoryService.RejectLinkedAncestors(payload); DataDirectoryService.RejectLinkedAncestors(rollbackRoot);
-        if (!Directory.Exists(root) || SamePath(root, payload) || DataDirectoryService.Contains(payload, root) || SamePath(root, rollbackRoot) || DataDirectoryService.Contains(rollbackRoot, root) || DataDirectoryService.Contains(payload, rollbackRoot)) throw new InvalidDataException("Invalid update directories");
+        if (UpdatePaths.Contains(plan.DataRoot, root)) throw new InvalidDataException("Installation cannot be the data directory");
+        UpdatePaths.RejectLinks(root); UpdatePaths.RejectLinks(payload); UpdatePaths.RejectLinks(rollbackRoot);
+        if (!Directory.Exists(root) || UpdatePaths.Contains(payload, root) || UpdatePaths.Contains(rollbackRoot, root) || UpdatePaths.Contains(payload, rollbackRoot)) throw new InvalidDataException("Invalid update directories");
         ReleaseUpdateService.ValidateRelative(plan.Executable);
-        if (plan.Manifest.Schema != 1 || plan.Manifest.Rid != ReleaseUpdateService.PlatformRid || !plan.Manifest.Files.ContainsKey(plan.Executable)) throw new InvalidDataException("Wrong update target");
+        if (plan.Manifest.Schema != 1 || plan.Manifest.Rid != ReleaseUpdateService.PlatformRid || !plan.Manifest.Files.ContainsKey(plan.Executable)
+            || plan.Executable != ReleaseUpdateService.ExecutableFor(plan.Product, plan.Manifest.Rid)) throw new InvalidDataException("Wrong update target");
         var files = new List<(string Source, string Target, string Backup)>();
         foreach (var (relative, digest) in plan.Manifest.Files)
         {
             ReleaseUpdateService.ValidateRelative(relative);
             var source = Path.Combine(payload, relative.Replace('/', Path.DirectorySeparatorChar)); var target = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar));
-            if (DataDirectoryService.Contains(plan.DataRoot, target) || SamePath(plan.DataRoot, target) || DataDirectoryService.Contains(plan.BackupRoot, target) || SamePath(plan.BackupRoot, target)) throw new InvalidDataException("Update overlaps user data");
-            DataDirectoryService.RejectLinkedAncestors(source); DataDirectoryService.RejectLinkedAncestors(target);
+            if (UpdatePaths.Contains(plan.DataRoot, target) || UpdatePaths.Contains(plan.BackupRoot, target)) throw new InvalidDataException("Update overlaps user data");
+            UpdatePaths.RejectLinks(source); UpdatePaths.RejectLinks(target);
             using var stream = File.OpenRead(source); if (digest.Length != 64 || !digest.All(Uri.IsHexDigit) || !CryptographicOperations.FixedTimeEquals(SHA256.HashData(stream), Convert.FromHexString(digest))) throw new InvalidDataException("Staged update was modified");
             files.Add((source, target, Path.Combine(rollbackRoot, relative.Replace('/', Path.DirectorySeparatorChar))));
         }
@@ -129,10 +152,10 @@ public static class UpdateInstaller
             throw;
         }
     }
-    private static bool SamePath(string left, string right) => string.Equals(Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar), Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 }
 public sealed class UpdateApplyPlan
 {
+    public ReleaseProduct Product { get; set; }
     public string Installation { get; set; } = "";
     public string Payload { get; set; } = "";
     public string Executable { get; set; } = "";

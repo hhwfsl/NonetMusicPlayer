@@ -156,7 +156,7 @@ public sealed partial class HeadlessPlayerSession
         ["artwork"] = list.Artwork, ["artworkRevision"] = list.ArtworkRevision, ["coverPath"] = list.Artwork && File.Exists(RemotePlaylistCover(peer, list)) ? RemotePlaylistCover(peer, list) : null
     };
     private JsonArray PlaylistListings() => new(State.Playlists.Select(p => (JsonNode)new JsonObject {
-        ["id"] = p.Id, ["name"] = p.Id == "liked" ? Localization.LocalizationCatalog.Get("Playlists.LikedSongs") : p.Name, ["description"] = p.Description, ["count"] = p.TrackIds.Count, ["coverPath"] = p.CoverPath, ["readOnly"] = false
+        ["id"] = p.Id, ["name"] = p.Id == "liked" ? Localization.LocalizationCatalog.Get("Playlists.LikedSongs") : p.Name, ["description"] = p.Description, ["count"] = p.TrackIds.Count, ["coverPath"] = p.CoverPath, ["readOnly"] = p.IsSourceLinked
     }).Concat(_lanPeers.Values.SelectMany(peer => peer.Catalog.Playlists.Select(p => (JsonNode)RemotePlaylistJson(peer, p, true)))).ToArray());
     private async Task<IReadOnlyList<StoredMusicTrack>> ReadPlaylistTracksAsync(string id, CancellationToken token)
     {

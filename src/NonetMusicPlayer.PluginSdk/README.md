@@ -1,5 +1,7 @@
 # NonetMusicPlayer.PluginSdk
 
+桌面可选能力 `MusicSearchContract.FollowCatalogCapability` 对应 `media.follow-catalog.v1`。宿主处理经确认的 `media` 请求 `follow-catalog` 并定期读取只读目录。目录页可选返回标题、完整条目数以及该页的平台不可用条目数。详见 [通用扩展接口](../../docs/UNIVERSAL_EXTENSIONS.md)。
+
 桌面可选音源能力 `media.share-link.v1` 通过 `musicSearch.supportsShareLink` 声明。`music.share-link` 接收稳定歌曲 ID 并返回公开 HTTPS 歌曲页，桌面在用户点击后复制。旧版宿主忽略该声明。
 
 完整界面方案使用 `InterfaceCompositionContract` 与 `StyleSheet.Layout`，能力 `ui.composition.v1`。它通过既有 styles 服务组装表现树、临时接管视觉设置，并保留原业务和控件生命周期；详见 [INTERFACE_PRESETS](../../docs/INTERFACE_PRESETS.md)。

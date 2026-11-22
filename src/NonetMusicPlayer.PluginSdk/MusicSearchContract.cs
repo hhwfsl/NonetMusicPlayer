@@ -26,6 +26,8 @@ public sealed class MusicSearchPage
 public static class MusicSearchContract
 {
     public const string ShareLinkCapability = "media.share-link.v1";
+    // 音源可以请求宿主订阅稳定目录 ID，旧宿主仍可提供基础搜索与播放。
+    public const string FollowCatalogCapability = "media.follow-catalog.v1";
 
     /// <summary>链接只供复制，不应返回播放代理、含身份信息的 URL 或本机路径。</summary>
     public static Uri ValidateShareLink(string? url)

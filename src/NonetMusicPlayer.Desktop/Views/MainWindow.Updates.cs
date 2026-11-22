@@ -18,7 +18,7 @@ public sealed partial class MainWindow
     private PreparedUpdate? _preparedUpdate;
     private bool _checkingUpdate, _downloadingUpdate;
     private Window? _releaseWindow;
-    public string VersionNumber => ReleaseUpdateService.CurrentVersion;
+    public string VersionNumber => ReleaseUpdateService.VersionOf(typeof(MainWindow).Assembly);
     private void InitializeUpdates()
     {
         _newVersion = Ui.AsyncButton("New", ShowUpdateAsync); _newVersion.Name = "NewVersionBadge"; _newVersion.IsVisible = false;

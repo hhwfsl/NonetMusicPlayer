@@ -61,8 +61,9 @@ public sealed partial class MainWindow
             var tracks = _vm.VisibleTracks.ToArray();
             await _vm.PlayTrackAsync(tracks.FirstOrDefault(), tracks);
         }, IconKind.Play));
-        menu.Items.Add(Menu(L10n.T("Common.EditDescriptionAndCover"), () => EditPlaylistAsync(playlist), IconKind.Edit));
-        if (!playlist.IsSystem)
+        if (playlist.IsSourceLinked) AddFollowedPlaylistActions(menu, playlist);
+        else menu.Items.Add(Menu(L10n.T("Common.EditDescriptionAndCover"), () => EditPlaylistAsync(playlist), IconKind.Edit));
+        if (!playlist.IsSystem && !playlist.IsSourceLinked)
         {
             menu.Items.Add(Menu(L10n.T("Playlists.RenamePlaylist"), () => RenameAsync(playlist), IconKind.Edit));
             menu.Items.Add(new Separator());

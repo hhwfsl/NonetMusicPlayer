@@ -24,7 +24,8 @@ public sealed partial class HeadlessPlayerSession
             }
             else if (track.ProviderId is { } provider && await Plugins.DescribeMusicAsync(provider, track.ProviderTrackId!, token) is { } description)
             {
-                var enriched = StoreSourceTrack(provider, description); if (enriched.Metadata.CoverPath is not null) track.Metadata = track.Metadata with { CoverPath = enriched.Metadata.CoverPath };
+                ApplySourceDetails(track, description);
+                track.NeedsSourceMetadata = false;
             }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }

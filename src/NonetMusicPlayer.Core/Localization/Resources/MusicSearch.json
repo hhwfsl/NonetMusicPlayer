@@ -1,4 +1,13 @@
 {
+  "MusicSearch.FollowConfirm": { "zh-CN": "订阅{0}的歌单「{1}」？Nonet 会定时同步平台上的曲目和顺序。", "en-US": "Follow “{1}” from {0}? Nonet will regularly sync the tracks and their order.", "ja-JP": "{0} の「{1}」をフォローしますか？ Nonet が曲と並び順を定期的に同期します。" },
+  "MusicSearch.CatalogReadOnly": { "zh-CN": "这是平台只读歌单，请在原音乐平台修改。", "en-US": "This playlist is read-only. Make changes on the source music service.", "ja-JP": "このプレイリストは読み取り専用です。元の音楽サービスで編集してください。" },
+  "MusicSearch.CatalogSyncNow": { "zh-CN": "立即同步", "en-US": "Sync now", "ja-JP": "今すぐ同期" },
+  "MusicSearch.CatalogUnfollow": { "zh-CN": "取消同步", "en-US": "Stop following", "ja-JP": "フォローを解除" },
+  "MusicSearch.CatalogUnfollowConfirm": { "zh-CN": "从 Nonet 移除此订阅？原平台歌单会保留。", "en-US": "Remove this subscription from Nonet? The original playlist will remain on the music service.", "ja-JP": "Nonet からこのフォローを解除しますか？ 元のプレイリストは音楽サービスに残ります。" },
+  "MusicSearch.CatalogSourceUnavailable": { "zh-CN": "请启用对应的音源插件后再同步。", "en-US": "Enable the source plugin to sync this playlist.", "ja-JP": "同期するには音源プラグインを有効にしてください。" },
+  "MusicSearch.CatalogSyncFailed": { "zh-CN": "平台歌单同步失败，已保留上次成功同步的内容。", "en-US": "Playlist sync failed. The last successful version has been kept.", "ja-JP": "同期に失敗しました。前回同期した内容は保持されています。" },
+  "MusicSearch.CatalogUnavailableTracks": { "zh-CN": "歌单已同步，已跳过平台标记为不可用的 {0} 个条目。", "en-US": "Playlist synced. The service marked {0} entries as unavailable, so they were skipped.", "ja-JP": "プレイリストを同期しました。サービスで利用不可とされた {0} 件の項目をスキップしました。" },
+  "MusicSearch.CatalogNotFollowed": { "zh-CN": "请选择已订阅的平台歌单。", "en-US": "Select a followed playlist.", "ja-JP": "フォロー中のプレイリストを選択してください。" },
   "MusicSearch.SharePlatformLink": { "zh-CN": "分享{0}链接", "en-US": "Share {0} link", "ja-JP": "{0}のリンクを共有" },
   "MusicSearch.ShareLinkCopied": { "zh-CN": "已将{0}链接复制到剪贴板。", "en-US": "Copied the {0} link to the clipboard.", "ja-JP": "{0}のリンクをクリップボードにコピーしました。" },
   "MusicSearch.ShareUnavailable": { "zh-CN": "暂时无法复制此歌曲的分享链接。", "en-US": "Could not copy a share link for this track.", "ja-JP": "この曲の共有リンクをコピーできませんでした。" },

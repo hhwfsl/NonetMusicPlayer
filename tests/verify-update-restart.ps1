@@ -5,10 +5,11 @@ $taskPublished = [IO.Path]::GetFullPath((Join-Path $taskRepository $PublishedDir
 if (-not $IsWindows) { throw 'This cross-process fixture is Windows-only.' }
 $taskRoot = Join-Path $taskRepository ('artifacts/update-restart-' + [guid]::NewGuid().ToString('N'))
 $taskInstall = Join-Path $taskRoot 'installation'
-$taskStage = Join-Path $taskRoot 'stage'
+$taskData = Join-Path $taskInstall 'Data'
+# 按实际更新布局把独立助手和载荷放进数据目录的 GUID 暂存区。
+$taskStage = Join-Path (Join-Path $taskData 'Updates') ([guid]::NewGuid().ToString('N'))
 $taskPayload = Join-Path $taskStage 'payload'
 $taskHelper = Join-Path $taskStage 'helper'
-$taskData = Join-Path $taskInstall 'Data'
 foreach ($taskDirectory in @($taskInstall,$taskPayload,$taskHelper,$taskData)) { [IO.Directory]::CreateDirectory($taskDirectory) | Out-Null }
 dotnet build (Join-Path $PSScriptRoot 'NonetMusicPlayer.UpdateRestartFixture/NonetMusicPlayer.UpdateRestartFixture.csproj') -c Release -o $taskPayload --nologo
 if ($LASTEXITCODE -ne 0) { throw 'Update fixture build failed.' }

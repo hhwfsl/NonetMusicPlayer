@@ -64,22 +64,24 @@ public sealed partial class HeadlessPlayerSession
                 case "music.info": data = await ReadTrackInfoAsync(FindTrack(Arg(0)), cancellationToken); save = false; break;
                 case "music.remove":
                     var removing = command.Arguments.ToHashSet(StringComparer.Ordinal); if (removing.Count == 0) throw new FormatException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.ProvideIds")); foreach (var id in removing) RequireEditableSource(FindTrack(id));
+                    if (State.Playlists.Any(list => list.IsSourceLinked && list.TrackIds.Any(removing.Contains)))
+                        throw new InvalidOperationException(LocalizationCatalog.Get("MusicSearch.CatalogReadOnly"));
                     State.Tracks.RemoveAll(t => removing.Contains(t.Id)); foreach (var list in State.Playlists) list.TrackIds.RemoveAll(removing.Contains);
                     _queue.RemoveAll(t => removing.Contains(t.Id)); if (Current is not null && removing.Contains(Current.Id)) { _audio.Stop(); _loaded = false; Current = null; State.LastPosition = 0; } break;
                 case "playlist.list": data = PlaylistListings(); save = false; break;
                 case "playlist.create": var created = new StoredPlaylist { Name = ValidName(Arg(0)) }; State.Playlists.Add(created); data = new JsonObject { ["id"] = created.Id }; break;
-                case "playlist.rename": var renamed = FindPlaylist(Arg(0)); if (renamed.Id == "liked") throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.LikedRenameDenied")); renamed.Name = ValidName(Arg(1)); break;
-                case "playlist.describe": var description = Arg(1).Trim(); if (description.Length > 500) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.DescriptionTooLong")); FindPlaylist(Arg(0)).Description = description; break;
-                case "playlist.delete": var deleted = FindPlaylist(Arg(0)); if (deleted.Id == "liked") throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.LikedDeleteDenied")); State.Playlists.Remove(deleted); if (State.LastPlaylistId == deleted.Id) State.LastPlaylistId = null; break;
+                case "playlist.rename": var renamed = FindEditablePlaylist(Arg(0)); if (renamed.Id == "liked") throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.LikedRenameDenied")); renamed.Name = ValidName(Arg(1)); break;
+                case "playlist.describe": var description = Arg(1).Trim(); if (description.Length > 500) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.DescriptionTooLong")); FindEditablePlaylist(Arg(0)).Description = description; break;
+                case "playlist.delete": var deleted = FindEditablePlaylist(Arg(0)); if (deleted.Id == "liked") throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.LikedDeleteDenied")); State.Playlists.Remove(deleted); if (State.LastPlaylistId == deleted.Id) State.LastPlaylistId = null; break;
                 case "playlist.add":
-                    var target = FindPlaylist(Arg(0)); var inputs = command.Arguments.Skip(1).ToArray(); if (inputs.Length == 0) throw new FormatException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.ProvideInputs"));
+                    var target = FindEditablePlaylist(Arg(0)); var inputs = command.Arguments.Skip(1).ToArray(); if (inputs.Length == 0) throw new FormatException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.ProvideInputs"));
                     var found = inputs.Where(id => State.Tracks.Concat(State.RecentTemporaryTracks).Concat(_musicResults).Concat(_lanTracks.Values).Concat(_queue).Any(t => t.Id == id)).Select(FindTrack).ToArray();
                     var files = inputs.Where(id => !found.Any(t => t.Id == id)).ToArray();
                     var imported = await ReadPathsAsync(files, cancellationToken); AddToPlaylist(target, found.Concat(imported)); break;
-                case "playlist.remove": var listToChange = FindPlaylist(Arg(0)); var ids = command.Arguments.Skip(1).ToHashSet(StringComparer.Ordinal); if (ids.Count == 0) throw new FormatException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.ProvideIds")); listToChange.TrackIds.RemoveAll(ids.Contains); RefreshQueue(); break;
-                case "playlist.move": var ordered = FindPlaylist(Arg(0)); var moving = Arg(1); if (!ordered.TrackIds.Contains(moving)) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.NotInPlaylist")); var index = CommandResults.Integer(command, 2, 1, ordered.TrackIds.Count) - 1; ordered.TrackIds.Remove(moving); ordered.TrackIds.Insert(index, moving); RefreshQueue(); break;
+                case "playlist.remove": var listToChange = FindEditablePlaylist(Arg(0)); var ids = command.Arguments.Skip(1).ToHashSet(StringComparer.Ordinal); if (ids.Count == 0) throw new FormatException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.ProvideIds")); listToChange.TrackIds.RemoveAll(ids.Contains); RefreshQueue(); break;
+                case "playlist.move": var ordered = FindEditablePlaylist(Arg(0)); var moving = Arg(1); if (!ordered.TrackIds.Contains(moving)) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.NotInPlaylist")); var index = CommandResults.Integer(command, 2, 1, ordered.TrackIds.Count) - 1; ordered.TrackIds.Remove(moving); ordered.TrackIds.Insert(index, moving); RefreshQueue(); break;
                 case "playlist.reorder": var reordered = FindPlaylist(Arg(0)); var at = CommandResults.Integer(command, 1, 1, State.Playlists.Count) - 1; State.Playlists.Remove(reordered); State.Playlists.Insert(at, reordered); break;
-                case "playlist.cover": FindPlaylist(Arg(0)).CoverPath = Arg(1) == "default" ? null : StoreCover(Arg(1)); break;
+                case "playlist.cover": FindEditablePlaylist(Arg(0)).CoverPath = Arg(1) == "default" ? null : StoreCover(Arg(1)); break;
                 case "favorite.add": AddToPlaylist(FindPlaylist("liked"), [FindTrack(Arg(0))]); break;
                 case "favorite.remove": FindPlaylist("liked").TrackIds.Remove(FindTrack(Arg(0)).Id); RefreshQueue(); break;
                 case "history.list": data = Strings(State.History); save = false; break;
@@ -96,6 +98,7 @@ public sealed partial class HeadlessPlayerSession
                 case "data.restore":
                     var restored = ParseState(Arg(0)); Save(); File.Copy(StatePath, StatePath + ".before-restore-" + DateTime.UtcNow.ToString("yyyy-MM-dd-HHmmssfff"), false);
                     EndListeningRecord("data-restore"); StopNetwork(); _audio.Stop(); _loaded = false; State = restored; Current = State.Tracks.Concat(State.RecentTemporaryTracks).Concat(State.QueueTracks).FirstOrDefault(t => t.Id == State.LastTrackId); _undoLibrary.Clear();
+                    _nextCatalogSync.Clear(); _catalogMetadataRetry.Clear(); _nextCatalogScan = 0;
                     // 恢复后的播放队列仍使用来源歌单，不把多首歌的队列退化为单首循环。
                     _queue = State.LastPlaylistId is { } restoredId && State.Playlists.FirstOrDefault(p => p.Id == restoredId) is { } restoredPlaylist ? PlaylistTracks(restoredPlaylist).ToList() : Current is null ? [] : [Current];
                     RestoreQueueSnapshot(); ApplySettings(State.Settings); break;

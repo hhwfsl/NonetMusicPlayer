@@ -53,6 +53,7 @@ public sealed partial class MainViewModel
 
     public void RemovePlaylistTracks(Playlist playlist, IEnumerable<TrackItem> tracks)
     {
+        RequireEditablePlaylist(playlist);
         var ids = tracks.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
         var prior = playlist.TrackIds.ToList();
         playlist.TrackIds.RemoveAll(ids.Contains); if (playlist.IsSystem) SyncFavoriteFlags();

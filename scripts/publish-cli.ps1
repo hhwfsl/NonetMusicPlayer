@@ -15,9 +15,10 @@ function Assert-TaskChild([string]$Candidate,[string]$Parent) {
 foreach($taskTarget in @(@{Name='windows';Rid='win-x64'},@{Name='macos';Rid='osx-x64'},@{Name='linux';Rid='linux-x64'}) | Where-Object { $_.Name -in $Platforms }) {
     $taskStage = Assert-TaskChild (Join-Path $taskArtifacts ('cli-stage-'+$taskTarget.Rid+'-'+$taskTimestamp)) $taskArtifacts
     $taskPackage = Join-Path $taskStage 'package'
-    dotnet restore $taskProject --configfile (Join-Path $taskRoot 'NuGet.Config') -r $taskTarget.Rid --disable-parallel
+    # 与桌面发布一样使用单个 MSBuild 节点，避免受限环境的共享编译器和进程管道冲突。
+    dotnet restore $taskProject --configfile (Join-Path $taskRoot 'NuGet.Config') -r $taskTarget.Rid --disable-parallel -m:1 -p:BuildInParallel=false
     if($LASTEXITCODE -ne 0) { throw 'CLI 还原失败，原发布包未修改。' }
-    dotnet publish $taskProject -c $Configuration -r $taskTarget.Rid --no-restore --self-contained true -o $taskPackage -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimMode=partial -p:DebugType=None -p:DebugSymbols=false -p:EnableCompressionInSingleFile=true
+    dotnet publish $taskProject -c $Configuration -r $taskTarget.Rid --no-restore --self-contained true -o $taskPackage -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimMode=partial -p:DebugType=None -p:DebugSymbols=false -p:EnableCompressionInSingleFile=true -m:1 -p:UseSharedCompilation=false -p:BuildInParallel=false
     if($LASTEXITCODE -ne 0) { throw 'CLI 发布失败，原发布包未修改。' }
     & (Join-Path $PSScriptRoot 'verify-native-architecture.ps1') -Directory $taskPackage -Rid $taskTarget.Rid -Cli
     # CLI 不引用 Avalonia，不需要图形库、字体、桌面文档或插件示例。

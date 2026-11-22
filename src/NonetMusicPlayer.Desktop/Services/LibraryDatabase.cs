@@ -32,7 +32,7 @@ public sealed class LibraryDatabase(string path)
         }
         for (var i = 0; !playbackOnly && i < state.Playlists.Count; i++)
         {
-            var p = state.Playlists[i]; yield return new("playlist", p.Id, i, (p.Name, p.Description, p.CoverPath, string.Join('\0', p.TrackIds)), () => JsonSerializer.Serialize(p, AppStorage.Json));
+            var p = state.Playlists[i]; yield return new("playlist", p.Id, i, (p.Name, p.Description, p.CoverPath, p.SourcePluginId, p.SourceCatalogId, string.Join('\0', p.TrackIds)), () => JsonSerializer.Serialize(p, AppStorage.Json));
         }
         for (var i = 0; i < state.ListeningEntries.Count; i++)
         {

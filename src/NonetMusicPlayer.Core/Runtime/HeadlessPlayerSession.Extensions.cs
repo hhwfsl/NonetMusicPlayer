@@ -14,9 +14,10 @@ public sealed partial class HeadlessPlayerSession
         public Task<CommandResult> ExecuteAsync(PlayerCommand command, CancellationToken token) => owner.ExecuteLockedAsync(command, token);
     }
     /// <summary>扩展只经已有权限策略访问数据和命令，不授予路径、Shell 或隐式危险操作确认。</summary>
-    private async Task<JsonObject> HandleExtensionRequestAsync(PluginManifest plugin, ExtensionHostRequest request, CancellationToken token)
+    private async Task<JsonObject> HandleExtensionRequestAsync(PluginManifest plugin, ExtensionHostRequest request, bool userGesture, CancellationToken token)
     {
         var args = request.Arguments;
+        if (request.Service == "media") return RequestCatalogFollow(plugin, args, userGesture);
         if (request.Service == "catalog")
         {
             var catalog = UniversalPluginCommandPolicy.CatalogFor(plugin.Permissions);

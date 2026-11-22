@@ -233,6 +233,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     }
     public async Task<IReadOnlyList<TrackItem>> ImportAsync(IEnumerable<string> paths, bool favorite = false, Playlist? playlist = null, bool autoplay = false)
     {
+        RequireEditablePlaylist(playlist);
         if (Plugins.HasHook("import.before") && (await Plugins.EvaluateHooksAsync("import.before", new() { ["playlistId"] = playlist?.Id, ["inputCount"] = paths.Count() })).Cancel) return [];
         if (IsBusy) { ReportWarning(L10n.T("Common.AnImportIsInProgressWaitForItTo")); return []; }
         IsBusy = true; var cancellation = new CancellationTokenSource(); _scanCancellation = cancellation; var inputs = paths.ToArray(); StatusText = L10n.T("Lyrics.ScanningMusicArtworkAndLyrics");
@@ -520,6 +521,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     }
     public async Task ImportM3uAsync(string path, Playlist? destination = null)
     {
+        RequireEditablePlaylist(destination);
         var lines = File.ReadAllLines(path).Where(l => !string.IsNullOrWhiteSpace(l) && !l.StartsWith('#')).ToArray();
         if (lines.Length > 50000) throw new InvalidDataException(L10n.T("Playlists.APlaylistImportCannotExceedSongs"));
         var entries = lines.Where(l => !Uri.TryCreate(l, UriKind.Absolute, out var uri) || uri.IsFile).Select(l => Uri.TryCreate(l, UriKind.Absolute, out var uri) && uri.IsFile ? uri.LocalPath : Path.IsPathRooted(l) ? l : Path.Combine(Path.GetDirectoryName(path)!, l)).ToArray();

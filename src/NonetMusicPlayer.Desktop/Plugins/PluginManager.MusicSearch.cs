@@ -137,11 +137,18 @@ public sealed partial class PluginManager
         PersistSearchCover(track);
     }
     /// <summary>先完整校验目录，再一次性建立歌单，失败不留下半个歌单。</summary>
-    public Task<IReadOnlyList<TrackItem>> ReadMusicCatalogAsync(PluginManifest plugin, string catalogId, CancellationToken token = default)
-        => ReadMusicCatalogAsync(plugin, catalogId, token, includeArtwork: true);
-    private async Task<IReadOnlyList<TrackItem>> ReadMusicCatalogAsync(PluginManifest plugin, string catalogId, CancellationToken token, bool includeArtwork)
+    public async Task<IReadOnlyList<TrackItem>> ReadMusicCatalogAsync(PluginManifest plugin, string catalogId, CancellationToken token = default)
+        => (await ReadMusicCatalogAsync(plugin, catalogId, token, includeArtwork: true)).Tracks;
+    private async Task<(IReadOnlyList<TrackItem> Tracks, string? Name, int Unavailable)> ReadMusicCatalogAsync(
+        PluginManifest plugin, string catalogId, CancellationToken token, bool includeArtwork, bool followed = false)
     {
-        if (catalogId.Length is 0 or > 300) throw new InvalidDataException("Invalid catalog ID.");
+        MusicCatalogReader.ValidateId(catalogId);
+        if (followed)
+        {
+            var snapshot = await MusicCatalogReader.ReadAsync((cursor, ct) => CallMediaAsync(plugin, "catalog.list",
+                new() { ["catalogId"] = catalogId, ["cursor"] = cursor, ["includeArtwork"] = "false" }, ct), token);
+            return (snapshot.Tracks.Select(track => CreateSourceTrack(plugin, track)).ToArray(), snapshot.Name, snapshot.UnavailableCount);
+        }
         var tracks = new List<TrackItem>(); var seen = new HashSet<string>(StringComparer.Ordinal); var cursor = "";
         do
         {
@@ -153,7 +160,7 @@ public sealed partial class PluginManager
             if (includeArtwork) await PersistCatalogMetadataAsync(plugin, page.Tracks, batch, token);
             tracks.AddRange(batch); cursor = page.NextCursor ?? "";
         } while (cursor.Length > 0);
-        return tracks.DistinctBy(t => t.Id).ToArray();
+        return (tracks.DistinctBy(t => t.Id).ToArray(), null, 0);
     }
     /// <summary>所有音源共用导入元数据落盘流程，不等待首次播放，也不保留整库 Base64。</summary>
     private Task PersistCatalogMetadataAsync(PluginManifest plugin, IReadOnlyList<ProviderTrack> items, TrackItem[] tracks, CancellationToken token)

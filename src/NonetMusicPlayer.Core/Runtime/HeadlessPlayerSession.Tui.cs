@@ -1,6 +1,9 @@
 namespace NonetMusicPlayer.Core.Runtime;
 
-public sealed record TuiItem(string Id, string Title, string Detail);
+public sealed record TuiItem(string Id, string Title, string Detail)
+{
+    public bool IsSourceLinked { get; init; }
+}
 public sealed record TuiSnapshot(string Title, string Artist, bool Playing, double Position, double Duration, double Volume, string Mode,
     IReadOnlyList<TuiItem> Music, IReadOnlyList<TuiItem> Playlists, IReadOnlyList<TuiItem> Recent, IReadOnlyList<TuiItem> Plugins, double ListeningSeconds)
 {
@@ -27,7 +30,8 @@ public sealed partial class HeadlessPlayerSession
             var index = State.Tracks.Concat(State.RecentTemporaryTracks).DistinctBy(t => t.Id).ToDictionary(t => t.Id);
             return new(Current?.Metadata.Title ?? "—", Current?.Metadata.Artist ?? "", _loaded && _audio.IsPlaying, _loaded ? _audio.Position.TotalSeconds : State.LastPosition,
                 Current?.Metadata.DurationSeconds ?? 0, State.Settings.Volume, State.Settings.PlayMode.ToString(), VisibleLibraryTracks().Select(Item).ToArray(),
-                State.Playlists.Select(p => new TuiItem(p.Id, Localization.LocalizationCatalog.Get(p.Name), p.TrackIds.Count.ToString())).Concat(_lanPeers.Values.SelectMany(peer => peer.Catalog.Playlists.Select(p => new TuiItem(RemotePlaylistId(peer, p), p.Name, peer.Name + " · " + p.TrackIds.Length)))).ToArray(),
+                State.Playlists.Select(p => new TuiItem(p.Id, Localization.LocalizationCatalog.Get(p.Name), p.TrackIds.Count + (p.IsSourceLinked ? " · " + Localization.LocalizationCatalog.Get("Tui.ReadOnlyPlaylist") : "")) { IsSourceLinked = p.IsSourceLinked })
+                    .Concat(_lanPeers.Values.SelectMany(peer => peer.Catalog.Playlists.Select(p => new TuiItem(RemotePlaylistId(peer, p), p.Name, peer.Name + " · " + p.TrackIds.Length)))).ToArray(),
                 State.History.Where(index.ContainsKey).Select(id => Item(index[id])).ToArray(),
                 Plugins.Installed.Select(p => new TuiItem(p.Id, p.Name, p.Version + " · " + (p.Enabled ? "ON" : "OFF"))).ToArray(), State.ListeningEntries.Sum(e => e.Seconds))
             {

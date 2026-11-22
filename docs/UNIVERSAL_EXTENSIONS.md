@@ -1,5 +1,9 @@
 # 通用扩展接口参考（SDK 4.16）
 
+支持 `media.follow-catalog.v1` 的桌面宿主可接收用户确认后的 `media` 请求 `{ "operation": "follow-catalog", "catalogId": "<稳定 ID>", "name": "<显示名>" }`。源插件须提供 `media-source` 并声明网络和曲库写入权限。同插件 ID 与目录 ID 只建立一条只读订阅。宿主定期从空游标调用 `catalog.list`，完整分页成功后更新曲目和顺序。目录页可选 `name` 和 `total`，若有总数则必须与全部原始条目一致。可选整数 `unavailableCount` 只计当前页中由平台明确标记为不可用、无法提供稳定曲目 ID 的条目，省略时为零。分页应保留重复的曲目行，宿主使用各页曲目数与不可用条目数校验总数，再按音源曲目 ID 去重。普通 `import-catalog` 保持原有一次性导入语义。先检查宿主初始化能力再显示订阅或执行动作。
+
+CLI 也协商 `media.follow-catalog.v1` 和 `media.share-link.v1`。CLI 只有在用户确认的直接插件动作中接受 `follow-catalog`，动作完成后再读取完整目录；返回值中的 `subscriptions` 列出已刷新结果。普通目录查询和定时轮询不能创建订阅。
+
 桌面 beta.49 与 CLI beta.33 的互听扩展不改变插件清单或 RPC：接收到已批准设备的音频请求时，通过原音源 `playback.resolve` 获取本机流，再通过配对 HTTPS 转发。`network.library.v1` 仍不交付配对令牌或播放 URL；CLI 只协商下文实际支持的无窗口能力，不宣称桌面 UI/服务能力。音源不必重新打包；歌单封面可选字段和端点详见宿主 `docs/LAN_LIBRARY.md`。
 
 ## CLI 数据与音源宿主（本地修订）

@@ -16,6 +16,7 @@ internal static class Program
             NonetMusicPlayer.Core.Diagnostics.AppLog.Initialize(Path.Combine(root, "initial-logs-" + Guid.NewGuid().ToString("N")));
             if (args.Contains("--terminal-only")) { await TerminalContractChecks.RunAsync(root); return 0; }
             if (args.Contains("--desktop-parity")) { await DesktopParityChecks.RunAsync(root); return 0; }
+            if (args.Contains("--cli-updates")) { await CliUpdateChecks.RunAsync(root); return 0; }
             if (args.Contains("--cli-lan")) { await CliLanSharingChecks.RunAsync(root); return 0; }
             if (args.Contains("--streaming-audio-only")) { await StreamingAudioChecks.RunAsync(); return 0; }
             if (args.Contains("--remote-startup")) { await RemoteStartupChecks.RunAsync(); return 0; }
@@ -27,6 +28,7 @@ internal static class Program
             await BufferedPcmChecks.RunAsync();
             await TerminalContractChecks.RunAsync(root);
             await PluginUpdateChecks.RunAsync(root);
+            await CliUpdateChecks.RunAsync(root);
             await PluginPlatformChecks.RunAsync(root);
             await TuiInteractionChecks.RunAsync(root);
             await DesktopParityChecks.RunAsync(root);

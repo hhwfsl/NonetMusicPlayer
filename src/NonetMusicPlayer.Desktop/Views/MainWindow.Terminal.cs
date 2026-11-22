@@ -102,9 +102,29 @@ public sealed partial class MainWindow
                     case "queue.play": await vm.PlayPlaylistAsync(Playlist(), command.Arguments.Count > 1 ? Arg(1) : null); break;
                     case "music.list": data = Tracks(vm.State.Tracks.Where(t => command.Arguments.Count == 0 || (t.Title + " " + t.Artist + " " + t.Album).Contains(Arg(0), StringComparison.CurrentCultureIgnoreCase))); break;
                     case "music.info": data = TrackJson(Track()); break;
+                    case "music.share": data = JsonValue.Create(await vm.Plugins.ReadShareLinkAsync(Track(), cancellationToken)); break;
                     case "music.remove": vm.RemoveLibraryTracks(command.Arguments.Select(id => vm.State.Tracks.FirstOrDefault(t => t.Id == id) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.TrackNotFound")))); break;
-                    case "playlist.list": data = new JsonArray(vm.Playlists.Select(p => (JsonNode)new JsonObject { ["id"] = p.Id, ["name"] = p.IsSystem ? L10n.T("Playlists.LikedSongs") : p.Name, ["description"] = p.Description, ["count"] = p.TrackIds.Count }).ToArray()); break;
+                    case "playlist.list": data = new JsonArray(vm.Playlists.Select(p => (JsonNode)new JsonObject { ["id"] = p.Id, ["name"] = p.IsSystem ? L10n.T("Playlists.LikedSongs") : p.Name, ["description"] = p.Description, ["count"] = p.TrackIds.Count, ["readOnly"] = p.IsSourceLinked }).ToArray()); break;
                     case "playlist.create": data = new JsonObject { ["id"] = vm.CreatePlaylist(Arg(0)).Id }; break;
+                    case "playlist.follow":
+                        var source = Plugin();
+                        if (!source.Permissions.Contains("network")) throw new InvalidOperationException(L10n.T("MusicSearch.CatalogSourceUnavailable"));
+                        var job = vm.Plugins.BeginCatalogImport(source, Arg(1), command.Arguments.Count > 2 ? Arg(2) : source.Name, cancellationToken, follow: true);
+                        await job.Completion;
+                        cancellationToken.ThrowIfCancellationRequested();
+                        data = new JsonObject { ["id"] = job.Playlist.Id, ["name"] = job.Playlist.Name, ["count"] = job.ImportedCount, ["readOnly"] = true };
+                        break;
+                    case "playlist.sync":
+                        var linked = Playlist();
+                        if (!linked.IsSourceLinked) throw new InvalidOperationException(L10n.T("MusicSearch.CatalogNotFollowed"));
+                        await vm.Plugins.RefreshFollowedPlaylistAsync(linked);
+                        data = new JsonObject { ["id"] = linked.Id, ["name"] = linked.Name, ["count"] = linked.TrackIds.Count, ["readOnly"] = true };
+                        break;
+                    case "playlist.unfollow":
+                        var unfollow = Playlist();
+                        if (!unfollow.IsSourceLinked) throw new InvalidOperationException(L10n.T("MusicSearch.CatalogNotFollowed"));
+                        vm.UnfollowCatalog(unfollow);
+                        break;
                     case "playlist.rename": if (Playlist().IsSystem) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.LikedRenameDenied")); vm.RenamePlaylist(Playlist(), Arg(1)); break;
                     case "playlist.describe": var described = Playlist(); vm.UpdatePlaylistDetails(described, described.Name, Arg(1), described.CoverPath); break;
                     case "playlist.delete": if (Playlist().IsSystem) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.LikedDeleteDenied")); vm.DeletePlaylist(Playlist()); break;

@@ -62,6 +62,9 @@ settings set lanApprovalWaitSeconds 30
 | `plugins` | `list`、`install <impp-file或github-release-url>`、`enable <id>`、`disable <id>`、`uninstall <id> [keep-files或delete-files]`、`config <id> [json]`、`schema <id>`、`refresh <id>` |
 | `plugins` 新增 | `info <id>`、`reload <id>`、`state <id>`、`invoke <id> <action> [json]`、`trust <id>` |
 | `playlist` 新增 | `tracks <id>`、`from-folders <folder...>`、`import <m3u-file> [playlist-id]`、`export <m3u-file> [playlist-id]` |
+| 平台歌单 | `playlist follow <source-id> <catalog-id> [name]`、`playlist sync <playlist-id>`、`playlist unfollow <playlist-id>` |
+| 平台分享 | `music share <track-id>` |
+| 软件更新 | `updates check`、`updates install`（需确认，选择当前宿主对应的版本与平台） |
 | `album` / `artist` | `list`、`tracks <name>`、`cover <name> <file或auto或default>` |
 
 无分类的命令操作终端本身。`nonet clear` 只清空显示和结果历史，保留磁盘日志、业务数据及方向键命令历史。`nonet exit` 在桌面版返回音乐主页，在 CLI 结束会话。`nonet app exit` 真正退出宿主进程。
@@ -79,7 +82,6 @@ settings set lanApprovalWaitSeconds 30
 | `documentation` | `open` |
 | `player` / `queue` | `player locate`、`queue show`、`queue hide`、`queue toggle` |
 | `layout` | `reset`、`edit <true或false>`、`export <json-file>`、`apply <json-file>` |
-| `updates` | `check`、`install`（下载校验后重启，需确认） |
 | `desktop-lyrics` | `toggle`、`lock <true或false>` |
 | `import` | `cancel` |
 | `data` | `directory <folder>` |

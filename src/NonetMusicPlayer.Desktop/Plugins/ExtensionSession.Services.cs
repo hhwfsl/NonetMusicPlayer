@@ -48,14 +48,16 @@ public sealed partial class ExtensionSession
         switch (request.Service)
         {
             case "media": {
+                var mediaOperation = args["operation"]?.GetValue<string>();
                 if (!_gesture || !Manifest.Permissions.Contains("library-write") || !PluginManager.HasMediaSource(Manifest)
-                    || args["operation"]?.GetValue<string>() != "import-catalog") throw new InvalidDataException("Interactive media import permission required.");
+                    || mediaOperation is not ("import-catalog" or "follow-catalog")) throw new InvalidDataException("Interactive media import permission required.");
+                var follow = mediaOperation == "follow-catalog";
                 var catalogId = args["catalogId"]?.GetValue<string>() ?? ""; var playlistName = args["name"]?.GetValue<string>() ?? Manifest.Name;
                 if (playlistName.Length is 0 or > 200 || playlistName.Any(char.IsControl)) throw new InvalidDataException("Invalid playlist name.");
-                if (!await ConfirmExtensionAsync("media.import", true, L10n.Format("MusicSearch.ImportConfirm", Manifest.Name, playlistName))) return new() { ["success"] = false };
-                if (args["background"]?.GetValue<bool>() == true)
+                if (!await ConfirmExtensionAsync("media.import", true, L10n.Format(follow ? "MusicSearch.FollowConfirm" : "MusicSearch.ImportConfirm", Manifest.Name, playlistName))) return new() { ["success"] = false };
+                if (follow || args["background"]?.GetValue<bool>() == true)
                 {
-                    var job = _manager.BeginCatalogImport(Manifest, catalogId, playlistName, _lifetime.Token);
+                    var job = _manager.BeginCatalogImport(Manifest, catalogId, playlistName, _lifetime.Token, follow);
                     return new() { ["success"] = true, ["pending"] = true, ["playlistId"] = job.Playlist.Id, ["jobId"] = job.Id };
                 }
                 var imported = await _manager.ReadMusicCatalogAsync(Manifest, catalogId, _lifetime.Token);
@@ -133,7 +135,7 @@ public sealed partial class ExtensionSession
             var total = tracks.Count(); return Result(tracks.Skip(offset).Take(limit).Select(t => (JsonNode?)Track(t)), total);
         }
         if (operation == "queue.list") items = vm.PlaybackQueue.Select(t => (JsonNode?)Track(t));
-        if (operation == "playlist.list") items = vm.Playlists.Select(p => (JsonNode?)new JsonObject { ["id"] = p.Id, ["name"] = p.IsSystem ? L10n.T("Playlists.LikedSongs") : p.Name, ["description"] = p.Description, ["count"] = p.TrackIds.Count });
+        if (operation == "playlist.list") items = vm.Playlists.Select(p => (JsonNode?)new JsonObject { ["id"] = p.Id, ["name"] = p.IsSystem ? L10n.T("Playlists.LikedSongs") : p.Name, ["description"] = p.Description, ["count"] = p.TrackIds.Count, ["readOnly"] = p.IsSourceLinked });
         if (operation == "history.list") items = vm.State.History.Select(id => (JsonNode?)JsonValue.Create(id));
         if (items is null) return null;
         return Result(items.Skip(offset).Take(limit), operation == "queue.list" ? vm.PlaybackQueue.Count : operation == "playlist.list" ? vm.Playlists.Count : vm.State.History.Count);

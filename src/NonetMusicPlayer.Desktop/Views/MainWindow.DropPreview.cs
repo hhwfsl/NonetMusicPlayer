@@ -44,6 +44,10 @@ public sealed partial class MainWindow
         var playlist = navigation?.Tag is string tag ? _vm.Playlists.FirstOrDefault(p => "playlist:" + p.Id == tag) : _vm.CurrentPlaylist;
         var paths = e.DataTransfer.TryGetFiles()?.Select(f => f.TryGetLocalPath()).OfType<string>().ToArray() ?? [];
         var payload = e.DataTransfer.TryGetText() ?? "";
+        if (!player && playlist?.IsSourceLinked == true && !payload.StartsWith("nonet-playlist:", StringComparison.Ordinal))
+        {
+            e.DragEffects = DragDropEffects.None; HideDropPreview(); return;
+        }
         string? message = null;
         var name = paths.Length == 1 ? Path.GetFileName(paths[0]) : L10n.Format("Home.DropItems", paths.Length);
         if (player && payload.StartsWith("nonet-tracks:", StringComparison.Ordinal) && DroppedTracks(payload) is { Length: > 0 } dropped) message = L10n.Format("Home.DropPlay", dropped.Length == 1 ? dropped[0].Title : L10n.Format("Home.DropItems", dropped.Length));

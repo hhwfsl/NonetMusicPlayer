@@ -18,7 +18,7 @@ internal static class DesktopParityChecks
         var output = Path.Combine(root, "parity-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(output);
         var media = Path.Combine(output, "音乐"); Directory.CreateDirectory(media);
         for (var i = 0; i < 12; i++) Wave(Path.Combine(media, "Track " + i + ".wav"));
-        var data = Path.Combine(output, "Data"); var audio = new Audio(); string listId, current; string[] moved;
+        var data = Path.Combine(output, "Data"); var audio = new Audio(); string listId, current, followedId; string[] moved;
         await using (var session = new HeadlessPlayerSession(data, audio))
         {
             var router = new PlayerCommandRouter(session) { UnknownCommandsAsOutput = true };
@@ -60,26 +60,39 @@ internal static class DesktopParityChecks
             await Run("album list"); await Run("artist list"); await Run("music search Track");
             var backup = Path.Combine(output, "backup.json"); await Run("data backup " + Quote(backup));
             await Run("queue move " + source[0] + " 1"); await Run("data restore " + Quote(backup) + " -y"); Require((await Queue()).SequenceEqual(moved), "Restore preserves the actual queued order");
-            await Search(session, router, output);
+            followedId = await Search(session, router, output);
             await Run("player stop"); Require(!audio.IsPlaying && audio.Position == TimeSpan.Zero, "Stop resets audio without discarding queue");
             Require((await router.ExecuteAsync("missing command")).Operation == "command.unknown", "Unknown CLI commands are ordinary output");
             await Run("queue play " + listId + " " + current); await Run("queue move " + source[0] + " 6"); moved = await Queue(); await Run("player pause");
         }
         await using (var reopened = new HeadlessPlayerSession(data, new Audio()))
         {
-            var queue = (await new PlayerCommandRouter(reopened).ExecuteAsync("queue list")).Data!.AsArray().Select(t => t!["id"]!.GetValue<string>());
+            var router = new PlayerCommandRouter(reopened);
+            var queue = (await router.ExecuteAsync("queue list")).Data!.AsArray().Select(t => t!["id"]!.GetValue<string>());
             Require(queue.SequenceEqual(moved) && reopened.State.ManualQueueOrder, "Actual queue order persists across restart");
+            var deadline = DateTime.UtcNow.AddSeconds(8);
+            while (DateTime.UtcNow < deadline)
+            {
+                var snapshot = await reopened.CaptureTuiAsync(default);
+                if (snapshot.PlaylistTracks[followedId].Select(t => t.Id).SequenceEqual(["fixture.cli-search-1:follow-auto"])) break;
+                await Task.Delay(50);
+            }
+            var linked = reopened.State.Playlists.Single(p => p.Id == followedId);
+            Require(linked.IsSourceLinked && linked.TrackIds.SequenceEqual(["fixture.cli-search-1:follow-auto"]), "Reopening CLI automatically refreshes the persisted platform subscription");
+            Require((await router.ExecuteAsync("playlist unfollow " + followedId + " -y")).Success
+                && !reopened.State.Playlists.Contains(linked) && reopened.State.Playlists.Single(p => p.Id == "liked").TrackIds.Contains("fixture.cli-search-1:remote-1"),
+                "Unfollowing preserves an independently liked song");
         }
         await Network(output, media);
         Console.WriteLine("PASS CLI parity: fixed shuffle/mode switch/manual move/restart, TUI queue, M3U/folders/undo, lyrics, real listening history, three generic search sources and approved duplex LAN.");
     }
-    private static async Task Search(HeadlessPlayerSession session, PlayerCommandRouter router, string output)
+    private static async Task<string> Search(HeadlessPlayerSession session, PlayerCommandRouter router, string output)
     {
         var fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../NonetMusicPlayer.ExtensionFixture/bin/Release/net10.0"));
         var sources = new List<PluginManifest>();
         foreach (var i in Enumerable.Range(1, 3))
         {
-            var manifest = new PluginManifest { Id = "fixture.cli-search-" + i, Name = "CLI Search " + i, Version = "1.0.0", ContractVersion = 2, Type = "extension", Runtime = "process", PageEntry = "page.json", Permissions = ["network", "process"], ProvidedServices = ["media-source"], MusicSearch = new() { Label = "Source " + i }, RequiredCapabilities = ["media.search.v1"], EntryPoints = new() { ["win-x64"] = "bin/NonetMusicPlayer.ExtensionFixture.exe" } };
+            var manifest = new PluginManifest { Id = "fixture.cli-search-" + i, Name = "CLI Search " + i, Version = "1.0.0", ContractVersion = 2, Type = "extension", Runtime = "process", PageEntry = "page.json", Permissions = ["network", "process", "library-write"], ProvidedServices = ["media-source"], MusicSearch = new() { Label = "Source " + i, SupportsShareLink = true }, RequiredCapabilities = ["media.search.v1"], EntryPoints = new() { ["win-x64"] = "bin/NonetMusicPlayer.ExtensionFixture.exe" } };
             var package = Path.Combine(output, "source-" + i + ".impp");
             using (var zip = ZipFile.Open(package, ZipArchiveMode.Create))
             {
@@ -116,6 +129,42 @@ internal static class DesktopParityChecks
         var installed = session.Plugins.Install(declaration); session.Plugins.SetEnabled(installed, true);
         var invocation = await router.ExecuteAsync("plugins invoke " + installed.Id + " volume -y").WaitAsync(TimeSpan.FromSeconds(5));
         Require(invocation.Success && session.State.Settings.Volume == 37 && invocation.Data!["state"]!["result"]!["success"]!.GetValue<bool>(), "Declarative action round-trips a permitted host command without self-deadlock");
+        return await FollowPlaylists(session, router, sources[0]);
+    }
+    private static async Task<string> FollowPlaylists(HeadlessPlayerSession session, PlayerCommandRouter router, PluginManifest source)
+    {
+        var storage = Path.Combine(session.DataDirectory, "Plugins", "Storage", source.Id);
+        var path = Path.Combine(storage, "followed-catalog.txt");
+        Directory.CreateDirectory(storage);
+        File.WriteAllText(path, "unavailable,unavailable,remote-1,follow-b,remote-1");
+        var invoke = "plugins invoke " + source.Id + " follow-fixture";
+        Require((await router.ExecuteAsync(invoke)).RequiresConfirmation && session.State.Playlists.All(p => !p.IsSourceLinked), "Plugin action requires a real confirmation before creating a follow");
+        var created = await router.ExecuteAsync(invoke + " -y").WaitAsync(TimeSpan.FromSeconds(10));
+        Require(created.Success && created.Data!["subscriptions"]![0]!["unavailable"]!.GetValue<int>() == 2, "Confirmed plugin follow waits for complete catalog without holding the extension lock");
+        var list = session.State.Playlists.Single(p => p.IsSourceLinked);
+        Require(list.TrackIds.SequenceEqual([source.Id + ":remote-1", source.Id + ":follow-b"]), "Keep platform order, count unavailable rows and deduplicate");
+        var listing = await router.ExecuteAsync("playlist list");
+        Require(listing.Data!.AsArray().Single(p => p!["id"]!.GetValue<string>() == list.Id)!["readOnly"]!.GetValue<bool>(), "Subscribed playlist is tagged read-only");
+        var share = await router.ExecuteAsync("music share " + source.Id + ":remote-1");
+        Require(share.Data!.GetValue<string>() == "https://music.example.com/song/remote-1", "CLI prints the public platform song link");
+        var duplicate = await router.ExecuteAsync("playlist follow " + source.Id + " followed-fixture -y");
+        Require(duplicate.Success && duplicate.Data!["id"]!.GetValue<string>() == list.Id, "Direct follow reuses the same subscription");
+        var track = list.TrackIds[0];
+        Require((await router.ExecuteAsync("favorite add " + track)).Success, "A personally liked track remains editable");
+        foreach (var command in new[] { "playlist add " + list.Id + " " + track, "playlist remove " + list.Id + " " + track + " -y",
+            "playlist move " + list.Id + " " + track + " 2", "playlist rename " + list.Id + " other", "playlist describe " + list.Id + " other",
+            "playlist cover " + list.Id + " default", "playlist delete " + list.Id + " -y", "music remove " + track + " -y" })
+            Require(!(await router.ExecuteAsync(command)).Success, "Read-only entry rejected: " + command);
+        Require((await router.ExecuteAsync("playlist create before-sync")).Success, "Create an undoable local action");
+        File.WriteAllText(path, "remote-1,bad-link,follow-c");
+        Require((await router.ExecuteAsync("playlist sync " + list.Id)).Success, "Manual sync updates the complete platform order");
+        Require(!(await router.ExecuteAsync("music share " + source.Id + ":bad-link")).Success, "Media host rejects a loopback share link");
+        Require((await router.ExecuteAsync("music undo")).Success && list.TrackIds.SequenceEqual([track, source.Id + ":bad-link", source.Id + ":follow-c"])
+            && !session.State.Tracks.Any(t => t.Id == source.Id + ":follow-b"), "Undo does not restore stale synchronized tracks or ordering");
+        File.WriteAllText(path, "broken");
+        Require(!(await router.ExecuteAsync("playlist sync " + list.Id)).Success && list.TrackIds.Count == 3, "Truncated platform response saves no partial changes");
+        File.WriteAllText(path, "follow-auto");
+        return list.Id;
     }
     private static async Task Network(string output, string media)
     {

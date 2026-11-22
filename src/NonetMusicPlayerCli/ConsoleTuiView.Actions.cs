@@ -53,6 +53,7 @@ internal sealed partial class ConsoleTuiView
             "playlist-id" => _playlist ?? (Page == "Playlists" ? item?.Id : _view?.Playlists.FirstOrDefault()?.Id) ?? "",
             "track-id" or "track-id..." => Page is "Music" or "Recent" or "Queue" or "Search" || _playlist is not null ? item?.Id ?? "" : _view?.CurrentId ?? "",
             "source-id|local" => _view?.SearchSources.FirstOrDefault()?.Id ?? "local",
+            "source-id" => _view?.SearchSources.FirstOrDefault(source => source.Id != "local")?.Id ?? "",
             "peer-id" or "peer-id|all" => _view?.Devices.FirstOrDefault()?.Id ?? "",
             "id" => Page == "Plugins" ? item?.Id ?? "" : _playlist ?? (Page == "Playlists" ? item?.Id : _view?.Playlists.FirstOrDefault()?.Id) ?? "",
             "yyyy-MM-dd" => DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
@@ -65,12 +66,16 @@ internal sealed partial class ConsoleTuiView
         "playlist-id" => _view?.Playlists.Where(p => !p.Id.StartsWith("peer:", StringComparison.Ordinal)).Select(p => p.Id).ToArray() ?? [],
         "track-id" => _view?.Music.Concat(_view.Queue).Concat(_view.SearchResults).Select(p => p.Id).Distinct().ToArray() ?? [],
         "source-id|local" => _view?.SearchSources.Select(p => p.Id).ToArray() ?? [],
+        "source-id" => _view?.SearchSources.Where(p => p.Id != "local").Select(p => p.Id).ToArray() ?? [],
         "peer-id" => _view?.Devices.Select(p => p.Id).ToArray() ?? [], _ => []
     };
     private Task? BeginNamedAction(string name, CancellationToken token) => BeginAction(Actions.Single(d => d.Name == name), token);
     private Task? BeginAction(CommandDefinition command, CancellationToken token)
     {
-        var form = TuiForm.FromCommand(command, Initial, Choices);
+        var form = TuiForm.FromCommand(command, hint => command.Name == "playlist.add" && hint == "id"
+            && _playlist is not null && _view?.Playlists.Any(p => p.Id == _playlist && p.IsSourceLinked) == true
+                ? _view.Playlists.FirstOrDefault(p => !p.IsSourceLinked && !p.Id.StartsWith("peer:", StringComparison.Ordinal))?.Id ?? ""
+                : Initial(hint), Choices);
         if (form.Fields.Count == 0) return Execute(CommandSyntax.PublicName(command.Name), token, true);
         _form = form; form.Caret = form.Current?.Value.Length ?? 0; return null;
     }

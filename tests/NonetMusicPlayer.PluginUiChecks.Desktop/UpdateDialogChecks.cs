@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using NonetMusicPlayer.Desktop.Controls;
 using NonetMusicPlayer.Desktop.Services;
+using NonetMusicPlayer.Core.Updates;
 using NonetMusicPlayer.Desktop.Views;
 
 /// <summary>用可取消的阻塞流验证真实点击流程，不连接网络、不退出真实播放器。</summary>

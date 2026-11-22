@@ -16,7 +16,7 @@ public sealed partial class HeadlessPlayerSession
     private readonly HashSet<string> _searchCursors = [];
     private string _searchSource = "", _searchQuery = "", _searchCursor = "";
     private readonly Stack<string> _undoLibrary = [];
-    private static bool Undoable(string name) => name.StartsWith("playlist.", StringComparison.Ordinal) && name is not ("playlist.list" or "playlist.tracks" or "playlist.export")
+    private static bool Undoable(string name) => name.StartsWith("playlist.", StringComparison.Ordinal) && name is not ("playlist.list" or "playlist.tracks" or "playlist.export" or "playlist.follow" or "playlist.sync" or "playlist.unfollow")
         || name is "music.remove" or "favorite.add" or "favorite.remove" or "history.remove" or "history.clear" or "album.cover" or "artist.cover";
 
     private async Task<(JsonNode? Data, bool Save)> ExecuteAdvancedAsync(PlayerCommand command, CancellationToken token)
@@ -24,6 +24,10 @@ public sealed partial class HeadlessPlayerSession
         string Arg(int n) => CommandResults.Required(command, n);
         switch (command.Name)
         {
+            case "updates.check": return (await CheckSoftwareUpdateAsync(false, token), false);
+            case "updates.install":
+                if (!command.Confirmed) throw new InvalidOperationException(LocalizationCatalog.Get("Commands.ConfirmationRequired"));
+                return (await CheckSoftwareUpdateAsync(true, token), false);
             case "player.stop": RecordPlaybackEvent("player.stop"); EndListeningRecord("stopped"); _audio.Stop(); _loaded = false; State.LastPosition = 0; return (null, true);
             case "queue.select":
                 var selected = _queue.FirstOrDefault(t => t.Id == Arg(0)) ?? throw new InvalidDataException("Track is not in the queue.");
@@ -34,6 +38,18 @@ public sealed partial class HeadlessPlayerSession
                 var at = CommandResults.Integer(command, 1, 1, _queue.Count) - 1; _queue.Remove(moving); _queue.Insert(at, moving); State.ManualQueueOrder = true;
                 return (TracksJson(_queue), true);
             case "playlist.tracks": return (TracksJson(await ReadPlaylistTracksAsync(Arg(0), token)), false);
+            case "playlist.follow":
+                var provider = FollowedCatalogSource(Arg(0)) ?? throw new InvalidOperationException(LocalizationCatalog.Get("MusicSearch.CatalogSourceUnavailable"));
+                var followed = FollowCatalog(provider, Arg(1), command.Arguments.Count > 2 ? Arg(2) : provider.Name);
+                var subscription = await SyncCatalogAsync(followed, token);
+                await EnrichCatalogBatchAsync(provider.Id, token);
+                return (subscription, false);
+            case "playlist.sync":
+                var synced = FindPlaylist(Arg(0));
+                var refresh = await SyncCatalogAsync(synced, token);
+                await EnrichCatalogBatchAsync(synced.SourcePluginId!, token);
+                return (refresh, false);
+            case "playlist.unfollow": UnfollowCatalog(FindPlaylist(Arg(0))); return (null, true);
             case "playlist.from-folders":
                 var created = new JsonArray();
                 var prepared = new List<(StoredPlaylist Playlist, IReadOnlyList<StoredMusicTrack> Tracks)>();
@@ -49,6 +65,9 @@ public sealed partial class HeadlessPlayerSession
             case "music.query": await QueryMusicAsync(Arg(0), Arg(1), false, token); return (MusicResultsJson(), false);
             case "music.more": if (_searchCursor.Length > 0) await QueryMusicAsync(_searchSource, _searchQuery, true, token); return (MusicResultsJson(), false);
             case "music.results": return (MusicResultsJson(), false);
+            case "music.share":
+                var share = FindTrack(Arg(0));
+                return (JsonValue.Create(await Plugins.ReadShareLinkAsync(share.ProviderId, share.ProviderTrackId, token)), false);
             case "music.search": return (TracksJson(VisibleLibraryTracks().Where(t => (t.Metadata.Title + " " + t.Metadata.Artist + " " + t.Metadata.Album).Contains(Arg(0), StringComparison.CurrentCultureIgnoreCase))), false);
             case "album.list": case "artist.list":
                 var kind = command.Name.Split('.')[0];
@@ -60,10 +79,11 @@ public sealed partial class HeadlessPlayerSession
                 if (!State.Tracks.Any(t => !IsLanTrack(t) && (command.Name.StartsWith("album.") ? t.Metadata.Album : t.Metadata.Artist) == Arg(0))) throw new InvalidOperationException(LocalizationCatalog.Get("Lan.ReadOnly"));
                 if (Arg(1) == "auto") State.GroupCovers.Remove(key); else State.GroupCovers[key] = Arg(1) == "default" ? "" : StoreCover(Arg(1)); return (null, true);
             case "playlist.import":
+                var targetList = command.Arguments.Count > 1 ? FindEditablePlaylist(Arg(1)) : null;
                 var file = Path.GetFullPath(Arg(0)); if (new FileInfo(file).Length > 4 * 1024 * 1024) throw new InvalidDataException("M3U is too large.");
                 var paths = File.ReadAllLines(file).Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#')).Select(l => Path.IsPathRooted(l) ? l : Path.Combine(Path.GetDirectoryName(file)!, l));
                 var imported = await ReadPathsAsync(paths, token);
-                var target = command.Arguments.Count > 1 ? FindPlaylist(Arg(1)) : new StoredPlaylist { Name = ValidName(Path.GetFileNameWithoutExtension(file)) };
+                var target = targetList ?? new StoredPlaylist { Name = ValidName(Path.GetFileNameWithoutExtension(file)) };
                 if (!State.Playlists.Contains(target)) State.Playlists.Add(target); AddToPlaylist(target, imported); return (new JsonObject { ["id"] = target.Id, ["count"] = imported.Count }, true);
             case "playlist.export":
                 var destination = Path.GetFullPath(Arg(0)); if (File.Exists(destination)) throw new IOException("Output already exists.");
@@ -72,7 +92,7 @@ public sealed partial class HeadlessPlayerSession
             case "undo":
                 if (!_undoLibrary.TryPop(out var snapshot)) throw new InvalidOperationException("Nothing to undo.");
                 var old = JsonSerializer.Deserialize<HeadlessPlayerState>(snapshot, CoreJson.Options)!;
-                State.Tracks = old.Tracks; State.Playlists = old.Playlists; State.History = old.History; State.RecentTemporaryTracks = old.RecentTemporaryTracks; State.GroupCovers = old.GroupCovers; RefreshQueue(); return (null, true);
+                RestorePlaylistUndo(old); return (null, true);
             case "lyrics.reload": return (JsonValue.Create(LyricPath() is { } path ? File.ReadAllText(path) : ""), false);
             case "lyrics.clear":
                 if (Current is null) throw new InvalidOperationException("Select a track first.");
@@ -88,7 +108,8 @@ public sealed partial class HeadlessPlayerSession
             case "plugins.trust": Plugins.TrustManaged(Plugins.Find(Arg(0))); return (null, false);
             case "plugins.reload": Plugins.Reload(Plugins.Find(Arg(0))); return (null, false);
             case "plugins.state": return (await Plugins.ExtensionStateAsync(Plugins.Find(Arg(0)), token), false);
-            case "plugins.invoke": return (await Plugins.InvokeExtensionAsync(Plugins.Find(Arg(0)), Arg(1), command.Arguments.Count > 2 ? JsonNode.Parse(Arg(2)) as JsonObject ?? throw new InvalidDataException("JSON object required.") : new(), token), false);
+            case "plugins.invoke": return (await InvokeInteractiveExtensionAsync(Plugins.Find(Arg(0)), Arg(1),
+                command.Arguments.Count > 2 ? JsonNode.Parse(Arg(2)) as JsonObject ?? throw new InvalidDataException("JSON object required.") : new(), command.Confirmed, token), false);
             default: return await ExecuteNetworkAsync(command, token);
         }
     }
@@ -110,10 +131,31 @@ public sealed partial class HeadlessPlayerSession
     /// <summary>搜索和目录采用同一身份与资源命名，加入歌单不会丢失封面或歌词。</summary>
     private StoredMusicTrack StoreSourceTrack(string provider, ProviderTrack track)
     {
-        var id = provider + ":" + track.Id; var resource = MusicFileReader.StableId(id); string? cover = null;
-        if (track.CoverBase64 is { Length: > 0 } image) { cover = Path.Combine(ArtworkDirectory, resource + ".image"); File.WriteAllBytes(cover, Convert.FromBase64String(image)); }
-        if (track.Lyrics is { Length: > 0 } lyrics) { Directory.CreateDirectory(LyricsDirectory); AtomicFile.Write(Path.Combine(LyricsDirectory, resource + ".lrc"), lyrics); }
-        return new() { ProviderId = provider, ProviderTrackId = track.Id, Metadata = new MusicMetadata(id, track.Title, track.Artist, track.Album, "", "." + track.Format, 0, track.DurationSeconds, cover) };
+        var id = provider + ":" + track.Id;
+        var stored = new StoredMusicTrack { ProviderId = provider, ProviderTrackId = track.Id, Metadata = new MusicMetadata(id, track.Title, track.Artist, track.Album, "", "." + track.Format, 0, track.DurationSeconds, null) };
+        ApplySourceDetails(stored, track);
+        return stored;
+    }
+    private void ApplySourceDetails(StoredMusicTrack stored, ProviderTrack track)
+    {
+        var resource = MusicFileReader.StableId(stored.Id);
+        var cover = stored.Metadata.CoverPath;
+        if (cover is null && track.CoverBase64 is { Length: > 0 } image)
+        {
+            cover = Path.Combine(ArtworkDirectory, resource + ".image");
+            PluginPathPolicy.RejectLinkedAncestors(cover);
+            if (!File.Exists(cover)) File.WriteAllBytes(cover, Convert.FromBase64String(image));
+        }
+        if (track.Lyrics is { Length: > 0 } lyrics && !State.DisabledLyrics.Contains(stored.Id))
+        {
+            var path = Path.Combine(LyricsDirectory, resource + ".lrc");
+            PluginPathPolicy.RejectLinkedAncestors(path);
+            if (!File.Exists(path) && !File.Exists(Path.ChangeExtension(path, ".txt")))
+                AtomicFile.Write(path, string.IsNullOrWhiteSpace(track.LyricsTranslation) ? lyrics : "[nonet:original]\n" + lyrics + "\n[nonet:translation]\n" + track.LyricsTranslation);
+        }
+        // 保存来源详情时只更新缺失的用户资源，保留本地歌词关联和已指定封面。
+        stored.Metadata = stored.Metadata with { Title = track.Title, Artist = track.Artist, Album = track.Album,
+            DurationSeconds = track.DurationSeconds > 0 ? track.DurationSeconds : stored.Metadata.DurationSeconds, CoverPath = cover };
     }
     private void RecordListeningHours(double seconds)
     {

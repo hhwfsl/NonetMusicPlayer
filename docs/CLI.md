@@ -1,6 +1,6 @@
 # 命令行播放器
 
-NonetMusicPlayerCli 0.4.0-beta.33 是无图形框架依赖的播放器。发布程序名为 `nonet`，使用独立数据目录和音频会话。新版同步队列、平台搜索、歌词管理、小时统计、互听歌单封面与插件歌曲转发，并提供在线远端曲库投影、只读来源与丰富歌曲信息，详见 [功能对照](CLI_DESKTOP_PARITY.md)。
+NonetMusicPlayerCli 0.4.0-beta.34 是无图形框架依赖的播放器。发布程序名为 `nonet`，使用独立数据目录和音频会话。支持队列、平台搜索、歌词管理、小时统计、互听歌单封面与插件歌曲转发，并提供在线远端曲库投影、只读来源与丰富歌曲信息，详见 [功能对照](CLI_DESKTOP_PARITY.md)。
 
 ## 启动与 PATH
 
@@ -31,7 +31,7 @@ CMD 在程序目录输入 `nonet`；PowerShell 使用 `.\nonet.exe`。将发布�
 | 全局 | Tab/Shift+Tab 切页；Ctrl+K 所有操作；Ctrl+D 退出 |
 | 非终端页 | Space 暂停/继续；N/P 下/上一首；←→ 跳转 ±5 秒；+/- 音量；M 循环方式 |
 | 音乐 / 最近 | Enter 播放；F 喜欢；I 信息；A 添加进歌单；Delete 按页面范围移除 |
-| 歌单 | Enter 浏览；曲目 Enter 从该歌曲播放整个歌单；Q 播放歌单；C 新建；R 改名；A 添加；Esc 返回 |
+| 歌单 | Enter 浏览；Q 播放歌单；C 新建；R 改名或同步订阅；Delete 删除本地歌单或取消订阅；Esc 返回 |
 | 插件 | Enter 启用/关闭；I 导入；C 开发者配置表单；Delete 卸载并选择保留或删除文件 |
 | 设置 | Enter 编辑；设备/语言/日志/模式可选择；R 默认；B 备份；O 恢复 |
 | 统计 | Enter 选择日期和日/月/年，再查看结果 |
@@ -82,6 +82,12 @@ JSON 模式仅输出命令结果，字段为 `operation`、`success`、`message`
 CLI 可用于纯命令行登录、SSH，不依赖 Avalonia、X11、Wayland 或桌面窗口。非播放事务不初始化音频设备。实际发声需要本机音频设备/服务；SSH 不会自动传输声音。Linux 可能需要发行版提供 FFmpeg 原生依赖。Windows 最低 Windows 10 22H2；当前包均为 x64，macOS/Linux 尚需实机验证。
 
 音源插件使用相同 .impp 包验证、配置、进程握手和流媒体 Contract，支持 v1 音源与 v2 media-source 扩展。`music sources` 列来源，`music query <id> "关键词"` 开始搜索，`music more` 追加下一页；结果使用稳定 ID 加入歌单。插件配置由共享账户加密存储保存，更新不把凭据写入索引。可信托管插件需先阅读“致命错误可能使宿主退出”的提示，再通过 `plugins trust <id>` 和启用确认。UI、桌宠和主题插件不能在 CLI 启用。远程仅支持公开 GitHub Release 的 HTTPS .impp 附件，程序不执行系统 Shell。
+
+平台歌单可以通过 `playlist follow <音源ID> <原歌单ID> -y` 订阅，也可调用支持的音源导入动作 `plugins invoke <插件ID> import '{"playlist":"<链接或ID>"}' -y`。`playlist list` 列出 CLI 中的订阅 ID，运行期间定时同步。歌单列表按 R 或执行 `playlist sync <订阅ID>` 立即同步。取消订阅用 `playlist unfollow <订阅ID>`，需要确认。同步校验完整分页，跳过平台明确标记为不可用的条目，失败时保留上次的曲目和顺序。对平台歌曲执行 `music share <歌曲ID>`，或按 H 显示公开分享链接。
+
+## 软件更新
+
+`nonet updates check` 显示当前 CLI 版本以及可安装的同架构更新。`nonet updates install -y` 下载并校验正式 CLI 包，保存数据后退出，由独立助手完成替换。命令输出的 `resultPath` 指向完成结果。助手完成后重新运行 `nonet` 即可，原有 Data 和替换前文件均可保留。
 
 随机模式先对整个范围排序再顺序播放，手动选歌重新洗牌；退出随机恢复来源顺序。`queue move <id> <位置>` 只改队列，不改歌单，重启保留实际顺序。统计页显示最近 24 小时播放时长，`statistics history` 查询会话、连续播放区间、事件及小时明细；暂停、拖动进度和解码停滞不凭墙上时间累计。
 

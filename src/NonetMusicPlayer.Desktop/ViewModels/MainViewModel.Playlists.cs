@@ -175,6 +175,7 @@ public sealed partial class MainViewModel
     }
     public void ReorderPlaylistTracks(Playlist playlist, IEnumerable<string> movingIds, string targetId, bool before)
     {
+        RequireEditablePlaylist(playlist);
         if (!State.Playlists.Contains(playlist) || !playlist.TrackIds.Contains(targetId)) return;
         var selected = movingIds.ToHashSet(StringComparer.Ordinal);
         var moving = playlist.TrackIds.Where(selected.Contains).ToArray();
@@ -192,13 +193,66 @@ public sealed partial class MainViewModel
         var previous = State.Playlists.ToArray(); State.Playlists.Remove(moving);
         State.Playlists.Insert(State.Playlists.IndexOf(target) + (before ? 0 : 1), moving);
         void Sync() { Playlists.Clear(); foreach (var p in State.Playlists) Playlists.Add(p); }
-        Sync(); _undo.Push(() => { State.Playlists = previous.ToList(); Sync(); }); Save(); ViewChanged?.Invoke(this, EventArgs.Empty);
+        Sync(); _undo.Push(() =>
+        {
+            var current = State.Playlists.ToHashSet();
+            State.Playlists = previous.Where(current.Contains).Concat(State.Playlists.Except(previous)).ToList();
+            Sync();
+        }); Save(); ViewChanged?.Invoke(this, EventArgs.Empty);
         CompleteOperation("playlist.reorder");
     }
     public Playlist CreatePlaylist(string name)
     {
         var playlist = new Playlist { Name = ValidName(name) }; State.Playlists.Add(playlist); Playlists.Add(playlist);
         Save(); ViewChanged?.Invoke(this, EventArgs.Empty); CompleteOperation("playlist.create", new System.Text.Json.Nodes.JsonObject { ["id"] = playlist.Id }); return playlist;
+    }
+    internal Playlist FollowCatalog(string pluginId, string catalogId, string name)
+    {
+        var existing = State.Playlists.FirstOrDefault(p => p.IsSourceLinked && p.SourcePluginId == pluginId && p.SourceCatalogId == catalogId);
+        if (existing is not null) return existing;
+        // 先保存来源身份，即使初次联网失败，重启后仍可继续同步。
+        var playlist = new Playlist { Name = ValidName(name), SourcePluginId = pluginId, SourceCatalogId = catalogId };
+        State.Playlists.Add(playlist); Playlists.Add(playlist);
+        Save(); ViewChanged?.Invoke(this, EventArgs.Empty);
+        return playlist;
+    }
+    internal void ApplyFollowedCatalog(Playlist playlist, IReadOnlyList<TrackItem> tracks, string? title)
+    {
+        if (!State.Playlists.Contains(playlist) || !playlist.IsSourceLinked) return;
+        var name = string.IsNullOrWhiteSpace(title) ? playlist.Name : title.Trim();
+        if (name.Length > 80) name = name[..79] + "…";
+        var order = tracks.Select(t => t.Id).ToList();
+        if (playlist.Name == name && playlist.TrackIds.SequenceEqual(order)
+            && order.All(TrackIndex().ContainsKey)) return;
+        var removed = playlist.TrackIds.Except(order, StringComparer.Ordinal).ToHashSet(StringComparer.Ordinal);
+        EnsureStored(tracks);
+        playlist.Name = name;
+        playlist.TrackIds = order;
+        if (removed.Count > 0)
+        {
+            var references = State.Playlists.SelectMany(p => p.TrackIds).ToHashSet(StringComparer.Ordinal);
+            var history = State.History.ToHashSet(StringComparer.Ordinal);
+            var recent = State.RecentTemporaryTracks.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
+            State.Tracks.RemoveAll(track =>
+            {
+                if (!removed.Contains(track.Id) || references.Contains(track.Id)) return false;
+                // 保留已播放歌曲的快照与统计，避免外部移除曲目同时抹掉本地历史。
+                if ((history.Contains(track.Id) || CurrentTrack?.Id == track.Id) && recent.Add(track.Id)) State.RecentTemporaryTracks.Add(track);
+                return true;
+            });
+            ObserveTracks();
+        }
+        if (CurrentPlaylist == playlist) PageTitle = playlist.Name;
+        RefreshSourceQueue(); Save(); ApplyFilter(); ViewChanged?.Invoke(this, EventArgs.Empty);
+    }
+    internal static void RequireEditablePlaylist(Playlist? playlist)
+    {
+        if (playlist?.IsSourceLinked == true) throw new InvalidOperationException(L10n.T("MusicSearch.CatalogReadOnly"));
+    }
+    internal bool CanRemoveFromLibrary(IEnumerable<TrackItem> tracks)
+    {
+        var ids = tracks.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
+        return !State.Playlists.Any(list => list.IsSourceLinked && list.TrackIds.Any(ids.Contains));
     }
     /// <summary>每个选中目录独立建立歌单，复用既有导入、歌词匹配和去重流程。</summary>
     public async Task<IReadOnlyList<Playlist>> CreatePlaylistsFromFoldersAsync(IEnumerable<string> paths)
@@ -227,6 +281,7 @@ public sealed partial class MainViewModel
     private bool _creatingFolderPlaylists;
     public void RenamePlaylist(Playlist playlist, string name)
     {
+        RequireEditablePlaylist(playlist);
         if (playlist.IsSystem) { ReportWarning(L10n.T("Playlists.LikedSongsCannotBeRenamedOrDeletedItsDescription")); return; }
         playlist.Name = ValidName(name); Save();
         if (Page == "playlist:" + playlist.Id) PageTitle = playlist.Name;
@@ -236,6 +291,7 @@ public sealed partial class MainViewModel
     private static string ValidName(string name) { name = name.Trim(); if (name.Length is 0 or > 80) throw new InvalidDataException(L10n.T("Playlists.PlaylistNamesMustContainCharacters")); return name; }
     public void UpdatePlaylistDetails(Playlist playlist, string name, string description, string? coverPath)
     {
+        RequireEditablePlaylist(playlist);
         if (!State.Playlists.Contains(playlist)) throw new InvalidDataException(L10n.T("Playlists.ThePlaylistNoLongerExists"));
         var validName = playlist.IsSystem ? L10n.T("Playlists.LikedSongs") : ValidName(name);
         description = description.Trim(); if (description.Length > 500) throw new InvalidDataException(L10n.T("Playlists.PlaylistDescriptionsCannotExceedCharacters"));
@@ -248,6 +304,15 @@ public sealed partial class MainViewModel
     public void SetPlaylistCover(Playlist playlist, string? coverPath) => UpdatePlaylistDetails(playlist, playlist.Name, playlist.Description, coverPath);
     private string StorePlaylistCover(Playlist playlist, string source) => StoreManagedCover("playlist-" + playlist.Id, source);
     public void DeletePlaylist(Playlist playlist)
+    {
+        RequireEditablePlaylist(playlist);
+        DeletePlaylistCore(playlist);
+    }
+    public void UnfollowCatalog(Playlist playlist)
+    {
+        if (playlist.IsSourceLinked) DeletePlaylistCore(playlist);
+    }
+    private void DeletePlaylistCore(Playlist playlist)
     {
         if (playlist.IsSystem) { ReportWarning(L10n.T("Playlists.LikedSongsIsABuiltInPlaylistAndCannot")); return; }
         var index = State.Playlists.IndexOf(playlist); if (index < 0) return;
@@ -264,6 +329,7 @@ public sealed partial class MainViewModel
     }
     public void AddToPlaylist(Playlist playlist, IEnumerable<TrackItem> tracks)
     {
+        RequireEditablePlaylist(playlist);
         var before = playlist.TrackIds.ToList(); var items = tracks.DistinctBy(t => t.Id).ToArray();
         EnsureStored(items);
         InsertPlaylistTracks(playlist, items); if (playlist.IsSystem) SyncFavoriteFlags();
@@ -302,12 +368,14 @@ public sealed partial class MainViewModel
         => RemoveTracksCore(tracks, false);
     private void RemoveTracksCore(IEnumerable<TrackItem> tracks, bool useCurrentPlaylist)
     {
-        var ids = tracks.Select(t => t.Id).ToHashSet(StringComparer.Ordinal); if (ids.Count == 0) return;
+        var selected = tracks.ToArray();
+        var ids = selected.Select(t => t.Id).ToHashSet(StringComparer.Ordinal); if (ids.Count == 0) return;
         if (useCurrentPlaylist && Page == "history") { RemoveRecentTracks(ids); return; }
         if (useCurrentPlaylist && (Page.StartsWith("album:") || Page.StartsWith("artist:") || Page is "albums" or "artists")) return;
         var undoCount = _undo.Count;
         if (useCurrentPlaylist && CurrentPlaylist is { } playlist)
         {
+            RequireEditablePlaylist(playlist);
             var before = playlist.TrackIds.ToList(); playlist.TrackIds.RemoveAll(ids.Contains); if (playlist.IsSystem) SyncFavoriteFlags();
             _undo.Push(() => { playlist.TrackIds = before; if (playlist.IsSystem) SyncFavoriteFlags(); });
             if (PlayingPlaylistId == playlist.Id) RefreshSourceQueue();
@@ -315,10 +383,20 @@ public sealed partial class MainViewModel
         }
         else
         {
-            var before = State.Tracks.ToList(); var orders = State.Playlists.ToDictionary(p => p.Id, p => p.TrackIds.ToList());
+            if (!CanRemoveFromLibrary(selected)) throw new InvalidOperationException(L10n.T("MusicSearch.CatalogReadOnly"));
+            var before = State.Tracks.Select((track, index) => (Track: track, Index: index)).Where(item => ids.Contains(item.Track.Id)).ToArray();
+            var orders = State.Playlists.Where(p => !p.IsSourceLinked && p.TrackIds.Any(ids.Contains)).ToDictionary(p => p.Id, p => p.TrackIds.ToList());
             State.Tracks.RemoveAll(t => ids.Contains(t.Id)); foreach (var p in State.Playlists) p.TrackIds.RemoveAll(ids.Contains);
-            CleanupTrackData(before.Where(t => ids.Contains(t.Id)).ToArray());
-            _undo.Push(() => { State.Tracks = before; foreach (var p in State.Playlists) if (orders.TryGetValue(p.Id, out var order)) p.TrackIds = order; ObserveTracks(); SyncFavoriteFlags(); });
+            CleanupTrackData(before.Select(item => item.Track).ToArray());
+            _undo.Push(() =>
+            {
+                // 后台同步无需撤销，保留用户删除后新收到的歌曲与平台歌单顺序。
+                var existing = State.Tracks.Select(track => track.Id).ToHashSet(StringComparer.Ordinal);
+                foreach (var item in before)
+                    if (existing.Add(item.Track.Id)) State.Tracks.Insert(Math.Min(item.Index, State.Tracks.Count), item.Track);
+                foreach (var p in State.Playlists) if (!p.IsSourceLinked && orders.TryGetValue(p.Id, out var order)) p.TrackIds = order;
+                ObserveTracks(); SyncFavoriteFlags();
+            });
             ObserveTracks(); _playingList.RemoveAll(t => ids.Contains(t.Id));
             if (CurrentTrack is not null && ids.Contains(CurrentTrack.Id)) { StopPlayback(); _audioLoaded = false; CurrentTrack = null; }
         }
@@ -387,7 +465,9 @@ public sealed partial class MainViewModel
     }
     public void MoveInPlaylist(TrackItem track, int delta)
     {
-        if (CurrentPlaylist is not { } playlist) return; var from = playlist.TrackIds.IndexOf(track.Id); var to = from + delta;
+        if (CurrentPlaylist is not { } playlist) return;
+        RequireEditablePlaylist(playlist);
+        var from = playlist.TrackIds.IndexOf(track.Id); var to = from + delta;
         if (from < 0 || to < 0 || to >= playlist.TrackIds.Count) return;
         (playlist.TrackIds[from], playlist.TrackIds[to]) = (playlist.TrackIds[to], playlist.TrackIds[from]);
         if (PlayingPlaylistId == playlist.Id) RefreshSourceQueue();
@@ -402,7 +482,7 @@ public sealed partial class MainViewModel
     }
     public void Sort(string field)
     {
-        if (CurrentPlaylist is not null) { ReportWarning(L10n.T("Playlists.PlaylistsUseManualOrderingMoveSongsUpOrDown")); return; }
+        if (CurrentPlaylist is { } playlist) { ReportWarning(L10n.T(playlist.IsSourceLinked ? "MusicSearch.CatalogReadOnly" : "Playlists.PlaylistsUseManualOrderingMoveSongsUpOrDown")); return; }
         _sourceSorts[Page] = field; ApplyFilter(); StatusText = L10n.T("Playback.ListSortedPlaybackFollowsTheFullListSearchingDoes");
     }
 }

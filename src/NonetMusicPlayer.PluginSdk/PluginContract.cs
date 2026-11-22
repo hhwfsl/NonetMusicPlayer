@@ -170,7 +170,17 @@ public sealed record PluginPetOptions(string Name = "音乐猫", string Body = "
 public sealed record SnakeGameOptions(int Columns = 24, int Rows = 18, int TickMilliseconds = 150, bool WrapWalls = false,
     string Background = "#111827", string Snake = "#9CCF92", string Food = "#F0526C");
 public sealed class WidgetDefinition { public string Title { get; set; } = ""; public string Text { get; set; } = ""; }
-public sealed class ProviderCatalog { public List<ProviderTrack> Tracks { get; set; } = []; public string? NextCursor { get; set; } }
+public sealed class ProviderCatalog
+{
+    public List<ProviderTrack> Tracks { get; set; } = [];
+    public string? NextCursor { get; set; }
+    // 可选来源标题及完整快照曲目数，旧目录可以省略。
+    public string? Name { get; set; }
+    public int? Total { get; set; }
+    // 平台明确标记为不可用且未提供曲目标识的条目仍计入分页总数。
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int UnavailableCount { get; set; }
+}
 public sealed class ProviderTrack
 {
     public string Id { get; set; } = "";

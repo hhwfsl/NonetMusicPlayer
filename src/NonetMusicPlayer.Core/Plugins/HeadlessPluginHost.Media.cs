@@ -8,9 +8,9 @@ namespace NonetMusicPlayer.Core.Plugins;
 public sealed partial class HeadlessPluginHost
 {
     private readonly Dictionary<string, ExtensionChannel> _extensions = [];
-    public Func<PluginManifest, ExtensionHostRequest, CancellationToken, Task<JsonObject>>? HandleRequest { get; set; }
+    public Func<PluginManifest, ExtensionHostRequest, bool, CancellationToken, Task<JsonObject>>? HandleRequest { get; set; }
     // 只协商实际支持的数据/动作/音源能力，不向无窗口宿主宣称图形控件能力。
-    private static readonly string[] HeadlessCapabilities = ["state.v1", "actions.v1", "commands.v1", "lyrics.v1", "services.v1", "ui.page-optional.v1", "runtime.declarative.v1", "runtime.supervised.v1", "media.search.v1", "media.artwork-batch.v1"];
+    private static readonly string[] HeadlessCapabilities = ["state.v1", "actions.v1", "commands.v1", "lyrics.v1", "services.v1", "ui.page-optional.v1", "runtime.declarative.v1", "runtime.supervised.v1", "media.search.v1", "media.artwork-batch.v1", MusicSearchContract.FollowCatalogCapability, MusicSearchContract.ShareLinkCapability, "lyrics.tracks.v1"];
     public IReadOnlyList<PluginManifest> MusicSearchSources => Installed.Where(p => p.Enabled && p.MusicSearch is not null && (p.Type == "provider" || p.ProvidedServices.Contains("media-source"))).ToArray();
     public void TrustManaged(PluginManifest plugin)
     {
@@ -21,10 +21,10 @@ public sealed partial class HeadlessPluginHost
     private void StopExtension(string id) { if (_extensions.Remove(id, out var channel)) channel.Dispose(); }
     public async Task<JsonObject> ExtensionStateAsync(PluginManifest plugin, CancellationToken token)
         => (await (await ExtensionAsync(plugin, token)).SyncAsync(token)).State.DeepClone().AsObject();
-    public async Task<JsonObject> InvokeExtensionAsync(PluginManifest plugin, string action, JsonObject values, CancellationToken token)
+    public async Task<JsonObject> InvokeExtensionAsync(PluginManifest plugin, string action, JsonObject values, CancellationToken token, bool userGesture = false)
     {
         if (action.Length is 0 or > 200) throw new InvalidDataException("Invalid plugin action.");
-        var frame = await (await ExtensionAsync(plugin, token)).InvokeAsync(new(action, values), token);
+        var frame = await (await ExtensionAsync(plugin, token)).InvokeAsync(new(action, values), token, userGesture);
         return new JsonObject { ["state"] = frame.State.DeepClone(), ["requests"] = JsonSerializer.SerializeToNode(frame.Requests, CoreJson.Options) };
     }
     public async Task<MusicSearchPage> SearchMusicAsync(string id, string query, string cursor, CancellationToken token)
@@ -42,6 +42,37 @@ public sealed partial class HeadlessPluginHost
         var result = (await MediaAsync(plugin, "music.describe", new() { ["trackId"] = trackId }, token)).Deserialize(MusicSourceJson.Default.ProviderTrack) ?? throw new InvalidDataException("Empty media metadata.");
         MusicSearchContract.ValidateTrack(result); if (result.Id != trackId) throw new InvalidDataException("Music identity changed."); return result;
     }
+    public async Task<string> ReadShareLinkAsync(string? providerId, string? trackId, CancellationToken token)
+    {
+        var plugin = MusicSearchSources.FirstOrDefault(p => p.Id == providerId && p.MusicSearch!.SupportsShareLink);
+        if (plugin is null || string.IsNullOrWhiteSpace(trackId))
+            throw new InvalidOperationException(Localization.LocalizationCatalog.Get("MusicSearch.ShareUnavailable"));
+        var result = await MediaAsync(plugin, "music.share-link", new() { ["trackId"] = trackId }, token);
+        var url = result.ValueKind == JsonValueKind.Object && result.TryGetProperty("url", out var link) && link.ValueKind == JsonValueKind.String
+            ? link.GetString() : null;
+        return MusicSearchContract.ValidateShareLink(url).AbsoluteUri;
+    }
+    public Task<MusicCatalogSnapshot> ReadFollowedCatalogAsync(PluginManifest plugin, string id, CancellationToken token)
+    {
+        MusicCatalogReader.ValidateId(id);
+        return MusicCatalogReader.ReadAsync((cursor, ct) => MediaAsync(plugin, "catalog.list",
+            new() { ["catalogId"] = id, ["cursor"] = cursor, ["includeArtwork"] = "false" }, ct), token);
+    }
+    internal async Task<IReadOnlyList<ProviderTrack>> ReadCatalogMetadataAsync(PluginManifest plugin, string[] ids, CancellationToken token)
+    {
+        if (plugin.RequiredCapabilities.Contains("media.artwork-batch.v1"))
+        {
+            var answer = await MediaAsync(plugin, "music.artwork", new() { ["trackIds"] = JsonSerializer.Serialize(ids) }, token);
+            var page = answer.Deserialize(MusicSourceJson.Default.MusicSearchPage) ?? throw new InvalidDataException("Missing media metadata.");
+            MusicSearchContract.ValidatePage(page, ids.Length);
+            if (page.Tracks.Any(track => !ids.Contains(track.Id, StringComparer.Ordinal))) throw new InvalidDataException("Unexpected media identity.");
+            return page.Tracks;
+        }
+        var tracks = new List<ProviderTrack>(ids.Length);
+        foreach (var id in ids)
+            if (await DescribeMusicAsync(plugin.Id, id, token) is { } description) tracks.Add(description);
+        return tracks;
+    }
     private async Task<JsonElement> MediaAsync(PluginManifest plugin, string method, Dictionary<string, string> values, CancellationToken token)
     {
         if (!plugin.Enabled || !plugin.Permissions.Contains("network") || plugin.Type != "provider" && !plugin.ProvidedServices.Contains("media-source")) throw new InvalidOperationException("Enabled media source and network permission required.");
@@ -54,7 +85,7 @@ public sealed partial class HeadlessPluginHost
     {
         if (!plugin.Enabled || plugin.Type != "extension") throw new InvalidOperationException("Enabled extension required.");
         if (_extensions.TryGetValue(plugin.Id, out var cached)) return cached;
-        var channel = new ExtensionChannel(DirectoryFor(plugin), plugin, _sessionConfiguration.GetValueOrDefault(plugin.Id, plugin.Configuration), (request, cancellation) => HandleRequest?.Invoke(plugin, request, cancellation) ?? Task.FromResult(new JsonObject { ["success"] = false, ["reason"] = "Headless service unavailable." }), error =>
+        var channel = new ExtensionChannel(DirectoryFor(plugin), plugin, _sessionConfiguration.GetValueOrDefault(plugin.Id, plugin.Configuration), (request, userGesture, cancellation) => HandleRequest?.Invoke(plugin, request, userGesture, cancellation) ?? Task.FromResult(new JsonObject { ["success"] = false, ["reason"] = "Headless service unavailable." }), error =>
         { plugin.Enabled = false; AppLog.Error("Plugin:" + plugin.Id, "CLI 扩展已因普通异常停用", error); Save(); });
         try { await channel.StartAsync(token); _extensions[plugin.Id] = channel; return channel; }
         catch (Exception error) { channel.Dispose(); if (error is not (OperationCanceledException or PluginOperationException)) { plugin.Enabled = false; Save(); AppLog.Error("Plugin:" + plugin.Id, "CLI 扩展初始化失败，已停用", error); } throw; }
@@ -65,7 +96,7 @@ public sealed partial class HeadlessPluginHost
         private readonly string _root, _configuration;
         private readonly PluginManifest _manifest;
         private readonly Action<Exception> _fault;
-        private readonly Func<ExtensionHostRequest, CancellationToken, Task<JsonObject>> _request;
+        private readonly Func<ExtensionHostRequest, bool, CancellationToken, Task<JsonObject>> _request;
         private readonly HashSet<string> _handled = [];
         private readonly CancellationTokenSource _lifetime = new();
         private readonly SemaphoreSlim _gate = new(1);
@@ -73,7 +104,7 @@ public sealed partial class HeadlessPluginHost
         private ManagedPluginLoader? _managed;
         private INonetExtension? _extension;
         private INonetManagedRpcPlugin? _rpc;
-        public ExtensionChannel(string root, PluginManifest manifest, string configuration, Func<ExtensionHostRequest, CancellationToken, Task<JsonObject>> request, Action<Exception> fault)
+        public ExtensionChannel(string root, PluginManifest manifest, string configuration, Func<ExtensionHostRequest, bool, CancellationToken, Task<JsonObject>> request, Action<Exception> fault)
         { _root = root; _manifest = manifest; _configuration = configuration; _request = request; _fault = fault; }
         public async Task StartAsync(CancellationToken token)
         {
@@ -107,28 +138,28 @@ public sealed partial class HeadlessPluginHost
         public async Task<ExtensionFrame> SyncAsync(CancellationToken token)
         {
             await _gate.WaitAsync(token); try { return await CompleteRequestsAsync(_extension is not null ? Validate(await _extension.SyncAsync(token))
-                : Validate((await CallAsync("extension.sync", [], token)).Deserialize(ExtensionJson.Default.ExtensionFrame) ?? throw new InvalidDataException("Invalid extension state.")), token); }
+                : Validate((await CallAsync("extension.sync", [], token)).Deserialize(ExtensionJson.Default.ExtensionFrame) ?? throw new InvalidDataException("Invalid extension state.")), false, token); }
             finally { _gate.Release(); }
         }
-        public async Task<ExtensionFrame> InvokeAsync(ExtensionInvocation invocation, CancellationToken token)
+        public async Task<ExtensionFrame> InvokeAsync(ExtensionInvocation invocation, CancellationToken token, bool userGesture = false)
         {
             await _gate.WaitAsync(token);
             try { return await CompleteRequestsAsync(_extension is not null ? Validate(await _extension.InvokeAsync(invocation, token))
-                : Validate((await CallAsync("extension.invoke", new() { ["invocation"] = JsonSerializer.Serialize(invocation, ExtensionJson.Default.ExtensionInvocation) }, token)).Deserialize(ExtensionJson.Default.ExtensionFrame) ?? throw new InvalidDataException("Invalid extension response.")), token); }
+                : Validate((await CallAsync("extension.invoke", new() { ["invocation"] = JsonSerializer.Serialize(invocation, ExtensionJson.Default.ExtensionInvocation) }, token)).Deserialize(ExtensionJson.Default.ExtensionFrame) ?? throw new InvalidDataException("Invalid extension response.")), userGesture, token); }
             catch (Exception error) when (error is PluginOperationException or ProviderRemoteException) { throw; }
             catch (Exception error) when (error is not OperationCanceledException) { _fault(error); _lifetime.Cancel(); throw; }
             finally { _gate.Release(); }
         }
         private async Task<JsonElement> CallAsync(string method, Dictionary<string, string> values, CancellationToken token)
             => _rpc is not null ? await _rpc.CallAsync(method, values, token) : await _process!.CallAsync(method, values, token);
-        private async Task<ExtensionFrame> CompleteRequestsAsync(ExtensionFrame frame, CancellationToken token)
+        private async Task<ExtensionFrame> CompleteRequestsAsync(ExtensionFrame frame, bool userGesture, CancellationToken token)
         {
             for (var round = 0; frame.Requests.Count > 0 && round < 16; round++)
             {
                 var request = frame.Requests.FirstOrDefault(r => !_handled.Contains(r.Id)); if (request is null) break;
                 if (_handled.Count >= 4096) throw new InvalidDataException("Too many extension requests."); _handled.Add(request.Id);
                 JsonObject result;
-                try { result = await _request(request, token); }
+                try { result = await _request(request, userGesture, token); }
                 catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
                 catch (Exception) { result = new() { ["success"] = false, ["reason"] = "Headless host rejected this service or permission." }; }
                 frame = _extension is not null ? Validate(await _extension.CompleteAsync(request.Id, result, token))

@@ -5,17 +5,22 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using NonetMusicPlayer.Core.Diagnostics;
+using NonetMusicPlayer.Core.Localization;
 
-namespace NonetMusicPlayer.Desktop.Services;
+namespace NonetMusicPlayer.Core.Updates;
+
+public enum ReleaseProduct { Desktop, Cli }
 
 /// <summary>只读取公开 Release；下载包必须同时通过 GitHub 摘要和包内逐文件摘要校验。</summary>
-public sealed class ReleaseUpdateService(HttpClient? client = null)
+public sealed class ReleaseUpdateService(HttpClient? client = null, ReleaseProduct product = ReleaseProduct.Desktop)
 {
     public const string Repository = "https://github.com/hhwfsl/NonetMusicPlayer";
     public const string ManifestName = "NonetMusicPlayer.update.json";
+    public const string CliManifestName = "NonetMusicPlayer.Cli.package.json";
     private const long DownloadLimit = 512L * 1024 * 1024, ExpandedLimit = 2L * 1024 * 1024 * 1024;
     private readonly HttpClient _http = client ?? new HttpClient { Timeout = TimeSpan.FromMinutes(20) };
-    public static string CurrentVersion => typeof(ReleaseUpdateService).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+    public static string VersionOf(System.Reflection.Assembly assembly) => assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
         .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().First().InformationalVersion.Split('+')[0];
     public static string PlatformRid => (OperatingSystem.IsWindows() ? "win" : OperatingSystem.IsMacOS() ? "osx" : "linux") + "-" + RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
 
@@ -29,34 +34,47 @@ public sealed class ReleaseUpdateService(HttpClient? client = null)
         response.EnsureSuccessStatusCode();
         var bytes = await ReadBoundedAsync(response.Content, 4 * 1024 * 1024, cancellationToken);
         var releases = JsonSerializer.Deserialize(bytes, UpdateJsonContext.Default.GitHubReleaseArray) ?? [];
-        var candidates = releases.Where(r => !r.Draft && r.TagName is { Length: <= 100 } && r.Assets?.Any(a => DesktopAsset(a.Name, rid)) == true)
-            .Select(r => (Release: r, Version: NormalizeVersion(r.TagName))).Where(r => r.Version is not null)
-            .OrderByDescending(r => r.Version, Comparer<string?>.Create(CompareVersions));
+        var candidates = releases.Where(r => !r.Draft && r.TagName is { Length: <= 100 } && r.Assets is not null)
+            .SelectMany(r => r.Assets!.Select(asset => (Release: r, Asset: asset, Version: AssetVersion(r.TagName, asset.Name, rid))))
+            .Where(candidate => candidate.Version is not null && CompareVersions(candidate.Version, current) > 0)
+            .GroupBy(candidate => candidate.Version, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(group => group.Key, Comparer<string?>.Create(CompareVersions));
         foreach (var candidate in candidates)
         {
-            if (CompareVersions(candidate.Version, current) <= 0) continue;
-            var asset = candidate.Release.Assets!.FirstOrDefault(a => DesktopAsset(a.Name, rid) && a.Size is > 0 and <= DownloadLimit && ValidDigest(a.Digest) && TrustedAssetUrl(a.BrowserDownloadUrl));
-            return new(candidate.Version!, candidate.Release.Body is { Length: <= 100_000 } notes ? notes : "", asset, rid);
+            var match = candidate.FirstOrDefault(item => ValidAsset(item.Asset));
+            var release = match.Release ?? candidate.First().Release;
+            return new(candidate.Key!, release.Body is { Length: <= 100_000 } notes ? notes : "", match.Asset, rid);
         }
         return null;
     }
-    private static bool DesktopAsset(string? name, string rid) => name is not null && name.StartsWith("NonetMusicPlayer.Desktop-", StringComparison.OrdinalIgnoreCase) && name.EndsWith("-" + rid + ".zip", StringComparison.OrdinalIgnoreCase);
+    private string? AssetVersion(string? tag, string? name, string rid)
+    {
+        var prefix = product == ReleaseProduct.Cli ? "NonetMusicPlayerCli-" : "NonetMusicPlayer.Desktop-";
+        var suffix = "-" + rid + ".zip";
+        if (name is null || name.Length <= prefix.Length + suffix.Length || !name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            || !name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) return null;
+        // CLI 和桌面独立编号，组合 Release 的标签仍可能是桌面版号。
+        return NormalizeVersion(product == ReleaseProduct.Cli ? name[prefix.Length..^suffix.Length] : tag);
+    }
+    private static bool ValidAsset(GitHubAsset asset) => asset.Size is > 0 and <= DownloadLimit && ValidDigest(asset.Digest) && TrustedAssetUrl(asset.BrowserDownloadUrl);
     private static bool ValidDigest(string? value) => value is { Length: 71 } && value.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) && value[7..].All(Uri.IsHexDigit);
     private static bool TrustedAssetUrl(string? url) => Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == "https" && uri.Host == "github.com" && uri.AbsolutePath.StartsWith("/hhwfsl/NonetMusicPlayer/releases/download/", StringComparison.Ordinal);
     private static HttpRequestMessage Request(string uri)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, uri);
-        request.Headers.UserAgent.ParseAdd("NonetMusicPlayer/" + CurrentVersion);
+        request.Headers.UserAgent.ParseAdd("NonetMusicPlayer");
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         request.Headers.Add("X-GitHub-Api-Version", "2022-11-28"); return request;
     }
     /// <summary>流式下载到独立暂存目录，验证摘要后解包；取消或失败仅清理本次暂存。</summary>
     public async Task<PreparedUpdate> DownloadAsync(UpdateRelease release, string dataRoot, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
     {
-        var asset = release.Asset ?? throw new InvalidDataException(L10n.T("Update.NoPackage"));
-        if (!TrustedAssetUrl(asset.BrowserDownloadUrl) || !ValidDigest(asset.Digest)) throw new InvalidDataException("Untrusted update asset");
+        var asset = release.Asset ?? throw new InvalidDataException(LocalizationCatalog.Get("Update.NoPackage"));
+        if (!ValidAsset(asset)) throw new InvalidDataException("Untrusted update asset");
+        if (product == ReleaseProduct.Cli && AssetVersion(null, asset.Name, release.Rid) != release.Version)
+            throw new InvalidDataException("CLI update asset does not match this version");
         var folder = Path.Combine(Path.GetFullPath(dataRoot), "Updates", Guid.NewGuid().ToString("N"));
-        DataDirectoryService.RejectLinkedAncestors(folder); Directory.CreateDirectory(folder);
+        UpdatePaths.RejectLinks(folder); Directory.CreateDirectory(folder);
         var archivePath = Path.Combine(folder, "download.zip");
         try
         {
@@ -77,12 +95,12 @@ public sealed class ReleaseUpdateService(HttpClient? client = null)
                 }
                 if (total != asset.Size || !CryptographicOperations.FixedTimeEquals(hash.GetHashAndReset(), Convert.FromHexString(asset.Digest![7..]))) throw new InvalidDataException("Update SHA-256 mismatch");
             }
-            return await Task.Run(() => ExtractVerified(archivePath, folder, release.Version, release.Rid, cancellationToken), cancellationToken);
+            return await Task.Run(() => ExtractVerified(archivePath, folder, release.Version, release.Rid, cancellationToken, product), cancellationToken);
         }
         catch
         {
             // 只清理本次操作创建的专用暂存目录，不触及安装目录及用户数据。
-            DataDirectoryService.RejectLinkedAncestors(folder); Directory.Delete(folder, true); throw;
+            UpdatePaths.RejectLinks(folder); Directory.Delete(folder, true); throw;
         }
     }
     /// <summary>取消恰好发生在解压完成之后时，也回收本次 GUID 暂存，绝不触及安装目录。</summary>
@@ -91,30 +109,30 @@ public sealed class ReleaseUpdateService(HttpClient? client = null)
         var stage = Path.GetFullPath(update.StageRoot);
         if (Path.GetFileName(Path.GetDirectoryName(stage)) != "Updates" || !Guid.TryParseExact(Path.GetFileName(stage), "N", out _)
             || Path.GetFullPath(update.Payload) != Path.Combine(stage, "payload")) throw new InvalidDataException("Invalid update stage");
-        DataDirectoryService.RejectLinkedAncestors(stage);
+        UpdatePaths.RejectLinks(stage);
         if (Directory.Exists(stage)) Directory.Delete(stage, true);
     }
     /// <summary>只回收成功完成的 GUID 更新暂存；失败、下载中和正在运行的助手均保持原状。</summary>
     public static void CleanupCompleted(string dataRoot)
     {
         var folder = Path.Combine(Path.GetFullPath(dataRoot), "Updates");
-        DataDirectoryService.RejectLinkedAncestors(folder);
+        UpdatePaths.RejectLinks(folder);
         if (!Directory.Exists(folder)) return;
         foreach (var stage in Directory.EnumerateDirectories(folder))
         {
             if (!Guid.TryParseExact(Path.GetFileName(stage), "N", out _)) continue;
             try
             {
-                DataDirectoryService.RejectLinkedAncestors(stage);
-                var result = Path.Combine(stage, "result.txt"); DataDirectoryService.RejectLinkedAncestors(result);
+                UpdatePaths.RejectLinks(stage);
+                var result = Path.Combine(stage, "result.txt"); UpdatePaths.RejectLinks(result);
                 if (!File.Exists(result) || new FileInfo(result).Length > 100 || File.ReadAllText(result) != "success") continue;
                 // 助手仍在退出时不能清除其载荷或旧文件；新进程稍后重试。
-                var running = Path.Combine(stage, "helper.lock"); DataDirectoryService.RejectLinkedAncestors(running);
+                var running = Path.Combine(stage, "helper.lock"); UpdatePaths.RejectLinks(running);
                 using (new FileStream(running, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None)) { }
                 var directories = new Stack<string>(); directories.Push(stage);
                 while (directories.TryPop(out var directory)) foreach (var path in Directory.EnumerateFileSystemEntries(directory))
                 {
-                    DataDirectoryService.RejectLinkedAncestors(path);
+                    UpdatePaths.RejectLinks(path);
                     if (Directory.Exists(path)) directories.Push(path);
                 }
                 Directory.Delete(stage, true);
@@ -124,37 +142,41 @@ public sealed class ReleaseUpdateService(HttpClient? client = null)
         if (!Directory.EnumerateFileSystemEntries(folder).Any()) Directory.Delete(folder);
     }
     /// <summary>校验安全相对路径、平台清单和逐文件摘要，不允许更新包携带用户数据。</summary>
-    public static PreparedUpdate ExtractVerified(string archivePath, string stageRoot, string version, string rid, CancellationToken cancellationToken = default)
+    public static PreparedUpdate ExtractVerified(string archivePath, string stageRoot, string version, string rid, CancellationToken cancellationToken = default, ReleaseProduct product = ReleaseProduct.Desktop)
     {
         using var archive = ZipFile.OpenRead(archivePath);
         if (archive.Entries.Count > 2000) throw new InvalidDataException("Too many update entries");
-        var manifestEntry = archive.GetEntry(ManifestName) ?? throw new InvalidDataException("Update manifest missing");
+        var manifestName = product == ReleaseProduct.Cli ? CliManifestName : ManifestName;
+        var manifestEntry = archive.GetEntry(manifestName) ?? throw new InvalidDataException("Update manifest missing");
         if (manifestEntry.Length > 512 * 1024) throw new InvalidDataException("Update manifest too large");
         using var input = manifestEntry.Open(); var manifest = JsonSerializer.Deserialize(input, UpdateJsonContext.Default.UpdateManifest) ?? throw new InvalidDataException("Invalid update manifest");
         if (manifest.Schema != 1 || manifest.Version != version || manifest.Rid != rid || manifest.Files.Count is < 1 or > 1900) throw new InvalidDataException("Update manifest does not match release");
-        var payload = Path.Combine(stageRoot, "payload"); DataDirectoryService.RejectLinkedAncestors(payload); Directory.CreateDirectory(payload);
+        var payload = Path.Combine(stageRoot, "payload"); UpdatePaths.RejectLinks(payload); Directory.CreateDirectory(payload);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase); long total = 0;
-        foreach (var entry in archive.Entries.Where(e => !e.FullName.EndsWith('/') && e.FullName != ManifestName))
+        foreach (var entry in archive.Entries.Where(e => !e.FullName.EndsWith('/') && e.FullName != manifestName))
         {
             cancellationToken.ThrowIfCancellationRequested(); ValidateRelative(entry.FullName);
             if (!seen.Add(entry.FullName) || !manifest.Files.TryGetValue(entry.FullName, out var digest) || digest.Length != 64 || !digest.All(Uri.IsHexDigit) || (entry.ExternalAttributes >> 16 & 0xF000) == 0xA000) throw new InvalidDataException("Unlisted, duplicate or linked update file");
             total += entry.Length; if (total > ExpandedLimit) throw new InvalidDataException("Expanded update exceeds size limit");
-            var target = Path.Combine(payload, entry.FullName.Replace('/', Path.DirectorySeparatorChar)); DataDirectoryService.RejectLinkedAncestors(target);
+            var target = Path.Combine(payload, entry.FullName.Replace('/', Path.DirectorySeparatorChar)); UpdatePaths.RejectLinks(target);
             Directory.CreateDirectory(Path.GetDirectoryName(target)!); entry.ExtractToFile(target, false);
             using var stream = File.OpenRead(target); if (!CryptographicOperations.FixedTimeEquals(SHA256.HashData(stream), Convert.FromHexString(digest))) throw new InvalidDataException("Update file SHA-256 mismatch");
             if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(target, (UnixFileMode)(entry.ExternalAttributes >> 16 & 0x1FF) | UnixFileMode.UserRead | UnixFileMode.UserWrite);
         }
         if (seen.Count != manifest.Files.Count) throw new InvalidDataException("Update files missing");
-        var executable = rid.StartsWith("osx-") ? "Contents/MacOS/Nonet" : rid.StartsWith("win-") ? "Nonet.exe" : "Nonet";
-        if (!manifest.Files.ContainsKey(executable)) throw new InvalidDataException("Desktop executable missing");
-        return new(stageRoot, payload, manifest, executable);
+        var executable = ExecutableFor(product, rid);
+        if (!manifest.Files.ContainsKey(executable)) throw new InvalidDataException("Update executable missing");
+        return new(stageRoot, payload, manifest, executable, product);
     }
+    internal static string ExecutableFor(ReleaseProduct product, string rid) => product == ReleaseProduct.Cli
+        ? rid.StartsWith("win-") ? "nonet.exe" : "nonet"
+        : rid.StartsWith("osx-") ? "Contents/MacOS/Nonet" : rid.StartsWith("win-") ? "Nonet.exe" : "Nonet";
     /// <summary>拒绝路径穿越、重解析文件、设备名及受保护的数据目录。</summary>
     public static void ValidateRelative(string relative)
     {
         var parts = relative.Split('/');
         if (relative.Length is < 1 or > 240 || relative.Contains('\\') || Path.IsPathRooted(relative) || parts.Any(p => p.Length == 0 || p is "." or ".." || p.TrimEnd(' ', '.') != p || p.Any(c => c < 32 || ":*?<>|\"".Contains(c)))) throw new InvalidDataException("Unsafe update path");
-        var reserved = new[] { "Data", "Plugins", "Lyrics", "Artwork", "Backgrounds", "Backups", "Logs", "Fonts", "Updates", "Nonet.bootstrap.json" };
+        var reserved = new[] { "Data", "Plugins", "Lyrics", "Artwork", "Backgrounds", "Backups", "Logs", "Fonts", "Updates", "Nonet.bootstrap.json", "cli-state.json", ".session.lock", "LanCache" };
         if (parts.Any(p => reserved.Contains(p, StringComparer.OrdinalIgnoreCase) || p.EndsWith(".bootstrap.json", StringComparison.OrdinalIgnoreCase))) throw new InvalidDataException("Update cannot contain user data");
         if (parts.Any(p => p.Split('.')[0].ToUpperInvariant() is "CON" or "NUL" or "AUX" or "PRN" || System.Text.RegularExpressions.Regex.IsMatch(p, "^(COM|LPT)[1-9](\\.|$)", System.Text.RegularExpressions.RegexOptions.IgnoreCase))) throw new InvalidDataException("Reserved update path");
     }
@@ -188,7 +210,7 @@ public sealed class ReleaseUpdateService(HttpClient? client = null)
     }
 }
 public sealed record UpdateRelease(string Version, string Notes, GitHubAsset? Asset, string Rid);
-public sealed record PreparedUpdate(string StageRoot, string Payload, UpdateManifest Manifest, string Executable);
+public sealed record PreparedUpdate(string StageRoot, string Payload, UpdateManifest Manifest, string Executable, ReleaseProduct Product = ReleaseProduct.Desktop);
 public sealed class GitHubRelease
 {
     [JsonPropertyName("tag_name")] public string? TagName { get; set; }

@@ -51,6 +51,8 @@ public sealed class StoredMusicTrack
     public MusicMetadata Metadata { get; set; } = new("", "", "", "", "", "", 0, 0, null);
     public string? ProviderId { get; set; }
     public string? ProviderTrackId { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool NeedsSourceMetadata { get; set; }
     public string Id => Metadata.Id;
 }
 public sealed class StoredPlaylist
@@ -59,6 +61,11 @@ public sealed class StoredPlaylist
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
     public string? CoverPath { get; set; }
+    // 可选来源身份，旧 CLI 歌单按普通可编辑歌单读取。
+    public string? SourcePluginId { get; set; }
+    public string? SourceCatalogId { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsSourceLinked => !string.IsNullOrEmpty(SourcePluginId) && !string.IsNullOrEmpty(SourceCatalogId);
     public List<string> TrackIds { get; set; } = [];
 }
 public sealed class StoredListeningEntry

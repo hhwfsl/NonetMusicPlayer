@@ -44,9 +44,11 @@ public sealed partial class PluginManager
         _uiVm.PropertyChanged += ExtensionPropertyChanged; _uiVm.OperationCompleted += ExtensionOperation;
         if (_uiHost is not null) _uiHost.PropertyChanged += ExtensionWindowChanged;
         _uiVm.SettingsChanged += ExtensionSettingsChanged; _uiVm.ViewChanged += ExtensionLibraryChanged; _uiVm.LanChanged += ExtensionNetworkChanged;
+        StartFollowedCatalogSync();
     }
     private void DetachExtensionEvents()
     {
+        StopFollowedCatalogSync();
         if (_uiVm is not null) { _uiVm.PropertyChanged -= ExtensionPropertyChanged; _uiVm.OperationCompleted -= ExtensionOperation; _uiVm.SettingsChanged -= ExtensionSettingsChanged; _uiVm.ViewChanged -= ExtensionLibraryChanged; _uiVm.LanChanged -= ExtensionNetworkChanged; }
         if (_uiHost is not null) _uiHost.PropertyChanged -= ExtensionWindowChanged;
         foreach (var session in _extensions.Values) session.Dispose(); _extensions.Clear();
@@ -56,7 +58,11 @@ public sealed partial class PluginManager
         if (e.PropertyName is "PlaybackPosition" or "CurrentTrack" or "IsPlaying" or "Volume" or "Page")
             foreach (var session in _extensions.Values.ToArray()) session.RefreshHostPresentation();
         if (e.PropertyName == "PlaybackPosition") { BroadcastExtensionEvent("player.position", new() { ["position"] = _uiVm?.PlaybackPosition, ["duration"] = _uiVm?.PlaybackDuration }); }
-        if (e.PropertyName == "Page") BroadcastExtensionEvent("navigation.changed", new() { ["page"] = _uiVm?.Page });
+        if (e.PropertyName == "Page")
+        {
+            BroadcastExtensionEvent("navigation.changed", new() { ["page"] = _uiVm?.Page });
+            if (_uiVm?.CurrentPlaylist?.IsSourceLinked == true) SyncDueCatalogs();
+        }
         if (e.PropertyName == "CurrentTrack") BroadcastExtensionEvent("player.track-changed", new()
         { ["id"] = _uiVm?.CurrentTrack?.Id, ["title"] = _uiVm?.CurrentTrack?.Title, ["artist"] = _uiVm?.CurrentTrack?.Artist });
         else if (e.PropertyName == "IsPlaying") BroadcastExtensionEvent("player.state-changed", new() { ["playing"] = _uiVm?.IsPlaying });

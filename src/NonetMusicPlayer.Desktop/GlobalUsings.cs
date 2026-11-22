@@ -4,3 +4,4 @@ global using NonetMusicPlayer.Core.Diagnostics;
 global using NonetMusicPlayer.Core.Streaming;
 global using L10n = NonetMusicPlayer.Desktop.Services.L10n;
 global using NonetMusicPlayer.Core.Plugins;
+global using NonetMusicPlayer.Core.Updates;

@@ -172,7 +172,13 @@ public sealed partial class HeadlessPlayerSession : IPlayerCommandBackend, IAsyn
     private async Task TickAsync()
     {
         if (_disposed || !await _gate.WaitAsync(0)) return;
-        try { AccountListening(); if (_loaded && DateTimeOffset.UtcNow - _lastSaved >= TimeSpan.FromSeconds(15)) Save(); }
+        try
+        {
+            AccountListening();
+            if (_loaded && DateTimeOffset.UtcNow - _lastSaved >= TimeSpan.FromSeconds(15)) Save();
+            await TickCatalogsAsync();
+        }
+        catch (OperationCanceledException) when (_catalogStop.IsCancellationRequested) { }
         catch (Exception error) { AppLog.Warning("CLI", "CLI state tick failed", error); }
         finally { _gate.Release(); }
     }
@@ -219,8 +225,8 @@ public sealed partial class HeadlessPlayerSession : IPlayerCommandBackend, IAsyn
     private void Publish(CommandResult result) => ResultPublished?.Invoke(this, result);
     public async ValueTask DisposeAsync()
     {
-        if (_disposed) return; _disposed = true; await _timer.DisposeAsync(); await _gate.WaitAsync();
+        if (_disposed) return; _disposed = true; _catalogStop.Cancel(); await _timer.DisposeAsync(); await _gate.WaitAsync();
         try { AccountListening(); EndListeningRecord("application-exit"); StopNetwork(); Save(); _audio.PlaybackStopped -= PlaybackEnded; _audio.PlaybackFailed -= PlaybackFailed; _audio.OutputDeviceChanged -= OutputChanged; _audio.Dispose(); Plugins.Dispose(); }
-        finally { _dataLease.Dispose(); _gate.Release(); }
+        finally { _catalogStop.Dispose(); _dataLease.Dispose(); _gate.Release(); }
     }
 }

@@ -263,7 +263,7 @@ public sealed partial class PluginManager : IDisposable
     }
     public void Dispose()
     {
-        CancelCatalogImports(); DisposeUiRuntime();
+        DisposeUiRuntime();
         foreach (var pair in _clients) { if (Installed.FirstOrDefault(p => p.Id == pair.Key) is { } manifest) pair.Value.NotifyLifecycle(manifest, "lifecycle.shutdown"); pair.Value.Dispose(); } _clients.Clear();
         foreach (var manifest in Installed.Where(p => p.Type is "ui" or "widget" or "lyrics" or "agent" or "extension")) NotifyUiUnavailable(manifest.Id);
         foreach (var manifest in Installed.Where(p => p.Enabled)) PublishLifecycle(manifest, "shutdown");

@@ -13,6 +13,7 @@ using Avalonia.VisualTree;
 using NonetMusicPlayer.Desktop.Controls;
 using NonetMusicPlayer.Desktop.Models;
 using NonetMusicPlayer.Desktop.Services;
+using NonetMusicPlayer.Core.Updates;
 using NonetMusicPlayer.Desktop.ViewModels;
 using NonetMusicPlayer.Desktop.Views;
 

@@ -54,6 +54,7 @@ internal static class MusicSearchChecks
         Wait(vm.RefreshProviderAsync(plugin));Check(vm.State.Tracks.Count==1&&playlist.TrackIds.Contains(cloud.Id),"Refresh cannot erase searched/cloud references");
         var catalog=Wait(vm.Plugins.ReadMusicCatalogAsync(plugin,"fixture-catalog"));Check(catalog.Count==1&&catalog[0].Id==cloud.Id,"Generic catalog identity");
         vm.Save();Check(storage.Load().Tracks.Single().ProviderId==plugin.Id,"SQLite roundtrip");
+        CheckFollowedCatalog(vm, window, storage, plugin, cloud);
         Wait(vm.SearchMusicAsync("","Cloud fixture"));Check(vm.Page=="songs"&&vm.VisibleTracks.Count==1,"Local collection search uses imported references");
         vm.Navigate("library");Pump();using(var bitmap=new RenderTargetBitmap(new PixelSize(1200,800))) { bitmap.Render(window);bitmap.Save(Path.Combine(root,"music-search.png"),PngBitmapEncoderOptions.Default); }
         vm.Navigate("plugins");vm.DisablePlugin(plugin);vm.Navigate("library");Pump();Check(window.GetVisualDescendants().OfType<ComboBox>().Single(c=>c.Name=="MusicSearchSource").Items.Count==1,"Disabled source removed");
@@ -61,6 +62,63 @@ internal static class MusicSearchChecks
         RunHeaderQueries(root,fixture,vm,window);
         RunPaged(root,fixture,vm,window);
         window.Close();Pump();Console.WriteLine("PASS generic music search registration/UI, cloud playlist references/SQLite, refresh, catalog, local filter and disable; "+root);
+    }
+    private static void CheckFollowedCatalog(MainViewModel vm, MainWindow window, AppStorage storage, PluginManifest plugin, TrackItem shared)
+    {
+        var snapshot = Path.Combine(storage.PluginsFolder, "Storage", plugin.Id, "followed-catalog.txt");
+        // 模拟删除旧导入副本后重订阅，保留这首歌在其他歌单里的引用与原曲库记录。
+        var sharedBy = vm.State.Playlists.Single(p => p.TrackIds.Contains(shared.Id));
+        var oldImport = vm.CreatePlaylist("Old cloud import");
+        vm.AddToPlaylist(oldImport, [shared]); vm.DeletePlaylist(oldImport);
+        Check(sharedBy.TrackIds.Contains(shared.Id) && vm.State.Tracks.Contains(shared), "Deleting a previous import keeps shared tracks");
+        File.WriteAllText(snapshot, "unavailable,unavailable,follow-a,remote-1,remote-1");
+        const string catalogId = "followed-fixture";
+        var job = vm.Plugins.BeginCatalogImport(plugin, catalogId, "Initial title", follow: true);
+        Check(ReferenceEquals(job, vm.Plugins.BeginCatalogImport(plugin, catalogId, "Duplicate", follow: true)), "Concurrent follows share the ongoing import");
+        Wait(job.Completion);
+        var playlist = job.Playlist;
+        string[] Order() => playlist.TrackIds.Select(id => vm.State.Tracks.Single(track => track.Id == id).ProviderTrackId!).ToArray();
+        Check(playlist.IsSourceLinked && playlist.Name == "Followed catalog" && Order().SequenceEqual(["follow-a", "remote-1"]), "Follow advances through unavailable-only pages and de-duplicates after validation");
+        Check(sharedBy.TrackIds.Contains(shared.Id) && ReferenceEquals(vm.State.Tracks.Single(t => t.Id == shared.Id), shared), "Reimport reuses shared tracks instead of replacing them");
+        var saved = storage.Load().Playlists.Single(p => p.Id == playlist.Id);
+        Check(saved.IsSourceLinked && saved.SourcePluginId == plugin.Id && saved.SourceCatalogId == catalogId, "Subscription persists in SQLite");
+        vm.Navigate("playlist:" + playlist.Id); Pump();
+        Check(!window.FindControl<Button>("LibraryAddFiles")!.IsVisible, "Platform playlist hides the add files button");
+        CheckRejected(() => vm.AddToPlaylist(playlist, [shared]));
+        CheckRejected(() => vm.RenamePlaylist(playlist, "Local rename"));
+        CheckRejected(() => vm.UpdatePlaylistDetails(playlist, playlist.Name, "Local description", null));
+        CheckRejected(() => vm.RemovePlaylistTracks(playlist, [shared]));
+        CheckRejected(() => vm.ReorderPlaylistTracks(playlist, [shared.Id], playlist.TrackIds[0], true));
+        CheckRejected(() => vm.RemoveLibraryTracks([shared]));
+        CheckRejected(() => Wait(vm.ImportM3uAsync("unused", playlist)));
+
+        var removed = playlist.TrackIds[0];
+        vm.State.History.Insert(0, removed);
+        File.WriteAllText(snapshot, "follow-c,follow-b,remote-1");
+        Wait(vm.Plugins.RefreshFollowedPlaylistAsync(playlist));
+        Check(Order().SequenceEqual(["follow-c", "follow-b", "remote-1"]), "Refresh atomically adds, removes and reorders across pages");
+        Check(!vm.State.Tracks.Any(t => t.Id == removed) && vm.State.RecentTemporaryTracks.Any(t => t.Id == removed), "Removed remote tracks preserve recent history");
+        File.WriteAllText(snapshot, "broken");
+        Wait(vm.Plugins.RefreshFollowedPlaylistAsync(playlist));
+        Check(Order().SequenceEqual(["follow-c", "follow-b", "remote-1"]), "Incomplete snapshot retains the last successful list");
+
+        // 模拟宿主重新附着后的首次打开，走自动刷新而非手动按钮。
+        vm.Navigate("library"); vm.Plugins.DetachHost(window); vm.Plugins.AttachHost(window, vm);
+        File.WriteAllText(snapshot, "");
+        vm.Navigate("playlist:" + playlist.Id);
+        var deadline = DateTime.UtcNow.AddSeconds(6);
+        while (playlist.TrackIds.Count > 0 && DateTime.UtcNow < deadline) Pump();
+        Check(playlist.TrackIds.Count == 0 && vm.State.Tracks.Contains(shared), "Opening a followed playlist refreshes an empty provider result and keeps other references");
+        vm.UnfollowCatalog(playlist);
+        Check(!vm.Playlists.Contains(playlist), "Unfollow removes only the local subscription");
+        Console.WriteLine("PASS followed playlist persistence, read-only guards, automatic refresh, pagination, failure retention and unlink");
+
+        static void CheckRejected(Action action)
+        {
+            try { action(); }
+            catch (InvalidOperationException) { return; }
+            throw new InvalidOperationException("A local write to a followed playlist was accepted.");
+        }
     }
     private static void CheckShareLink(MainWindow window, MainViewModel vm, TrackItem track)
     {

@@ -37,6 +37,32 @@ public sealed class BaselineExtension : INonetExtension
     {
         if (invocation.Action == "service:media-source")
         {
+            var serviceMethod = invocation.Values["method"]?.GetValue<string>();
+            // 文件驱动的目录分页只供同步回归使用，不连接真实平台账号。
+            if (serviceMethod == "catalog.list" && invocation.Values["catalogId"]?.GetValue<string>() == "followed-fixture")
+            {
+                var snapshot = File.ReadAllText(Path.Combine(_storage, "followed-catalog.txt"));
+                var cursor = invocation.Values["cursor"]?.GetValue<string>() ?? "";
+                var ids = snapshot == "broken" ? ["remote-1"] : snapshot.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                var offset = cursor.Length == 0 ? 0 : int.Parse(cursor);
+                var rows = ids.Skip(offset).Take(2).ToArray();
+                var page = new ProviderCatalog
+                {
+                    Name = "Followed catalog",
+                    Tracks = rows.Where(id => id != "unavailable").Select(id => new ProviderTrack { Id = id, Title = id }).ToList(),
+                    UnavailableCount = rows.Count(id => id == "unavailable"),
+                    NextCursor = offset + 2 < ids.Length ? (offset + 2).ToString() : null,
+                    Total = snapshot == "broken" ? 2 : ids.Length
+                };
+                _frame.State["serviceResult"] = JsonSerializer.SerializeToNode(page, MusicSourceJson.Default.ProviderCatalog);
+                _frame.Revision++; return ValueTask.FromResult(_frame);
+            }
+            if (serviceMethod == "music.describe" && invocation.Values["trackId"]?.GetValue<string>() is { } followedId
+                && followedId.StartsWith("follow-", StringComparison.Ordinal))
+            {
+                _frame.State["serviceResult"] = JsonSerializer.SerializeToNode(new ProviderTrack { Id = followedId, Title = followedId }, MusicSourceJson.Default.ProviderTrack);
+                _frame.Revision++; return ValueTask.FromResult(_frame);
+            }
             if (invocation.Values["method"]?.GetValue<string>() == "music.share-link")
             {
                 var id = invocation.Values["trackId"]!.GetValue<string>();
@@ -81,6 +107,11 @@ public sealed class BaselineExtension : INonetExtension
         }
         _frame.Revision++; _frame.State["count"] = (_frame.State["count"]?.GetValue<int>() ?? 0) + 1;
         if (invocation.Action == "configure") _frame.Requests.Add(new(Guid.NewGuid().ToString("N"), "config", new()));
+        if (invocation.Action == "follow-fixture")
+        {
+            _frame.Requests.Add(new("follow-" + Guid.NewGuid().ToString("N"), "media", new()
+            { ["operation"] = "follow-catalog", ["catalogId"] = "followed-fixture", ["name"] = "Requested catalog" }));
+        }
         if (invocation.Action == "crash") throw new InvalidOperationException("Intentional fixture failure.");
         if (invocation.Action == "collapse") _frame.State["columns"] = "0,*";
         if (invocation.Action == "expand") _frame.State["columns"] = "180,*";
@@ -95,7 +126,15 @@ public sealed class BaselineExtension : INonetExtension
         return await InvokeAsync(invocation with { Values=values },token);
     }
     public ValueTask<ExtensionFrame> SyncAsync(CancellationToken cancellationToken) => ValueTask.FromResult(_frame);
-    public ValueTask<ExtensionFrame> CompleteAsync(string requestId, JsonObject result, CancellationToken cancellationToken) => ValueTask.FromResult(_frame);
+    public ValueTask<ExtensionFrame> CompleteAsync(string requestId, JsonObject result, CancellationToken cancellationToken)
+    {
+        if (requestId.StartsWith("follow-", StringComparison.Ordinal))
+        {
+            _frame.State["followResult"] = result.DeepClone();
+            _frame.Requests.RemoveAll(request => request.Id == requestId);
+        }
+        return ValueTask.FromResult(_frame);
+    }
     public ValueTask<ExtensionFrame> EventAsync(ExtensionEvent value, CancellationToken cancellationToken) { _frame.State["lastEvent"] = value.Name; _frame.Revision++; return ValueTask.FromResult(_frame); }
     public ValueTask DisposeAsync() { if (_storage.Length > 0) File.WriteAllText(Path.Combine(_storage, "disposed.txt"), "disposed"); return ValueTask.CompletedTask; }
 }

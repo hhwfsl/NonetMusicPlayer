@@ -51,6 +51,9 @@ public sealed partial class Playlist : ObservableObject
         set { var old = _coverPath; if (SetProperty(ref _coverPath, value)) { ArtworkCache.Shared.Invalidate(old); OnPropertyChanged(nameof(Artwork)); OnPropertyChanged(nameof(HasArtwork)); } }
     }
     public List<string> TrackIds { get; set; } = [];
+    public string? SourcePluginId { get; set; }
+    public string? SourceCatalogId { get; set; }
+    [JsonIgnore] public bool IsSourceLinked => !IsSystem && !string.IsNullOrEmpty(SourcePluginId) && !string.IsNullOrEmpty(SourceCatalogId);
     [JsonIgnore] public bool IsSystem => Id == LikedId;
     [JsonIgnore] public IImage? Artwork => ArtworkCache.Shared.GetImage(CoverPath);
     [JsonIgnore] public bool HasArtwork => Artwork is not null;

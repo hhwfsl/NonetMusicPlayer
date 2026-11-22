@@ -1,42 +1,5 @@
 # 🎵 Nonet Music Player
 
-当前版本为桌面 **0.4.0-beta.50**、Android **0.3.0-beta.12**、CLI **0.4.0-beta.33**。桌面 Release 提供六个平台 ZIP 和三个 Windows 安装器。CLI 三平台 ZIP 可在桌面 beta.49 的 Release 中下载，Android 使用独立 Release。
-
-桌面 beta.50 可以从歌曲及播放栏的「更多」菜单复制支持分享的音源歌曲链接。警告提示约 6 秒自动关闭。文本框、数字输入框、下拉框及切换控件取消悬停提示，输入框获得焦点时保持原背景色。
-
-移动端修复：远端歌单和歌曲的封面、歌词等编辑入口按只读来源隐藏，个人收藏、队列及本机歌单引用仍可管理。底部菜单外部关闭不再触发整屏按压闪动。后台互听保护覆盖单向供流会话，设备互听页可请求系统允许持续后台运行并显示当前授权状态；首次开启共享会由系统询问，拒绝不阻止连接。
-
-移动端本地修订：图片裁剪提供固定边框，拖动、双指与滑块缩放始终铺满框，导出与框内预览一致。歌单页显示连接设备的歌单，两端专辑/艺术家/浏览/搜索也合并远端歌曲，断开后移除浏览投影。未收藏的互听歌曲也记入实际播放设备的听歌时长、次数和小时统计；统计保留，不自动收藏。
-
-设备互听同步歌单描述和独立封面，保留本地与插件歌曲的原顺序。手机播放电脑端插件歌曲时，由提供端的原插件解析并通过已配对 HTTPS 增量转发音频，手机无需安装音源插件；不改变提供端播放器，也不传账户或插件播放凭据。完整封面/描述与统计请使用桌面 beta.49、CLI beta.33 和 Android beta.12；旧协议默认值保留。
-
-CLI 同步远端歌单封面/描述、插件歌曲转发、音乐/专辑/艺术家/搜索/TUI 的在线曲库投影，以及未收藏互听歌曲的时长和小时图表；断开保留个人引用与统计。远端来源只读，歌曲信息按已有本地标签补充音频与文件字段。
-
-桌面 0.4.0-beta.48：专辑、艺术家卡片按绘制帧合并滚动刷新并复用可见控件，封面在后台限并发解码，过期请求取消；歌单卡片同样异步加载封面。拖动滚动条时优先呈现当前视口，离页或持续最小化后释放卡片像素。
-
-查看歌曲信息增加年份/流派、曲目/碟号、专辑艺术家、作曲者及音频规格、码率和修改时间，有数据的附加标签才显示。信息按组展示且可复制，关闭按钮固定在底部。
-
-桌面 0.4.0-beta.47：队列显示封面并支持拖拽排序；歌曲拖动显示半透明虚影，相邻行连续让位，修复行间切换时闪动。修复逐行歌词重载后主题色消失，以及右上平台搜索改词后残留旧结果的问题；补齐桌面终端命令。CLI 与共享核心同步相关业务代码，独立 CLI 编号仍为 0.4.0-beta.32，功能对照见 [CLI 与桌面功能](docs/CLI_DESKTOP_PARITY.md)。
-
-本地六架构 ZIP 位于 `publish/desktop/archives`，Windows x64/x86/ARM64 installer 位于 `publish/desktop/windows_installer`；CLI 三平台 ZIP 位于 `publish/cli/archives`，Android APK 位于 `publish/android`。运行目录保留原数据，旧包归档；每个 Release 附 SHA-256 清单。
-
-Android 0.3.0-beta.11 支持队列、歌曲及侧栏歌单拖拽排序和即时让位预览；随机播放生成完整队列，退出随机时恢复来源顺序。侧栏每次展开 5 个歌单，标题行可整组开合并保留数量；新建歌单保持原位置，主页以单屏布局展示正常高度的 24 小时图表。详见 [移动端说明](src/NonetMusicPlayer.Android/README.md)。
-
-逐行歌词重新加载后当前行持续使用主题色，无需关闭再打开歌词页，保留原有页面和虚拟化行缓存。
-
-桌面 0.4.0-beta.46 修复 Windows 启动时闪白和显示后移动：首帧准备完成后在最终居中位置呈现，保留原有最小尺寸、尺寸记忆和托盘行为。
-
-桌面 0.4.0-beta.45 隐藏标题栏版本、改善插件卡片的多行操作区，并简化未知命令和拖拽排序反馈。Windows 主窗口标题栏直接使用系统非客户区拖动与双击，移除拖窗坐标补偿和鼠标消息拦截；自绘标题栏支持系统贴靠入口，最小窗口为 640×480 DIP。
-
-桌面 0.4.0-beta.44 增加触摸/笔边缘缩放；歌曲工具栏先收缩搜索框、再成组换行，播放栏为完整工具按钮组预留宽度，适配最小窗口和大字号。
-
-布局校验按显示缩放换算一个物理像素的取整容差，避免 150% 缩放下正常播放栏在启动或调整窗口时反复误报；真实越界仍保留保护。
-
-主窗口记住普通状态下调整的尺寸，每次重新启动居中显示，不保存窗口位置。设置 → 布局 → 恢复默认窗口大小可恢复当前屏幕的默认尺寸并立即居中；最大化和最小化不覆盖记忆尺寸。
-
-桌面播放栏的桌面歌词按钮右侧提供播放列表浮层，可直接查看实际播放顺序并点歌；点击外部、再次点击按钮或按 Esc 收起。随机播放先洗牌再顺序播放，上一首沿队列回退，手动重选歌曲会重新洗牌。最大化和还原直接执行；容器使用抛物线变形，歌词固定尺寸从播放栏朝向内容区的边缘垂直滑入滑出并保留背景标题，菜单、音量和日历浮层支持外部/按钮关闭及快速开合，展开按钮保持选中；系统减少动画偏好仍优先。详见 [桌面动画与播放队列](docs/DESKTOP_MOTION_AND_QUEUE.md)。
-
-
 > [!WARNING]
 > 本项目由 AI 完成，尚未经过独立人工代码 review。已在 Windows 和 Android 15 模拟器验证；macOS 和 Linux 仅生成交叉构建产物，未做对应系统实机测试。当前为预发布版本，使用前请备份数据，参与开发前请审查相关代码。
 
@@ -61,9 +24,9 @@ Android 0.3.0-beta.11 支持队列、歌曲及侧栏歌单拖拽排序和即时�
 
 | 产品 | 当前版本 | 发行说明 |
 | --- | --- | --- |
-| 桌面 | [0.4.0-beta.48](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.48) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
-| CLI | [0.4.0-beta.32](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.32) | Windows、Linux、macOS x64 |
-| Android | [0.3.0-beta.11](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/android-v0.3.0-beta.11) | API 28+；通用 APK；沿用既有测试签名 |
+| 桌面 | [0.4.0-beta.51](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.51) | Windows x64/x86/ARM64：ZIP + installer；Linux x64/ARM64、macOS x64：ZIP |
+| CLI | [0.4.0-beta.34](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/v0.4.0-beta.51) | Windows、Linux、macOS x64 |
+| Android | [0.3.0-beta.12](https://github.com/hhwfsl/NonetMusicPlayer/releases/tag/android-v0.3.0-beta.12) | API 28+；通用 APK；沿用既有测试签名 |
 
 本仓库包含桌面、CLI、共享核心、Android、插件 SDK、打包器和测试。插件模板独立维护在 [NonetMusicPlayerPlugin](https://github.com/hhwfsl/NonetMusicPlayerPlugin)。
 

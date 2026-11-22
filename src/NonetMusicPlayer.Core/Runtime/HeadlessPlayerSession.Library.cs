@@ -47,9 +47,28 @@ public sealed partial class HeadlessPlayerSession
     }
     private void AddToPlaylist(StoredPlaylist playlist, IEnumerable<StoredMusicTrack> tracks)
     {
+        RequireEditablePlaylist(playlist);
         var items = tracks.DistinctBy(t => t.Id).ToArray(); EnsureStored(items);
         var existing = playlist.TrackIds.ToHashSet(StringComparer.Ordinal);
         playlist.TrackIds.InsertRange(0, items.Select(t => t.Id).Where(existing.Add));
+        RefreshQueue();
+    }
+    private void RestorePlaylistUndo(HeadlessPlayerState old)
+    {
+        // 本地撤销不能覆盖后台同步结果，也不能重新创建已取消的订阅。
+        var linked = State.Playlists.Where(playlist => playlist.IsSourceLinked).ToDictionary(playlist => playlist.Id, StringComparer.Ordinal);
+        var linkedTrackIds = linked.Values.SelectMany(playlist => playlist.TrackIds).ToHashSet(StringComparer.Ordinal);
+        var currentLinkedTracks = State.Tracks.Where(track => linkedTrackIds.Contains(track.Id)).ToDictionary(track => track.Id, StringComparer.Ordinal);
+        var previousLocalTracks = old.Playlists.Where(playlist => !playlist.IsSourceLinked).SelectMany(playlist => playlist.TrackIds).ToHashSet(StringComparer.Ordinal);
+        var previousLinkedTracks = old.Playlists.Where(playlist => playlist.IsSourceLinked).SelectMany(playlist => playlist.TrackIds).ToHashSet(StringComparer.Ordinal);
+        State.Tracks = old.Tracks.Where(track => currentLinkedTracks.ContainsKey(track.Id) || !previousLinkedTracks.Contains(track.Id) || previousLocalTracks.Contains(track.Id))
+            .Select(track => currentLinkedTracks.GetValueOrDefault(track.Id) ?? track)
+            .Concat(currentLinkedTracks.Values).DistinctBy(track => track.Id).ToList();
+        State.Playlists = old.Playlists.Where(playlist => !playlist.IsSourceLinked || linked.ContainsKey(playlist.Id))
+            .Select(playlist => playlist.IsSourceLinked ? linked[playlist.Id] : playlist).Concat(linked.Values).DistinctBy(playlist => playlist.Id).ToList();
+        State.History = old.History;
+        State.RecentTemporaryTracks = old.RecentTemporaryTracks;
+        State.GroupCovers = old.GroupCovers;
         RefreshQueue();
     }
     private void RefreshQueue()

@@ -5,6 +5,7 @@ using NonetMusicPlayer.Core.Diagnostics;
 using NonetMusicPlayer.Core.Persistence;
 using NonetMusicPlayer.Core.Runtime;
 using NonetMusicPlayer.Core.Localization;
+using NonetMusicPlayer.Core.Updates;
 
 namespace NonetMusicPlayerCli;
 
@@ -14,6 +15,7 @@ internal static class Program
     private static async Task<int> Main(string[] args)
     {
         Console.OutputEncoding = new UTF8Encoding(false); Console.InputEncoding = Encoding.UTF8;
+        if (args.Length == 2 && args[0] == "--apply-update") return UpdateInstaller.RunHelper(args[1], ReleaseProduct.Cli);
         var directory = Path.Combine(AppContext.BaseDirectory, "Data"); var commands = new List<string>(); var json = false; var noTui = false; var stay = false; var repl = false; var forceTui = false;
         try
         {
@@ -38,7 +40,7 @@ internal static class Program
             }
             using var cancellation = new CancellationTokenSource();
             Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancellation.Cancel(); };
-            await using var session = new HeadlessPlayerSession(directory);
+            await using var session = new HeadlessPlayerSession(directory) { SoftwareVersion = ReleaseUpdateService.VersionOf(typeof(Program).Assembly) };
             var router = new PlayerCommandRouter(session) { UnknownCommandsAsOutput = true }; session.ResultPublished += (_, result) => router.Publish(result);
             var exitCode = 0;
             var interactive = !json && !noTui && !Console.IsInputRedirected && (forceTui || !Console.IsOutputRedirected && Environment.GetEnvironmentVariable("TERM") != "dumb" && ConsoleCapabilities.EnableAnsi());
@@ -53,6 +55,7 @@ internal static class Program
                 {
                     if (json) Console.WriteLine(JsonSerializer.Serialize(result, CoreJson.Rpc));
                     else if (result.Operation is "help" or "command.unknown") Console.WriteLine(result.Message);
+                    else if (result.Operation == "music.share" && result.Data is System.Text.Json.Nodes.JsonValue link) Console.WriteLine(link.GetValue<string>());
                     else if (result.Data is not null) Console.WriteLine(result.Data.ToJsonString(CoreJson.Readable));
                 }
                 AppLog.EntryWritten += PrintLog;

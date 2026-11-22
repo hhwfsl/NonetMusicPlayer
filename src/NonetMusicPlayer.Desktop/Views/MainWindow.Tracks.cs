@@ -119,7 +119,7 @@ public sealed partial class MainWindow
         var liked = tracks.All(t => t.IsFavorite);
         menu.Items.Add(Menu(liked ? L10n.T("Playlists.RemoveFromLikedSongs") : L10n.T("Playlists.AddToLikedSongs"), () => { if (liked) _vm.UnfavoriteTracks(tracks); else _vm.FavoriteTracks(tracks); return Task.CompletedTask; }, IconKind.Heart));
         var destinations = new MenuItem { Header = L10n.T("Playlists.AddToPlaylist"), Icon = new VectorIcon { Kind = IconKind.Playlist, Width = 18, Height = 18 } };
-        foreach (var playlist in _vm.Playlists)
+        foreach (var playlist in _vm.Playlists.Where(p => !p.IsSourceLinked))
         {
             var item = Menu(PlaylistName(playlist), () => { _vm.AddToPlaylist(playlist, tracks); return Task.CompletedTask; }, rawLabel: true);
             item.Icon = PlaylistArtwork(playlist, 22); destinations.Items.Add(item);
@@ -134,7 +134,7 @@ public sealed partial class MainWindow
         {
             menu.Items.Add(Menu(L10n.T("Common.TrackInformation"), () => SongInfoDialog.Show(this, tracks[0]), IconKind.Info));
             AppendTrackShareLink(menu, tracks[0]);
-            if (_vm.CurrentPlaylist is not null)
+            if (_vm.CurrentPlaylist is { IsSourceLinked: false })
             {
                 menu.Items.Add(Menu(L10n.T("Playlists.MoveUpInPlaylist"), () => { _vm.MoveInPlaylist(tracks[0], -1); return Task.CompletedTask; }, IconKind.MoveUp));
                 menu.Items.Add(Menu(L10n.T("Playlists.MoveDownInPlaylist"), () => { _vm.MoveInPlaylist(tracks[0], 1); return Task.CompletedTask; }, IconKind.MoveDown));
@@ -142,7 +142,7 @@ public sealed partial class MainWindow
         }
         if (_vm.Page == "history")
             menu.Items.Add(Menu("Library.RemoveFromRecent", () => { _vm.RemoveRecentTracks(tracks.Select(t => t.Id)); return Task.CompletedTask; }, IconKind.Trash));
-        else if (_vm.CurrentPlaylist is not null || _vm.Page == "songs") {
+        else if (_vm.CurrentPlaylist is { IsSourceLinked: false } || (_vm.Page == "songs" && _vm.CanRemoveFromLibrary(tracks))) {
         menu.Items.Add(new Separator());
         menu.Items.Add(Menu(_vm.CurrentPlaylist is null ? L10n.T("Library.RemoveFromLibrary") : L10n.T("Playlists.RemoveFromThisPlaylist"), async () =>
         {

@@ -194,7 +194,7 @@ public sealed partial class MainWindow : Window
         TrackHeader.ColumnDefinitions[2].Width = new GridLength(showArtwork ? 48 : 0);
         TrackHeader.ColumnDefinitions[6].Width = new GridLength(showDuration ? 56 : 0);
         foreach (var label in TrackHeader.Children.OfType<TextBlock>().Where(c => Grid.GetColumn(c) is 2 or 6)) label.IsVisible = Grid.GetColumn(label) == 2 ? showArtwork : showDuration;
-        LibraryAddFiles.IsVisible = LibraryAddFolder.IsVisible = _vm?.CurrentPlaylist is not null;
+        LibraryAddFiles.IsVisible = LibraryAddFolder.IsVisible = _vm?.CurrentPlaylist is { IsSourceLinked: false };
         PageContentGrid.Margin = ViewportHeight < 620 ? new(18, 12, 18, 6) : new(30, 24, 30, 12);
         LibraryActions.Margin = ViewportHeight < 620 ? new(0, 8, 0, 0) : new(0, 18, 0, 0);
         var profile = ViewportHeight < 620 ? 0 : ViewportWidth < 1000 || ViewportHeight < 650 ? 1 : 2;
@@ -338,17 +338,17 @@ public sealed partial class MainWindow : Window
     private async void AddFiles_Click(object? sender, RoutedEventArgs e) => await AddFilesAsync();
     private async Task AddFilesAsync()
     {
-        if (_vm?.CurrentPlaylist is null) { _vm?.ReportWarning(L10n.T("Playlists.SelectAPlaylistBeforeAddingMusic")); return; }
+        if (_vm?.CurrentPlaylist is not { IsSourceLinked: false } playlist) { _vm?.ReportWarning(L10n.T(_vm.CurrentPlaylist?.IsSourceLinked == true ? "MusicSearch.CatalogReadOnly" : "Playlists.SelectAPlaylistBeforeAddingMusic")); return; }
         var paths = await OpenFilesAsync(L10n.T("Library.AddMusicFiles"), _vm!.Plugins.InputFileExtensions.Select(x => "*" + x).ToArray());
-        if (paths.Length > 0 && _vm is not null) await _vm.ImportAsync(paths, _vm.CurrentPlaylist?.IsSystem == true, _vm.CurrentPlaylist);
+        if (paths.Length > 0 && _vm is not null) await _vm.ImportAsync(paths, playlist.IsSystem, playlist);
     }
     private async void AddFolder_Click(object? sender, RoutedEventArgs e) => await AddFolderAsync();
     private async Task AddFolderAsync()
     {
-        if (_vm?.CurrentPlaylist is null) { _vm?.ReportWarning(L10n.T("Playlists.SelectAPlaylistBeforeAddingMusic")); return; }
+        if (_vm?.CurrentPlaylist is not { IsSourceLinked: false } playlist) { _vm?.ReportWarning(L10n.T(_vm.CurrentPlaylist?.IsSourceLinked == true ? "MusicSearch.CatalogReadOnly" : "Playlists.SelectAPlaylistBeforeAddingMusic")); return; }
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = L10n.T("Library.AddMusicFolder"), AllowMultiple = true });
         var paths = folders.Select(f => f.TryGetLocalPath()).OfType<string>().ToArray();
-        if (paths.Length > 0 && _vm is not null) await _vm.ImportAsync(paths, _vm.CurrentPlaylist?.IsSystem == true, _vm.CurrentPlaylist);
+        if (paths.Length > 0 && _vm is not null) await _vm.ImportAsync(paths, playlist.IsSystem, playlist);
     }
     private void CancelImport_Click(object? sender, RoutedEventArgs e) => _vm?.CancelImport();
     private void PlayAll_Click(object? sender, RoutedEventArgs e) { if (_vm is not null) _ = _vm.PlayTrackAsync(_vm.VisibleTracks.FirstOrDefault(), _vm.VisibleTracks.ToArray()); }
@@ -379,7 +379,7 @@ public sealed partial class MainWindow : Window
         if (_vm is null || sender is not Control control) return;
         var menu = new ContextMenu { Placement = PlacementMode.Top }; var track = _vm.CurrentTrack;
         var playlists = new MenuItem { Header = L10n.T("Playlists.AddToPlaylist"), IsEnabled = track is not null, Icon = new VectorIcon { Kind = IconKind.Playlist } };
-        foreach (var playlist in _vm.Playlists) playlists.Items.Add(Menu(PlaylistName(playlist), () => { if (track is not null) _vm.AddToPlaylist(playlist, [track]); return Task.CompletedTask; }, rawLabel: true));
+        foreach (var playlist in _vm.Playlists.Where(p => !p.IsSourceLinked)) playlists.Items.Add(Menu(PlaylistName(playlist), () => { if (track is not null) _vm.AddToPlaylist(playlist, [track]); return Task.CompletedTask; }, rawLabel: true));
         playlists.Items.Add(Menu(L10n.T("Playlists.CreatePlaylistAndAdd"), async () =>
         {
             var name = await PlayerDialog.Prompt(this, L10n.T("Playlists.NewPlaylist"), L10n.T("Playlists.CreateAPlaylistContainingTheCurrentTrack"), L10n.T("Playlists.NewPlaylist"));
@@ -446,6 +446,7 @@ public sealed partial class MainWindow : Window
     private async Task DropAsync(DragEventArgs e, bool favorite, Playlist? playlist)
     {
         if (_vm is null) return;
+        if (playlist?.IsSourceLinked == true) { _vm.ReportWarning(L10n.T("MusicSearch.CatalogReadOnly")); return; }
         try
         {
             if (e.DataTransfer.TryGetText() is { } text && text.StartsWith("nonet-tracks:"))
@@ -481,15 +482,16 @@ public sealed partial class MainWindow : Window
     private void LibraryMore_Click(object? sender, RoutedEventArgs e)
     {
         if (_vm is null || sender is not Control control) return; var menu = new ContextMenu();
-        if (_vm.CurrentPlaylist is not null && !LibraryAddFiles.IsVisible) {
+        if (_vm.CurrentPlaylist is { IsSourceLinked: false } && !LibraryAddFiles.IsVisible) {
             menu.Items.Add(Menu(L10n.T("Library.AddMusic"), AddFilesAsync, IconKind.FileAdd));
             menu.Items.Add(Menu(L10n.T("Common.AddFolder"), AddFolderAsync, IconKind.Folder));
             menu.Items.Add(new Separator());
         }
-        if (_vm.CurrentPlaylist is not null) menu.Items.Add(Menu(L10n.T("Playlists.ImportM3UPlaylist"), async () => { var paths = await OpenFilesAsync(L10n.T("Playlists.ImportPlaylist"), ["*.m3u", "*.m3u8"], false); if (paths.Length > 0) { try { await _vm.ImportM3uAsync(paths[0]); } catch (Exception exception) { _vm.ReportError(L10n.T("Playlists.PlaylistImportFailed"), exception); } } }));
+        if (_vm.CurrentPlaylist is { IsSourceLinked: false }) menu.Items.Add(Menu(L10n.T("Playlists.ImportM3UPlaylist"), async () => { var paths = await OpenFilesAsync(L10n.T("Playlists.ImportPlaylist"), ["*.m3u", "*.m3u8"], false); if (paths.Length > 0) { try { await _vm.ImportM3uAsync(paths[0]); } catch (Exception exception) { _vm.ReportError(L10n.T("Playlists.PlaylistImportFailed"), exception); } } }));
         menu.Items.Add(Menu(L10n.T("Common.ExportCurrentListAsM3U"), async () => { var name = L10n.T("Playlists.ExportPrefix") + "_" + (_vm.CurrentPlaylist is { } list ? PlaylistName(list) : _vm.PageTitle); foreach (var invalid in Path.GetInvalidFileNameChars()) name = name.Replace(invalid, '_'); var path = await SaveFileAsync(L10n.T("Common.ExportLocalTrackList"), name + ".m3u8", "m3u8"); if (path is not null) { try { _vm.ExportM3u(path); _vm.StatusText = L10n.T("Plugins.LocalTracksExportedPluginTracksAreOmittedToKeep"); } catch (Exception exception) { _vm.ReportError(L10n.T("Common.ExportFailed"), exception); } } }));
         menu.Items.Add(Menu(L10n.T("Common.UndoLastAction"), () => { _vm.UndoCommand.Execute(null); return Task.CompletedTask; }));
-        if (_vm.CurrentPlaylist is { } playlist) { menu.Items.Add(Menu(L10n.T("Playlists.EditPlaylistDetails"), () => EditPlaylistAsync(playlist), IconKind.Edit)); if (!playlist.IsSystem) menu.Items.Add(Menu(L10n.T("Playlists.DeletePlaylist"), () => DeleteAsync(playlist), IconKind.Trash)); }
+        if (_vm.CurrentPlaylist is { IsSourceLinked: true } followed) AddFollowedPlaylistActions(menu, followed);
+        else if (_vm.CurrentPlaylist is { } playlist) { menu.Items.Add(Menu(L10n.T("Playlists.EditPlaylistDetails"), () => EditPlaylistAsync(playlist), IconKind.Edit)); if (!playlist.IsSystem) menu.Items.Add(Menu(L10n.T("Playlists.DeletePlaylist"), () => DeleteAsync(playlist), IconKind.Trash)); }
         if (_vm.Page == "history") menu.Items.Add(Menu(L10n.T("Playback.ClearHistory"), async () => { if (await PlayerDialog.Confirm(this, L10n.T("Playback.ClearPlaybackHistory"), L10n.T("Playlists.LikedSongsPlaylistsAndMusicFilesAreUnchanged"), L10n.T("Common.Clear"))) _vm.ClearHistory(); }));
         OpenMenu(control, menu);
     }
@@ -521,7 +523,7 @@ public sealed partial class MainWindow : Window
             case "batch": if (!LibraryPage.IsVisible) return; SetBatchMode(!TracksList.BatchMode); break;
             case "selectAll": if (!LibraryPage.IsVisible || !TracksList.BatchMode) return; TracksList.SelectAll(); break;
             case "clearSelection": if (!LibraryPage.IsVisible || !TracksList.BatchMode) return; TracksList.SelectedItems?.Clear(); break;
-            case "moveUp": case "moveDown": if (!TracksList.BatchMode || SelectedTracks.Length != 1 || _vm.CurrentPlaylist is null) return; _vm.MoveInPlaylist(SelectedTracks[0], action == "moveUp" ? -1 : 1); break;
+            case "moveUp": case "moveDown": if (!TracksList.BatchMode || SelectedTracks.Length != 1 || _vm.CurrentPlaylist is not { IsSourceLinked: false }) return; _vm.MoveInPlaylist(SelectedTracks[0], action == "moveUp" ? -1 : 1); break;
             case "previous": _vm.PlayPreviousCommand.Execute(null); break;
             case "next": _vm.PlayNextCommand.Execute(null); break;
             case "seekBack": _vm.Seek(_vm.PlaybackPosition - 5); break;

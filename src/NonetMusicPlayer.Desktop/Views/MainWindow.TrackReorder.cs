@@ -14,7 +14,7 @@ public sealed partial class MainWindow
     private void BeginTrackReorderPreview(string[] ids)
     {
         CancelTrackReorderPreview(); _trackReorderActive = false;
-        if (_vm?.CurrentPlaylist is not { } playlist) return;
+        if (_vm?.CurrentPlaylist is not { IsSourceLinked: false } playlist) return;
         _trackReorderActive = true;
         _trackReorderPage = _vm.Page; _trackReorderSource = playlist.TrackIds.ToArray(); _trackReorderIds = ids;
         _trackReorder = new TrackReorderPreview(TracksList, _vm.VisibleTracks, ids, _dragStart);
