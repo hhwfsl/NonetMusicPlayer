@@ -7,32 +7,57 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using NonetMusicPlayer.Core.Diagnostics;
 using NonetMusicPlayer.Core.Localization;
+using NonetMusicPlayer.Core.Network;
 
 namespace NonetMusicPlayer.Core.Updates;
 
 public enum ReleaseProduct { Desktop, Cli }
 
-/// <summary>只读取公开 Release；下载包必须同时通过 GitHub 摘要和包内逐文件摘要校验。</summary>
-public sealed class ReleaseUpdateService(HttpClient? client = null, ReleaseProduct product = ReleaseProduct.Desktop)
+/// <summary>只读取公开 Release；下载包必须同时通过发布摘要和包内逐文件摘要校验。</summary>
+public sealed partial class ReleaseUpdateService(HttpClient? client = null, ReleaseProduct product = ReleaseProduct.Desktop)
 {
     public const string Repository = "https://github.com/hhwfsl/NonetMusicPlayer";
     public const string ManifestName = "NonetMusicPlayer.update.json";
     public const string CliManifestName = "NonetMusicPlayer.Cli.package.json";
     private const long DownloadLimit = 512L * 1024 * 1024, ExpandedLimit = 2L * 1024 * 1024 * 1024;
-    private readonly HttpClient _http = client ?? new HttpClient { Timeout = TimeSpan.FromMinutes(20) };
+    private readonly HttpClient _http = client ?? new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromMinutes(20) };
+    private readonly GitHubApiCooldown _apiCooldown = client is null ? GitHubApiCooldown.Shared : new();
+    private readonly SemaphoreSlim _checkGate = new(1);
+    private (string Current, string Rid, DateTimeOffset Expires, UpdateRelease? Release)? _lastCheck;
     public static string VersionOf(System.Reflection.Assembly assembly) => assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
         .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().First().InformationalVersion.Split('+')[0];
     public static string PlatformRid => (OperatingSystem.IsWindows() ? "win" : OperatingSystem.IsMacOS() ? "osx" : "linux") + "-" + RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
 
-    /// <summary>按版本与平台筛选桌面 Release；不存在的仓库视为尚无可用发布。</summary>
+    /// <summary>按产品、版本与平台筛选公开 Release；匿名接口限流时改用公开发布源。</summary>
     public async Task<UpdateRelease?> CheckAsync(string current, string? rid = null, CancellationToken cancellationToken = default)
     {
         rid ??= PlatformRid;
+        await _checkGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (_lastCheck is { } cached && cached.Current == current && cached.Rid == rid && cached.Expires > DateTimeOffset.UtcNow)
+                return cached.Release;
+            var release = _apiCooldown.IsActive
+                ? await CheckPublicFeedAsync(current, rid, cancellationToken)
+                : await CheckApiAsync(current, rid, cancellationToken);
+            _lastCheck = (current, rid, DateTimeOffset.UtcNow.AddMinutes(1), release);
+            return release;
+        }
+        finally { _checkGate.Release(); }
+    }
+
+    private async Task<UpdateRelease?> CheckApiAsync(string current, string rid, CancellationToken token)
+    {
         using var request = Request("https://api.github.com/repos/hhwfsl/NonetMusicPlayer/releases?per_page=50");
-        using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
+        if (_apiCooldown.Observe(response))
+        {
+            response.Dispose();
+            return await CheckPublicFeedAsync(current, rid, token);
+        }
         if (response.StatusCode == HttpStatusCode.NotFound) return null;
         response.EnsureSuccessStatusCode();
-        var bytes = await ReadBoundedAsync(response.Content, 4 * 1024 * 1024, cancellationToken);
+        var bytes = await ReadBoundedAsync(response.Content, 4 * 1024 * 1024, token);
         var releases = JsonSerializer.Deserialize(bytes, UpdateJsonContext.Default.GitHubReleaseArray) ?? [];
         var candidates = releases.Where(r => !r.Draft && r.TagName is { Length: <= 100 } && r.Assets is not null)
             .SelectMany(r => r.Assets!.Select(asset => (Release: r, Asset: asset, Version: AssetVersion(r.TagName, asset.Name, rid))))
@@ -56,9 +81,12 @@ public sealed class ReleaseUpdateService(HttpClient? client = null, ReleaseProdu
         // CLI 和桌面独立编号，组合 Release 的标签仍可能是桌面版号。
         return NormalizeVersion(product == ReleaseProduct.Cli ? name[prefix.Length..^suffix.Length] : tag);
     }
-    private static bool ValidAsset(GitHubAsset asset) => asset.Size is > 0 and <= DownloadLimit && ValidDigest(asset.Digest) && TrustedAssetUrl(asset.BrowserDownloadUrl);
+    private static bool ValidAsset(GitHubAsset asset) => asset.Size > 0 && HasTrustedDigest(asset);
+    private static bool HasTrustedDigest(GitHubAsset asset) => asset.Size is >= 0 and <= DownloadLimit && ValidDigest(asset.Digest) && TrustedAssetUrl(asset.BrowserDownloadUrl);
     private static bool ValidDigest(string? value) => value is { Length: 71 } && value.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) && value[7..].All(Uri.IsHexDigit);
-    private static bool TrustedAssetUrl(string? url) => Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == "https" && uri.Host == "github.com" && uri.AbsolutePath.StartsWith("/hhwfsl/NonetMusicPlayer/releases/download/", StringComparison.Ordinal);
+    private static bool TrustedAssetUrl(string? url) => Uri.TryCreate(url, UriKind.Absolute, out var uri) && IsPublicHttps(uri)
+        && uri.Host == "github.com" && uri.Query.Length == 0 && uri.AbsolutePath.StartsWith("/hhwfsl/NonetMusicPlayer/releases/download/", StringComparison.Ordinal);
+    private static bool IsPublicHttps(Uri uri) => uri.IsAbsoluteUri && uri.Scheme == "https" && uri.IsDefaultPort && uri.UserInfo.Length == 0 && uri.Fragment.Length == 0;
     private static HttpRequestMessage Request(string uri)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, uri);
@@ -70,7 +98,7 @@ public sealed class ReleaseUpdateService(HttpClient? client = null, ReleaseProdu
     public async Task<PreparedUpdate> DownloadAsync(UpdateRelease release, string dataRoot, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
     {
         var asset = release.Asset ?? throw new InvalidDataException(LocalizationCatalog.Get("Update.NoPackage"));
-        if (!ValidAsset(asset)) throw new InvalidDataException("Untrusted update asset");
+        if (!HasTrustedDigest(asset)) throw new InvalidDataException("Untrusted update asset");
         if (product == ReleaseProduct.Cli && AssetVersion(null, asset.Name, release.Rid) != release.Version)
             throw new InvalidDataException("CLI update asset does not match this version");
         var folder = Path.Combine(Path.GetFullPath(dataRoot), "Updates", Guid.NewGuid().ToString("N"));
@@ -78,11 +106,13 @@ public sealed class ReleaseUpdateService(HttpClient? client = null, ReleaseProdu
         var archivePath = Path.Combine(folder, "download.zip");
         try
         {
-            using var request = Request(asset.BrowserDownloadUrl!);
-            using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken); response.EnsureSuccessStatusCode();
-            var finalUri = response.RequestMessage?.RequestUri;
-            if (finalUri is null || finalUri.Scheme != "https" || !(finalUri.Host == "github.com" || finalUri.Host == "release-assets.githubusercontent.com" || finalUri.Host == "objects.githubusercontent.com")) throw new InvalidDataException("Unexpected download redirect");
-            if (response.Content.Headers.ContentLength is { } length && length != asset.Size) throw new InvalidDataException("Update size mismatch");
+            using var response = await GetReleaseAssetAsync(asset.BrowserDownloadUrl!, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            var advertised = response.Content.Headers.ContentLength;
+            if (advertised is <= 0 or > DownloadLimit || asset.Size > 0 && advertised is not null && advertised != asset.Size)
+                throw new InvalidDataException("Update size mismatch");
+            // 公开校验清单只声明摘要，长度可以由下载响应提供，也可能只在流结束时确定。
+            var expectedLength = asset.Size > 0 ? asset.Size : advertised;
             await using (var source = await response.Content.ReadAsStreamAsync(cancellationToken))
             await using (var target = new FileStream(archivePath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, true))
             using (var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
@@ -90,12 +120,16 @@ public sealed class ReleaseUpdateService(HttpClient? client = null, ReleaseProdu
                 var buffer = new byte[64 * 1024]; long total = 0; int count;
                 while ((count = await source.ReadAsync(buffer, cancellationToken)) > 0)
                 {
-                    total += count; if (total > DownloadLimit || total > asset.Size) throw new InvalidDataException("Update exceeds declared size");
-                    hash.AppendData(buffer, 0, count); await target.WriteAsync(buffer.AsMemory(0, count), cancellationToken); progress?.Report((double)total / asset.Size);
+                    total += count; if (total > (expectedLength ?? DownloadLimit)) throw new InvalidDataException("Update exceeds declared size");
+                    hash.AppendData(buffer, 0, count); await target.WriteAsync(buffer.AsMemory(0, count), cancellationToken);
+                    if (expectedLength is { } length) progress?.Report((double)total / length);
                 }
-                if (total != asset.Size || !CryptographicOperations.FixedTimeEquals(hash.GetHashAndReset(), Convert.FromHexString(asset.Digest![7..]))) throw new InvalidDataException("Update SHA-256 mismatch");
+                if (total == 0 || expectedLength is not null && total != expectedLength
+                    || !CryptographicOperations.FixedTimeEquals(hash.GetHashAndReset(), Convert.FromHexString(asset.Digest![7..]))) throw new InvalidDataException("Update SHA-256 mismatch");
             }
-            return await Task.Run(() => ExtractVerified(archivePath, folder, release.Version, release.Rid, cancellationToken, product), cancellationToken);
+            var prepared = await Task.Run(() => ExtractVerified(archivePath, folder, release.Version, release.Rid, cancellationToken, product), cancellationToken);
+            if (expectedLength is null) progress?.Report(1);
+            return prepared;
         }
         catch
         {

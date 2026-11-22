@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
+using NonetMusicPlayer.Core.Network;
 using NonetMusicPlayer.Desktop.Controls;
 using NonetMusicPlayer.Desktop.Services;
 
@@ -54,6 +55,11 @@ public sealed partial class MainWindow
                 if (_availableUpdate is not null) await ShowUpdateAsync();
                 else _vm.ReportWarning(L10n.T("Update.LatestOrNoRelease"));
             }
+        }
+        catch (GitHubRateLimitException error)
+        {
+            AppLog.Warning("Update", "Public release discovery failed during GitHub rate limit", error);
+            if (manual) _vm.ReportWarning(error.Message);
         }
         catch (OperationCanceledException) { if (manual && !_updateStop.IsCancellationRequested) _vm.ReportWarning(L10n.T("Update.Failed")); }
         catch (Exception error)

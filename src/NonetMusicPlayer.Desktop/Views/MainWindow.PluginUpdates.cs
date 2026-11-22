@@ -1,5 +1,6 @@
 using System.Net;
 using Avalonia.Controls;
+using NonetMusicPlayer.Core.Network;
 using NonetMusicPlayer.Core.Plugins;
 using NonetMusicPlayer.Desktop.Services;
 
@@ -59,6 +60,8 @@ public sealed partial class MainWindow
         }
         catch (HttpRequestException error) when (error.StatusCode == HttpStatusCode.NotFound)
         { if (manual) _vm.ReportWarning(L10n.T("Plugins.RepositoryUnavailable")); }
+        catch (GitHubRateLimitException error)
+        { if (manual) _vm.ReportWarning(error.Message); }
         catch (OperationCanceledException) { if (manual && !_updateStop.IsCancellationRequested) _vm.ReportWarning(L10n.T("Plugins.PluginDownloadCanceledOrTimedOut")); }
         catch (Exception error)
         {

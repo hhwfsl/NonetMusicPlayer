@@ -1,5 +1,10 @@
 # NonetMusicPlayerCli Changelog
 
+## 0.4.0-beta.35 · 2026-11-22
+
+- `updates check` 和 `updates install` 在 GitHub REST API 限流时改用公开发布订阅源。按 CLI 独立版号和架构选择 ZIP，校验发布清单和包内 SHA-256。
+- 插件更新检查遵循 GitHub 的限流恢复时间，冷却期间暂停 API 请求。
+
 ## 0.4.0-beta.34 · 2026-11-22
 
 - 支持只读平台歌单订阅、运行时自动同步、手动同步和取消订阅。复用已有曲目引用，完整校验分页与不可用条目。

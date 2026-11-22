@@ -2,13 +2,13 @@
 
 本项目由 AI 完成，尚未经过人工代码 review；测试仅在 Windows 进行，macOS/Linux 未经实机验证。
 
-独立的纯命令行音乐播放器，当前版本 **0.4.0-beta.34**。与 Nonet 桌面播放器共享核心逻辑，但不依赖窗口，使用独立数据和播放会话。
+独立的纯命令行音乐播放器，当前版本 **0.4.0-beta.35**。与 Nonet 桌面播放器共享核心逻辑，但不依赖窗口，使用独立数据和播放会话。
 
 本版同步互听歌单描述、封面缓存和本机插件音频转发，远端歌单出现在 TUI 与 `playlist list`；使用 `peer:<设备ID>:<歌单ID>` 读取曲目和播放。音乐、专辑、艺术家及本地搜索包含在线设备歌曲，断开后撤掉投影；个人收藏和历史统计保留。未收藏的互听歌曲也累计时长和小时图表，提供端仅转发不记账。远端来源只读，可管理自己的歌单引用和播放队列。
 
 `music info <歌曲ID>` 按已有数据补充文件大小/格式、修改时间、编码、码率、采样率、位深、声道及年份/曲目/碟号/作曲者等；缺失项隐藏，不额外请求云端。
 
-`playlist follow/sync/unfollow` 管理平台只读订阅，`music share` 输出公开歌曲链接。`updates check` 检查当前 CLI 版号，`updates install -y` 校验并启动更新，完成后重新运行即可。详见 [CLI 使用说明](../../docs/CLI.md)。
+`playlist follow/sync/unfollow` 管理平台只读订阅，`music share` 输出公开歌曲链接。`updates check` 检查当前 CLI 版号，`updates install -y` 校验并启动更新，完成后重新运行即可。GitHub REST API 限流时，更新命令会使用公开发布源及其 SHA-256 清单。详见 [CLI 使用说明](../../docs/CLI.md)。
 
 ## 启动
 

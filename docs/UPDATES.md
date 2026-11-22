@@ -10,7 +10,7 @@ Android 使用独立的 `android-v<版本>` 标签与单一 APK，不使用本�
 
 启动时后台检查公开 GitHub Releases。没有仓库、没有桌面 Release 或已经是最新版时，不显示 New。离线自动检查不会弹出阻断窗口；设置最下面“关于 → 版本”可手动检查，“仓库”链接可直接打开 GitHub。
 
-发现新版本后，标题栏版本号旁显示 New。点击查看 Release 更新日志，选择取消或下载。点击下载后日志弹窗立即关闭，下载进度显示在右上角提示条，右侧可取消。取消会删除本次下载及解压暂存。下载校验完成后自动保存播放状态并重启安装，无需再次点击；更新成功后删除下载 ZIP。日志文本可选择复制，但不可编辑且不显示 tooltip。
+发现新版本后，标题栏软件名旁显示 New。点击查看 Release 更新日志，选择取消或下载。点击下载后日志弹窗立即关闭，下载进度显示在右上角提示条，右侧可取消。取消会删除本次下载及解压暂存。下载校验完成后自动保存播放状态并重启安装，无需再次点击；更新成功后删除下载 ZIP。日志文本可选择复制，但不可编辑且不显示 tooltip。
 
 必须使用可写安装目录；只读目录需要迁移至可写目录或重新运行安装程序。安装版默认使用当前用户的可写程序目录。不要在数据迁移期间重启更新。
 
@@ -28,9 +28,11 @@ Release 标签可为 `desktop-v<版本>` 或 `v<版本>`。程序按语义版本
 
 更新检查会对所有符合条件的 Release 按数字语义版本排序，不使用 GitHub 返回列表的第一项判定最新版本。例如 `beta.11 > beta.10 > beta.8`。GitHub 网页对同日预发布后缀的排序可能与数字语义版本不同；下载当前版本应使用 README 的版本链接。
 
+GitHub REST API 达到匿名请求限额时，软件更新使用官方公开 Release 订阅源和同一 Release 的 `SHA256SUMS.txt`，仍按产品、架构以及包内清单验证下载内容。冷却期间软件和插件暂缓调用 REST API，短时间内重复检查共用结果。
+
 `scripts/publish-desktop.ps1 -CleanOnly -SkipInstaller` 将从全新 artifacts 暂存目录生成 ZIP，输出到 `publish/desktop/archives`，不读取或覆盖正在使用的发布目录。macOS ZIP 解压到 `Nonet.app` 内；可执行文件路径为 `Contents/MacOS/Nonet`，Windows 为 `Nonet.exe`，Linux 为 `Nonet`。
 
-ZIP 根目录包含 `NonetMusicPlayer.update.json`，声明 schema、version、rid 和每个程序文件的 SHA-256；macOS 的文件从 `.app` 内的 Contents 起组织。下载还要求 GitHub 资产提供 `sha256:` digest。[GitHub Release 资产 API](https://docs.github.com/en/rest/releases/assets?apiVersion=2022-11-28)定义了 digest 和下载链接字段。
+ZIP 根目录包含 `NonetMusicPlayer.update.json`，声明 schema、version、rid 和每个程序文件的 SHA-256；macOS 的文件从 `.app` 内的 Contents 起组织。整个 ZIP 的 SHA-256 来自 GitHub Release 资产的 `digest` 字段，使用公开订阅源时则读取同一 Release 的 `SHA256SUMS.txt`。[GitHub Release 资产 API](https://docs.github.com/en/rest/releases/assets?apiVersion=2022-11-28)
 
 只接受预设仓库的 HTTPS 资产，校验大小、整体摘要和逐文件摘要；拒绝未列出的文件、路径穿越、符号链接、重复路径和用户数据目录。摘要防止损坏和未经预期的文件改变，但不是独立的发布者签名；仓库账户安全仍很重要。
 

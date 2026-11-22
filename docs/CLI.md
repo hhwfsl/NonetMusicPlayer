@@ -1,6 +1,6 @@
 # 命令行播放器
 
-NonetMusicPlayerCli 0.4.0-beta.34 是无图形框架依赖的播放器。发布程序名为 `nonet`，使用独立数据目录和音频会话。支持队列、平台搜索、歌词管理、小时统计、互听歌单封面与插件歌曲转发，并提供在线远端曲库投影、只读来源与丰富歌曲信息，详见 [功能对照](CLI_DESKTOP_PARITY.md)。
+NonetMusicPlayerCli 0.4.0-beta.35 是无图形框架依赖的播放器。发布程序名为 `nonet`，使用独立数据目录和音频会话。支持队列、平台搜索、歌词管理、小时统计、互听歌单封面与插件歌曲转发，并提供在线远端曲库投影、只读来源与丰富歌曲信息，详见 [功能对照](CLI_DESKTOP_PARITY.md)。
 
 ## 启动与 PATH
 
@@ -88,6 +88,8 @@ CLI 可用于纯命令行登录、SSH，不依赖 Avalonia、X11、Wayland 或�
 ## 软件更新
 
 `nonet updates check` 显示当前 CLI 版本以及可安装的同架构更新。`nonet updates install -y` 下载并校验正式 CLI 包，保存数据后退出，由独立助手完成替换。命令输出的 `resultPath` 指向完成结果。助手完成后重新运行 `nonet` 即可，原有 Data 和替换前文件均可保留。
+
+GitHub REST API 限流时，两个命令通过公开发布订阅源和该 Release 的 `SHA256SUMS.txt` 查找 CLI 更新。CLI 比较 ZIP 的独立版本号，安装时校验整个 ZIP 及包内文件。
 
 随机模式先对整个范围排序再顺序播放，手动选歌重新洗牌；退出随机恢复来源顺序。`queue move <id> <位置>` 只改队列，不改歌单，重启保留实际顺序。统计页显示最近 24 小时播放时长，`statistics history` 查询会话、连续播放区间、事件及小时明细；暂停、拖动进度和解码停滞不凭墙上时间累计。
 

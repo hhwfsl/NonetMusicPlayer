@@ -64,6 +64,21 @@
     "en-US": "Unable to check for updates. Try again later.",
     "ja-JP": "更新を確認できません。後でもう一度お試しください。"
   },
+  "Update.GitHubApiRateLimited": {
+    "zh-CN": "GitHub 暂时限制了更新请求，请稍后再检查。",
+    "en-US": "GitHub is temporarily limiting update requests. Try again later.",
+    "ja-JP": "GitHub が更新リクエストを一時的に制限しています。後でもう一度お試しください。"
+  },
+  "Update.GitHubPublicFeedFailed": {
+    "zh-CN": "GitHub 更新接口已限流，暂时也无法读取公开发布信息。请稍后再检查。",
+    "en-US": "GitHub is rate limiting the update API, and the public release information is unavailable. Try again later.",
+    "ja-JP": "GitHub の更新 API が制限され、公開リリース情報も取得できません。後でもう一度お試しください。"
+  },
+  "Update.PublicReleaseNotes": {
+    "zh-CN": "已从 GitHub 的公开发布源取得此版本。更新说明见 {0}",
+    "en-US": "Found through GitHub's public release feed. Release notes are available at {0}",
+    "ja-JP": "GitHub の公開リリースフィードから取得しました。更新履歴は {0} をご覧ください。"
+  },
   "Update.New": {
     "zh-CN": "新版本",
     "en-US": "New release",

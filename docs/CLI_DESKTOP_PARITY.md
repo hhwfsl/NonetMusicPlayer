@@ -1,6 +1,6 @@
 # 桌面终端与 CLI 功能对照
 
-桌面 0.4.0-beta.51 / CLI 0.4.0-beta.34 功能对照。两种终端使用同一命令目录、参数检查和危险操作确认，`nonet help` 只列当前宿主支持的命令。CLI 三平台 ZIP 随桌面 beta.51 发布，Android beta.12 独立发布。
+桌面 0.4.0-beta.52 / CLI 0.4.0-beta.35 功能对照。两种终端使用同一命令目录、参数检查和危险操作确认，`nonet help` 只列当前宿主支持的命令。CLI 三平台 ZIP 随桌面 beta.52 发布，Android beta.12 独立发布。
 
 互听同步包括歌单描述、独立封面及修订缓存、提供端插件解析和认证 HTTPS/Range 转发。`playlist list` 与 TUI 同时列本机和只读远端歌单，远端 ID 为 `peer:<设备ID>:<原歌单ID>`，可用于 `playlist tracks` 和 `queue play`，读取时按需缓存歌单封面。音乐、专辑、艺术家及本地搜索包含当前连接的远端歌曲，断开即撤掉投影；已保存个人引用、日统计和小时图表保留。未收藏的互听歌曲同样按本机真实播放累计，提供端纯转发不计账。
 
@@ -21,7 +21,7 @@
 | 插件 | `plugins list/install/enable/disable/uninstall/config/schema/refresh/info/reload/state/invoke/trust` |
 | 局域网互听 | `network sharing/invitation/connect/requests/accept/reject/peers/playlists/tracks/play/disconnect/renew/status`；显式批准后建立双向只读音乐共享 |
 | 设置与备份 | `settings list/get/set/reset`、`data backup/restore`；各宿主只列自身设置，禁止 CLI 使用桌面资料目录 |
-| 软件更新 | `updates check/install`；校验本宿主对应版本和 RID。桌面更新后自动重启，CLI 助手在退出后完成替换 |
+| 软件更新 | `updates check/install`。GitHub API 限流时读取公开发布源，按宿主版本和 RID 验证 ZIP。桌面更新后自动重启，CLI 助手在退出后完成替换 |
 
 CLI 新增“播放队列”“平台搜索”“设备互听”TUI 栏目。队列和歌单可 Ctrl+↑↓ 调整顺序；搜索页 S 选择来源并输入关键词、L 加载下一页；统计页展示正常高度的最近 24 小时文字图表。全部非图形操作可由 Ctrl+K 菜单选择并填写参数。窄终端优先显示当前栏目，不要求固定分辨率。
 

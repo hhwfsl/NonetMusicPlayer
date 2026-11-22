@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text.Json;
+using NonetMusicPlayer.Core.Network;
 using NonetMusicPlayer.Core.Persistence;
 
 namespace NonetMusicPlayer.Core.Plugins;
@@ -19,8 +20,10 @@ public sealed class PluginReleaseDownloader : IDisposable
 {
     public const long MaximumBytes = 128L * 1024 * 1024;
     private readonly HttpClient _http;
+    private readonly GitHubApiCooldown _apiCooldown;
     public PluginReleaseDownloader(HttpMessageHandler? handler = null)
     {
+        _apiCooldown = handler is null ? GitHubApiCooldown.Shared : new();
         _http = new HttpClient(handler ?? new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(120) };
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("NonetMusicPlayer-PluginUpdater/1.0");
     }
@@ -103,9 +106,18 @@ public sealed class PluginReleaseDownloader : IDisposable
     {
         for (var redirects = 0; redirects <= 5; redirects++)
         {
-            if (api) { if (uri.Scheme != "https" || uri.Host != "api.github.com") throw new InvalidDataException("不安全的 Release API 重定向。"); }
+            if (api)
+            {
+                if (uri.Scheme != "https" || uri.Host != "api.github.com") throw new InvalidDataException("不安全的 Release API 重定向。");
+                if (_apiCooldown.IsActive) throw new GitHubRateLimitException();
+            }
             else ValidateDownloadUri(uri);
             var response = await _http.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+            if (api && _apiCooldown.Observe(response))
+            {
+                response.Dispose();
+                throw new GitHubRateLimitException();
+            }
             if ((int)response.StatusCode is >= 300 and < 400 && response.Headers.Location is { } target) { uri = target.IsAbsoluteUri ? target : new Uri(uri, target); response.Dispose(); continue; }
             if (!response.IsSuccessStatusCode) { var status = response.StatusCode; response.Dispose(); throw new HttpRequestException(status is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests ? "GitHub 访问受限，请稍后重试或使用文件导入。" : "无法下载插件，HTTP " + (int)status, null, status); }
             return response;
