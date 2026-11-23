@@ -82,12 +82,13 @@ public sealed partial class ExtensionSession
                     ["capabilities"] = Strings(ExtensionContract.Capabilities), ["slots"] = Strings(ExtensionContract.Slots),
                     ["hooks"] = Strings(UniversalExtensionContract.Hooks),
                     ["pluginServices"] = new JsonArray(_manager.Installed.Where(p => p.Enabled && p.Id != Manifest.Id).SelectMany(p => p.ProvidedServices.Select(n => (JsonNode?)JsonValue.Create("plugin:" + p.Id + "/" + n))).ToArray()), ["services"] = Strings(["commands", "catalog", "config", "interaction", "files.pick", "lyrics", "dialogs.confirm", "dialogs.notify", "dialogs.prompt", "ui", "development", .. UniversalExtensionContract.Services]),
+                    ["interactiveOperations"] = new JsonObject { ["network"] = Strings(["open", "set-sharing", "set-approval-wait", "disconnect"]), ["styles"] = Strings(["morph"]) },
                     ["commands"] = ExtensionCatalog(), ["pluginId"] = Manifest.Id,
                     ["state"] = Manifest.Permissions.Contains("music-read") ? HostState() : new JsonObject { ["page"] = _manager.ExtensionViewModel.Page } };
             case "query":
                 var operation = args["operation"]?.GetValue<string>() ?? "status";
                 // 只读查询采用与终端相同的业务源，但先分页再脱敏，避免完整音乐库进入进程帧。
-                if (operation is not ("status" or "music.list" or "music.info" or "playlist.list" or "queue.list" or "history.list" or "statistics" or "statistics.history" or "player.devices" or "settings.list" or "settings.get" or "plugins.list" or "selection.list"))
+                if (operation is not ("status" or "music.list" or "music.info" or "music.sources" or "playlist.list" or "playlist.tracks" or "queue.list" or "history.list" or "statistics" or "statistics.history" or "statistics.hours" or "player.devices" or "settings.list" or "settings.get" or "plugins.list" or "plugins.info" or "selection.list" or "album.list" or "album.tracks" or "artist.list" or "artist.tracks" or "lyrics.show" or "data.info"))
                     throw new InvalidDataException("Not a query operation.");
                 var arguments = (args["arguments"] as JsonArray ?? []).Select(a => a!.GetValue<string>()).ToArray();
                 var command = UniversalPluginCommandPolicy.ValidateFor(new(request.Id, operation, arguments), Manifest.Permissions);
@@ -101,7 +102,8 @@ public sealed partial class ExtensionSession
                     return new() { ["success"] = true, ["data"] = PluginCommandPolicy.Sanitize(history["items"]), ["total"] = history["total"]!.DeepClone(), ["offset"] = offset, ["limit"] = limit };
                 }
                 if (PagedQuery(operation, arguments, offset, limit) is { } page) return page;
-                var result = await Owner.Commands.ExecuteAsync(command, cancellationToken: _lifetime.Token);
+                // 插件动作可由桌面终端发起，嵌套查询复用已持有的命令上下文。
+                var result = await Owner.Commands.ExecuteFromExtensionAsync(command, cancellationToken: _lifetime.Token);
                 var total = result.Data is JsonArray list ? list.Count : 1;
                 var data = result.Data is JsonArray array ? new JsonArray(array.Skip(offset).Take(limit).Select(a => a?.DeepClone()).ToArray()) : result.Data;
                 return new() { ["success"] = result.Success, ["data"] = PluginCommandPolicy.Sanitize(data), ["total"] = total, ["offset"] = offset, ["limit"] = limit };

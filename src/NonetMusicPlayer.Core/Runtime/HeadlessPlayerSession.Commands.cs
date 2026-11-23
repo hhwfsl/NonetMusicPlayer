@@ -24,7 +24,7 @@ public sealed partial class HeadlessPlayerSession
     {
             ObjectDisposedException.ThrowIf(_disposed, this); AccountListening();
             // 插件重启或配置变化后旧 loopback 地址可能已失效，不能沿用互听的短期解析缓存。
-            if (command.Name is "plugins.enable" or "plugins.disable" or "plugins.uninstall" or "plugins.reload" or "plugins.refresh" || command.Name == "plugins.config" && command.Arguments.Count > 1) _lanPlaybackSources.Clear();
+            if (command.Name is "plugins.enable" or "plugins.disable" or "plugins.uninstall" or "plugins.reload" or "plugins.refresh" or "plugins.update" || command.Name == "plugins.config" && command.Arguments.Count > 1) _lanPlaybackSources.Clear();
             if (command.Name is "player.play" or "player.pause" or "player.resume" or "player.stop" or "player.next" or "player.previous" or "player.seek" or "queue.play" or "queue.select" or "network.play") _lanResume = null;
             var undoSnapshot = Undoable(command.Name) ? JsonSerializer.Serialize(State, CoreJson.Options) : null;
             string Arg(int n) => CommandResults.Required(command, n);
@@ -94,6 +94,13 @@ public sealed partial class HeadlessPlayerSession
                     var changed = JsonSerializer.SerializeToNode(State.Settings, CoreJson.Options)!.AsObject(); var setting = changed.Select(p => p.Key).FirstOrDefault(k => k.Equals(Arg(0), StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.UnknownSetting"));
                     var settingValue = CommandResults.ParseSettingValue(Arg(1)); SettingsContract.Validate(setting, settingValue); changed[setting] = settingValue; var replacement = changed.Deserialize<HeadlessPlayerSettings>(CoreJson.Options) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.InvalidSettings")); replacement.Validate(); ApplySettings(replacement); break;
                 case "settings.reset": ApplySettings(new HeadlessPlayerSettings { LyricsFolder = State.Settings.LyricsFolder, BackupFolder = State.Settings.BackupFolder }); break;
+                case "data.info":
+                    data = new JsonObject { ["edition"] = "cli", ["dataDirectory"] = DataDirectory, ["backupDirectory"] = BackupDirectory, ["lyricsDirectory"] = LyricsDirectory }; save = false; break;
+                case "data.backup-directory":
+                    var backupDirectory = Path.GetFullPath(Arg(0));
+                    PluginPathPolicy.RejectLinkedAncestors(backupDirectory);
+                    Directory.CreateDirectory(backupDirectory);
+                    State.Settings.BackupFolder = backupDirectory; break;
                 case "data.backup": Save(); if (File.Exists(Arg(0))) throw new IOException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.BackupExists")); File.Copy(StatePath, Path.GetFullPath(Arg(0)), false); break;
                 case "data.restore":
                     var restored = ParseState(Arg(0)); Save(); File.Copy(StatePath, StatePath + ".before-restore-" + DateTime.UtcNow.ToString("yyyy-MM-dd-HHmmssfff"), false);
@@ -112,7 +119,7 @@ public sealed partial class HeadlessPlayerSession
                         using var downloader = new PluginReleaseDownloader(); var assets = await downloader.ResolveAsync(Arg(0), cancellationToken);
                         if (assets.Count > 1) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.MultiplePackages"));
                         using var package = await downloader.DownloadAsync(assets[0], Path.Combine(DataDirectory, "Plugins"), new Progress<double>(percent => PluginDownloadProgress?.Invoke(this, percent)), cancellationToken);
-                        Plugins.Install(package.Path);
+                        Plugins.Install(package.Path, PluginReleaseDownloader.RepositoryFromRelease(Arg(0)).Coordinate);
                     }
                     else Plugins.Install(Arg(0)); break;
                 case "plugins.enable": Plugins.SetEnabled(Plugins.Find(Arg(0)), true); break;
@@ -121,6 +128,8 @@ public sealed partial class HeadlessPlayerSession
                 case "plugins.config": var plugin = Plugins.Find(Arg(0)); if (command.Arguments.Count > 1) Plugins.Configure(plugin, Arg(1)); else { data = JsonNode.Parse(plugin.Configuration); save = false; } break;
                 case "plugins.schema": data = Plugins.Schema(Plugins.Find(Arg(0))); save = false; break;
                 case "plugins.refresh": await RefreshProviderAsync(Arg(0), cancellationToken); break;
+                case "plugins.check-updates": data = await CheckPluginUpdatesAsync(command.Arguments.FirstOrDefault(), cancellationToken); save = false; break;
+                case "plugins.update": data = await UpdatePluginAsync(Plugins.Find(Arg(0)), cancellationToken); break;
                 default: (data, save) = await ExecuteAdvancedAsync(command, cancellationToken); break;
             }
             if (undoSnapshot is not null) { _undoLibrary.Push(undoSnapshot); if (_undoLibrary.Count > 100) { var keep = _undoLibrary.Take(100).Reverse().ToArray(); _undoLibrary.Clear(); foreach (var item in keep) _undoLibrary.Push(item); } }

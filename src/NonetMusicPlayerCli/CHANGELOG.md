@@ -1,5 +1,9 @@
 # NonetMusicPlayerCli Changelog
 
+## 0.4.0-beta.36 · 2026-11-23
+
+- 新增 `plugins check-updates`、`plugins update`、`data info`、`data backup-directory`。远程插件安装记住来源仓库，更新验证包的平台、稳定 ID 和版本。
+
 ## 0.4.0-beta.35 · 2026-11-22
 
 - `updates check` 和 `updates install` 在 GitHub REST API 限流时改用公开发布订阅源。按 CLI 独立版号和架构选择 ZIP，校验发布清单和包内 SHA-256。

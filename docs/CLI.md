@@ -1,6 +1,6 @@
 # 命令行播放器
 
-NonetMusicPlayerCli 0.4.0-beta.35 是无图形框架依赖的播放器。发布程序名为 `nonet`，使用独立数据目录和音频会话。支持队列、平台搜索、歌词管理、小时统计、互听歌单封面与插件歌曲转发，并提供在线远端曲库投影、只读来源与丰富歌曲信息，详见 [功能对照](CLI_DESKTOP_PARITY.md)。
+NonetMusicPlayerCli 0.4.0-beta.36 是无图形框架依赖的播放器。发布程序名为 `nonet`，使用独立数据目录和音频会话。支持队列、平台搜索、歌词管理、小时统计、互听歌单封面与插件歌曲转发，并提供在线远端曲库投影、只读来源与丰富歌曲信息，详见 [功能对照](CLI_DESKTOP_PARITY.md)。
 
 ## 启动与 PATH
 
@@ -98,5 +98,7 @@ GitHub REST API 限流时，两个命令通过公开发布订阅源和该 Releas
 发布脚本生成 Windows/macOS/Linux x64 运行目录与 `publish/cli/archives` 纯净 ZIP，ZIP 包含版本/RID/逐文件 SHA-256 清单，Unix 程序带执行权限；归档不含 Data。三平台包仍需分别在目标系统验证音频。
 
 ## 插件包与重新接入
+
+`plugins check-updates [插件ID]` 查看插件可用版本。`plugins update <插件ID>` 通过已记录的仓库检查并安装同 ID 的新版包，确认前不会替换包。`data info` 显示数据、歌词和备份目录；`data backup-directory <目录>` 更改备份目录。
 
 原生插件按平台分别发布 `.impp`；CLI 只安装本机平台内容，同时兼容旧版 Contract v1 多平台包。更新保留插件 ID 和配置，拒绝降级。卸载时不删除文件会解除注册、保留原插件目录；再次导入同 ID、同版本的包即可接入，不会移动到 Retained。删除插件文件为不可撤销操作。

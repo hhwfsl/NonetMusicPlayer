@@ -24,6 +24,8 @@ public sealed partial class ExtensionSession
         {
             var layers = operation == "reset" ? [] : args["layers"]?.Deserialize(StyleSheetJson.Default.ListStyleSheet) ?? throw new InvalidDataException("Missing style layers.");
             foreach (var sheet in layers) StyleSheetContract.Validate(sheet);
+            if (Manifest.SupportsApprovalModes && !await ConfirmExtensionAsync("styles." + operation, true, L10n.T("Extensions.ApplyLayoutConfirm")))
+                return new() { ["success"] = false, ["reason"] = "User declined; do not retry." };
             // 信任由插件启用审批建立；后台重启恢复风格不重复打断，但不能提升插件权限。
             Owner.ApplyInterfaceLayers(Manifest.Id, layers);
             return new() { ["success"] = true, ["count"] = layers.Count };

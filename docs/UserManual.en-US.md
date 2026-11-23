@@ -1,190 +1,40 @@
-# Nonet User Manual
+# Nonet User Guide
 
-Desktop version 0.4.0-beta.48. Chinese, Japanese and English interfaces provide the same features.
+> For desktop version 0.4.0-beta.53.
 
-Album and artist cards reuse visible controls and load bounded thumbnails in the background. Rapid scrollbar changes render the latest viewport and cancel outdated artwork requests; playlist cards also load artwork asynchronously. Leaving a page or sustained minimization releases card pixels, and restoring the window reloads them without moving the viewport. Song information now groups available tags, audio specifications and local file details; optional missing tags stay hidden and the Close button remains accessible in small windows.
+## Import and play music
 
-Local revision: dragging tracks shows a translucent copy that follows the pointer while neighboring rows animate into place. Queue rows no longer have drag dots; touch and pen use a whole-row long press. Changing the upper-right search query or source replaces previous results. New terminal commands cover queue selection/reordering/popovers, source search and pagination, hourly statistics, lyrics and plugin actions. `window default-size` restores and centers the default window size. Run `nonet help` for current commands; see COMMANDS.md for parameters. The standalone CLI now shares the queue, search, playlist, lyrics, statistics, data-plugin and approved LAN workflows; windows and themes remain desktop features.
+1. Open Playlists in the sidebar and select Liked Songs or create a playlist.
+2. In the playlist toolbar, choose Add Music or Add Folder. You can also drop audio files into the playlist. Nonet references the original files, so keep them accessible.
+3. Double-click a song to play it. Use the player bar to pause, skip, adjust volume, or seek. Drop an external file onto the player bar for temporary playback. Like it or add it to a playlist from More to keep it in your library.
 
-On Windows, the window appears at its final centered position after the first frame is ready, avoiding a white flash and subsequent movement. Tray reopening retains its current position. The minimum size remains 640×480 logical pixels.
+## Find music and manage playlists
 
-The title bar shows the app name followed by New when an update is available; version details remain in About. Plugin actions form balanced rows and move below the text in narrow cards. Unknown terminal commands print “Unknown command” directly. Reordering tracks has no floating hint. Windows handles title-bar mouse dragging, double-clicking and snapping directly, replacing the previous drag-coordinate workaround. The minimum window size is 640×480.
+- Open Music for shortcuts to the full song, album, and artist lists. Use a page search to find entries in its current list. To search a music platform, enable its source plugin and select the platform in the top-right search box.
+- Drag songs to reorder a playlist. Drag playlists in the sidebar to reorder them. A song’s More menu lets you view its details, add it to another playlist, or remove it from the current one.
+- Use a playlist’s More menu to edit its name, description, or cover, and to import or export M3U. Use the toolbar’s batch actions to work with several songs at once.
 
-## Nearby libraries
+## Play queue
 
-Connect both devices to the same trusted LAN. Open Nearby libraries on the source, enable sharing, then paste its five-minute invitation on the other device. Shared playlists include their descriptions and covers. Desktop plugin tracks are resolved by the enabled plugin on the computer and streamed through the paired HTTPS connection to the phone; the phone needs no desktop plugin. Keep the source computer online. Account credentials, plugin playback URLs, controls, settings, history and statistics are not synchronized. Use the matching local desktop and Android builds for full playlist artwork and description display; older published packages lack this revision.
+Select the queue button next to Desktop Lyrics on the player bar. Select a track to play it, or drag tracks to change the order. Select the queue button again, click outside the panel, or press Esc to close it.
 
-Like a remote track or add it to a local playlist to retain a Desktop/Mobile reference, not an audio download. Explicit disconnect removes temporary libraries; background sleep, temporary network loss and idle time retain pairing and playlists while retrying. Recovery reuses the session and resumes interrupted playback at its retained position; a manual pause or track change cancels automatic resume. A force-stopped process or restarted sharing service requires pairing again. Sharing is off at startup and stops on exit. Allow only private-network firewall access; do not expose the service to the internet. Android shows a foreground notification with a Stop sharing action.
+Use the playback mode button to switch between repeat list, repeat one, and shuffle. Shuffle creates a queue that plays in order. Choosing a song manually reshuffles the queue starting with that song.
 
-## Background-based theme color
+## Lyrics and Desktop Lyrics
 
-Settings → Appearance → Use a theme color from the background is off by default. Enable it to extract a representative color now and whenever the background changes, without restarting. No background means no color change. Disabling the option or removing the background keeps the last color for manual adjustment. Analysis runs in the background, not continuously.
+- Click the cover on the player bar to open the lyrics page. Click it again to return. Scroll to preview a line and select the play button next to it to jump to that timestamp.
+- Import a track with a matching .lrc beside it, or use More on the player bar to import LRC or TXT for the current track. Change the lyrics folder or timing offset in Settings.
+- Select Desktop Lyrics to open a separate lyrics window. Hover over the lyrics to move, resize, or lock it. Use the unlock button on the player bar to regain control.
 
-Hover over a button to see its full name and any existing action guidance. Hints follow the current language and button state. Ellipsized text, read-only paths and selections also show their full content; long hints wrap without requiring a wider window.
+## Plugins and listening between devices
 
-## Getting started
+- In the Plugin Center, import an .impp file or enter a public GitHub Release link. Review the source and permissions, enable the plugin, and use its gear button to configure it. Plugins with pages appear in the sidebar. To change a subscribed playlist, edit it on the music platform and let Nonet sync it.
+- Open the device listening page on both devices on the same local network. Enable sharing and copy an invitation on one device. Paste it on the other, then approve the connection on the device that issued it. Keep the device providing a track online during playback.
 
-Keep the complete platform folder. Windows ZIPs and installers are available for x64, x86 and ARM64, with Windows 10 22H2 as the minimum. Linux supports x64/ARM64; macOS remains x64. Choose the matching package and never mix native libraries from different architectures. ARM64, macOS and Linux builds await testing on corresponding devices. The executable directory must be writable; generated data defaults to its Data folder. Native plugins also require matching architecture support.
+## Settings, listening statistics, and updates
 
-Select or create a playlist, then use its Add Music / Add Folder icons (with tooltips), or drop files into that playlist. Folder import includes subfolders. Dropping files on the player bar or opening audio through the OS starts temporary playback without importing it into playlists. Use Favorite or Add to Playlist to keep it. Original music stays in place. Tags and artwork are read during import; matching song.lrc / song.txt files are copied to the separate lyrics directory.
-
-## Music home and playback
-
-Startup opens Music, a single-screen overview of collection counts, listening time for the last 24 hours, recent tracks and playlists. Playlist covers stay square and resize for smaller windows without page scrolling. Click a count to open the full collection; the playlists section's View All opens the full playlist page, including playlists from connected devices. Hourly listening time accumulates from versions that record it; older play counts are not converted into duration. Playback restoration is independent of startup navigation. Minimizing/restoring or regaining focus preserves the current scroll position. Explicitly opening songs/recent starts at the top; only the playlist that owns playback locates its playing song. Deleting another playlist from the sidebar does not leave the current page.
-
-A floating drag hint identifies temporary playback, the receiving playlist, lyric association or reordering. Leaving the window clears the hint without changing source files.
-
-Desktop shuffle randomizes the current playback source once and plays that queue in order. Previous walks backwards; wrapping keeps the same order. Manually selecting any song, including the current song, creates a fresh queue starting with it. Automatic advance, pause/resume and error recovery preserve the queue. The original playlist order stays intact.
-
-The queue button to the right of desktop lyrics opens a floating playback list. Click a song to play it. Click outside, click the button again or press Escape to close. Opening and closing can reverse during animation; the list adapts to the top player bar, smaller windows and both themes.
-
-## Player terminal and independent CLI
-
-The Terminal sits between Plugins and Settings. Enter commands after `nonet $ `; the `nonet` prefix is optional within a session, such as `nonet help` and `nonet player pause`. `nonet clear` clears display only; `nonet exit` returns to Home. Mouse, keyboard, plugins and commands share player state. Terminal logs are the exact records persisted to Logs; typed commands are not log entries. Confirm with y + Enter or `-y`, cancel with `-n`. Settings → Terminal provides opacity, font size, scrollback (1,000 by default, up to 10,000) and a minimum displayed log level. Filtering does not change disk logging. System shell commands are not executed.
-
-The standalone CLI executable is `nonet`, in `publish/cli`. Add its full release directory to user PATH to launch it from CMD, PowerShell, Linux or macOS terminals. It has no graphical dependency and uses independent data/playback. Playback still needs local audio services. PgUp reviews the application's bounded scrollback; the outer terminal controls its own buffer and font. Never use Desktop Data for CLI. Use `--stay` to keep playback after a command. See [CLI guide](CLI.md) and [command reference](COMMANDS.md).
-
-The optional precise lyric timing plugin contributes an item to the More menu in the player bar and a sidebar page. Choose a song (the current one is the default) and a lyric file, then start from the beginning, and press Space for each next line; line one is zero. Undo is available. Saving complete annotations creates and links an LRC without modifying the source file. Song changes/mode changes are locked while annotating; track end pauses. Cancel, navigation or disabling the plugin discards unsaved work and releases the restriction.
-
-## Song playback
-
-Search titles, artists, albums and providers. Enter, the magnifier or leaving the input applies the search; the cross clears it. Double-click a song or use its Play button. The player provides previous, play/pause, next, repeat modes, favorites, more actions, volume and desktop lyrics.
-
-The seek bar spans the top edge of the player. Click or drag to seek. Modes are repeat list, repeat one and shuffle. A red heart means the song belongs to the permanent Favorites playlist; click again to remove it. Volume and last playback position are saved, but startup does not autoplay.
-
-An unplayable song shows an error and advances to the next candidate. Playback stops if every song in the current list fails. Check the file path, encoding, output device and, for server tracks, the provider configuration. Windows taskbar previews offer previous, play/pause and next; this feature is Windows-only.
-
-Changing or losing audio output pauses playback, retains the track and position, and selects an available device. Press Play to continue; reconnect a device first if none are available. Output failures do not mark a song as unreadable. Only one instance runs per user across installation folders. Opening another audio file activates that instance and replaces its current temporary playback.
-
-Files dropped on the player bar always play temporarily, even while a playlist is open. Metadata, artwork and lyrics are read. Temporary audio enters recent history, but not the library, album/artist summaries or statistics. Favorite or Add to Playlist starts normal recording from that point. No temporary-playback page is opened.
-
-## Playlists, albums and artists
-
-Favorites cannot be deleted or renamed, but its cover and description can change. Other playlists can be created, renamed, edited, exported/imported as M3U and deleted without deleting music files. New additions appear first. Drag songs to reorder a playlist and drag sidebar playlists to reorder the sidebar. Column headings do not sort playlists.
-
-The playing highlight belongs only to the source playlist. Changing songs or returning to that playlist locates the playing song. Clicking a row does not select it. Enter Batch Actions to reveal song checkboxes and one tri-state Select All checkbox: unchecked, partly selected, or all selected. Click the checkbox to select/clear the entire list. Leaving batch mode clears selections.
-
-Library, Recent History and non-source playlists start at the top each time they are opened. The same song appearing in another playlist does not cause that playlist to scroll.
-
-Songs and playlists have context menus; touch users can use visible More buttons. Favorite songs show Remove from Favorites. Song information includes artwork, tags and the complete path, with selectable, copyable, read-only text. A separate Windows action opens the folder and selects the file. Albums and artists use cover tiles with options to replace or reset artwork.
-
-Cover selection opens a crop preview: drag the picture, zoom with the wheel or slider, or enter exact X/Y/side pixel values. Confirm to create a 320 × 320 managed cover; cancel keeps the current cover. Background and cover images are limited to 20 MB and checked for excessive pixel dimensions before decoding.
-
-## Lyrics
-
-Long desktop lyrics scroll forward with playback, never bounce. Word-timed lines follow the sung glyph; line-timed text estimates reading position until the next timestamp or the song ending. Pausing freezes the viewport, the line ending stays visible, and a new line or deliberate backward seek repositions it. Window size and font size remain unchanged.
-
-Click the player artwork to open a full-width lyric view with artwork on the left and lyrics on the right. Click again to return. Timed lyrics scroll automatically. Each wheel step previews one adjacent line; dragging with a mouse or touch snaps to the nearest centered line when released. Scrollbars are hidden. After scrolling stops, a Play button beside the centered line seeks to that line. Reopening the view restores the current playback line. Double-clicking lyrics does not seek. Preview leaves the playback-line highlight unchanged and returns to following after five idle seconds. Long lines wrap inside one timestamped row. The More menu in the player bar offers LRC/TXT import and Show Lyric File in Folder (Windows selects the file). Plain untimed text cannot provide precise line seeking.
-
-Desktop Lyrics is an independent window: minimizing or hiding the main player does not hide lyrics. The player button reflects the restored visibility and lock state. Both lines follow the theme color without displaced shadows. Hover text to reveal the frame; leaving hides it. Blank areas pass clicks through when the frame is hidden. While unlocked, drag the four edges to resize or drag elsewhere except buttons to move; position and dimensions are saved on release. Mouse and touch are supported. Settings → Lyrics → Desktop lyrics font size defaults to 28 px (14–48 px), applied on Enter or loss of focus. Translation text is always 68.75% of the primary size. Without a translation, only the current original line is shown, never the next line. Resizing and changing line length never rescale fonts. Long lines scroll horizontally inside the fixed window instead of automatically expanding it.
-
-Choose a year and month directly from the statistics calendar dropdowns. The non-editable year list covers the current year minus 100 through the current year plus 100 (201 choices) and supports scrolling and keyboard selection. Dates cannot exceed these bounds.
-
-Artist and album context menus and detail menus distinguish **Restore default cover**, which finds parsed song artwork, from **Use application default cover**, which forces the missing-artwork placeholder. A coverless first song does not hide artwork from other songs in the group. These choices persist across restarts.
-
-Lock from the lyric frame to prevent moving, selecting or closing it and pass all clicks through. The player-bar lyric button becomes Unlock; press it to unlock without hiding lyrics, then close if desired. Linux click-through requires X11 Shape; unsupported systems may show lyrics without full input transparency.
-
-Equal timestamps group the first line as the original and subsequent distinct lines as translations. Blank rows are omitted and translation text is slightly smaller than the original. This is a common bilingual-file convention, not language detection. Multiple timestamps and millisecond offset tags are supported; hovering does not highlight the lyric background.
-
-LRC accepts `[mm:ss]`, `[mm:ss.xx]`, `[mm:ss.xxx]`, `[mm:ss:xx]` and `[mm:ss;xx]`. Fractions are interpreted by their digit count: `.12`, `:12` and `;12` mean 120 milliseconds, while `.123` means 123 milliseconds. These formats also work with word timestamps and offset tags.
-
-## Settings and appearance
-
-On Windows, macOS and Linux, Settings → Appearance can place window buttons on either side. Right: minimize, maximize/restore, close. Left: close, minimize, maximize/restore. Changes apply immediately and persist. macOS defaults to the left; Windows/Linux default to the right.
-
-Language changes apply immediately. The default theme follows the system; Light and Dark are also available. The theme color applies to selection and interaction states. Select a color with the wheel, RGB fields or hexadecimal input. Background image and available control styles provide further customization.
-
-Choose navigation and player positions from dropdowns in Settings → Layout; drag region handles to resize. Plugins provide deeper layout customization and custom controls. User JSON layout files are no longer loaded. Disable the plugin to restore the original interface; Ctrl+Shift+Esc disables UI extensions and opens the plugin manager. See UI_LAYOUT.md for the extension API.
-
-On Windows, window dots can be left or right. macOS defaults to left; Windows/Linux default to right, with existing preferences retained. Right order: minimize, maximize/restore, close. Left order: close, minimize, maximize/restore, with the logo, app name and version centered. Colors continue to identify the same functions. My Music and Plugins sections can collapse; playlists can also collapse with the button next to New Playlist; the state is saved. Plugins is hidden when no plugin pages are available.
-
-Search Settings to locate an option; all sections remain expanded. Blank areas also respond to wheel scrolling. The manual button beside the Settings title opens this manual. Click path entries to open their directories. Reset Settings requires confirmation and retains music, playlists, plugins, statistics and storage directories.
-
-Drag the navigation boundary to change its width. Use the short central grip below the seek bar and above playback controls to change player height; dragging the seek bar never resizes the player. Both support mouse and touch and save their sizes. Resizing resets custom workspace coordinates to adjacent regions but keeps nested controls and a backup. Speed and equalizer controls have been removed.
-
-The main window remembers its normal size and opens centered on every fresh launch. Its position is never saved; maximizing or minimizing does not overwrite the remembered size. The first launch fits the monitor's logical work area, including portrait and high-DPI screens; saved dimensions are constrained to a smaller screen when necessary. Settings → Layout → Restore default window size restores the current screen's default dimensions and centers the window. Touch and pen can drag the custom title bar, including restoring a maximized window. Touch target sizing adapts automatically; no manual touch optimization switch is provided.
-
-Background images cover the whole window. Separate title, navigation, content and player opacity controls change only their background overlays, not text or buttons; lower values reveal more of the image. Window opacity still affects the entire app. Select an installed font or import a TTF/OTF/TTC file up to 32 MB for immediate use with character fallback. A managed copy is kept in Data/Fonts, without installing the font into the OS. Choosing Default Font restores the original font.
-
-Playback settings retain the latest 1,000 tracks by default. Set the history limit to zero to disable it. Lowering the limit removes older history entries, not songs or listening statistics.
-
-Text and number inputs apply on Enter or losing focus, including clicks in blank areas. Invalid input leaves the last applied value unchanged. Multiline fields use Ctrl+Enter or leaving the field; Enter inserts a line break. Toggles, choices and sliders apply immediately. Plugin form edits are drafts until Save and Close.
-
-Minimize Memory Optimization is on by default. After the window stays minimized or hidden for about 0.8 seconds, rebuildable original artwork, background and unused thumbnail caches are released and background garbage collection is requested. Windows also returns idle resident pages. Pages, input, scroll position and playback are retained; desktop lyrics, device sharing and plugins continue. Restoring quickly cancels cleanup; images are decoded again as needed after restoration. Memory depends on the current pages, images and plugins, with no fixed ceiling. Close defaults to the system tray; choose direct exit in Settings if preferred. The tray menu contains only Open Application and Exit Application; Exit fully quits. If the system tray is unavailable, closing exits normally.
-
-Windows: register audio support in Settings, then choose Nonet in system Default Apps. Existing defaults are not overwritten automatically. Register again after moving the app. macOS: open the app, then use Finder Get Info → Open With → Change All. Linux: register the audio handler in Settings (xdg-utils required), then choose it in the file manager. OS registration writes an OS-maintained application entry; player data remains in its configured folder. macOS/Linux integration awaits platform testing.
-
-Shortcuts can be recorded, disabled, reset and saved immediately. Conflicts and invalid combinations prevent saving. Common defaults: Space play/pause, Ctrl+Left/Right previous/next, Ctrl+D favorite, Ctrl+O add music, Ctrl+L search and Ctrl+B batch mode. Inputs, sliders, selection controls and plugin games retain their own keys. Touch operation is supported through visible buttons and menus.
-
-## Listening statistics
-
-The seven-day and 24-hour charts show actual listening time and totals. Older daily totals without hourly timestamps remain intact; their hourly distribution is not estimated.
-
-Sessions, continuous playback intervals, positions, track/source snapshots and playback events are retained in local SQLite storage. Active playback checkpoints run about every five seconds; pause, seek, track changes and exit also save. Removing music references or clearing recent history retains statistics. Temporary playback may retain events but does not contribute to statistics. SQLite backups include details; older JSON backups restore only their existing summaries.
-
-The top four cards retain overall totals. A shared calendar selection controls daily, monthly and yearly panels for that date, its month and its year. Each shows total duration, play count and longest-listened / most-played songs and artists. Pausing, loading, seeking and unsaved temporary playback do not add listening time. Statistics stay local.
-
-## Plugins
-
-The update button sits between configuration and uninstall. GitHub imports check their original repository; local imports use developer-declared repository metadata. Importing or dropping a newer package with the same ID asks for confirmation and retains configuration. Equal versions need no update, older versions cannot overwrite newer ones. Legacy plugins without repository metadata remain usable and can be updated by importing a newer local package.
-
-Select or drag an .impp file into Plugin Center, review the author, type and permissions, then enable its switch. Only .impp packages are accepted. GitHub Release Import accepts public release-tag, latest or .impp asset URLs; the current platform asset is selected automatically. It downloads assets up to 128 MiB, not repository source code. Cards show basic metadata; the trash button disables before uninstalling. New installations are disabled by default. Enabled page plugins appear in the sidebar Plugins section.
-
-Download progress appears in a toast at the top right of the main window, not in a separate window. The Cancel button beside the progress bar cancels and removes partial data. Known sizes show a percentage; unknown sizes show a busy indicator. After download and verification, the progress toast disappears and a separate completion toast closes automatically after about four seconds. Download completion does not install or enable the plugin: review its information and permissions first.
-
-Games stop their timers when their page closes. Declarative pets may remain in a floating window until disabled, uninstalled or the player exits; their timers and subscriptions are then released. The snake sample uses arrows/WASD, Space to pause and R to restart. The music-cat sample can control playback, favorites and search, and display track-change messages.
-
-The configuration icon opens an in-app form generated from plugin_config_schema.json, with descriptions, toggles, choices, numbers and lists. Individual reset buttons restore defaults. Save and Close validates and applies; Close discards drafts. Only the developer schema defines the form. Missing or empty schemas show No configuration; users cannot add, remove or rename configuration fields. Provider More can also load its catalog. Providers communicate with an existing server; the player does not create a server. Password and sensitive authentication fields are session-only and must be entered again after restart. Native provider processes are not sandboxed; install only trusted plugins. PLUGIN_DEVELOPMENT.md describes interfaces and limitations.
-
-Background image opacity defaults to 50%; existing choices are retained. Background selection uses the same draggable crop preview as covers, with an application or original-image aspect ratio. The preview is on the left and exact parameters and Save are on the right, without scrolling the form. The right-hand navigation divider stays visible; a top-mounted player's resize grip moves to its lower edge.
-
-The Windows installer is in publish/desktop/windows_installer. It installs per user without administrator privileges by default and requires a writable destination. Upgrading and uninstalling preserve the Data folder and directory-choice file. Uninstall removes the application, not original music or externally configured data. Back up important data separately.
-
-## Data, backups and recovery
-
-Data contains references, playlists, settings, progress, statistics, covers, lyrics, plugins, layouts and logs. Nonet.bootstrap.json beside the executable records custom directory choices. Music files are not included in state backups.
-
-After applying a background, the managed Artwork/Backgrounds folder retains only the active image and up to two recent copies. A full application exit retains only the active image; without an active background, old managed image copies are removed. Original images, covers, other folders and non-image files are not removed. Hiding to the tray is not a full exit.
-
-Settings can change data and backup directories. Migration retains the original data and explains when the new directory takes effect; do not force the process to exit during copying. Follow the restart prompt when a directory change requires it. Recovery accepts a valid backup or an older state.json, archives the current state first and does not autoplay or delete music files.
-
-Back up the full Data folder separately from original music and external lyric folders. Moving the player does not move externally referenced music. If a path changes, make it accessible or reimport.
-
-## Troubleshooting
-
-- Missing or unplayable music: check paths, permissions, devices, network and provider settings.
-- Missing artwork: the file may have no embedded/adjacent artwork; customize playlist, album or artist covers.
-- Unsynchronized lyrics: import timed LRC and check the timing offset.
-- Invalid layout: disable the layout plugin, or press Ctrl+Shift+Esc to recover the plugin manager without clearing the library.
-- Plugin failures: check the package version, platform entry, permissions and configuration.
-- Diagnostics: bounded, rotating logs are in Data/Logs. Common credential fields are redacted; review logs for private information before sharing.
-
-## Lyrics, data and updates
-
-Inline `[time]` and `<time>` enhanced LRC fills each glyph from left to right in both lyric views, without whole-character opacity fading or displaced desktop shadows. Translation uses its own timestamps when present, otherwise the original line's completion ratio. Ordinary LRC keeps line highlighting. Hovering or dragging the playback slider previews the pointer target in minutes:seconds; hovering never seeks, and leaving hides the preview. Regaining focus immediately restores the current lyric position. Embedded lyrics are read directly from tags without exporting a separate file; manual lyric selection takes precedence.
-
-Recent removal only changes history. Albums and artists are read-only classifications. Removing the last playlist reference cleans application-generated metadata, artwork and lyric copies, never source audio or source lyrics. Confirmed Browse Songs deletion removes every playlist reference. M3U names use a translated `Playlist_<name>` prefix.
-
-Desktop state uses Data/library.db (SQLite), with incremental progress saves and consistent backups. Existing state.json is migrated but retained. CLI uses a separate source-generated JSON state and defaults to a character TUI. Tab / Shift+Tab switches pages, arrows select, Enter opens or executes, and Space toggles playback; F1–F7 are not used. Commands are entered only in Terminal, between Plugins and Help: Up / Down recalls history, PageUp / PageDown scrolls output, and Ctrl+L clears it. Settings has keyboard-editable fields. Ctrl+K opens the complete action picker and parameter forms; Tab selects fields, Ctrl+N adds a repeated argument, Enter submits, and Esc cancels. Destructive confirmation defaults to cancel; press Y to approve. Ctrl+D exits. See CLI.md for the full keyboard reference. Use `--repl` for a scrolling prompt or `--no-tui` for line mode.
-
-About is the last Settings section, with version, Check for Updates and repository link. Startup also checks in the background. A New badge opens readonly, tooltip-free release notes. Download closes this dialog and shows cancellable progress at the top right; cancellation removes partial data. Once verified, the app saves state and restarts automatically to install, then deletes the downloaded ZIP. Application files are replaced after exit and rolled back on replacement failure; data is excluded. The configured repository is https://github.com/hhwfsl/NonetMusicPlayer; a missing repository or compatible release simply provides no update. A published executable and writable installation folder are required.
-
-Uninstalling a plugin disables it first and asks whether to delete files or keep them in their original Plugins/<id> folder. Reimporting the same ID/version reconnects the plugin and restores configuration; downgrades are rejected. Deleting files is irreversible and produces no Retained copy. Providers may declare disable, uninstall and shutdown callbacks; the host disposes declarative page resources.
-
-This is prerelease software. Keep backups and avoid untrusted native process plugins.
-
-Back to Top is an icon button after Clear Search in Settings and after Batch Selection in track, recent, album and artist lists. It changes only the viewport, not playback or selected tracks.
-
-Plugin versions are checked in the background on startup. New appears beside an available update; click to review readonly notes and confirm. Updates use the same cancellable toast workflow, preserve ID/configuration, and require matching-platform assets. The folder button opens the installed plugin directory.
-
-## Background media, login startup and folder playlists
-
-Settings → Appearance accepts PNG, JPG, JPEG, still WebP and BMP backgrounds, up to 20 MB. Crop images, choose Fill or Fit, and adjust region opacity without modifying originals. Video, GIF and animated WebP/APNG backgrounds were removed. Old animated background settings are disabled with a notice; music playback is unaffected.
-
-Start at Login in Settings → Playback is off by default. Enabling it registers Nonet for the current user's desktop login. Disabling it or resetting settings removes that entry. System startup management and security policies remain effective.
-
-Use the sidebar playlist add button, then Create from Folders, to select multiple folders. Each folder becomes a separate playlist named after that folder; supported audio is imported recursively with covers and matching local lyrics. Empty folders create empty playlists. Canceling the picker creates nothing; canceling an active import retains playlists already created. Source audio is never deleted.
-
-Maximize and restore switch immediately. Lyrics preserve the previous page title and slide vertically from the player bar edge facing the lyrics area. Mode, More, volume and calendar popovers close on another click of their button or an outside click; the calendar scrolls within shorter windows.
-
-Lyrics now slide vertically from the player edge facing the lyrics area, keeping their original size. Popover buttons remain selected while open. The queue survives layout recomposition and navigation, including Qinglan 2.0.7; reimport the updated preset to replace its old copy.
+- Search Settings for the option you need. Use Appearance to change the theme, font, and background. Use Shortcuts to change key bindings. In Layout, restore the default window size to resize and center the window.
+- Open listening statistics to see playback time. Select a day in the calendar to view the associated daily, monthly, and yearly totals.
+- Back up or restore your library in Settings. If you move to another device, transfer the original audio files as well. The desktop app and standalone CLI use separate data folders.
+- Open Settings → About to view the version and check for updates. Select New next to Nonet to download an update. If an older version cannot check, use the repository link in About to download from GitHub Releases.
+- For keyboard commands and batch work, open Terminal in the sidebar and enter nonet help.

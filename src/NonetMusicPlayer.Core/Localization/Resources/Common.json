@@ -1004,6 +1004,11 @@
     "en-US": "User manual",
     "ja-JP": "ユーザーマニュアル"
   },
+  "Common.UserManualVersion": {
+    "zh-CN": "适用于桌面版 {0}。",
+    "en-US": "For desktop version {0}.",
+    "ja-JP": "デスクトップ版 {0} 対応。"
+  },
   "Common.TheUserManualCouldNotBeFound": {
     "zh-CN": "使用手册文件不存在。",
     "en-US": "The user manual could not be found.",
@@ -1643,6 +1648,16 @@
     "zh-CN": "最常听的歌曲",
     "en-US": "Top tracks",
     "ja-JP": "よく聴く曲"
+  },
+  "Common.MaximizeWindow": {
+    "zh-CN": "最大化",
+    "en-US": "Maximize",
+    "ja-JP": "最大化"
+  },
+  "Common.RestoreWindow": {
+    "zh-CN": "还原",
+    "en-US": "Restore",
+    "ja-JP": "元に戻す"
   },
   "Common.MaximizeRestore": {
     "zh-CN": "最大化 / 还原",

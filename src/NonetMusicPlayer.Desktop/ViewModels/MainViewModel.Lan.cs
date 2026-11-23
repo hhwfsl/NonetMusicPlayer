@@ -80,7 +80,8 @@ public sealed partial class MainViewModel
     public bool LanSharing => _lanServer is not null;
     /// <summary>通用扩展仅获得歌曲引用，不获得配对邀请、会话令牌或媒体 URL。</summary>
     internal IReadOnlyList<TrackItem> LanPeerTracks(string peerId) => _lanTracks.GetValueOrDefault(peerId) ?? [];
-    internal IEnumerable<TrackItem> CommandTracks => State.Tracks.Concat(State.RecentTemporaryTracks).Concat(_lanTracks.Values.SelectMany(t => t)).DistinctBy(t => t.Id);
+    internal IEnumerable<TrackItem> CommandTracks => State.Tracks.Concat(State.RecentTemporaryTracks).Concat(_temporaryTracks)
+        .Concat(SourceTracks("cloud-search")).Concat(_lanTracks.Values.SelectMany(t => t)).DistinctBy(t => t.Id);
     public string LanDeviceId
     {
         get

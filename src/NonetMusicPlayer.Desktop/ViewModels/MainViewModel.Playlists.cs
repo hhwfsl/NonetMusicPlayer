@@ -23,7 +23,7 @@ public sealed partial class MainViewModel
         "lyrics" => L10n.T("Playback.NowPlaying"), "settings" => L10n.T("Common.Settings"), "plugins" => L10n.T("Plugins.PluginManager"), "statistics" => L10n.T("Statistics.ListeningStatistics"), "devices" => L10n.T("Lan.Title"),
         _ => page.StartsWith("album:") ? page[6..] : page.StartsWith("artist:") ? page[7..] : State.Playlists.FirstOrDefault(p => "playlist:" + p.Id == page) is { } p ? p.IsSystem ? L10n.T("Playlists.LikedSongs") : p.Name : L10n.T("Playlists.Playlists")
     };
-    private IEnumerable<TrackItem> SourceTracks(string page)
+    internal IEnumerable<TrackItem> SourceTracks(string page)
     {
         if (page.StartsWith("lan:", StringComparison.Ordinal)) return LanSourceTracks(page);
         if (page == "cloud-search") { var sources = Plugins.MusicSearchSources.Select(p => p.Id).ToHashSet(StringComparer.Ordinal); return _cloudSearchTracks.Where(t => sources.Contains(t.ProviderId!)); }

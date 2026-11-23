@@ -2,7 +2,9 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using NonetMusicPlayer.Core.Commands;
 using NonetMusicPlayer.Core.Plugins;
+using NonetMusicPlayer.Core.Runtime;
 
 /// <summary>使用内存 HTTP 模拟仓库和 Release，不上传插件，也不连接真实私人仓库。</summary>
 internal static class PluginUpdateChecks
@@ -50,6 +52,32 @@ internal static class PluginUpdateChecks
         using var missing = new PluginReleaseDownloader(new FakeHttp(_ => new(HttpStatusCode.NotFound)));
         try { await missing.ResolveAsync("https://github.com/example/nonexistent/releases/latest"); throw new InvalidOperationException("Missing repo must fail"); }
         catch (HttpRequestException error) when (error.StatusCode == HttpStatusCode.NotFound) { }
+        // 用旧包与真实 CLI 路由验证检查、确认与升级，而不请求实际仓库。
+        var manifestPath = Path.Combine(source, "manifest.json");
+        File.WriteAllText(manifestPath, File.ReadAllText(manifestPath).Replace("1.1.0", "1.0.0"));
+        var prior = PluginPackageBuilder.Pack(source, Path.Combine(work, "old.impp"));
+        await using (var cli = new HeadlessPlayerSession(Path.Combine(work, "cli")))
+        {
+            var router = new PlayerCommandRouter(cli);
+            cli.Plugins.Install(prior);
+            var factory = typeof(HeadlessPlayerSession).GetField("_pluginDownloaderFactory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+            factory.SetValue(cli, (Func<PluginReleaseDownloader>)(() => new(new FakeHttp(request =>
+            {
+                if (request.RequestUri!.Host != "api.github.com") return new(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
+                var json = JsonSerializer.Serialize(new { tag_name = "v1.1.0", assets = new[] { new { name = "release.impp", browser_download_url = "https://github.com/example/nonet_plugin_check/releases/download/v1.1.0/release.impp", size = bytes.Length, digest = "sha256:" + Convert.ToHexString(SHA256.HashData(bytes)) } } });
+                return new(HttpStatusCode.OK) { Content = new StringContent(json) };
+            }))));
+            var check = await router.ExecuteAsync("plugins check-updates checks.update");
+            Check(check.Success && check.Data?[0]?["available"]?.GetValue<string>() == "1.1.0", "CLI command reports matching release");
+            var unconfirmed = await router.ExecuteAsync("plugins update checks.update");
+            Check(unconfirmed.RequiresConfirmation && cli.Plugins.Find("checks.update").Version == "1.0.0", "CLI plugin replacement requires explicit confirmation");
+            var upgrade = await router.ExecuteAsync("plugins update checks.update -y");
+            Check(upgrade.Success && upgrade.Data?["updated"]?.GetValue<bool>() == true && cli.Plugins.Find("checks.update").OriginRepository == "example/nonet_plugin_check", "CLI installs the verified package with provenance");
+            var backup = Path.Combine(work, "cli backup");
+            Check((await router.ExecuteAsync("data backup-directory '" + backup + "' -y")).Success, "CLI can set backup directory");
+            var data = await router.ExecuteAsync("data info");
+            Check(data.Success && data.Data?["backupDirectory"]?.GetValue<string>() == backup, "CLI reports the effective backup directory");
+        }
         Console.WriteLine("PASS plugin repository coordinates/provenance, ID/version policy, mocked Release, real package validation, progress/hash, missing repo, no uploads");
     }
     private static void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }

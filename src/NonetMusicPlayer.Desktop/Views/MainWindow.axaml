@@ -81,6 +81,7 @@
                                 Background="#FF5F57"
                                 Classes="window-control"
                                 Click="CloseWindow_Click"
+                                Cursor="Arrow"
                                 ToolTip.Tip="{ui:Loc Key='Common.Close'}" />
                             <Button
                                 x:Name="MinimizeWindowButton"
@@ -88,14 +89,14 @@
                                 Background="#FEBC2E"
                                 Classes="window-control"
                                 Click="MinimizeWindow_Click"
+                                Cursor="Arrow"
                                 ToolTip.Tip="{ui:Loc Key='Common.Minimize'}" />
                             <Button
                                 x:Name="MaximizeWindowButton"
-                                AutomationProperties.Name="{ui:Loc Key='Common.MaximizeOrRestore'}"
                                 Background="#28C840"
                                 Classes="window-control"
                                 Click="MaximizeWindow_Click"
-                                ToolTip.Tip="{ui:Loc Key='Common.MaximizeRestore'}" />
+                                Cursor="Arrow" />
                         </StackPanel>
                     </Grid>
                 </Border>

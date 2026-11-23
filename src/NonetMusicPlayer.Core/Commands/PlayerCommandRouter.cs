@@ -67,7 +67,12 @@ public sealed class PlayerCommandRouter(IPlayerCommandBackend backend)
         new("network.requests", "network.requests"), new("network.accept", "network.accept <request-id>"),
         new("network.reject", "network.reject <request-id>"), new("network.disconnect", "network.disconnect <peer-id|all>"),
         new("network.renew", "network.renew"), new("network.invitation", "network.invitation"),
-        new("network.playlists", "network.playlists <peer-id>"), new("network.tracks", "network.tracks <peer-id>"), new("network.play", "network.play <peer-id> [playlist-id] [track-id]")
+        new("network.playlists", "network.playlists <peer-id>"), new("network.tracks", "network.tracks <peer-id>"), new("network.play", "network.play <peer-id> [playlist-id] [track-id]"),
+        new("lyrics.open", "lyrics.open", DesktopOnly:true), new("lyrics.close", "lyrics.close", DesktopOnly:true), new("lyrics.toggle", "lyrics.toggle", DesktopOnly:true),
+        new("music.details", "music.details <track-id>", DesktopOnly:true), new("music.copy-link", "music.copy-link <track-id>", DesktopOnly:true),
+        new("playlist.edit", "playlist.edit <playlist-id>", DesktopOnly:true), new("plugins.configure", "plugins.configure <id>", DesktopOnly:true),
+        new("plugins.check-updates", "plugins.check-updates [id]"), new("plugins.update", "plugins.update <id>", true),
+        new("data.info", "data.info"), new("data.backup-directory", "data.backup-directory <folder>", true)
     ];
 
     public async Task<CommandResult> ExecuteAsync(string input, Func<CommandDefinition, Task<bool>>? confirm = null, CancellationToken cancellationToken = default)

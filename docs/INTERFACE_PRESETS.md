@@ -120,7 +120,7 @@ var response = await context.RequestFromUserAsync("styles", new JsonObject
 
 `StyleRule.scope` 可以限定到具有指定样式类的祖先范围，例如只改变沉浸播放器内的 TextBlock 或 VectorIcon，而不影响设置页。VectorIcon 的 foreground 对应其画刷。原有类型级规则、按压反馈和 morph 操作继续可用，详见 [STYLE_EXTENSIONS](STYLE_EXTENSIONS.md)。
 
-`lyrics.edgeToEdge:true` 在歌词页移除窗口内侧描边，退出后恢复正常窗口外观。`artwork` 表现节点在方案仍启用时复用封面控件和模糊实例；需要常驻背景时不要为它设置 `whenPage`，可用内容层及条件遮罩决定可见范围。移除方案时释放引用。自动外观扩展声明 `runtime.startup.v1`、`autoStart:true` 及样式/布局能力，宿主在显示首个窗口前完成其初始贡献；桌宠等依赖可见窗口的扩展仍在窗口打开后启动。
+`lyrics.edgeToEdge:true` 让转场扩展到方案安排的歌词视口边缘，并为实际标题栏和进度滑块留出空间。放在侧栏顶部的应用标志随侧栏逐段遮盖。`artwork` 表现节点在方案仍启用时复用封面控件和模糊实例；需要常驻背景时不要为它设置 `whenPage`，可用内容层及条件遮罩决定可见范围。移除方案时释放引用。自动外观扩展声明 `runtime.startup.v1`、`autoStart:true` 及样式/布局能力，宿主在显示首个窗口前完成其初始贡献；桌宠等依赖可见窗口的扩展仍在窗口打开后启动。
 
 歌词菜单扩展位置 `lyrics.more` 保持有效，入口统一在播放栏“更多”菜单的歌词分组。旧 `LyricsMore` 命名锚点保留为不可见占位，不再提供独立按钮。
 

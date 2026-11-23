@@ -39,6 +39,9 @@ internal static class TerminalParityChecks
         var lyric = Path.Combine(output, "terminal.lrc"); File.WriteAllText(lyric, "[00:01.00]第一行\n[00:02.00]第二行"); Run("lyrics import " + Quote(lyric));
         Require(Run("lyrics reload").Data!.AsArray().Count == 2, "Reload uses actual lyric parser"); Run("lyrics export " + Quote(Path.Combine(output, "terminal-export.lrc"))); Run("lyrics clear -y"); Require(vm.CurrentTrack!.LyricsDisabled && vm.LyricLines.Count == 0 && File.Exists(lyric), "Terminal lyric unlink preserves source files");
         Run("lyrics import " + Quote(lyric)); Require(!vm.CurrentTrack.LyricsDisabled, "Reimport re-enables lyrics");
+        var beforeLyrics = vm.Page; Run("lyrics open"); Run("lyrics open"); Require(vm.Page == "lyrics", "Lyrics open is idempotent");
+        Run("lyrics close"); Run("lyrics close"); Require(vm.Page == beforeLyrics, "Lyrics close restores the underlying page");
+        Require(Run("data info").Data?["edition"]?.GetValue<string>() == "desktop", "Desktop data directory is discoverable");
         Run("playlist export " + Quote(Path.Combine(output, "terminal.m3u")) + " " + playlist.Id);
         Require(File.ReadAllText(Path.Combine(output, "terminal.m3u")).Contains("fixture-0"), "Explicit playlist export is independent of current filtered page");
         Run("layout edit true"); Run("layout edit false"); Run("window default-size"); Run("network status"); Run("network peers"); Run("network requests");

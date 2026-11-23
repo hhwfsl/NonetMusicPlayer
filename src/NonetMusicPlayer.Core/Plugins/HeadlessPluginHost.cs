@@ -26,7 +26,9 @@ public sealed partial class HeadlessPluginHost : IDisposable
         }
     }
     public PluginManifest Find(string id) => Installed.FirstOrDefault(p => p.Id == id) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PluginNotFound"));
-    public PluginManifest Install(string package)
+    public PluginManifest Install(string package) => Install(package, null);
+
+    internal PluginManifest Install(string package, string? originRepository)
     {
         var plugin = PluginPackageInspector.Inspect(package); PluginPlatformPolicy.RequireSupported(plugin, PluginPlatformPolicy.CurrentRid);
         var target = DirectoryFor(plugin); var previous = Installed.FirstOrDefault(p => p.Id == plugin.Id);
@@ -62,6 +64,7 @@ public sealed partial class HeadlessPluginHost : IDisposable
                 if (previous is not null) SetEnabled(previous, false);
                 PluginPathPolicy.AfterProcessExit(() => Directory.Move(target, rollback)); moved = true;
             }
+            if (originRepository is not null) plugin.OriginRepository = originRepository;
             PluginPathPolicy.AfterProcessExit(() => Directory.Move(stage, target)); newMoved = true;
             if (index < 0) Installed.Add(plugin); else Installed[index] = plugin;
             Save();

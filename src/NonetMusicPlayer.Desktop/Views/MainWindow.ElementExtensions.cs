@@ -95,7 +95,7 @@ public sealed partial class MainWindow
     private void SuspendElementExtensions()
     {
         // 重组根容器会移除快照层；必须先结束转场并释放透明度覆盖，避免歌词永久隐藏。
-        if (_interfaceComposition?.IsApplied == true) _lyricsMotion.Cancel();
+        if (_interfaceComposition?.IsApplied == true && _lyricsMotion.IsRunning) _lyricsMotion.Cancel();
         _interfaceComposition?.Suspend();
         ClearElementContributions(); _elementLayouts?.Suspend();
     }

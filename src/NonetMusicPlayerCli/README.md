@@ -2,7 +2,7 @@
 
 本项目由 AI 完成，尚未经过人工代码 review；测试仅在 Windows 进行，macOS/Linux 未经实机验证。
 
-独立的纯命令行音乐播放器，当前版本 **0.4.0-beta.35**。与 Nonet 桌面播放器共享核心逻辑，但不依赖窗口，使用独立数据和播放会话。
+独立的纯命令行音乐播放器，当前版本 **0.4.0-beta.36**。与 Nonet 桌面播放器共享核心逻辑，但不依赖窗口，使用独立数据和播放会话。
 
 本版同步互听歌单描述、封面缓存和本机插件音频转发，远端歌单出现在 TUI 与 `playlist list`；使用 `peer:<设备ID>:<歌单ID>` 读取曲目和播放。音乐、专辑、艺术家及本地搜索包含在线设备歌曲，断开后撤掉投影；个人收藏和历史统计保留。未收藏的互听歌曲也累计时长和小时图表，提供端仅转发不记账。远端来源只读，可管理自己的歌单引用和播放队列。
 
@@ -11,6 +11,8 @@
 `playlist follow/sync/unfollow` 管理平台只读订阅，`music share` 输出公开歌曲链接。`updates check` 检查当前 CLI 版号，`updates install -y` 校验并启动更新，完成后重新运行即可。GitHub REST API 限流时，更新命令会使用公开发布源及其 SHA-256 清单。详见 [CLI 使用说明](../../docs/CLI.md)。
 
 ## 启动
+
+使用 `nonet plugins check-updates [插件ID]` 检查插件版本，使用 `nonet plugins update <插件ID>` 安装已确认的更新。`nonet data info` 显示有效目录，`nonet data backup-directory <目录>` 设置备份位置。
 
 发布程序为 `nonet.exe`（Windows）或 `nonet`（Linux/macOS）。PowerShell 在所在目录输入 `.\nonet.exe`，CMD 输入 `nonet`，Linux/macOS 输入 `./nonet`。保留发布文件夹内所有运行文件；将整个目录加入用户 PATH 后可在任意终端直接输入 `nonet`，无需系统 Shell 扩展或脚本包装。
 

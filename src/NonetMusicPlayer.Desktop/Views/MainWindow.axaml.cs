@@ -42,8 +42,8 @@ public sealed partial class MainWindow : Window
         InitializeViewportContinuity();
         InitializeWindowPlacement();
         DataContextChanged += (_, _) => AttachViewModel();
-        SizeChanged += (_, _) => Responsive();
-        PropertyChanged += (_, e) => { if (e.Property == WindowStateProperty) { if (WindowState == WindowState.Minimized) { _pageMotion.Cancel(); _lyricsMotion.Cancel(); } RefreshWindowFrame(); RefreshResizeBorders(); } };
+        SizeChanged += (_, _) => { if (_lyricsMotion.IsRunning) _lyricsMotion.Cancel(); Responsive(); };
+        PropertyChanged += (_, e) => { if (e.Property == WindowStateProperty) { if (WindowState == WindowState.Minimized) { _pageMotion.Cancel(); _lyricsMotion.Cancel(); } RefreshWindowFrame(); RefreshResizeBorders(); RefreshMaximizeLabel(); } };
         DragDrop.SetAllowDrop(this, true);
         // 歌曲让位会切换系统拖放命中行；进入新行也要接续预览，避免旧行 Leave 的延迟清理将其撤销。
         AddHandler(DragDrop.DragEnterEvent, DragOver);
@@ -234,16 +234,20 @@ public sealed partial class MainWindow : Window
         var previousPageId = _displayedPage;
         var navigated = _displayedPage != _vm.Page;
         if (navigated) _menuToggleAnchor = null;
-        var lyricsTransition = navigated && (_displayedPage == "lyrics" || _vm.Page == "lyrics") && IsVisible && WindowState != WindowState.Minimized;
+        var lyrics = _vm.Page == "lyrics";
+        var lyricsTransition = navigated && (previousPageId == "lyrics" || lyrics) && IsVisible && WindowState != WindowState.Minimized
+            && InterfaceMotion.IsEnabled && InterfaceMotionProfile?.LyricsDurationMs != 0;
         _pageMotion.Cancel(); if (lyricsTransition) _lyricsMotion.Interrupt(); else _lyricsMotion.Cancel();
-        var transitionLayer = (Grid)WindowSurface.Child!;
-        var lyricsRegion = LyricsTransitionRegion();
-        var previousPageSize = WindowSurface.Bounds.Size;
-        var previousPage = lyricsTransition && _vm.Page == "lyrics" ? LyricsPageMotion.Capture(WindowSurface, new(previousPageSize)) : null;
-        var lyricsSnapshot = lyricsTransition && _displayedPage == "lyrics" ? LyricsPageMotion.Capture(WindowSurface, lyricsRegion) : null;
+        var lyricsRegion = lyricsTransition && !lyrics ? LyricsTransitionRegion() : default;
+        var lyricsSnapshot = lyricsTransition && !lyrics ? CaptureLyricsSnapshot(lyricsRegion) : null;
         SuspendElementExtensions();
         _displayedPage = _vm.Page;
         _activeMenu?.Close();
+        if (lyrics)
+        {
+            ShowLyricsPage(lyricsTransition);
+            return;
+        }
         // 先释放上一页网格，再重算工具栏尺寸，避免导航时重新创建旧页面卡片。
         DisposePage();
         if (_selectionPage != _vm.Page) { _selectionPage = _vm.Page; SetBatchMode(false); }
@@ -253,7 +257,7 @@ public sealed partial class MainWindow : Window
         var replacement = slot.Length > 0 ? ExtensionReplacement(slot) : null;
         var alternate = replacement is not null || _vm.Page is "library" or "playlists" or "terminal" or "settings" or "plugins" or "albums" or "artists" or "statistics" or "devices" || _vm.Page.StartsWith("plugin:", StringComparison.Ordinal);
         alternate |= _vm.Page.StartsWith("interface:", StringComparison.Ordinal);
-        var lyrics = _vm.Page == "lyrics"; FullLyricsHost.IsVisible = lyrics; ContentSurface.IsVisible = !lyrics; PageContentGrid.IsVisible = !lyrics; SidebarPanel.IsVisible = !lyrics;
+        FullLyricsHost.IsVisible = false; SetWorkspacePageVisible(true);
         LibraryPage.IsVisible = !alternate; AlternatePage.IsVisible = alternate;
         LibraryActions.IsVisible = !alternate; SearchContainer.IsVisible = !alternate; TrackCountLabel.IsVisible = !alternate;
         UserManualButton.IsVisible = _vm.Page == "settings";
@@ -269,43 +273,19 @@ public sealed partial class MainWindow : Window
             "playlists" => new InterfacePlaylistGallery(_vm, BuildPlaylistCard, BuildRemotePlaylistCard),
             "albums" => Groups(false), "artists" => Groups(true), "statistics" => new StatisticsView(_vm), _ => _vm.Page.StartsWith("plugin:") ? PluginPage(_vm.Page) : null
         });
-        if (lyrics) FullLyricsHost.Content = ExtensionReplacement("page.lyrics") ?? new LyricsView(this, _vm);
         foreach (var nav in Workspace.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("nav")))
         { nav.Classes.Set("selected", nav.Tag?.ToString() == _vm.Page); }
         Dispatcher.UIThread.Post(Responsive, Avalonia.Threading.DispatcherPriority.Loaded);
         LocatePlayingTrack(this, EventArgs.Empty);
         ApplyCatalogQuery(initial: true);
         RefreshElementExtensions();
-        var lyricsReady = true;
-        if (lyrics)
-        {
-            UpdateLayout();
-            // 首次定位不能留给 Loaded/Render 回调，否则快照会冻结尚未居中的歌词。
-            if (FullLyricsHost.Content is LyricsView view) lyricsReady = view.PrepareEntrance();
-            UpdateLayout();
-        }
-        if (lyricsTransition && lyrics && lyricsReady)
-        {
-            lyricsRegion = LyricsTransitionRegion();
-            lyricsSnapshot = LyricsPageMotion.Capture(WindowSurface, lyricsRegion);
-        }
         if (lyricsSnapshot is not null)
         {
-            _pageMotion.Cancel();
-            try { var origin = transitionLayer.TranslatePoint(default, WindowSurface) ?? default;
-                _lyricsMotion.Begin(transitionLayer, FullLyricsHost, lyricsSnapshot, lyricsRegion, new Vector(origin.X, origin.Y), lyrics, InterfaceSettings.PlayerTop, InterfaceMotionProfile, previousPage, previousPageSize, new Rect(PlayerSurface.TranslatePoint(default, WindowSurface) ?? default, PlayerSurface.Bounds.Size)); }
-            catch (Exception error) { previousPage?.Dispose(); AppLog.Warning("UI", "Lyrics transition skipped", error); }
+            UpdateLayout();
+            PlayLyricsTransition(lyricsSnapshot, lyricsRegion, opening: false);
         }
-        else
-        {
-            previousPage?.Dispose();
-            if (navigated && IsVisible && WindowState != WindowState.Minimized)
-            {
-                if (lyrics || previousPageId == "lyrics")
-                    _pageMotion.Enter(lyrics ? FullLyricsHost : alternate ? AlternatePage : LibraryPage, InterfaceMotionProfile?.PageDurationMs ?? 140);
-                else _pageMotion.EnterPage(alternate ? AlternatePage : LibraryPage, ResolvePageTransition(previousPageId ?? "", _vm.Page));
-            }
-        }
+        else if (navigated && previousPageId != "lyrics" && IsVisible && WindowState != WindowState.Minimized)
+            _pageMotion.EnterPage(alternate ? AlternatePage : LibraryPage, ResolvePageTransition(previousPageId ?? "", _vm.Page));
     }
     private void BuildPlaylists()
     {

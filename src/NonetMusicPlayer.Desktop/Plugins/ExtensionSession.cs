@@ -271,6 +271,9 @@ public sealed partial class ExtensionSession : IDisposable
         {
             var operation = args["operation"]!.GetValue<string>();
             var arguments = args["arguments"]!.AsArray().Select(a => a!.GetValue<string>()).ToArray();
+            // 更新会重建插件会话，当前会话不能在自己的命令中等待它完成。
+            if (operation == "plugins.update" && arguments.FirstOrDefault() == Manifest.Id)
+                return new() { ["success"] = false, ["reason"] = "Update the calling plugin from the plugin center." };
             var tracks = _manager.ExtensionTracks;
             if (operation is "player.play" or "music.info" or "favorite.add" or "favorite.remove" or "music.remove")
                 foreach (var id in arguments) if (!tracks.Contains(id)) throw new InvalidDataException("Track ID required; paths are not allowed.");
@@ -278,7 +281,8 @@ public sealed partial class ExtensionSession : IDisposable
                 foreach (var id in arguments.Skip(1).Take(operation == "playlist.move" ? 1 : int.MaxValue))
                     if (!tracks.Contains(id)) throw new InvalidDataException("Track ID required.");
             var encoded = UniversalPluginCommandPolicy.ValidateFor(new(request.Id, operation, arguments), Manifest.Permissions);
-            if (PluginApprovalPolicy.RequiresConfirmation(Manifest.ApprovalMode, operation, PluginCommandPolicy.RequiresConfirmation(operation)) && !await PlayerDialog.Confirm(Owner, L10n.T("Agent.Confirm"), encoded, L10n.T("Common.Confirm")))
+            // 软件或插件替换始终需要用户确认。
+            if ((operation is "updates.install" or "plugins.update" || PluginApprovalPolicy.RequiresConfirmation(Manifest.ApprovalMode, operation, UniversalPluginCommandPolicy.RequiresConfirmation(operation))) && !await PlayerDialog.Confirm(Owner, L10n.T("Agent.Confirm"), encoded, L10n.T("Common.Confirm")))
                 return new() { ["success"] = false, ["reason"] = "User declined. Do not retry." };
             _lifetime.Token.ThrowIfCancellationRequested();
             var result = await Owner.Commands.ExecuteFromExtensionAsync(encoded, _ => Task.FromResult(true), _lifetime.Token);

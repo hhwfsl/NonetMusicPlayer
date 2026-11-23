@@ -85,8 +85,11 @@ public sealed partial class MainWindow
                     case "status": data = new JsonObject { ["title"] = vm.CurrentTrack?.Title, ["trackId"] = vm.CurrentTrack?.Id, ["playing"] = vm.IsPlaying, ["position"] = vm.PlaybackPosition, ["duration"] = vm.PlaybackDuration, ["volume"] = vm.Volume, ["source"] = vm.PlayingSourcePage }; break;
                     case "player.play":
                         if (command.Arguments.Count == 0) await vm.SetPlayingAsync(true);
+                        else if (vm.CommandTracks.FirstOrDefault(t => t.Id == Arg(0)) is { } knownTrack)
+                            await vm.PlayTrackAsync(knownTrack, vm.State.Tracks.Contains(knownTrack) && knownTrack.ProviderId?.StartsWith("lan:", StringComparison.Ordinal) != true
+                                ? vm.State.Tracks : vm.Page == "cloud-search" && vm.VisibleTracks.Contains(knownTrack) ? vm.VisibleTracks : [knownTrack]);
                         else if (File.Exists(Arg(0))) await vm.PlayTemporaryFilesAsync([Arg(0)]);
-                        else await vm.PlayTrackAsync(Track(), Track().ProviderId?.StartsWith("lan:", StringComparison.Ordinal) == true ? [Track()] : vm.State.Tracks);
+                        else throw new InvalidDataException(L10n.T("Commands.TrackNotFound"));
                         if (!vm.IsPlaying) throw new InvalidOperationException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.PlaybackStartFailed")); break;
                     case "player.pause": await vm.SetPlayingAsync(false); break;
                     case "player.resume": await vm.SetPlayingAsync(true); break;
@@ -100,12 +103,15 @@ public sealed partial class MainWindow
                     case "player.device": if (!vm.AudioDevices.Contains(Arg(0))) throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.OutputNotFound")); await vm.SwitchOutputAsync(Arg(0)); break;
                     case "queue.list": data = Tracks(vm.PlaybackQueue); break;
                     case "queue.play": await vm.PlayPlaylistAsync(Playlist(), command.Arguments.Count > 1 ? Arg(1) : null); break;
-                    case "music.list": data = Tracks(vm.State.Tracks.Where(t => command.Arguments.Count == 0 || (t.Title + " " + t.Artist + " " + t.Album).Contains(Arg(0), StringComparison.CurrentCultureIgnoreCase))); break;
+                    case "music.list": data = Tracks(vm.SourceTracks("songs").Where(t => command.Arguments.Count == 0 || (t.Title + " " + t.Artist + " " + t.Album).Contains(Arg(0), StringComparison.CurrentCultureIgnoreCase))); break;
                     case "music.info": data = TrackJson(Track()); break;
                     case "music.share": data = JsonValue.Create(await vm.Plugins.ReadShareLinkAsync(Track(), cancellationToken)); break;
+                    case "music.copy-link": await window.CopyTrackLinkAsync(Track(), cancellationToken); break;
+                    case "music.details": await SongInfoDialog.Show(window, Track()); break;
                     case "music.remove": vm.RemoveLibraryTracks(command.Arguments.Select(id => vm.State.Tracks.FirstOrDefault(t => t.Id == id) ?? throw new InvalidDataException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.TrackNotFound")))); break;
-                    case "playlist.list": data = new JsonArray(vm.Playlists.Select(p => (JsonNode)new JsonObject { ["id"] = p.Id, ["name"] = p.IsSystem ? L10n.T("Playlists.LikedSongs") : p.Name, ["description"] = p.Description, ["count"] = p.TrackIds.Count, ["readOnly"] = p.IsSourceLinked }).ToArray()); break;
+                    case "playlist.list": data = window.CommandPlaylistListings(); break;
                     case "playlist.create": data = new JsonObject { ["id"] = vm.CreatePlaylist(Arg(0)).Id }; break;
+                    case "playlist.edit": await window.EditPlaylistAsync(Playlist()); break;
                     case "playlist.follow":
                         var source = Plugin();
                         if (!source.Permissions.Contains("network")) throw new InvalidOperationException(L10n.T("MusicSearch.CatalogSourceUnavailable"));
@@ -170,6 +176,8 @@ public sealed partial class MainWindow
                     case "data.backup": if (File.Exists(Arg(0))) throw new IOException(NonetMusicPlayer.Core.Localization.LocalizationCatalog.Get("Commands.BackupExists")); vm.Save(); File.Copy(Path.Combine(vm.Storage.Root, "state.json"), Path.GetFullPath(Arg(0)), false); break;
                     case "data.restore": vm.RestoreLibraryBackup(Arg(0)); break;
                     case "lyrics.show": data = new JsonArray(vm.LyricLines.Select(l => (JsonNode)new JsonObject { ["seconds"] = l.Seconds, ["text"] = l.Text }).ToArray()); break;
+                    case "lyrics.open": case "lyrics.close": case "lyrics.toggle":
+                        if (command.Name == "lyrics.toggle" || (vm.Page == "lyrics") != (command.Name == "lyrics.open")) window.ToggleLyrics(); break;
                     case "lyrics.import": vm.ImportLyrics(Arg(0)); break;
                     case "lyrics.path": data = JsonValue.Create(vm.CurrentTrack is { } current ? vm.Lyrics.ExistingPath(current.Id) : null); break;
                     case "plugins.list": data = new JsonArray(vm.Plugins.Installed.Select(p => (JsonNode)new JsonObject { ["id"] = p.Id, ["name"] = p.Name, ["version"] = p.Version, ["type"] = p.Type, ["enabled"] = p.Enabled }).ToArray()); break;
@@ -180,6 +188,12 @@ public sealed partial class MainWindow
                     case "plugins.disable": vm.DisablePlugin(Plugin()); break;
                     case "plugins.uninstall": if (command.Arguments.Count > 1 && Arg(1) is not ("keep-files" or "delete-files")) throw new InvalidDataException("keep-files | delete-files"); vm.DisablePlugin(Plugin()); vm.Plugins.Uninstall(Plugin(), command.Arguments.Count > 1 && Arg(1) == "delete-files"); window.RefreshPluginNavigation(); break;
                     case "plugins.config": if (command.Arguments.Count > 1) vm.Plugins.Configure(Plugin(), Arg(1)); else data = JsonNode.Parse(Plugin().Configuration); break;
+                    case "plugins.configure": data = JsonValue.Create(await window.OpenPluginConfigurationAsync(Plugin())); break;
+                    case "plugins.check-updates":
+                        if (command.Arguments.Count > 0) await window.CheckPluginUpdateAsync(Plugin(), false);
+                        else await window.CheckPluginUpdatesAsync();
+                        data = new JsonArray(window._pluginUpdates.Select(item => (JsonNode)new JsonObject { ["id"] = item.Key, ["version"] = item.Value.Version }).ToArray()); break;
+                    case "plugins.update": await window.CheckPluginUpdateAsync(Plugin()); break;
                     case "plugins.schema": data = vm.Plugins.ReadConfigurationSchema(Plugin()); break;
                     case "plugins.refresh": await vm.RefreshProviderAsync(Plugin()); break;
                     case "layout.reset": window.RestoreDefaultLayout(); break;
@@ -199,6 +213,8 @@ public sealed partial class MainWindow
                     case "playlist.import": await vm.ImportM3uAsync(Arg(0), command.Arguments.Count > 1 ? Playlist(1) : null); break;
                     case "playlist.export": if (File.Exists(Arg(0))) throw new IOException(L10n.T("Commands.BackupExists")); vm.ExportM3u(Arg(0), command.Arguments.Count > 1 ? Playlist(1) : null); break;
                     case "data.directory": await vm.ConfigureDataDirectoryAsync(Arg(0)); break;
+                    case "data.info": data = new JsonObject { ["edition"] = "desktop", ["dataDirectory"] = vm.Storage.Root, ["backupDirectory"] = vm.Storage.BackupFolder }; break;
+                    case "data.backup-directory": vm.SetBackupFolder(Arg(0)); window.LayoutConfiguration.SetBackupFolder(Arg(0)); window.ShowPage(); break;
                     case "help.open": window.OpenUserManual(); break;
                     case "selection.begin": window.SetBatchMode(true); break;
                     case "selection.end": window.SetBatchMode(false); break;

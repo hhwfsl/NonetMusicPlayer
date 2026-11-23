@@ -57,10 +57,10 @@ settings set lanApprovalWaitSeconds 30
 | `history` | `list`、`remove <track-id...>`、`clear` |
 | `statistics` | `show [yyyy-MM-dd] [day或month或year]`、`hours [1-72]`、`history [session或interval或event或hour] [limit] [offset] [session-id]` |
 | `settings` | `list`、`get <name>`、`set <name> <json-value>`、`reset` |
-| `data` | `backup <file>`、`restore <file>` |
+| `data` | `info`、`backup <file>`、`restore <file>`、`backup-directory <folder>` |
 | `lyrics` | `show`、`import <file>`、`path`、`reload`、`export <file>`、`clear` |
 | `plugins` | `list`、`install <impp-file或github-release-url>`、`enable <id>`、`disable <id>`、`uninstall <id> [keep-files或delete-files]`、`config <id> [json]`、`schema <id>`、`refresh <id>` |
-| `plugins` 新增 | `info <id>`、`reload <id>`、`state <id>`、`invoke <id> <action> [json]`、`trust <id>` |
+| `plugins` 管理 | `info <id>`、`reload <id>`、`state <id>`、`invoke <id> <action> [json]`、`trust <id>`、`check-updates [id]`、`update <id>` |
 | `playlist` 新增 | `tracks <id>`、`from-folders <folder...>`、`import <m3u-file> [playlist-id]`、`export <m3u-file> [playlist-id]` |
 | 平台歌单 | `playlist follow <source-id> <catalog-id> [name]`、`playlist sync <playlist-id>`、`playlist unfollow <playlist-id>` |
 | 平台分享 | `music share <track-id>` |
@@ -83,11 +83,15 @@ settings set lanApprovalWaitSeconds 30
 | `player` / `queue` | `player locate`、`queue show`、`queue hide`、`queue toggle` |
 | `layout` | `reset`、`edit <true或false>`、`export <json-file>`、`apply <json-file>` |
 | `desktop-lyrics` | `toggle`、`lock <true或false>` |
+| `lyrics` | `open`、`close`、`toggle` |
+| `music` | `details <track-id>`、`copy-link <track-id>` |
+| `playlist` | `edit <playlist-id>` |
+| `plugins` | `configure <id>` |
 | `import` | `cancel` |
 | `data` | `directory <folder>` |
 | `selection` | `begin`、`end`、`all`、`clear`、`select <track-id...>`、`list` |
 
-页面 ID：`library`（音乐主页）、`songs`、`playlists`、`albums`、`artists`、`history`、`statistics`、`network`（设备互听）、`plugins`、`terminal`、`settings`、`lyrics`。歌单使用 `playlist:<id>`，分类使用 `album:<name>` 和 `artist:<name>`。
+页面 ID 包括 `library`（音乐主页）、`songs`、`playlists`、`albums`、`artists`、`history`、`statistics`、`devices`（设备互听）、`plugins`、`terminal`、`settings`、`lyrics`。歌单使用 `playlist:<id>`，分类使用 `album:<name>` 和 `artist:<name>`。互听歌单使用 `playlist list` 返回的 `lan:<设备ID>:<歌单ID>` 查询。
 
 `nonet statistics history` 分页读取长期听歌明细，缺省显示 100 个会话，每页最多 500 条；例如 `nonet statistics history event 50 0 <session-id>` 读取某个会话的播放事件。该命令不修改歌曲或历史记录。
 

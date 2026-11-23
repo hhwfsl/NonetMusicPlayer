@@ -23,7 +23,7 @@ public sealed partial class HeadlessPlayerSession
             // 保存并退出后由同一版本的隔离助手安全替换程序文件。
             token.ThrowIfCancellationRequested();
             Save();
-            var backup = string.IsNullOrWhiteSpace(State.Settings.BackupFolder) ? Path.Combine(DataDirectory, "Backups") : State.Settings.BackupFolder;
+            var backup = BackupDirectory;
             using var helper = UpdateInstaller.LaunchHelper(prepared, DataDirectory, backup);
             ExitRequested = true;
             return new() { ["version"] = release.Version, ["scheduled"] = true, ["resultPath"] = Path.Combine(prepared.StageRoot, "result.txt") };

@@ -14,6 +14,12 @@ CLI 在冻结 Contract v1/v2 上增加数据扩展与 `media-source` 承载，�
 
 配置使用共享核心账户加密实现，桌面保留原公开包装 API；扩展状态在 `Plugins/Storage/<id>`，同 ID 更新保留，不放在待替换的包内。CLI 与桌面资料目录独立。详细命令范围和图形功能边界见 [CLI_DESKTOP_PARITY](CLI_DESKTOP_PARITY.md)。
 
+## 对话代理与宿主交互
+
+对话插件通过 `catalog` 发现宿主管理的命令，通过 `commands` 提交操作名和参数数组。命令沿用终端路由、插件清单权限和宿主审批。插件复制公开歌曲链接、打开全屏歌词或检查插件更新时，使用目录中的对应命令。
+
+面向对话代理的 `catalog` 按插件已有权限提供当前命令，包括队列选择与排序、平台搜索和分享、平台歌单订阅同步、分类和小时统计、互听曲目播放及更新。依赖文件路径的操作继续使用宿主文件选择器。软件安装更新需要当次用户确认。宿主的 `host` 结果可含 `interactiveOperations`，按服务列出可通过 `interaction` 请求确认的操作。调用方应先发现字段，再请求互听交互和界面变形。
+
 ## 页面过渡（可选 `ui.page-transitions.v1`）
 
 `styles` 服务通过 `StyleSheet.pageTransitions` 提供默认配置与按来源/目标页面匹配的覆盖规则；支持淡入、位移、组合效果、时长、初始透明度和缓动。`catalog` 返回目录，`resolve-page-transition` 查询叠加后的有效配置。参数、优先级、取消恢复及歌词专用转场的关系见 [PAGE_TRANSITIONS](PAGE_TRANSITIONS.md)。

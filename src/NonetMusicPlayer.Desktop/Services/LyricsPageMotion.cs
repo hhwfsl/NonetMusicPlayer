@@ -1,13 +1,11 @@
 using Avalonia;
-using Avalonia.Animation;
-using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 
 namespace NonetMusicPlayer.Desktop.Services;
 
@@ -15,6 +13,7 @@ namespace NonetMusicPlayer.Desktop.Services;
 public sealed class LyricsPageMotion : IDisposable
 {
     public const int MaximumSnapshotPixels = 2_000_000;
+    private const double BackdropBlurRadius = 40;
     private readonly RetargetableMotion _slide = new();
     private Action? _cancel;
     private double? _interrupted;
@@ -45,45 +44,74 @@ public sealed class LyricsPageMotion : IDisposable
         }
         catch (Exception error) { AppLog.Warning("UI", "Lyrics transition snapshot skipped", error); return null; }
     }
-    public void Begin(Grid layer, ContentControl host, Bitmap snapshot, Rect region, Vector layerOffset, bool opening, bool playerTop)
-        => Begin(layer, host, snapshot, region, layerOffset, opening, playerTop, null);
-    public void Begin(Grid layer, ContentControl host, Bitmap snapshot, Rect region, Vector layerOffset, bool opening, bool playerTop, InterfaceMotionProfile? profile)
-        => Begin(layer, host, snapshot, region, layerOffset, opening, playerTop, profile, null, default);
-    public void Begin(Grid layer, ContentControl host, Bitmap snapshot, Rect region, Vector layerOffset, bool opening, bool playerTop, InterfaceMotionProfile? profile, Bitmap? previousPage, Size previousPageSize, Rect? playerRegion = null)
+    public void Begin(Grid layer, ContentControl host, Bitmap snapshot, Rect region, IReadOnlyList<Rect> protectedAreas,
+        IReadOnlyList<Control> workspace, IReadOnlyList<Control> chrome, bool opening, bool playerTop, int duration, Action? settled)
     {
         var start = _interrupted ?? (opening ? 0 : 1);
-        _interrupted = null; Cancel();
-        if (!InterfaceMotion.IsEnabled || profile?.LyricsDurationMs == 0) { snapshot.Dispose(); previousPage?.Dispose(); return; }
+        Cancel();
+        if (!InterfaceMotion.IsEnabled || duration == 0) { snapshot.Dispose(); settled?.Invoke(); return; }
         var generation = ++_generation;
-        var player = playerRegion ?? new Rect(region.X, playerTop ? region.Y - 96 : region.Bottom, region.Width, 96);
-        // 只在播放栏朝向内容区的边缘裁剪；整张歌词图保持原尺寸，仅沿 Y 轴平移。
-        var top = playerTop ? Math.Max(region.Y, player.Bottom) : region.Y;
-        var bottom = playerTop ? region.Bottom : Math.Min(region.Bottom, player.Y);
-        var full = new Rect(region.X - layerOffset.X, top - layerOffset.Y, region.Width, Math.Max(1, bottom - top));
+        var full = region;
         var image = new Image { Source = snapshot, Stretch = Stretch.Fill, Width = full.Width, Height = full.Height, IsHitTestVisible = false };
         var transform = new TranslateTransform(); image.RenderTransform = transform;
         var overlay = new Border { Name = "LyricsTransitionOverlay", Width = full.Width, Height = full.Height,
             Margin = new Thickness(full.X, full.Y, 0, 0), HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top, IsHitTestVisible = false, ClipToBounds = true, Child = image, ZIndex = 1000 };
-        Grid.SetRowSpan(overlay, 100); Grid.SetColumnSpan(overlay, 100);
-        Border? backdrop = null;
-        if (opening && previousPage is not null)
+        // 转场图层单独让出原生标题栏和伸出播放栏的进度滑块。
+        foreach (var area in protectedAreas)
         {
-            backdrop = new Border { Name = "LyricsTransitionBackdrop", Child = new Image { Source = previousPage, Stretch = Stretch.Fill },
-                Width = previousPageSize.Width, Height = previousPageSize.Height, Margin = new Thickness(-layerOffset.X, -layerOffset.Y, 0, 0),
-                HorizontalAlignment = overlay.HorizontalAlignment, VerticalAlignment = overlay.VerticalAlignment, IsHitTestVisible = false, ZIndex = 999 };
-            Grid.SetRowSpan(backdrop, 100); Grid.SetColumnSpan(backdrop, 100); layer.Children.Add(backdrop);
+            if (!full.Intersects(area)) continue;
+            var local = new Rect(new Point(area.X - full.X, area.Y - full.Y), area.Size);
+            overlay.Clip = new CombinedGeometry(GeometryCombineMode.Exclude,
+                overlay.Clip ?? new RectangleGeometry(new Rect(full.Size)), new RectangleGeometry(local));
+        }
+        Grid.SetRowSpan(overlay, 100); Grid.SetColumnSpan(overlay, 100);
+        var blur = new BlurEffect { Radius = BackdropBlurRadius * start };
+        var protectedVisuals = chrome.ToHashSet<Visual>();
+        var protectedParents = chrome.SelectMany(control => control.GetVisualAncestors()).ToHashSet();
+        var blurLeases = workspace.SelectMany(BlurTargets)
+            .Select(visual => visual.Bind(Visual.EffectProperty, new ConstantValue(blur), BindingPriority.Animation)).ToArray();
+        // 方案可把品牌或播放器放进侧栏，只模糊这些控件所在分支以外的子树。
+        IEnumerable<Visual> BlurTargets(Visual visual)
+        {
+            if (protectedVisuals.Contains(visual)) yield break;
+            if (!protectedParents.Contains(visual)) { yield return visual; yield break; }
+            foreach (var child in visual.GetVisualChildren())
+                foreach (var target in BlurTargets(child)) yield return target;
+        }
+        var backdrop = new List<(double Top, Size Size, RectangleGeometry Reveal, IDisposable Lease)>();
+        foreach (var control in workspace)
+        {
+            if (control.TranslatePoint(default, layer) is not { } origin) continue;
+            var reveal = new RectangleGeometry(new Rect(control.Bounds.Size));
+            var clip = control.Clip is { } previous ? new CombinedGeometry(GeometryCombineMode.Intersect, previous, reveal) : (Geometry)reveal;
+            var lease = control.Bind(Visual.ClipProperty, new ConstantValue(clip), BindingPriority.Animation);
+            backdrop.Add((origin.Y, control.Bounds.Size, reveal, lease));
         }
         IDisposable? opacity = null, input = null; var finished = false;
-        void Draw(double value) => transform.Y = (playerTop ? -1 : 1) * full.Height * (1 - value);
+        void Draw(double value)
+        {
+            // 展开和收回共用同一进度，动画中途反向时模糊半径从当前值接续。
+            blur.Radius = BackdropBlurRadius * value;
+            transform.Y = (playerTop ? -1 : 1) * full.Height * (1 - value);
+            // 只在歌词已覆盖的区域裁掉背景，透明方案也不会透出旧内容。
+            var edge = (playerTop ? full.Bottom : full.Top) + transform.Y;
+            foreach (var (top, size, reveal, _) in backdrop)
+            {
+                var cut = Math.Clamp(edge - top, 0, size.Height);
+                reveal.Rect = playerTop ? new Rect(0, cut, size.Width, size.Height - cut) : new Rect(0, 0, size.Width, cut);
+            }
+        }
         void Finish()
         {
             if (finished) return; finished = true; _slide.Changed -= Draw;
-            // 真实歌词、旧页底图和快照在同一个 UI 事务中交接，不透出旧页的一帧。
+            // 同一个 UI 事务内移除快照、还原裁剪并显示最终页面。
             opacity?.Dispose(); input?.Dispose();
-            if (backdrop is not null) { layer.Children.Remove(backdrop); if (backdrop.Child is Image old) old.Source = null; }
-            layer.Children.Remove(overlay); image.Source = null; snapshot.Dispose(); previousPage?.Dispose();
+            foreach (var item in backdrop) item.Lease.Dispose();
+            foreach (var lease in blurLeases) lease.Dispose();
+            layer.Children.Remove(overlay); image.Source = null; snapshot.Dispose();
             if (_generation == generation) _cancel = null;
+            settled?.Invoke();
         }
         _slide.MoveAsync(start, 0).GetAwaiter().GetResult(); Draw(start); layer.Children.Add(overlay);
         if (opening)
@@ -96,7 +124,7 @@ public sealed class LyricsPageMotion : IDisposable
         _ = Run();
         async Task Run()
         {
-            try { await _slide.MoveAsync(opening ? 1 : 0, profile?.LyricsDurationMs ?? 300); }
+            try { await _slide.MoveAsync(opening ? 1 : 0, duration); }
             catch (Exception error) { AppLog.Warning("UI", "歌词垂直转场已结束", error); }
             finally { await Dispatcher.UIThread.InvokeAsync(Finish); }
         }

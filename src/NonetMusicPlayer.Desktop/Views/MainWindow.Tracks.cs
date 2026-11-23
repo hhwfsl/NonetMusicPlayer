@@ -187,6 +187,8 @@ public sealed partial class MainWindow
     {
         ++_viewportRequest;
         _locateTimer.Stop(); var request = ++_locateRequest;
+        // 歌词转场继续使用当前工作区画面，不重置仍在显示的歌曲列表位置。
+        if (_vm?.Page == "lyrics") return;
         if (CanLocatePlayingTrack) { LocatePlayingTrack(sender, e); return; }
         var page = _vm?.Page;
         Dispatcher.UIThread.Post(() =>

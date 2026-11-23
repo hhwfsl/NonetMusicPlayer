@@ -15,6 +15,7 @@ public sealed partial class MainWindow
     private TouchWindowResizer? _touchWindowResizer;
     private void InitializeTitleInteraction()
     {
+        RefreshMaximizeLabel();
         _touchTitleMover = new TouchWindowMover(this);
         _touchWindowResizer = new TouchWindowResizer(this);
         _resizeBorders.AddRange(((Grid)Content!).Children.OfType<Border>().Where(b => b.Tag is string));
@@ -49,6 +50,7 @@ public sealed partial class MainWindow
     }
     private void ApplyTitleButtons()
     {
+        RefreshMaximizeLabel();
         var left = _vm is null ? OperatingSystem.IsMacOS() : InterfaceSettings.TitleButtonsOnLeft;
         TitleBarLayout.Margin = left ? new(16, 0, 16, 0) : new(20, 0, 12, 0);
         TitleBarLayout.ColumnDefinitions = new ColumnDefinitions(left ? "*,Auto,*" : "Auto,*,Auto");
@@ -59,6 +61,13 @@ public sealed partial class MainWindow
         Control[] buttons = left ? [CloseWindowButton, MinimizeWindowButton, MaximizeWindowButton]
             : [MinimizeWindowButton, MaximizeWindowButton, CloseWindowButton];
         TitleButtons.Children.Clear(); foreach (var button in buttons) TitleButtons.Children.Add(button);
+    }
+    // 原生贴靠、双击标题栏和按钮共用窗口状态，提示始终显示当前可执行的操作。
+    private void RefreshMaximizeLabel()
+    {
+        var label = L10n.T(WindowState == WindowState.Maximized ? "Common.RestoreWindow" : "Common.MaximizeWindow");
+        ToolTip.SetTip(MaximizeWindowButton, label);
+        Avalonia.Automation.AutomationProperties.SetName(MaximizeWindowButton, label);
     }
     // 缩放热区仅随窗口状态切换，不再等待一次后续鼠标移动才能恢复。
     private void RefreshResizeBorders() { foreach (var border in _resizeBorders) border.IsHitTestVisible = WindowState == WindowState.Normal; }

@@ -29,8 +29,13 @@ public sealed partial class MainWindow
                 case "queue.show": case "queue.hide": case "queue.toggle": window.SetPlaybackQueueOpen(command.Name == "queue.show" || command.Name == "queue.toggle" && !window.IsPlaybackQueueOpen); return null;
                 case "player.locate": vm.Navigate(vm.PlayingSourcePage); window.LocatePlayingTrack(window, EventArgs.Empty); return null;
                 case "playlist.tracks":
+                    if (Arg(0).StartsWith("lan:", StringComparison.Ordinal))
+                    {
+                        if (!window.CommandLanPlaylists().Any(row => row["id"]?.GetValue<string>() == Arg(0))) throw new InvalidDataException(L10n.T("Commands.PlaylistNotFound"));
+                        return Tracks(vm.SourceTracks(Arg(0)));
+                    }
                     var list = vm.Playlists.FirstOrDefault(p => p.Id == Arg(0)) ?? throw new InvalidDataException(L10n.T("Commands.PlaylistNotFound"));
-                    var byId = vm.State.Tracks.ToDictionary(t => t.Id); return Tracks(list.TrackIds.Select(id => byId.GetValueOrDefault(id)).OfType<TrackItem>());
+                    return Tracks(vm.SourceTracks("playlist:" + list.Id));
                 case "playlist.from-folders": return new JsonArray((await vm.CreatePlaylistsFromFoldersAsync(command.Arguments)).Select(p => (JsonNode)new JsonObject { ["id"] = p.Id, ["name"] = p.Name, ["count"] = p.TrackIds.Count }).ToArray());
                 case "music.sources": return new JsonArray(new[] { new JsonObject { ["id"] = "local", ["name"] = L10n.T("Library.MusicLibrary") } }.Concat(vm.Plugins.MusicSearchSources.Select(p => new JsonObject { ["id"] = p.Id, ["name"] = p.MusicSearch!.Label })).Cast<JsonNode>().ToArray());
                 case "music.query":
@@ -39,8 +44,8 @@ public sealed partial class MainWindow
                 case "music.more": await vm.LoadMoreMusicResultsAsync(); return SearchResults();
                 case "music.results": return SearchResults();
                 case "album.list": case "artist.list":
-                    var kind = command.Name.Split('.')[0]; return new JsonArray(vm.State.Tracks.GroupBy(t => ViewModels.MainViewModel.GroupDisplayName(kind, kind == "album" ? t.Album : t.Artist)).OrderBy(g => g.Key).Select(g => (JsonNode)new JsonObject { ["name"] = g.Key, ["count"] = g.Count() }).ToArray());
-                case "album.tracks": case "artist.tracks": var type = command.Name.Split('.')[0]; return Tracks(vm.State.Tracks.Where(t => ViewModels.MainViewModel.GroupDisplayName(type, type == "album" ? t.Album : t.Artist) == Arg(0)));
+                    var kind = command.Name.Split('.')[0]; return new JsonArray(vm.SourceTracks("songs").GroupBy(t => ViewModels.MainViewModel.GroupDisplayName(kind, kind == "album" ? t.Album : t.Artist)).OrderBy(g => g.Key).Select(g => (JsonNode)new JsonObject { ["name"] = g.Key, ["count"] = g.Count() }).ToArray());
+                case "album.tracks": case "artist.tracks": return Tracks(vm.SourceTracks(command.Name.Split('.')[0] + ":" + Arg(0)));
                 case "lyrics.reload": vm.ReloadLyrics(); return TracksLyrics();
                 case "lyrics.clear": if (vm.CurrentTrack is null) throw new InvalidOperationException(L10n.T("Commands.SelectTrack")); vm.CancelLyricsAssociation(); return null;
                 case "lyrics.export":
@@ -82,4 +87,17 @@ public sealed partial class MainWindow
             JsonArray TracksLyrics() => new(vm.LyricLines.Select(l => (JsonNode)new JsonObject { ["seconds"] = l.Seconds, ["text"] = l.Text }).ToArray());
         }
     }
+
+    private IEnumerable<JsonObject> CommandLanPlaylists() => _vm!.LanPeers.Where(peer => peer.Connected).SelectMany(peer =>
+        peer.Catalog.Playlists.Select(playlist => new JsonObject
+        {
+            ["id"] = "lan:" + peer.DeviceId + ":" + playlist.Id, ["name"] = playlist.Name, ["description"] = playlist.Description,
+            ["count"] = playlist.TrackIds.Length, ["readOnly"] = true, ["peerId"] = peer.DeviceId
+        }));
+
+    private JsonArray CommandPlaylistListings() => new(_vm!.Playlists.Select(playlist => new JsonObject
+    {
+        ["id"] = playlist.Id, ["name"] = playlist.IsSystem ? L10n.T("Playlists.LikedSongs") : playlist.Name, ["description"] = playlist.Description,
+        ["count"] = playlist.TrackIds.Count, ["readOnly"] = playlist.IsSourceLinked
+    }).Concat(CommandLanPlaylists()).Cast<JsonNode?>().ToArray());
 }

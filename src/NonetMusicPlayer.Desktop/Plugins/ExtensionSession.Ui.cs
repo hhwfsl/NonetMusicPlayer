@@ -15,7 +15,7 @@ public sealed partial class ExtensionSession
         {
             var commands = catalog["commands"]!.AsArray();
             foreach (var operation in new[] { "read", "elements", "update-elements", "reset-elements", "apply", "reset" })
-                commands.Add(new JsonObject { ["operation"] = "extension.ui." + operation, ["usage"] = operation == "apply" ? "[legacy layout string; prefer extension.service ui/update-elements]" : operation == "update-elements" ? "use extension.service: {service:ui,arguments:{operation:update-elements,patches:[{target,properties,parent?,index?}]}}" : "no arguments", ["confirmation"] = operation != "read" });
+                commands.Add(new JsonObject { ["operation"] = "extension.ui." + operation, ["usage"] = operation == "apply" ? "one layout JSON string" : operation == "update-elements" ? "one JSON patch array: [{target,properties,parent?,index?}]" : "no arguments", ["confirmation"] = operation is not ("read" or "elements") });
             if (Manifest.Permissions.Contains("plugins-control") && Manifest.Permissions.Contains("plugin-development"))
             {
                 commands.Add(new JsonObject { ["operation"] = "extension.package", ["usage"] = "one JSON string: {id:custom.name,name,version,layout:optional layout JSON string,page:{schemaVersion:2,root:{...}},contributions:[...]}. Generates and installs a data-only plugin; never executable code.", ["confirmation"] = true });

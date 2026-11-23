@@ -32,7 +32,7 @@ public sealed partial class HeadlessPlayerSession
             var encoded = UniversalPluginCommandPolicy.ValidateFor(new(request.Id, operation, arguments), plugin.Permissions);
             var definition = PlayerCommandRouter.Definitions.Single(d => d.Name == operation);
             if (definition.DesktopOnly) return new() { ["success"] = false, ["reason"] = "This operation needs a desktop window." };
-            if (PluginCommandPolicy.RequiresConfirmation(operation)) return new() { ["success"] = false, ["reason"] = "Run and confirm this operation directly in the terminal." };
+            if (UniversalPluginCommandPolicy.RequiresConfirmation(operation)) return new() { ["success"] = false, ["reason"] = "Run and confirm this operation directly in the terminal." };
             var known = State.Tracks.Concat(State.RecentTemporaryTracks).Concat(_musicResults).Concat(_lanTracks.Values).Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
             if (operation is "player.play" or "music.info" or "favorite.add" or "favorite.remove" or "music.remove")
                 foreach (var id in arguments) if (!known.Contains(id)) throw new InvalidDataException("Track identity required.");

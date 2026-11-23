@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using NonetMusicPlayer.Core.Updates;
 using NonetMusicPlayer.Desktop.Services;
 
 namespace NonetMusicPlayer.Desktop.Views;
@@ -17,11 +18,15 @@ public sealed class UserManualWindow : Window
         var candidates = new[] { Path.Combine(AppContext.BaseDirectory, name), Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../docs", name)), Path.Combine(Environment.CurrentDirectory, "docs", name) };
         var path = candidates.FirstOrDefault(File.Exists) ?? throw new FileNotFoundException(L10n.T("Common.TheUserManualCouldNotBeFound"));
         var stack = new StackPanel { Spacing = 10, Margin = new(24), MaxWidth = 960, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var version = ReleaseUpdateService.VersionOf(typeof(UserManualWindow).Assembly);
         foreach (var line in File.ReadLines(path))
         {
             if (string.IsNullOrWhiteSpace(line)) continue;
             var level = line.TakeWhile(c => c == '#').Count();
-            var text = line.TrimStart('#').Trim().Replace("**", "").Replace("`", "");
+            // 手册标题下的版本行以当前程序集为准，旧文档随包升级时也不会显示旧版本。
+            var text = line.StartsWith("> ", StringComparison.Ordinal) ? L10n.Format("Common.UserManualVersion", version)
+                : line.TrimStart('#').Trim().Replace("**", "").Replace("`", "");
+            if (text.StartsWith("- ", StringComparison.Ordinal)) text = "• " + text[2..];
             stack.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = level switch { 1 => 25, 2 => 20, 3 => 16, _ => 14 }, FontWeight = level > 0 ? FontWeight.SemiBold : FontWeight.Normal, Margin = new(0, level > 0 ? 12 : 0, 0, 0) });
         }
         Content = new DockPanel { Children = { Ui.Scroll(stack) } };

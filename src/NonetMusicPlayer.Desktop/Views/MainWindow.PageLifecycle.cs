@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using NonetMusicPlayer.Desktop.Models;
@@ -37,11 +38,54 @@ public sealed partial class MainWindow
     private void DisposePage()
     {
         _restoreExpandedStyleControl?.Invoke();
+        DisposeWorkspacePage();
+        DisposeLyricsPage();
+    }
+    private void DisposeWorkspacePage()
+    {
         if (AlternatePage.Content is IDisposable page && !ReferenceEquals(page, _cachedSettings)) page.Dispose();
-        if (FullLyricsHost.Content is IDisposable lyrics) lyrics.Dispose();
         // 分类网格现在由包含返回栏的页面承载，退出时仍需显式释放已实现卡片的封面。
         _groupList?.Dispose();
-        AlternatePage.Content = null; FullLyricsHost.Content = null; _groupList = null;
+        AlternatePage.Content = null; _groupList = null;
+    }
+    private void DisposeLyricsPage()
+    {
+        if (FullLyricsHost.Content is IDisposable lyrics) lyrics.Dispose();
+        FullLyricsHost.Content = null;
+    }
+    private void SetWorkspacePageVisible(bool visible)
+    {
+        ContentSurface.IsVisible = PageContentGrid.IsVisible = SidebarPanel.IsVisible = visible;
+    }
+    private void ShowLyricsPage(bool animate)
+    {
+        _restoreExpandedStyleControl?.Invoke();
+        DisposeLyricsPage();
+        FullLyricsHost.Content = ExtensionReplacement("page.lyrics") ?? new LyricsView(this, _vm!);
+        FullLyricsHost.IsVisible = true;
+        RefreshElementExtensions();
+        PositionFullLyrics();
+        UpdateLayout();
+        // 第一帧之前定位到真实播放行；保留原页控件直到转场完成，避免重采样和重新排版。
+        var ready = FullLyricsHost.Content is not LyricsView view || view.PrepareEntrance();
+        UpdateLayout();
+        if (animate && ready)
+        {
+            var region = LyricsTransitionRegion();
+            if (CaptureLyricsSnapshot(region) is { } snapshot)
+            {
+                PlayLyricsTransition(snapshot, region, opening: true, HideWorkspaceForLyrics);
+                return;
+            }
+        }
+        HideWorkspaceForLyrics();
+    }
+    private void HideWorkspaceForLyrics()
+    {
+        SetWorkspacePageVisible(false);
+        DisposeWorkspacePage();
+        _selectionPage = "lyrics";
+        SetBatchMode(false);
     }
     private void ToggleLyrics()
     {
@@ -87,10 +131,40 @@ public sealed partial class MainWindow
     }
     private Rect LyricsTransitionRegion()
     {
-        var origin = FullLyricsHost.TranslatePoint(default, WindowSurface) ?? default;
-        var title = TitleBarSurface.TranslatePoint(default, WindowSurface) ?? default;
-        var top = Math.Max(origin.Y, title.Y + TitleBarSurface.Bounds.Height);
-        return new Rect(origin.X, top, FullLyricsHost.Bounds.Width, Math.Max(0, origin.Y + FullLyricsHost.Bounds.Height - top));
+        var layer = (Grid)WindowSurface.Child!;
+        if (FullLyricsHost.TranslatePoint(default, layer) is not { } origin || PlayerSurface.TranslatePoint(default, layer) is not { } player) return default;
+        var playerTop = InterfaceSettings.PlayerTop;
+        var top = origin.Y;
+        // 贴边歌词可覆盖侧栏顶部；默认布局仍保留整条标题栏的高度。
+        if (InterfaceLyricsProfile?.EdgeToEdge != true && TitleBarSurface.TranslatePoint(default, layer) is { } title)
+            top = Math.Max(top, title.Y + TitleBarSurface.Bounds.Height);
+        if (playerTop) top = Math.Max(top, player.Y + PlayerSurface.Bounds.Height);
+        var bottom = origin.Y + FullLyricsHost.Bounds.Height;
+        if (!playerTop) bottom = Math.Min(bottom, player.Y);
+        return new Rect(origin.X, top, FullLyricsHost.Bounds.Width, Math.Max(0, bottom - top));
+    }
+    private Bitmap? CaptureLyricsSnapshot(Rect region)
+    {
+        if (FullLyricsHost.TranslatePoint(default, (Grid)WindowSurface.Child!) is not { } origin) return null;
+        return LyricsPageMotion.Capture(FullLyricsHost, new Rect(region.X - origin.X, region.Y - origin.Y, region.Width, region.Height));
+    }
+    private void PlayLyricsTransition(Bitmap snapshot, Rect region, bool opening, Action? settled = null)
+    {
+        var layer = (Grid)WindowSurface.Child!;
+        var protectedAreas = new List<Rect>();
+        // 只为实际标题栏留出空间。清蓝的品牌在侧栏内，应随侧栏一同被遮盖。
+        if (TitleBarSurface.TranslatePoint(default, layer) is { } caption)
+            protectedAreas.Add(new Rect(caption, TitleBarSurface.Bounds.Size));
+        if (PlaybackSlider.IsEffectivelyVisible && PlaybackSlider.TranslatePoint(default, layer) is { } origin)
+        {
+            // 以滑块实际绘制位置为准；边缘余量覆盖高 DPI 的抗锯齿像素。
+            var center = origin.Y + PlaybackSlider.ThumbCenter.Y;
+            var radius = PlaybackSlider.ThumbRadius + 1;
+            protectedAreas.Add(new Rect(origin.X, center - radius, PlaybackSlider.Bounds.Width, 2 * radius));
+        }
+        _lyricsMotion.Begin(layer, FullLyricsHost, snapshot, region, protectedAreas, [ContentSurface, SidebarPanel],
+            [TitleBarSurface, TitleBrand, PlayerSurface, PlaybackSlider], opening,
+            InterfaceSettings.PlayerTop, InterfaceMotionProfile?.LyricsDurationMs ?? 300, settled);
     }
     private void PositionFullLyrics()
     {

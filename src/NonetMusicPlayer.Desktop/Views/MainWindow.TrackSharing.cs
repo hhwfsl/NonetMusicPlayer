@@ -12,16 +12,21 @@ public sealed partial class MainWindow
         var vm = _vm;
         if (track is null || vm?.Plugins.ShareLinkSource(track) is not { } source) return;
         var label = L10n.Format("MusicSearch.SharePlatformLink", source.Name);
-        menu.Items.Add(Menu(label, async () =>
-        {
-            // 剪贴板仅在点击后写入，等系统完成写入再提示成功。
-            if (Clipboard is not { } clipboard) throw new InvalidOperationException(L10n.T("MusicSearch.ShareUnavailable"));
-            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(12));
-            var url = await vm.Plugins.ReadShareLinkAsync(track, deadline.Token);
-            var transfer = new DataTransfer();
-            transfer.Add(DataTransferItem.CreateText(url));
-            await clipboard.SetDataAsync(transfer);
-            vm.ReportSuccess(L10n.Format("MusicSearch.ShareLinkCopied", source.Name));
-        }, rawLabel: true));
+        menu.Items.Add(Menu(label, () => CopyTrackLinkAsync(track), rawLabel: true));
+    }
+
+    // 菜单与终端共用实际复制路径，剪贴板写入完成后才显示成功。
+    private async Task CopyTrackLinkAsync(TrackItem track, CancellationToken token = default)
+    {
+        if (_vm is not { } vm || Clipboard is not { } clipboard || vm.Plugins.ShareLinkSource(track) is not { } source)
+            throw new InvalidOperationException(L10n.T("MusicSearch.ShareUnavailable"));
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+        deadline.CancelAfter(TimeSpan.FromSeconds(12));
+        var url = await vm.Plugins.ReadShareLinkAsync(track, deadline.Token);
+        deadline.Token.ThrowIfCancellationRequested();
+        var transfer = new DataTransfer();
+        transfer.Add(DataTransferItem.CreateText(url));
+        await clipboard.SetDataAsync(transfer);
+        vm.ReportSuccess(L10n.Format("MusicSearch.ShareLinkCopied", source.Name));
     }
 }
